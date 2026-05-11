@@ -102,8 +102,6 @@ export function showResult({
 
   resultStats.innerHTML = html;
 
-  renderOnlineRanking();
-
   const gameDiv = dom.game();
   const resultDiv = dom.result();
   const showQuest = dom.showQuest();
@@ -115,18 +113,40 @@ export function showResult({
 
   if (gameDiv) gameDiv.style.display = "none";
   if (resultDiv) resultDiv.style.display = "flex";
+
+  // ★ここを遅延させる
+  requestAnimationFrame(() => {
+    renderOnlineRanking();
+  });
 }
 
 
 async function renderOnlineRanking() {
-  const ranking = await getRanking();
+  console.log("ranking start");
 
-  const html = ranking
-    .map((r, i) => {
-      return `<div>${i + 1}位 ${r.player_name} ${r.score}</div>`;
-    })
-    .join("");
+  try {
+    const ranking = await getRanking();
+    console.log("ranking:", ranking);
 
-  const el = document.getElementById("onlineRanking");
-  if (el) el.innerHTML = html;
+    if (!ranking) {
+      console.warn("ranking is null/undefined");
+      return;
+    }
+
+    const el = document.getElementById("onlineRanking");
+
+    if (!el) {
+      console.warn("onlineRanking not found");
+      return;
+    }
+
+    el.innerHTML = ranking
+      .map((r, i) => {
+        return `<div>${i + 1}位 ${r.player_name} ${r.score}</div>`;
+      })
+      .join("");
+
+  } catch (err) {
+    console.error("renderOnlineRanking error:", err);
+  }
 }
