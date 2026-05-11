@@ -1,13 +1,14 @@
 import { supabase } from "./supabase.js";
 
+console.log("submitScore loaded");
+
 export async function submitScore(scoreData) {
-  const { error } = await supabase
+  console.log("before insert");
+
+  const { data, error } = await supabase
     .from("scores")
     .insert([scoreData]);
-  
-    console.log("insert result", data, error);
-    
-  if (error) {
-    console.error(error);
-  }
+
+  console.log("after insert");
+  console.log("insert result", data, error);
 }
