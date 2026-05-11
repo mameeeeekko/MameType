@@ -1,4 +1,6 @@
-// resultRenderer.js
+// resultView.js
+
+import { getRanking } from "../online/getRanking.js";
 
 // ======================================
 // 結果画面表示専用
@@ -100,6 +102,8 @@ export function showResult({
 
   resultStats.innerHTML = html;
 
+  renderOnlineRanking();
+
   const gameDiv = dom.game();
   const resultDiv = dom.result();
   const showQuest = dom.showQuest();
@@ -111,4 +115,18 @@ export function showResult({
 
   if (gameDiv) gameDiv.style.display = "none";
   if (resultDiv) resultDiv.style.display = "flex";
+}
+
+
+async function renderOnlineRanking() {
+  const ranking = await getRanking();
+
+  const html = ranking
+    .map((r, i) => {
+      return `<div>${i + 1}位 ${r.player_name} ${r.score}</div>`;
+    })
+    .join("");
+
+  const el = document.getElementById("ranking");
+  if (el) el.innerHTML = html;
 }
