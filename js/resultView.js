@@ -127,6 +127,6 @@ async function renderOnlineRanking() {
     })
     .join("");
 
-  const el = document.getElementById("ranking");
+  const el = document.getElementById("onlineRanking");
   if (el) el.innerHTML = html;
 }

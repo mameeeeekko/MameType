@@ -528,7 +528,7 @@ function initSettingsUI() {
   if (soundToggle && soundIcon) {
     soundToggle.addEventListener("change", () => {
       Game.setSoundEnabled(soundToggle.checked);
-      soundIcon.src = soundToggle.checked ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png";
+      soundIcon.src = soundToggle.checked ? "../assets/pic/sound1.png" : "../assets/pic/soundmute.png";
       saveSettings();
     });
   }
@@ -1071,7 +1071,7 @@ function applySoundSettingsToUI() {
   if (SEToggle) SEToggle.checked = current.soundeffect;
   if (soundToggle && soundIcon) {
     soundToggle.checked = Game.getSoundEnabled();
-    soundIcon.src = Game.getSoundEnabled() ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png";
+    soundIcon.src = Game.getSoundEnabled() ? "../assets/pic/sound1.png" : "../assets/pic/soundmute.png";
   }
 }
 
