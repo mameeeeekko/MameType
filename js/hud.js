@@ -1,0 +1,679 @@
+import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEMENTS } from "./playerStats.js";
+import { savePlayerStats } from "./storage.js";
+import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
+import { getClearedStageCount, getTotalStars, getAvailableMaxStars } from "./questProgress.js";
+import { PASSIVE_SKILLS } from "./questSkills.js";
+
+function formatDateOnly(dateStr){
+  if(!dateStr) return "";
+  return dateStr.slice(0,10);
+}
+
+export function initAchievementsUI() {
+  const btn = document.getElementById("hudAchievementsBtn");
+  const modal = document.getElementById("achModal");
+  const list = document.getElementById("achList");
+  const close = document.getElementById("achClose");
+
+  if (!btn || !modal || !list || !close) return;
+
+  btn.onclick = () => {
+    renderAchievements(list);
+    modal.style.display = "flex";
+  };
+
+  close.onclick = () => {
+    const fresh = getPlayerStats();
+    markAchievementsSeen(fresh);   // ★既読化
+    modal.style.display = "none";
+  };
+
+  modal.onclick = e => {
+    if (e.target === modal) modal.style.display = "none";
+  };
+}
+
+function renderAchievements(container) {
+  const stats = getPlayerStats();
+
+  const html = ACHIEVEMENTS.map(a => {
+    const unlocked = Array.isArray(stats.achievements) && stats.achievements.includes(a.id);
+    const isNew =
+      unlocked &&
+      Array.isArray(stats.seenAchievements) &&
+      !stats.seenAchievements.includes(a.id);
+
+    return `
+      <div class="ach-item ${unlocked ? "unlocked" : ""}">
+        ${isNew ? `<div class="ach-new">NEW</div>` : ""}
+        <div>🏅</div>
+        <div style="font-size:11px">${a.name}</div>
+        <div class="ach-desc">${a.desc}</div>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="stats-section">
+      勲章 ${(stats.achievements?.length || 0)}/${ACHIEVEMENTS.length}
+    </div>
+    <div class="ach-grid">${html}</div>
+  `;
+}
+
+function markAchievementsSeen(s) {
+  if (!s) return;
+
+  // achievements を配列に正規化
+  if (!Array.isArray(s.achievements)) {
+    s.achievements = Object.values(s.achievements || {});
+  }
+
+  // seen を配列に正規化
+  if (!Array.isArray(s.seenAchievements)) {
+    s.seenAchievements = Object.values(s.seenAchievements || {});
+  }
+
+  let changed = false;
+
+  for (const id of s.achievements) {
+    if (!s.seenAchievements.includes(id)) {
+      s.seenAchievements.push(id);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    s.seenAchievements = Array.from(s.seenAchievements);
+    savePlayerStats(s);
+  }
+}
+
+// 変更後（引数追加）
+export function updateHud(statsArg, options = {}) {
+  const stats = statsArg || getPlayerStats();
+
+  const isQuest = options.isQuestMode;
+  const normalHud = document.getElementById("normalHud");
+  const questHud  = document.getElementById("questHud");
+
+  // ===== 表示切り替え =====
+  if (isQuest) {
+    if (normalHud) normalHud.style.display = "none";
+    if (questHud)  questHud.style.display = "block";
+
+    updateQuestHud();   // ← クエスト専用
+  } else {
+    if (normalHud) normalHud.style.display = "block";
+    if (questHud)  questHud.style.display = "none";
+
+    updateNormalHud(stats); // ← 通常
+  }
+
+  setupStatsModal(options); // ← イベントは分離
+}
+
+function setupStatsModal(options = {}) {
+  const modal = document.getElementById("playerStatsModal");
+  const modalQuest = document.getElementById("questStatsModal");
+  const btn = document.getElementById("hudDetailBtn");
+  const closeBtn = document.getElementById("statsClose");
+  const closeBtnQuest = document.getElementById("statsCloseQuest");
+
+
+  const isQuest = options.isQuestMode;
+
+  if (!btn || !modal || !closeBtn || !closeBtnQuest) return;
+  
+  const fresh = getPlayerStats();
+  //詳細ステータス分岐
+  btn.onclick = () => {
+    if(isQuest){
+      modalQuest.style.display = "flex";
+      renderQuestStatsModal();
+    } else {
+      modal.style.display = "flex";
+      renderStatsModal(fresh);
+    }
+  };
+
+  closeBtn.onclick = () => {
+    markAchievementsSeen(fresh);
+    modal.style.display = "none";
+  };
+
+  closeBtnQuest.onclick = () => {
+    markAchievementsSeen(fresh);
+    modalQuest.style.display = "none";
+  };
+
+  modal.addEventListener("click", e => {
+    if (e.target === modal) modal.style.display = "none";
+  });
+}
+
+function updateQuestHud() {
+  const s = getPlayerStatsForEnemy() || {};
+
+  const level   = Number(s.level) || 1;
+  const exp     = Number(s.exp) || 0;
+  const nextExp = Number(s.nextExp ?? s.next) || 1;
+  const maxHp   = Number(s.maxHp ?? s.hp) || 0;
+  const defense = Number(s.defense ?? s.def) || 0;
+  const cleared = getClearedStageCount();
+  const totalStars = getTotalStars();
+  const maxStars   = getAvailableMaxStars();
+
+  const levelEl = document.getElementById("hudLevel");
+  const hpEl    = document.getElementById("hudHp");
+  const defEl   = document.getElementById("hudDef");
+  const expEl   = document.getElementById("hudExp");
+  const clearEl = document.getElementById("hudClear");
+
+  if (!levelEl || !hpEl || !defEl || !expEl) return;
+
+  levelEl.textContent = `Lv ${level}`;
+  hpEl.textContent    = `HP ${maxHp}`;
+  defEl.textContent   = `DEF ${defense}`;
+  expEl.textContent   = `EXP ${exp} / ${nextExp}`;
+
+  const expPercent = Math.min(exp / nextExp, 1) * 100;
+  const bar = document.getElementById("hudExpBar");
+  if (bar) bar.style.width = expPercent + "%";
+
+  const percent = maxStars > 0
+  ? Math.floor((totalStars / maxStars) * 100)
+  : 0;
+
+  if (clearEl) clearEl.textContent = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%)`;
+}
+
+function updateNormalHud(stats) {
+  const normal = stats.regular || {};
+  const free   = stats.freeMode || {};
+
+  const avgSpeed = normal.avgSpeed || 0;
+  const avgAcc   = normal.avgAccuracy || 0;
+  const maxSpeed = normal.maxSpeed || 0;
+
+  document.getElementById("hudAvgSpeed").textContent = avgSpeed.toFixed(1);
+  document.getElementById("hudAvgAcc").textContent   = avgAcc.toFixed(1) + "%";
+  document.getElementById("hudMaxSpeed").textContent = maxSpeed.toFixed(1);
+
+  document.getElementById("hudSpeedRank").textContent = getSpeedRank(avgSpeed);
+  document.getElementById("hudAccRank").textContent   = getAccuracyRank(avgAcc);
+
+  const speedPercent = Math.min(avgSpeed / 600, 1) * 100;
+  const accPercent   = Math.min(avgAcc / 100, 1) * 100;
+
+  document.getElementById("hudSpeedBar").style.width = speedPercent + "%";
+  document.getElementById("hudAccBar").style.width   = accPercent + "%";
+
+  const totalTime = (normal.totalGameTime || 0) + (free.totalTime || 0);
+  const totalTimeText = formatPlayTime(totalTime);
+
+  const el = document.getElementById("totalPlayTime");
+  if (el) el.textContent = totalTimeText;
+}
+//=======================================================
+//クエストモードステータス詳細画面
+//=======================================================
+
+function renderQuestStatsModal() {
+  const skillData = calcQuestSkillStats();
+  const skillStats = skillData;
+  const s = getPlayerStatsForEnemy() || {};
+  const r = s.questRecord || {};
+  const totalStars = getTotalStars();
+  const maxStars = getAvailableMaxStars();
+  const starsPercent = Math.floor(totalStars / maxStars * 100);
+  const exp = Number(s.exp) || 0;
+  const nextExp = Number(s.nextExp) || 1;
+  const expPercent = Math.min(exp / nextExp, 1) * 100;
+
+  // 左
+  const left = document.getElementById("questBasicStats");
+
+  if (left) {
+    left.innerHTML = `
+      <div class="stats-section">STATUS</div>
+
+        <div class="stats-row"><span>Lv</span><span>${s.level}</span></div>
+        <div class="stats-row"><span>HP</span><span>${s.maxHp}</span></div>
+        <div class="stats-row"><span>DEF</span><span>${s.defense}</span></div>
+        <div class="stats-row"><span>EXP</span><span>${exp} / ${nextExp}</span></div>
+
+        <div class="quest-exp-wrap">
+          <div class="quest-exp-bar-bg">
+            <div class="quest-exp-bar-fill" style="width:${expPercent}%"></div>
+          </div>
+        </div>
+
+      <div class="stats-section">SKILL BONUS</div>
+
+        <div class="quest-skill-row">
+          <span>Chain増加</span>
+          ${renderQuestStatBar(skillStats.chainRate)}
+          <span>x${skillStats.chainRate.toFixed(2)}</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>Chain減衰</span>
+          ${renderQuestStatBar(skillStats.chainDecayRate, true)}
+          <span>x${skillStats.chainDecayRate.toFixed(2)}</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>ChainBonus</span>
+          ${renderQuestStatBar(skillStats.chainBonus)}
+          <span>x${skillStats.chainBonus.toFixed(2)}</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>KnockBack</span>
+          ${renderQuestStatBar(skillStats.knockbackBonus)}
+          <span>x${skillStats.knockbackBonus.toFixed(2)}</span>
+        </div>
+
+      <div class="stats-section">INPUT</div>
+        <div class="stats-row"><span>Avg.KPM</span><span>${(r.avgKpm || 0).toFixed(1)}</span></div>
+        <div class="stats-row"><span>Max KPM</span><span>${r.maxKpm || 0}</span></div>
+        <div class="stats-row"><span>Accuracy</span><span>${(r.avgAccuracy || 0).toFixed(1)}%</span></div>
+    `;
+  }
+
+  // 右（スキル）
+  renderQuestEquipmentSkills();
+
+  // 中央リング
+  renderQuestRing(s, totalStars, maxStars);
+
+  // 下
+  const bottom = document.getElementById("questBottom");
+
+  if (bottom) {
+    const r = s.questRecord || {};
+
+    bottom.innerHTML = `
+      <div class="quest-bottom-grid">
+
+        <div class="quest-bottom-card">
+          <div class="quest-bottom-title">RECORD</div>
+
+          <div class="quest-bottom-row">
+            <span class="quest-bottom-label">CLEAR</span>
+            <span class="quest-bottom-value">${getClearedStageCount()}</span>
+          </div>
+
+          <div class="quest-bottom-row">
+            <span class="quest-bottom-label">★</span>
+            <span class="quest-bottom-value gold">
+              ${totalStars} / ${maxStars} (${starsPercent}%)
+            </span>
+          </div>
+
+          <div class="quest-bottom-row">
+            <span class="quest-bottom-label">PLAY</span>
+            <span class="quest-bottom-value">${r.totalPlays || 0}</span>
+          </div>
+
+          <div class="quest-bottom-row">
+            <span class="quest-bottom-label">KILL</span>
+            <span class="quest-bottom-value">${r.totalKills || 0}</span>
+          </div>
+
+          <div class="quest-bottom-row">
+            <span class="quest-bottom-label">TIME</span>
+            <span class="quest-bottom-value">
+              ${formatPlayTime(r.totalPlayTime || 0)}
+            </span>
+          </div>
+        </div>
+
+        <div class="quest-bottom-card">
+          <div class="quest-bottom-title">ACTIVITY</div>
+
+          <div class="quest-bottom-row">
+            <span class="quest-bottom-label">TODAY</span>
+            <span class="quest-bottom-value">${r.days?.todayCount || 0}</span>
+          </div>
+
+          <div class="quest-bottom-row">
+            <span class="quest-bottom-label">BEST / DAY</span>
+            <span class="quest-bottom-value">${r.days?.maxPerDay || 0}</span>
+          </div>
+
+          <div class="quest-bottom-row">
+            <span class="quest-bottom-label">連続日数</span>
+            <span class="quest-bottom-value gold">
+              ${r.days?.streak || 0}
+            </span>
+          </div>
+        </div>
+
+      </div>
+    `;
+  }
+}
+
+function renderQuestEquipmentSkills() {
+  const el = document.getElementById("questRight");
+  if (!el) return;
+
+  const equipped = calcQuestSkillStats().equipped || [];
+
+  el.innerHTML = "";
+
+  if (equipped.length === 0) {
+    el.innerHTML = `<div class="skill-empty">NO EQUIP</div>`;
+    return;
+  }
+
+  equipped.forEach(id => {
+    const skill = PASSIVE_SKILLS?.[id];
+    if (!skill) return;
+
+    const item = document.createElement("div");
+    item.className = "skill-item equipped";
+
+    item.innerHTML = `
+      <div class="skill-icon-wrap">
+        <img src="${skill.icon}" class="skill-icon">
+      </div>
+      <div class="skill-main">
+        <div class="skill-name">◆ ${skill.name}</div>
+        <div class="skill-desc">${skill.desc ?? ""}</div>
+      </div>
+    `;
+
+    el.appendChild(item);
+  });
+}
+
+
+function renderQuestRing(s) {
+  const canvas = document.getElementById("questCoreCanvas");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const w = canvas.width = 280;
+  const h = canvas.height = 280;
+
+  const cx = w / 2;
+  const cy = h / 2;
+
+  ctx.clearRect(0, 0, w, h);
+
+  const exp = Number(s.exp) || 0;
+  const nextExp = Number(s.nextExp) || 1;
+  const ratio = Math.min(exp / nextExp, 1);
+
+  const level = s.level || 1;
+  const slots = s.skillSlots || s.slotCount || 3;
+
+  /* =========================
+     外側リング背景
+  ========================= */
+  ctx.strokeStyle = "rgba(0,255,255,0.15)";
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 86, 0, Math.PI * 2);
+  ctx.stroke();
+
+  /* =========================
+     EXPリング
+  ========================= */
+  ctx.strokeStyle = "rgba(0,255,255,0.95)";
+  ctx.shadowBlur = 14;
+  ctx.shadowColor = "rgba(0,255,255,0.9)";
+  ctx.lineCap = "round";
+
+  ctx.beginPath();
+  ctx.arc(
+    cx,
+    cy,
+    86,
+    -Math.PI / 2,
+    -Math.PI / 2 + Math.PI * 2 * ratio
+  );
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+
+  /* =========================
+     内側リング
+  ========================= */
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 58, 0, Math.PI * 2);
+  ctx.stroke();
+
+  /* =========================
+     中央 EXP%
+  ========================= */
+  // ctx.fillStyle = "#9ff";
+  // ctx.font = "bold 24px monospace";
+  // ctx.textAlign = "center";
+  // ctx.fillText(`${Math.floor(ratio * 100)}%`, cx, cy + 8);
+
+  /* =========================
+     下部 Lv表示
+  ========================= */
+  const levelY = cy + 132;
+
+  /* Lvラベル */
+  ctx.fillStyle = "rgba(130,220,255,0.75)";
+  ctx.font = "14px monospace";
+  ctx.textAlign = "right";
+  ctx.fillText("Lv", cx - 4, levelY);
+
+  /* 数字 */
+  ctx.fillStyle = "rgba(180,255,255,0.98)";
+  ctx.font = "bold 22px monospace";
+  ctx.textAlign = "left";
+  ctx.fillText(String(level), cx + 4, levelY);
+
+  /* =========================
+     右側 スキルスロット
+  ========================= */
+  const slotX = cx + 114;
+  const startY = cy - ((slots - 1) * 22) / 2;
+
+  for (let i = 0; i < slots; i++) {
+    const y = startY + i * 22;
+
+    ctx.fillStyle = "rgba(0,255,255,0.12)";
+    ctx.strokeStyle = "rgba(0,255,255,0.45)";
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.roundRect(slotX, y, 14, 14, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    /* 内部ライン */
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(slotX + 2.5, y + 7);
+    ctx.lineTo(slotX + 11, y + 7);
+    ctx.stroke();
+  }
+}
+
+//=== skillパラメータ関連関数 ======================
+function calcQuestSkillStats() {
+  const stats = getPlayerStatsForEnemy() || {};
+  const equipped = stats.equippedSkills || [];
+
+  console.log("equippedSkills =", equipped);
+
+  const result = {
+    chainRate: 1,
+    chainDecayRate: 1,
+    chainBonus: 1,
+    knockbackBonus: 1
+  };
+
+  equipped.forEach(id => {
+    const skill = PASSIVE_SKILLS?.[id];
+
+    console.log("skill =", id, skill);
+
+    if (!skill) return;
+
+    if (typeof skill.apply === "function") {
+      skill.apply(result);
+      console.log("after apply", id, structuredClone(result));
+    }
+  });
+
+  console.log("final result =", result);
+
+  return {
+    equipped,
+    ...result
+  };
+}
+
+function renderQuestStatBar(value, inverse = false) {
+  const base = 1.0;
+
+  // inverse=true は小さいほど強い
+  const delta = inverse ? base - value : value - base;
+
+  // ±1.0 を最大幅にする
+  const scale = 45;
+
+  const width = Math.min(Math.abs(delta) * scale, 45);
+  const left = delta >= 0 ? 50 : 50 - width;
+  const dir = delta >= 0 ? "up" : "down";
+
+  return `
+    <div class="quest-skill-bar">
+      <div class="quest-skill-bar-center"></div>
+      <div class="quest-skill-bar-fill ${dir}"
+           style="left:${left}%; width:${width}%;">
+      </div>
+    </div>
+  `;
+}
+
+
+//==============================================================
+//デイリーステータス詳細
+//==============================================================
+function renderStatsModal(sArg) {
+  
+  const s = sArg ?? getPlayerStats() ?? {};
+  const e = s.enemyMode ?? {};
+  const n = s.regular ?? {};
+  const f = s.freeMode ?? {};
+
+  const AllTime = f.totalTime + n.totalGameTime + e.totalPlayTime;
+  const basicTotalPlays = n.totalPlays + e.totalPlays
+
+  // ★追加：各モード回数
+  const eModes = e.modes || {};
+  const nModes = n.modes || {};
+  const fModes = f.modes || {};
+
+  const nNormalNum = nModes["normal"] || 0;
+  const nAttackNum = nModes["time_attack"] || 0;
+  const nLongNum   = nModes["long_text"] || 0;
+  const nMissNum   = nModes["miss_practice"] || 0;
+  const eEnemyNum  = eModes["enemy_mode"] || 0;
+
+  const fNormalNum = fModes["normal"] || 0;
+  const fAttackNum = fModes["time_attack"] || 0;
+  const fLongNum   = fModes["long_text"] || 0;
+  const fMissNum   = fModes["miss_practice"] || 0;
+  const fEnemyNum  = fModes["enemy_mode"] || 0;
+
+  const NormalNum = nNormalNum + fNormalNum
+  const AttackNum = nAttackNum + fAttackNum
+  const LongNum = nLongNum + fLongNum
+  const MissNum = nMissNum + fMissNum
+  const EnemyNum = eEnemyNum + fEnemyNum;
+
+  const content = document.getElementById("statsContent");
+
+  content.innerHTML = `
+
+  <div class="stats-section">入力（ベーシック）</div>
+  <div class="stats-row"><span>平均KPM</span><span>${(n.avgSpeed || 0).toFixed(0)}</span></div>
+  <div class="stats-row"><span>平均正確率</span><span>${(n.avgAccuracy || 0).toFixed(1)}%</span></div>
+  <div class="stats-row">
+    <span>最高KPM</span><span>
+      ${n.maxSpeed || 0}
+      ${n.maxSpeedDate ? `(${formatDateOnly(n.maxSpeedDate)})` : ""}
+    </span>
+  </div>
+  <div class="stats-row"><span>累計タイプ数</span><span>${n.totalTyped || 0}</span></div>
+  <div class="stats-row"><span>累計ミス数</span><span>${n.totalMiss || 0}</span></div>
+
+  <div class="stats-section">入力（エネミー）</div>
+  <div class="stats-row"><span>平均KPM</span><span>${(e.avgGKpm || 0).toFixed(0)}</span></div>
+  <div class="stats-row"><span>平均正確率</span><span>${(e.avgAccuracy || 0).toFixed(1)}%</span></div>
+  <div class="stats-row">
+    <span>最高KPM</span><span>
+      ${e.maxGKpm || 0}
+      ${e.maxGKpmDate ? `(${formatDateOnly(e.maxGKpmDate)})` : ""}
+    </span>
+  </div>
+  
+  <div class="stats-row"><span>累計タイプ数</span><span>${e.totalTyped || 0}</span></div>
+  <div class="stats-row"><span>累計ミス数</span><span>${e.totalMiss || 0}</span></div>
+  <div class="stats-row"><span>敵撃破数</span><span>${e.totalKills || 0}</span></div>
+
+  <div class="stats-section">総合</div>
+  <div class="stats-row"><span>最高eScore</span><span>
+  ${n.maxEScore || 0}
+  ${n.maxEScoreDate ? `(${formatDateOnly(n.maxEScoreDate)})` : ""}
+  </span></div>
+  <div class="stats-row">
+    <span>最高gScore</span><span>
+      ${e.maxGScore || 0}
+      ${e.maxGScoreDate ? `(${formatDateOnly(e.maxGScoreDate)})` : ""}
+    </span>
+  </div>
+  <div class="stats-row"><span>プレイ時間</span><span>${formatPlayTime(AllTime || 0)}</span></div>
+  <div class="stats-row"><span>プレイ回数</span><span>${s.totalPlays || 0}</span></div>
+  <div class="stats-row sub"><span>スタンダード</span><span>${NormalNum || 0}</span></div>
+  <div class="stats-row sub"><span>タイムアタック</span><span>${AttackNum || 0}</span></div>
+  <div class="stats-row sub"><span>長文</span><span>${LongNum || 0}</span></div>
+  <div class="stats-row sub"><span>エネミー</span><span>${EnemyNum || 0}</span></div>
+  <div class="stats-row sub"><span>ミス練習</span><span>${MissNum || 0}</span></div>
+  <div class="stats-row sub"><span>最多プレイ回数／日</span><span>${s.days?.maxPerDay || 0}</span></div>
+  <div class="stats-row sub"><span>今日のプレイ回数</span><span>${s.days?.todayCount || 0}</span></div>
+    
+  <div class="stats-section">デイリー</div>
+  <div class="stats-row"><span>プレイ時間</span><span>${formatPlayTime(n.totalGameTime || 0)}</span></div>
+  <div class="stats-row"><span>プレイ回数</span><span>${basicTotalPlays || 0}</span></div>
+  <div class="stats-row sub"><span>スタンダード</span><span>${nNormalNum || 0}</span></div>
+  <div class="stats-row sub"><span>タイムアタック</span><span>${nAttackNum || 0}</span></div>
+  <div class="stats-row sub"><span>長文</span><span>${nLongNum || 0}</span></div>
+  <div class="stats-row sub"><span>エネミー</span><span>${eEnemyNum || 0}</span></div>
+  <div class="stats-row sub"><span>ミス練習</span><span>${nMissNum || 0}</span></div>
+
+  <div class="stats-section">フリーモード</div>
+  <div class="stats-row"><span>プレイ時間</span><span>${formatPlayTime(f.totalTime || 0)}</span></div>
+  <div class="stats-row"><span>プレイ回数</span><span>${f.totalPlays || 0}</span></div>
+  <div class="stats-row sub"><span>スタンダード</span><span>${fNormalNum || 0}</span></div>
+  <div class="stats-row sub"><span>タイムアタック</span><span>${fAttackNum || 0}</span></div>
+  <div class="stats-row sub"><span>長文</span><span>${fLongNum || 0}</span></div>
+  <div class="stats-row sub"><span>エネミー</span><span>${fEnemyNum || 0}</span></div>
+  <div class="stats-row sub"><span>ミス練習</span><span>${fMissNum || 0}</span></div>
+
+  <div class="stats-section">日数</div>
+  <div class="stats-row"><span>プレイ日数</span><span>${s.days?.unique || 0}</span></div>
+  <div class="stats-row"><span>連続日数</span><span>${s.days?.streak || 0}</span></div>
+`;
+
+}
+
+ 
+

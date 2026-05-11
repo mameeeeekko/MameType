@@ -1,0 +1,6912 @@
+[
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T06:46:50.360Z",
+    "gScore": 825,
+    "gRank": "C",
+    "kpm": 151,
+    "accuracy": 90,
+    "totalMistake": 9,
+    "defeatedCount": 10,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "e5e653f8-1af2-441c-81f2-b4cf3ce943a8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T06:47:23.957Z",
+    "gScore": 985,
+    "gRank": "C",
+    "kpm": 195,
+    "accuracy": 95,
+    "totalMistake": 5,
+    "defeatedCount": 10,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "b9fbee74-b100-4be8-bd9a-764a7faef652",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-23T06:47:47.814Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 43,
+    "totalMistake": 0,
+    "totalChars": 48,
+    "totalTime": 8.077000000000014,
+    "kpm": 357,
+    "eScore": 357,
+    "eRank": "ShootingStar",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "8b325cc9-677d-4167-85e1-d4c91f131fe8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-23T06:48:03.901Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 92,
+    "totalCorrect": 47,
+    "totalMistake": 4,
+    "totalChars": 56,
+    "totalTime": 11.503,
+    "kpm": 292,
+    "eScore": 229,
+    "eRank": "A",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "ee79d67e-760a-4a05-af5e-a25f2c35b0d4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-23T06:48:18.228Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 85,
+    "totalCorrect": 44,
+    "totalMistake": 8,
+    "totalChars": 48,
+    "totalTime": 10.128,
+    "kpm": 284,
+    "eScore": 172,
+    "eRank": "B-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "c775a0a1-5f7b-4358-b6b5-c90bb0e82199",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-23T06:48:31.965Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 91,
+    "totalCorrect": 43,
+    "totalMistake": 4,
+    "totalChars": 48,
+    "totalTime": 9.464,
+    "kpm": 304,
+    "eScore": 233,
+    "eRank": "A",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "fa1e7e92-5216-4fdf-b459-f69ad8749794",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-23T06:50:23.283Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 93,
+    "totalCorrect": 37,
+    "totalMistake": 3,
+    "totalChars": 41,
+    "totalTime": 7.798999999999996,
+    "kpm": 315,
+    "eScore": 249,
+    "eRank": "A+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "211d4988-cce8-4224-8694-65ebb1d37b13",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:02:46.134Z",
+    "gScore": 1330,
+    "gRank": "B",
+    "kpm": 241,
+    "accuracy": 97,
+    "totalMistake": 4,
+    "defeatedCount": 10,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "1ebb8f13-86c7-4ba9-9e38-998576abc1e8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:21:56.411Z",
+    "gScore": 740,
+    "gRank": "C",
+    "kpm": 167,
+    "accuracy": 78,
+    "totalMistake": 22,
+    "defeatedCount": 10,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "38f04c29-4ee5-4e40-a197-9b6aa205f979",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:23:14.107Z",
+    "gScore": 1265,
+    "gRank": "B",
+    "kpm": 197,
+    "accuracy": 78,
+    "totalMistake": 39,
+    "defeatedCount": 10,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "ef8a9c20-51e6-42af-986d-577b645fec96",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:36:06.980Z",
+    "gScore": 0,
+    "gRank": "C",
+    "kpm": 17,
+    "accuracy": 20,
+    "totalMistake": 4,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "39de80ef-6020-40d4-9d1b-c2db7eadc7dd",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:38:41.197Z",
+    "gScore": 770,
+    "gRank": "C",
+    "kpm": 249,
+    "accuracy": 92,
+    "totalMistake": 6,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "f41f9923-a0a0-47a0-896b-26610928dca7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:47:39.773Z",
+    "gScore": 905,
+    "gRank": "C",
+    "kpm": 169,
+    "accuracy": 90,
+    "totalMistake": 11,
+    "defeatedCount": 8,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "4b78bbe7-8874-4c26-91b1-090203e9964b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:48:34.479Z",
+    "gScore": 810,
+    "gRank": "C",
+    "kpm": 203,
+    "accuracy": 92,
+    "totalMistake": 6,
+    "defeatedCount": 6,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "3c015d90-9843-4683-9d9a-3b0cb47e87a3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:49:05.994Z",
+    "gScore": 395,
+    "gRank": "C",
+    "kpm": 176,
+    "accuracy": 89,
+    "totalMistake": 5,
+    "defeatedCount": 4,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "63d0414f-f99a-4187-a94e-d2e0d5861082",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:53:37.041Z",
+    "gScore": 450,
+    "gRank": "C",
+    "kpm": 204,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "d5302695-27aa-47b7-9a5f-b8a123969cc9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-23T07:54:42.327Z",
+    "gScore": 855,
+    "gRank": "C",
+    "kpm": 179,
+    "accuracy": 93,
+    "totalMistake": 7,
+    "defeatedCount": 6,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "8c2b4180-6f99-4770-999b-78ac00d7796c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T01:51:16.318Z",
+    "gScore": 680,
+    "gRank": "C",
+    "kpm": 243,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "94a329f4-cea9-4ee5-a962-ff71aef8e0a9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T01:51:46.250Z",
+    "gScore": 1140,
+    "gRank": "B",
+    "kpm": 257,
+    "accuracy": 92,
+    "totalMistake": 8,
+    "defeatedCount": 6,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "bee76e96-bfcc-4b2a-ad2c-3de27d1ab5d1",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T01:54:27.329Z",
+    "gScore": 740,
+    "gRank": "C",
+    "kpm": 195,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 6,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "84cee483-f36a-4d55-932c-519be0b6a9a6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T02:25:48.487Z",
+    "gScore": 450,
+    "gRank": "C",
+    "kpm": 190,
+    "accuracy": 94,
+    "totalMistake": 2,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "73c9479d-e1f6-48a3-b175-5acadae5f9d2",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T02:35:29.655Z",
+    "gScore": 190,
+    "gRank": "C",
+    "kpm": 191,
+    "accuracy": 91,
+    "totalMistake": 2,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "df2d2e8f-9538-4bca-a31a-2b7230cd6ea3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T02:49:26.301Z",
+    "gScore": 290,
+    "gRank": "C",
+    "kpm": 170,
+    "accuracy": 77,
+    "totalMistake": 10,
+    "defeatedCount": 2,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "bfdbba8f-93fb-4020-b1f4-c98c53688c84",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T02:54:05.926Z",
+    "gScore": 1190,
+    "gRank": "B",
+    "kpm": 205,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "3d3bea16-83a4-4569-93f1-62ad731efbdd",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T03:00:20.001Z",
+    "gScore": 0,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "c7403480-591e-457b-b4a0-dfa8f7780e1b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T03:02:08.287Z",
+    "gScore": 0,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "8dd420cc-1afe-476c-9396-c0fb6dbc516f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T03:03:22.796Z",
+    "gScore": 185,
+    "gRank": "C",
+    "kpm": 328,
+    "accuracy": 95,
+    "totalMistake": 1,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "1d4a80d9-5b1a-4b2a-8482-76917f9ccc9c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T03:03:37.341Z",
+    "gScore": 610,
+    "gRank": "C",
+    "kpm": 268,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "7ae9b383-4892-4192-970f-df87c636a45f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T04:05:06.847Z",
+    "gScore": 120,
+    "gRank": "C",
+    "kpm": 193,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "1fa1b169-67ae-49aa-a9b2-f2d9dc2ccafc",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T04:06:41.533Z",
+    "gScore": 330,
+    "gRank": "C",
+    "kpm": 175,
+    "accuracy": 79,
+    "totalMistake": 10,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "1067faec-7846-4c97-9597-c11f9a15f48a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T05:18:58.363Z",
+    "gScore": 2795,
+    "gRank": "S",
+    "kpm": 271,
+    "accuracy": 93,
+    "totalMistake": 6,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "617f4aeb-40e7-4173-946c-fcd30bd58e94",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T05:20:51.911Z",
+    "gScore": 2743,
+    "gRank": "S",
+    "kpm": 215,
+    "accuracy": 92,
+    "totalMistake": 5,
+    "defeatedCount": 6,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "d4d1a64a-1c0b-479c-9231-4575893393a0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T05:21:14.879Z",
+    "gScore": 3087,
+    "gRank": "S",
+    "kpm": 233,
+    "accuracy": 95,
+    "totalMistake": 4,
+    "defeatedCount": 6,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "50c09d6e-0f42-4eac-ba9a-f478c0cbfd31",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T05:35:22.685Z",
+    "gScore": 538,
+    "gRank": "C",
+    "kpm": 187,
+    "accuracy": 96,
+    "totalMistake": 3,
+    "defeatedCount": 5,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "4097763f-c854-417d-bb11-58bf1c106b5c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T05:37:55.871Z",
+    "gScore": 747,
+    "gRank": "C",
+    "kpm": 171,
+    "accuracy": 99,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "c1519246-0062-4059-9235-14081dfab180",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T06:21:16.400Z",
+    "gScore": 749,
+    "gRank": "C",
+    "kpm": 336,
+    "accuracy": 99,
+    "totalMistake": 1,
+    "defeatedCount": 7,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "a20d82f9-3de3-4e7e-b158-0118be1d36af",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T06:28:07.866Z",
+    "gScore": 240,
+    "gRank": "C",
+    "kpm": 199,
+    "accuracy": 87,
+    "totalMistake": 10,
+    "defeatedCount": 5,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "2e1ee8c9-ee61-4dce-bfee-0439bff1389d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T06:28:34.982Z",
+    "gScore": 935,
+    "gRank": "C",
+    "kpm": 280,
+    "accuracy": 94,
+    "totalMistake": 7,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "df0d3811-2776-4050-8629-304fedf670e4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T06:30:40.864Z",
+    "gScore": 212,
+    "gRank": "C",
+    "kpm": 201,
+    "accuracy": 89,
+    "totalMistake": 7,
+    "defeatedCount": 4,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "a7f81493-aba4-4b9e-9a1f-e30aca87fcd3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T06:39:06.230Z",
+    "gScore": 613,
+    "gRank": "C",
+    "kpm": 191,
+    "accuracy": 96,
+    "totalMistake": 3,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "1110e876-2eb8-4081-a2a3-c416791109af",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T06:40:10.345Z",
+    "gScore": 548,
+    "gRank": "C",
+    "kpm": 177,
+    "accuracy": 96,
+    "totalMistake": 3,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "c7f320eb-b226-4f0d-8f6f-d5c94d625662",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T07:32:42.550Z",
+    "gScore": 533,
+    "gRank": "C",
+    "kpm": 252,
+    "accuracy": 92,
+    "totalMistake": 7,
+    "defeatedCount": 8,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "a5f361a8-d59c-4b3a-a23d-4d4b1a8db7df",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T07:32:54.570Z",
+    "gScore": 0,
+    "gRank": "C",
+    "kpm": 155,
+    "accuracy": 71,
+    "totalMistake": 7,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "d5bf9c09-3177-4e43-86ff-20c3bbb25663",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T07:34:03.515Z",
+    "gScore": 1008,
+    "gRank": "B",
+    "kpm": 278,
+    "accuracy": 97,
+    "totalMistake": 3,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "d044e579-5f03-4146-b97c-d2cb0485fc6e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T07:50:04.373Z",
+    "gScore": 1157,
+    "gRank": "B",
+    "kpm": 190,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "768b9cd7-1100-4696-a827-992aca3b7c9b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T07:52:12.407Z",
+    "gScore": 340,
+    "gRank": "C",
+    "kpm": 167,
+    "accuracy": 93,
+    "totalMistake": 5,
+    "defeatedCount": 8,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "d9342dd8-6664-418b-ae26-1b20facb1765",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-25T08:04:52.010Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 90,
+    "totalCorrect": 47,
+    "totalMistake": 5,
+    "totalChars": 57,
+    "totalTime": 9.964999999999998,
+    "kpm": 343,
+    "eScore": 253,
+    "eRank": "A+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "0639ee90-b182-4c96-96c3-50259c034929",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-25T08:11:59.474Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 43,
+    "totalMistake": 0,
+    "totalChars": 48,
+    "totalTime": 8.471,
+    "kpm": 340,
+    "eScore": 340,
+    "eRank": "Falcon",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "d473e290-bb6e-4602-a92e-b72c0d0d6ee4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-25T08:14:28.182Z",
+    "gScore": 807,
+    "gRank": "C",
+    "kpm": 242,
+    "accuracy": 96,
+    "totalMistake": 4,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "5027f85a-77a1-40f7-96b5-cac98f073b0e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T00:42:27.061Z",
+    "gScore": 462,
+    "gRank": "C",
+    "kpm": 117,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "82be30c6-20a9-403a-bf1c-208e8eb6d908",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T00:46:45.176Z",
+    "gScore": 1133,
+    "gRank": "B",
+    "kpm": 235,
+    "accuracy": 91,
+    "totalMistake": 8,
+    "defeatedCount": 10,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "39a876ef-4454-466b-a5f0-b1e6e3af68d4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "date": "2026-03-26T00:53:26.413Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 90.9,
+    "totalCorrect": 40,
+    "totalMistake": 4,
+    "totalChars": 50,
+    "totalTime": 9.337,
+    "kpm": 321,
+    "eScore": 241,
+    "eRank": "A",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "ce3e9197-9eab-40f8-8fd0-faffd7851de8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T00:54:03.790Z",
+    "gScore": 726,
+    "gRank": "C",
+    "kpm": 217,
+    "accuracy": 97,
+    "totalMistake": 2,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "1862bcec-ffb5-41e1-9e48-e5f9394d63d8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:26:16.851Z",
+    "gScore": 1383,
+    "gRank": "B",
+    "kpm": 178,
+    "accuracy": 94,
+    "totalMistake": 4,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "64de24f7-c20c-4ad6-84d9-3c01983b0122",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:26:51.566Z",
+    "gScore": 1734,
+    "gRank": "A",
+    "kpm": 278,
+    "accuracy": 97,
+    "totalMistake": 3,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "d015e38d-5fda-468c-8055-bc97327f0cad",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:28:30.466Z",
+    "gScore": 1440,
+    "gRank": "B",
+    "kpm": 239,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "af31334d-a657-4cb2-9cfd-4cb588a68cd1",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:36:56.349Z",
+    "gScore": 709,
+    "gRank": "C",
+    "kpm": 160,
+    "accuracy": 96,
+    "totalMistake": 2,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "55d8895f-b450-4669-b58a-a33f55c10c7a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:40:28.831Z",
+    "gScore": 820,
+    "gRank": "C",
+    "kpm": 196,
+    "accuracy": 88,
+    "totalMistake": 8,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "f759c1ed-fb28-4b6f-9ca6-b45978fadc0d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:41:45.214Z",
+    "gScore": 1862,
+    "gRank": "A",
+    "kpm": 218,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "6bd50bfd-7027-40a5-bdb9-2788cdfe5d65",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:46:04.946Z",
+    "gScore": 1572,
+    "gRank": "A",
+    "kpm": 254,
+    "accuracy": 92,
+    "totalMistake": 9,
+    "defeatedCount": 10,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "095e4f2e-1bfb-4a7c-bc5e-152ada24f57b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:47:54.647Z",
+    "gScore": 1044,
+    "gRank": "B",
+    "kpm": 275,
+    "accuracy": 93,
+    "totalMistake": 8,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "a0b68420-7051-4d65-b4f1-14cb2b83710a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:49:05.645Z",
+    "gScore": 740,
+    "gRank": "C",
+    "kpm": 168,
+    "accuracy": 94,
+    "totalMistake": 3,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "4e7c8e5c-31c5-4d6f-977d-270765424f8d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:54:35.864Z",
+    "gScore": 556,
+    "gRank": "C",
+    "kpm": 118,
+    "accuracy": 94,
+    "totalMistake": 2,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "9348866c-6e74-42e0-930d-a1d89f0f354e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T01:57:41.731Z",
+    "gScore": 1021,
+    "gRank": "B",
+    "kpm": 241,
+    "accuracy": 95,
+    "totalMistake": 5,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "d8fec7ac-fd28-4507-bf9b-ea02d5e12fa2",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:02:35.246Z",
+    "gScore": 695,
+    "gRank": "C",
+    "kpm": 164,
+    "accuracy": 94,
+    "totalMistake": 4,
+    "defeatedCount": 10,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "0eeed899-a097-4bc8-b138-22fa22873924",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:08:29.331Z",
+    "gScore": 648,
+    "gRank": "C",
+    "kpm": 159,
+    "accuracy": 84,
+    "totalMistake": 12,
+    "defeatedCount": 10,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "710601b9-7973-4937-a31a-d0a0492b5e3c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:22:39.620Z",
+    "gScore": 1518,
+    "gRank": "A",
+    "kpm": 185,
+    "accuracy": 97,
+    "totalMistake": 2,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "1d893973-54c8-48df-a51c-e8140314504c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:27:23.617Z",
+    "gScore": 978,
+    "gRank": "C",
+    "kpm": 324,
+    "accuracy": 97,
+    "totalMistake": 2,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "6c057337-b166-4a66-a9a8-32032b932823",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:27:57.468Z",
+    "gScore": 537,
+    "gRank": "C",
+    "kpm": 235,
+    "accuracy": 83,
+    "totalMistake": 13,
+    "defeatedCount": 5,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "ef9c6607-2b6b-4a99-bb4b-841f52df1324",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:32:03.552Z",
+    "gScore": 659,
+    "gRank": "C",
+    "kpm": 291,
+    "accuracy": 92,
+    "totalMistake": 5,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "c30d9c2f-25dd-4720-992d-69eaab69a182",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:32:55.418Z",
+    "gScore": 554,
+    "gRank": "C",
+    "kpm": 124,
+    "accuracy": 89,
+    "totalMistake": 2,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "c3521962-9cad-4aff-98fa-c8306c6ca1f4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:41:07.542Z",
+    "gScore": 998,
+    "gRank": "C",
+    "kpm": 247,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "65a2948e-ec9b-415f-b5c5-ea59cf6c18ab",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-26T02:43:07.495Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 44,
+    "totalMistake": 0,
+    "totalChars": 48,
+    "totalTime": 8.141999999999985,
+    "kpm": 354,
+    "eScore": 354,
+    "eRank": "ShootingStar",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "eaefc17d-8a93-452a-9bec-d49ffb3f51bc",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:44:31.554Z",
+    "gScore": 656,
+    "gRank": "C",
+    "kpm": 212,
+    "accuracy": 98,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "1ce0ca6e-6123-428a-9760-de57207268f6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:45:52.563Z",
+    "gScore": 83,
+    "gRank": "C",
+    "kpm": 172,
+    "accuracy": 89,
+    "totalMistake": 5,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "a1ac26e4-060c-48e5-88a1-454723b2a5e6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:46:58.361Z",
+    "gScore": 976,
+    "gRank": "C",
+    "kpm": 203,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "d69c3a2e-f70e-4d3d-89bb-d087eab71aa7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:47:27.612Z",
+    "gScore": 1046,
+    "gRank": "B",
+    "kpm": 229,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "c0d56631-25ef-40db-a00c-a7216a87bee4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:48:14.528Z",
+    "gScore": 940,
+    "gRank": "C",
+    "kpm": 129,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "73d8c8e8-ce68-4352-8a06-0b6778238597",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T02:48:36.763Z",
+    "gScore": 1023,
+    "gRank": "B",
+    "kpm": 268,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "5e4201bb-56b7-4c82-a610-cc2b5053bdec",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T06:25:40.198Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "a54aa6dc-2b7f-4424-8490-df49b4409116",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T06:27:49.764Z",
+    "gScore": 899,
+    "gRank": "C",
+    "kpm": 98,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "268bc145-3c5f-4c99-bca8-3fca085e2035",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T06:28:40.397Z",
+    "gScore": 552,
+    "gRank": "C",
+    "kpm": 185,
+    "accuracy": 87,
+    "totalMistake": 5,
+    "defeatedCount": 5,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "b4b393e6-ef9a-435e-b32d-d0882afb8473",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T06:35:54.752Z",
+    "gScore": 977,
+    "gRank": "C",
+    "kpm": 280,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "98c6c536-ea71-430c-b7c6-99b3e214c2f2",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T06:36:19.618Z",
+    "gScore": 665,
+    "gRank": "C",
+    "kpm": 215,
+    "accuracy": 93,
+    "totalMistake": 3,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "8f80657f-cf69-4b91-93c6-d58c1418e82d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T06:36:34.003Z",
+    "gScore": 532,
+    "gRank": "C",
+    "kpm": 169,
+    "accuracy": 81,
+    "totalMistake": 6,
+    "defeatedCount": 5,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "2b511e1f-5c7d-485a-8088-f8a3f61273f5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T06:37:20.585Z",
+    "gScore": 447,
+    "gRank": "C",
+    "kpm": 268,
+    "accuracy": 95,
+    "totalMistake": 4,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "c30fbe9b-0a2e-4285-9b13-8b9cfe9b028c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T06:37:38.502Z",
+    "gScore": 967,
+    "gRank": "B",
+    "kpm": 187,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "9a9b3c92-99db-4a5b-bc5d-81f865240ed3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-26T13:59:54.468Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 95.7,
+    "totalCorrect": 44,
+    "totalMistake": 2,
+    "totalChars": 48,
+    "totalTime": 8.593,
+    "kpm": 335,
+    "eScore": 293,
+    "eRank": "Great!",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "e8175af0-9858-485e-b19c-aa310a1fc6a8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T14:00:22.364Z",
+    "gScore": 622,
+    "gRank": "B",
+    "kpm": 261,
+    "accuracy": 91,
+    "totalMistake": 5,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "ba826cb5-424d-46ad-afe6-a3ee4dc4af4d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T14:00:44.866Z",
+    "gScore": 871,
+    "gRank": "B",
+    "kpm": 220,
+    "accuracy": 98,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "9d6cf0b1-fc19-480e-8b94-70e0c51f0be9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T14:01:16.498Z",
+    "gScore": 987,
+    "gRank": "B",
+    "kpm": 197,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "bf4a1adb-acc8-43f3-8429-8e1af7f50416",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T14:01:35.999Z",
+    "gScore": 816,
+    "gRank": "B",
+    "kpm": 172,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "94b577b8-ffa1-4690-9f0e-04423086d86b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T14:33:54.732Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "fc0fbf43-56dd-4794-8d87-2a65cdeba814",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T14:44:27.493Z",
+    "gScore": 803,
+    "gRank": "B",
+    "kpm": 67,
+    "accuracy": 90,
+    "totalMistake": 4,
+    "defeatedCount": 20,
+    "maxChain": 12,
+    "isFreeMode": false,
+    "id": "3535ac50-5362-4c71-a1e3-949b8bdc1c92",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T14:45:35.191Z",
+    "gScore": 949,
+    "gRank": "B",
+    "kpm": 83,
+    "accuracy": 98,
+    "totalMistake": 1,
+    "defeatedCount": 20,
+    "maxChain": 20,
+    "isFreeMode": false,
+    "id": "83499136-8e2b-4bb8-b6eb-f0cc9754af7a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-26T14:47:41.258Z",
+    "gScore": 2151,
+    "gRank": "S",
+    "kpm": 177,
+    "accuracy": 96,
+    "totalMistake": 8,
+    "defeatedCount": 30,
+    "maxChain": 30,
+    "isFreeMode": false,
+    "id": "1d606d5b-b262-4913-b1ba-f369e7901fe4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T00:42:52.120Z",
+    "gScore": 2190,
+    "gRank": "S",
+    "kpm": 210,
+    "accuracy": 95,
+    "totalMistake": 12,
+    "defeatedCount": 30,
+    "maxChain": 30,
+    "isFreeMode": false,
+    "id": "5015350f-ee6f-46a2-b644-2cc2b54c5c39",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T00:45:43.392Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "2c9d201d-d28d-4086-8f3d-32a86de9e753",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T00:49:34.363Z",
+    "gScore": 890,
+    "gRank": "B",
+    "kpm": 146,
+    "accuracy": 98,
+    "totalMistake": 1,
+    "defeatedCount": 14,
+    "maxChain": 14,
+    "isFreeMode": false,
+    "id": "4f8ffc29-2095-45d2-a340-50e497c35cc8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:01:45.158Z",
+    "gScore": 477,
+    "gRank": "C",
+    "kpm": 117,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 12,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "8188e475-cf79-43f5-8380-95da242cdac6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:02:21.866Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "0e3d2b35-23f6-47bd-a614-ed7b4e7bbbdd",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:02:59.458Z",
+    "gScore": 641,
+    "gRank": "B",
+    "kpm": 21,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "2e9de681-f4e9-436c-b4b0-30553d34091a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:03:43.049Z",
+    "gScore": 269,
+    "gRank": "C",
+    "kpm": 69,
+    "accuracy": 56,
+    "totalMistake": 23,
+    "defeatedCount": 5,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "76560ad9-bb38-4be3-b164-ff03c4e42379",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:24:36.021Z",
+    "gScore": 261,
+    "gRank": "C",
+    "kpm": 242,
+    "accuracy": 86,
+    "totalMistake": 4,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "9299656e-6d00-449f-89ee-139c20f03ca5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:26:45.830Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "cd0097f6-8e2e-48ae-a706-7802e3d2123f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:29:03.597Z",
+    "gScore": 325,
+    "gRank": "C",
+    "kpm": 167,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 4,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "d5327079-5b1a-442d-b72a-b4bf422478b4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:54:25.780Z",
+    "gScore": 1176,
+    "gRank": "B",
+    "kpm": 91,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 14,
+    "maxChain": 14,
+    "isFreeMode": false,
+    "id": "267b02df-f064-43e3-90ae-77ceae45e777",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:55:04.713Z",
+    "gScore": 85,
+    "gRank": "C",
+    "kpm": 98,
+    "accuracy": 93,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "94d300a8-3d27-4b94-a2af-07981d287bb9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T01:55:47.781Z",
+    "gScore": 956,
+    "gRank": "B",
+    "kpm": 174,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "75dc0685-7d21-451a-9c80-a875ce291ec2",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:04:09.745Z",
+    "gScore": 576,
+    "gRank": "B",
+    "kpm": 218,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "9c20cd0b-f552-467d-8001-740745b0d32f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:10:28.140Z",
+    "gScore": 897,
+    "gRank": "B",
+    "kpm": 110,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "e09dc18e-c3bc-4b0b-9e6e-ca4f4120f6b1",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:10:43.205Z",
+    "gScore": 658,
+    "gRank": "B",
+    "kpm": 323,
+    "accuracy": 98,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "34bcc587-776b-4840-b690-b87a0bb00bea",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:30:00.795Z",
+    "gScore": 451,
+    "gRank": "C",
+    "kpm": 86,
+    "accuracy": 59,
+    "totalMistake": 15,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "faf212c1-1b9e-4400-af8d-8a28b5311ff7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:30:13.526Z",
+    "gScore": 891,
+    "gRank": "B",
+    "kpm": 59,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "9c00e4ae-19a3-4957-b06a-7551690d4e74",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:30:45.295Z",
+    "gScore": 157,
+    "gRank": "C",
+    "kpm": 124,
+    "accuracy": 91,
+    "totalMistake": 5,
+    "defeatedCount": 4,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "e35c833d-0821-4c9b-b59d-6deac0c63c54",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:30:59.860Z",
+    "gScore": 522,
+    "gRank": "B",
+    "kpm": 155,
+    "accuracy": 86,
+    "totalMistake": 3,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "5856c80a-409b-4ca6-bd12-a4b159454b55",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:31:05.426Z",
+    "gScore": 817,
+    "gRank": "B",
+    "kpm": 286,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "a2acff56-9ce7-48cd-a0ca-b375a0f4ff3d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:32:35.562Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "2e7fecdc-488d-49ae-bd30-4d0ac2f72a5c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:41:53.306Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "a8b6bff9-505d-4f4b-ba20-2659a7e8cdfa",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T02:45:47.007Z",
+    "gScore": 800,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "4ef6f207-eb57-40d8-8792-02f439b78453",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-27T02:46:49.836Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 84.3,
+    "totalCorrect": 43,
+    "totalMistake": 8,
+    "totalChars": 49,
+    "totalTime": 13.64,
+    "kpm": 216,
+    "eScore": 129,
+    "eRank": "C",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "5ccc3aa3-fc90-41a2-9645-64dd9805d58d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-27T02:58:40.464Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 78.2,
+    "totalCorrect": 43,
+    "totalMistake": 12,
+    "totalChars": 49,
+    "totalTime": 22.115,
+    "kpm": 133,
+    "eScore": 64,
+    "eRank": "D-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "f41aa00b-9edd-42a5-99fc-75a8da46c82e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T07:07:32.683Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "9e34f3a7-e333-4fd9-9e32-5aec868f9894",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T07:13:17.576Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "f2afb818-a9c2-4528-8e7c-a1dd3503647f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-27T07:28:15.265Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 77.8,
+    "totalCorrect": 49,
+    "totalMistake": 14,
+    "totalChars": 59,
+    "totalTime": 23.642000000000003,
+    "kpm": 150,
+    "eScore": 71,
+    "eRank": "D-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "b508b650-0917-4e4a-aee9-8fafe3fb2548",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-27T07:28:32.616Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 94,
+    "totalCorrect": 47,
+    "totalMistake": 3,
+    "totalChars": 57,
+    "totalTime": 11.941,
+    "kpm": 286,
+    "eScore": 238,
+    "eRank": "A",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "a12fa9bc-bae6-41e0-9815-d421a7690c10",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-27T07:28:52.058Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 83.1,
+    "totalCorrect": 49,
+    "totalMistake": 10,
+    "totalChars": 59,
+    "totalTime": 15.437,
+    "kpm": 229,
+    "eScore": 131,
+    "eRank": "C",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "191d1f8a-5adb-48ba-be69-df84542ac376",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-27T07:42:27.726Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "ee3c7af8-bcd1-4a10-aba5-5c87ae5a12f0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-28T01:44:53.837Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 85.4,
+    "totalCorrect": 41,
+    "totalMistake": 7,
+    "totalChars": 49,
+    "totalTime": 16.92500000000093,
+    "kpm": 174,
+    "eScore": 108,
+    "eRank": "C-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "29d50abc-115a-45bf-8357-c6b0defa2fb9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:45:59.345Z",
+    "gScore": 333,
+    "gRank": "C",
+    "kpm": 191,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "14014162-7502-4791-b538-01333f2a1434",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:46:38.545Z",
+    "gScore": 527,
+    "gRank": "B",
+    "kpm": 111,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 4,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "78faaf5f-9336-4708-962b-fc18bfb65dd6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:47:09.079Z",
+    "gScore": 40,
+    "gRank": "C",
+    "kpm": 67,
+    "accuracy": 91,
+    "totalMistake": 3,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "a5cf3b0a-97ee-430e-bd2f-e8e0f60a0620",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:47:40.912Z",
+    "gScore": 551,
+    "gRank": "B",
+    "kpm": 166,
+    "accuracy": 91,
+    "totalMistake": 3,
+    "defeatedCount": 5,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "60ffbb27-55ab-4b88-9e6d-60c721e387ca",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:48:00.778Z",
+    "gScore": 597,
+    "gRank": "B",
+    "kpm": 212,
+    "accuracy": 98,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "7c0aeffc-837a-4cc3-98b5-99f32afbeff5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:48:34.992Z",
+    "gScore": 903,
+    "gRank": "B",
+    "kpm": 153,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "5ef6f384-3eab-4ead-b32a-d2bd5d23120d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:50:41.313Z",
+    "gScore": 761,
+    "gRank": "B",
+    "kpm": 198,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "4016f93a-7a47-4b21-ab48-5e9bbf4c89a3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:51:15.610Z",
+    "gScore": 179,
+    "gRank": "C",
+    "kpm": 155,
+    "accuracy": 81,
+    "totalMistake": 14,
+    "defeatedCount": 6,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "18594b7e-8440-437f-ba64-12cd77c3fda8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-28T01:56:03.944Z",
+    "gScore": 1042,
+    "gRank": "B",
+    "kpm": 83,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "7d9beba4-95c2-4394-9fcf-a0b3a3ac19d5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T00:56:13.715Z",
+    "gScore": 1007,
+    "gRank": "B",
+    "kpm": 82,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "e34bd4a9-ffc2-4177-bb76-9b05f8e9f400",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T01:19:57.620Z",
+    "gScore": 420,
+    "gRank": "C",
+    "kpm": 449,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "43c11b90-8ccb-4317-82a2-c339f0b306bf",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T01:20:52.427Z",
+    "gScore": 648,
+    "gRank": "B",
+    "kpm": 113,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "8686e920-8084-4511-b6c8-1ba9644815bf",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T01:26:02.417Z",
+    "gScore": 219.20000000000002,
+    "gRank": "C",
+    "kpm": 130,
+    "accuracy": 95,
+    "totalMistake": 1,
+    "defeatedCount": 9,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "7c34be3c-f337-4cb3-b0e1-c0efccc909a7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T01:33:18.797Z",
+    "gScore": 333.6,
+    "gRank": "C",
+    "kpm": 59,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "39262792-1bf3-478a-a248-541c0f614169",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T01:39:48.373Z",
+    "gScore": 366.40000000000003,
+    "gRank": "C",
+    "kpm": 85,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "4842c96d-18a1-41bc-80ec-6856e276c779",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T01:44:32.064Z",
+    "gScore": 369,
+    "gRank": "C",
+    "kpm": 117,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "2dae6385-ee91-4fcb-a154-0a9eb2446047",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T01:44:56.961Z",
+    "gScore": 431,
+    "gRank": "C",
+    "kpm": 86,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "5f02e87b-3f3b-49b7-a9f1-c6f512ac6495",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:03:45.569Z",
+    "gScore": 200,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "9e9ea068-cdea-47f1-b482-8c651e5e8442",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:10:16.115Z",
+    "gScore": 234,
+    "gRank": "C",
+    "kpm": 121,
+    "accuracy": 95,
+    "totalMistake": 1,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "422795b6-3f25-4bd0-a01d-63eadb54646c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:13:41.890Z",
+    "gScore": 335,
+    "gRank": "C",
+    "kpm": 93,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "1b4adc15-0d1c-4c3e-a926-0d68b3a9aab9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:16:51.222Z",
+    "gScore": 255,
+    "gRank": "C",
+    "kpm": 166,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 7,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "db0aa554-37a5-4e75-9c20-717bc386bd6e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:38:58.742Z",
+    "gScore": 250,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "4561b05d-9ba4-4e94-b2e3-6dbb1c4647ff",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:41:40.420Z",
+    "gScore": 100,
+    "gRank": "C",
+    "kpm": 930,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "303c868e-c33e-4e74-bd44-0accd73023d6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:44:01.434Z",
+    "gScore": 54,
+    "gRank": "C",
+    "kpm": 305,
+    "accuracy": 89,
+    "totalMistake": 1,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "cd683a04-af35-40db-b22a-31e6a35a08a3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:58:32.005Z",
+    "gScore": 522,
+    "gRank": "B",
+    "kpm": 121,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "20caeaf7-6de8-45d1-b172-593cb93deddb",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T02:58:58.818Z",
+    "gScore": 907,
+    "gRank": "B",
+    "kpm": 138,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "8e63da85-d398-4cde-bb13-36a3095a137c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T04:18:47.486Z",
+    "gScore": 872,
+    "gRank": "B",
+    "kpm": 113,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "df619c91-dd38-47d9-bf16-3c4f6b7eb243",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T04:19:57.584Z",
+    "gScore": 168,
+    "gRank": "C",
+    "kpm": 144,
+    "accuracy": 94,
+    "totalMistake": 1,
+    "defeatedCount": 6,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "274adc1f-c41b-409a-95d4-ed20aa61037d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T04:21:03.916Z",
+    "gScore": 265,
+    "gRank": "C",
+    "kpm": 143,
+    "accuracy": 96,
+    "totalMistake": 1,
+    "defeatedCount": 8,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "452fb36d-329d-4ffb-8e0c-75ca00415e63",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T04:40:47.901Z",
+    "gScore": 134,
+    "gRank": "C",
+    "kpm": 163,
+    "accuracy": 89,
+    "totalMistake": 2,
+    "defeatedCount": 5,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "543eeebf-2d49-443d-b1fd-73b872c7ec3d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:05:49.038Z",
+    "gScore": 685,
+    "gRank": "B",
+    "kpm": 270,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "ccb4364f-dc03-4eb4-b6a3-a63300c72f4f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:20:16.912Z",
+    "gScore": 388,
+    "gRank": "C",
+    "kpm": 192,
+    "accuracy": 71,
+    "totalMistake": 2,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "b91452c4-396f-40f8-9c4d-d7c225ed8d9e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:21:02.193Z",
+    "gScore": 623,
+    "gRank": "B",
+    "kpm": 185,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "6193f5b0-b017-4332-9566-4fdc3f5444e4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:27:52.608Z",
+    "gScore": 839,
+    "gRank": "B",
+    "kpm": 95,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "09cf912c-1ae7-46a9-bd85-f54de4f64efe",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:31:38.394Z",
+    "gScore": 256,
+    "gRank": "C",
+    "kpm": 133,
+    "accuracy": 96,
+    "totalMistake": 1,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "1d674475-d1b5-429a-b4fb-e0fa4f25319e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:32:00.459Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "67a1fd38-2c06-4e32-9bcc-1dc2b0b7350f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:32:15.325Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "af92de13-900d-4bf7-a0a5-c39b0aeaafb8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:36:13.777Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "5fcf4adc-dd4a-45f6-bae3-b98d8fb8ce7e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:50:14.221Z",
+    "gScore": 277,
+    "gRank": "C",
+    "kpm": 107,
+    "accuracy": 95,
+    "totalMistake": 1,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "2d78bf89-9ff5-4525-a03d-9db2f87a2189",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:50:56.669Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "019ff360-46fd-49bf-8dbe-37158713afa2",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:51:12.218Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "80dd0a48-f038-4fb8-9aea-5927330f785b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:51:48.668Z",
+    "gScore": 628,
+    "gRank": "B",
+    "kpm": 97,
+    "accuracy": 95,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "ecadb9ec-a0ef-488d-9070-a240031e6c63",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:52:11.587Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "9a848a59-f3ba-4f49-8a27-270db58ba4d7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:52:37.418Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "dd0e6ed9-5b27-476f-8a3b-fa626181ea5e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:53:08.037Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "cb8abb90-c382-48c8-bd49-e7ddc70b1325",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:53:37.386Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "6b473fb0-0e64-4755-9bad-118662844505",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:54:45.134Z",
+    "gScore": 669,
+    "gRank": "B",
+    "kpm": 194,
+    "accuracy": 90,
+    "totalMistake": 3,
+    "defeatedCount": 10,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "bce7e641-6fe6-4cf2-905d-795fe101de6a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:55:45.918Z",
+    "gScore": 897,
+    "gRank": "B",
+    "kpm": 111,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "0cc2f5aa-b439-43d7-a201-3fd039e417be",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:56:12.335Z",
+    "gScore": 895,
+    "gRank": "B",
+    "kpm": 114,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "2d596307-1cef-4e6c-9b98-6315c791c398",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T05:57:07.087Z",
+    "gScore": 902,
+    "gRank": "B",
+    "kpm": 130,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "5d1f0e26-5753-4a02-9761-dc3aa2055751",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T06:04:40.460Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "21cbbee4-3486-4428-b07e-1ffd79832ac3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T06:05:02.222Z",
+    "gScore": 119,
+    "gRank": "C",
+    "kpm": 76,
+    "accuracy": 83,
+    "totalMistake": 2,
+    "defeatedCount": 6,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "d86ff044-b5ce-4d88-afb8-ea8563b7cfed",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T06:05:20.638Z",
+    "gScore": 722,
+    "gRank": "B",
+    "kpm": 129,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "4fc1cae3-fddf-4620-8465-801e2b744140",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T07:17:47.940Z",
+    "gScore": 525,
+    "gRank": "B",
+    "kpm": 227,
+    "accuracy": 93,
+    "totalMistake": 7,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "0371ea8f-16d9-4707-b825-70af2a5966d2",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T07:18:26.176Z",
+    "gScore": 463,
+    "gRank": "C",
+    "kpm": 243,
+    "accuracy": 97,
+    "totalMistake": 2,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "30c71fde-dea1-446c-b198-602f29abf32f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T07:23:10.798Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "c769806a-fd84-4683-9471-725e4fff240e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T07:23:31.393Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "f5ee789a-e9db-4b30-ad8c-3ddf0e06a699",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T07:25:57.823Z",
+    "gScore": 232,
+    "gRank": "C",
+    "kpm": 162,
+    "accuracy": 91,
+    "totalMistake": 6,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "29eeb94c-9994-4ab3-b8cd-9a59186424c9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T07:29:49.610Z",
+    "gScore": 611,
+    "gRank": "B",
+    "kpm": 296,
+    "accuracy": 96,
+    "totalMistake": 5,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "557a1b12-ae3c-4ad5-a3b7-29a12b8bb115",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T07:30:23.157Z",
+    "gScore": 133,
+    "gRank": "C",
+    "kpm": 214,
+    "accuracy": 90,
+    "totalMistake": 6,
+    "defeatedCount": 6,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "3969bf8e-6778-49c4-86a5-4f9e60d96670",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T07:39:01.044Z",
+    "gScore": 649,
+    "gRank": "B",
+    "kpm": 215,
+    "accuracy": 88,
+    "totalMistake": 12,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "5a5ee38d-f425-42ce-978e-1d34e9ddde0c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T08:16:03.444Z",
+    "gScore": 216,
+    "gRank": "C",
+    "kpm": 36,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "c9272adc-0099-49a9-b60c-41cd926539b9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:09:07.117Z",
+    "gScore": 462,
+    "gRank": "C",
+    "kpm": 787,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "276fe3fe-7d8f-42b8-8719-80a29f0fcc57",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:14:10.904Z",
+    "gScore": 303,
+    "gRank": "C",
+    "kpm": 221,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "001e4b1f-10d1-420e-b417-30756a0b655b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:23:34.419Z",
+    "gScore": 329,
+    "gRank": "C",
+    "kpm": 683,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "c4ddf295-fbcc-4769-94d1-df40c9a48ab6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-30T14:24:00.940Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 95.7,
+    "totalCorrect": 44,
+    "totalMistake": 2,
+    "totalChars": 48,
+    "totalTime": 21.284,
+    "kpm": 135,
+    "eScore": 118,
+    "eRank": "C-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "61c72c61-98f5-49c6-8884-1be7ea0cac15",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-30T14:24:29.966Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 81.5,
+    "totalCorrect": 44,
+    "totalMistake": 10,
+    "totalChars": 48,
+    "totalTime": 15.444,
+    "kpm": 186,
+    "eScore": 101,
+    "eRank": "D+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "d6be116a-4fae-4cc1-819f-f708af11989d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:38:39.722Z",
+    "gScore": 250,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "512ffcff-65f4-4add-89fe-f19e0d94b509",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:38:54.854Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "3c772eff-61e1-4b40-90d8-714ad26c5d96",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:56:16.297Z",
+    "gScore": 198,
+    "gRank": "C",
+    "kpm": 242,
+    "accuracy": 83,
+    "totalMistake": 6,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "44d247c4-4407-4334-9cac-33fccdf864e5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:56:24.350Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "cc37b578-7cde-479f-bf4a-8b463dfb6731",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:56:29.688Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "9b40e38d-1709-4566-b9c6-48d76fb51238",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T14:56:33.949Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "0c6c70ab-7cd7-4696-894e-4b6b5ca5dfde",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T15:02:29.341Z",
+    "gScore": 252,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "523e0324-bde6-45fc-b161-403ec11d5117",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T15:02:43.603Z",
+    "gScore": 654,
+    "gRank": "B",
+    "kpm": 235,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "d10a47cb-0fda-4ad7-880a-6ea1d9998c28",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T15:03:29.880Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "beb1f521-b2a5-4345-ad3e-f3116ad3d601",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T15:09:10.666Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "7c29190e-5a57-4ff8-ba87-9fbe6526016a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-30T15:13:06.037Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 90.4,
+    "totalCorrect": 47,
+    "totalMistake": 5,
+    "totalChars": 57,
+    "totalTime": 13.169999999999996,
+    "kpm": 260,
+    "eScore": 192,
+    "eRank": "B+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "0b12a7bf-70a2-48b8-9ce7-aa3e9f4229e1",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-30T15:20:33.349Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 95.6,
+    "totalCorrect": 43,
+    "totalMistake": 2,
+    "totalChars": 47,
+    "totalTime": 0.835,
+    "kpm": 3377,
+    "eScore": 2946,
+    "eRank": "God",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "fef0cdb0-11cb-46bd-ac55-266eb91d92bc",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-30T15:22:34.035Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 93.5,
+    "totalCorrect": 43,
+    "totalMistake": 3,
+    "totalChars": 49,
+    "totalTime": 12.408,
+    "kpm": 237,
+    "eScore": 194,
+    "eRank": "B+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "b3b422ba-9d7d-44ef-b8c7-ba84fc9433fe",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-30T15:39:27.022Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 93.5,
+    "totalCorrect": 43,
+    "totalMistake": 3,
+    "totalChars": 49,
+    "totalTime": 14.004000000000007,
+    "kpm": 210,
+    "eScore": 172,
+    "eRank": "B-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "62777bb4-9271-43b6-9a09-973a3984a039",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T15:39:54.922Z",
+    "gScore": 202,
+    "gRank": "C",
+    "kpm": 310,
+    "accuracy": 86,
+    "totalMistake": 4,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "69ca25e4-a2bc-448d-b367-3f1635032275",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-30T15:40:01.534Z",
+    "gScore": 307,
+    "gRank": "C",
+    "kpm": 278,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "27790844-1e11-4abc-8ffd-76797d173e22",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-30T23:39:16.728Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 97.7,
+    "totalCorrect": 43,
+    "totalMistake": 1,
+    "totalChars": 49,
+    "totalTime": 53.749999999999766,
+    "kpm": 55,
+    "eScore": 51,
+    "eRank": "E+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "2c928563-9507-4bec-8b6d-7fae8bccbd53",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T00:26:56.217Z",
+    "gScore": 624,
+    "gRank": "B",
+    "kpm": 137,
+    "accuracy": 96,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "8a7b2f2f-95f1-4d9f-9876-90ecd56fd35c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T00:27:01.806Z",
+    "gScore": 802,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "e12752bb-bd13-48a8-9fdf-e096de5f0518",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T00:27:13.720Z",
+    "gScore": 710,
+    "gRank": "B",
+    "kpm": 101,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 7,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "b40e5805-865b-4268-9da5-5128c7593867",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T00:27:26.678Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 41,
+    "totalMistake": 0,
+    "totalChars": 49,
+    "totalTime": 8.636,
+    "kpm": 340,
+    "eScore": 340,
+    "eRank": "Falcon",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "cc3c1a1d-c010-4c1f-ad84-7fe7d05014cb",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-31T00:27:44.530Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 95.9,
+    "totalCorrect": 47,
+    "totalMistake": 2,
+    "totalChars": 56,
+    "totalTime": 10.761999999999993,
+    "kpm": 312,
+    "eScore": 275,
+    "eRank": "S",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "82f8dc06-f713-43e2-b8af-dbb5fc861dac",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-31T00:27:57.320Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 97.7,
+    "totalCorrect": 43,
+    "totalMistake": 1,
+    "totalChars": 49,
+    "totalTime": 8.563000000000015,
+    "kpm": 343,
+    "eScore": 320,
+    "eRank": "Rapid",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "9e7d17a3-38bb-4f02-9a8c-2dc090136e28",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-31T00:28:12.352Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 88.9,
+    "totalCorrect": 40,
+    "totalMistake": 5,
+    "totalChars": 48,
+    "totalTime": 10.394,
+    "kpm": 277,
+    "eScore": 195,
+    "eRank": "B+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "09d9cfab-3f22-48ea-96e7-fd347fe9537a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T00:28:23.768Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 39,
+    "totalMistake": 0,
+    "totalChars": 42,
+    "totalTime": 7.711,
+    "kpm": 327,
+    "eScore": 327,
+    "eRank": "Falcon",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "2f7e4c3a-ecb0-40cf-9cab-70fcb00b381d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-31T00:28:37.927Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 47,
+    "totalMistake": 0,
+    "totalChars": 57,
+    "totalTime": 10.153,
+    "kpm": 337,
+    "eScore": 337,
+    "eRank": "Falcon",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "1f25c0d7-3ee3-4858-aef0-4a078af0c654",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-31T00:30:00.034Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 93,
+    "totalCorrect": 40,
+    "totalMistake": 3,
+    "totalChars": 51,
+    "totalTime": 9.216,
+    "kpm": 332,
+    "eScore": 267,
+    "eRank": "S",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "5cefc31a-0e3b-40fb-ac87-77186815c34e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T00:30:27.152Z",
+    "gScore": 628,
+    "gRank": "B",
+    "kpm": 187,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "5c235b91-1265-4e0d-85a0-45e371207b80",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T00:30:41.966Z",
+    "gScore": 757,
+    "gRank": "B",
+    "kpm": 94,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "09c2fc8b-e652-4eaa-8cdc-ff1fc1941593",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T00:30:51.977Z",
+    "gScore": 263,
+    "gRank": "C",
+    "kpm": 223,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "e143073f-bae0-4599-af7c-8c242cc49107",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T00:31:17.249Z",
+    "gScore": 300,
+    "gRank": "C",
+    "kpm": 145,
+    "accuracy": 88,
+    "totalMistake": 7,
+    "defeatedCount": 6,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "d3744e64-ef48-4931-bf0e-b5de9e3b6fa1",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T01:19:32.483Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 85.5,
+    "totalCorrect": 47,
+    "totalMistake": 8,
+    "totalChars": 56,
+    "totalTime": 14.192,
+    "kpm": 237,
+    "eScore": 148,
+    "eRank": "C+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "8186b57b-73ee-4488-886f-e41924cb2249",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T01:25:37.117Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 80,
+    "totalCorrect": 40,
+    "totalMistake": 10,
+    "totalChars": 50,
+    "totalTime": 12.621,
+    "kpm": 238,
+    "eScore": 122,
+    "eRank": "C-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "8f15ef0d-5a59-4a61-b3a5-e549001fc8fe",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T01:26:01.783Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 94.9,
+    "totalCorrect": 37,
+    "totalMistake": 2,
+    "totalChars": 42,
+    "totalTime": 12.721,
+    "kpm": 198,
+    "eScore": 169,
+    "eRank": "B-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "d6812ee9-07dd-4283-a9c2-fb6b447f13e6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T01:43:05.060Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 97.4,
+    "totalCorrect": 37,
+    "totalMistake": 1,
+    "totalChars": 41,
+    "totalTime": 9.186,
+    "kpm": 268,
+    "eScore": 247,
+    "eRank": "A+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "4363ca35-0e57-4027-8382-d0ef679d0104",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-31T01:43:35.583Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 77.4,
+    "totalCorrect": 41,
+    "totalMistake": 12,
+    "totalChars": 50,
+    "totalTime": 16.17299999999999,
+    "kpm": 185,
+    "eScore": 86,
+    "eRank": "D",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "80bdf664-1a4a-4fac-87a3-cbf894ebfbf8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T01:50:09.887Z",
+    "gScore": 151,
+    "gRank": "C",
+    "kpm": 161,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "f86aff95-8aef-4df4-b967-5e0c04dff58a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T01:50:13.120Z",
+    "gScore": 137,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "f4547e30-302d-4a9d-9532-a7819252c2b9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T01:50:27.495Z",
+    "gScore": 150,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 1,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "512ec615-d2a5-43e4-b861-82542c95dc43",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T02:12:07.212Z",
+    "gScore": 648,
+    "gRank": "B",
+    "kpm": 139,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 4,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "6ad86011-fc8e-4e89-b480-8fcb66324904",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T02:12:49.526Z",
+    "gScore": 423,
+    "gRank": "C",
+    "kpm": 209,
+    "accuracy": 93,
+    "totalMistake": 6,
+    "defeatedCount": 6,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "492206bb-93a0-44b8-a5cc-7ab739eb5959",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T02:29:08.913Z",
+    "mode": "long_text",
+    "difficulty": null,
+    "difficultyName": null,
+    "accuracy": 86.6,
+    "totalCorrect": 116,
+    "totalMistake": 18,
+    "totalChars": 116,
+    "totalTime": 32.384000000000015,
+    "kpm": 215,
+    "eScore": 139,
+    "eRank": "C",
+    "solvedCount": 0,
+    "questionLimit": 1,
+    "id": "3249f51a-aab0-430d-a951-98bc90cd229b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "long_text": true
+    }
+  },
+  {
+    "date": "2026-03-31T04:06:38.298Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 10,
+    "totalMistake": 0,
+    "totalChars": 11,
+    "totalTime": 3.28,
+    "kpm": 201,
+    "eScore": 201,
+    "eRank": "B+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "1fde5abe-1945-41c8-a7ee-9a38b194c285",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T04:06:49.940Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 29,
+    "totalMistake": 0,
+    "totalChars": 29,
+    "totalTime": 5.354,
+    "kpm": 325,
+    "eScore": 325,
+    "eRank": "Falcon",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "c97da1d3-e2ca-4c0c-9b1b-7a76cdd3f815",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T04:07:17.663Z",
+    "gScore": 585,
+    "gRank": "B",
+    "kpm": 80,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "562f041f-2afe-4534-bca8-3948cbd4f1a5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T04:07:30.361Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 92.9,
+    "totalCorrect": 26,
+    "totalMistake": 2,
+    "totalChars": 30,
+    "totalTime": 8.637,
+    "kpm": 208,
+    "eScore": 167,
+    "eRank": "B-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "3717da9c-23c8-4a55-8285-320a839b94bb",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T04:08:01.325Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 25,
+    "totalMistake": 0,
+    "totalChars": 30,
+    "totalTime": 12.227,
+    "kpm": 147,
+    "eScore": 147,
+    "eRank": "C+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "67e5c90d-ffdf-48d9-8bd0-dc6f76f492a9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T04:08:14.823Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 94.1,
+    "totalCorrect": 32,
+    "totalMistake": 2,
+    "totalChars": 38,
+    "totalTime": 8.714,
+    "kpm": 262,
+    "eScore": 218,
+    "eRank": "A-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "6e00351e-96fb-429f-94d9-416763c71dcd",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T04:23:03.060Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 80,
+    "totalCorrect": 28,
+    "totalMistake": 7,
+    "totalChars": 33,
+    "totalTime": 10.252,
+    "kpm": 193,
+    "eScore": 99,
+    "eRank": "D+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "b04bdb7c-d742-4152-9058-dc30a3b86555",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T04:30:02.408Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 10,
+    "totalMistake": 0,
+    "totalChars": 11,
+    "totalTime": 3.574,
+    "kpm": 185,
+    "eScore": 185,
+    "eRank": "B",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "a5ef1b4d-8b60-48b1-bff1-28e143a4d5e3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T04:53:28.163Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 44,
+    "totalMistake": 0,
+    "totalChars": 48,
+    "totalTime": 9.151,
+    "kpm": 315,
+    "eScore": 315,
+    "eRank": "Rapid",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "a0e3fe43-d158-43c9-8142-b39bd7f0ec39",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-31T05:57:15.670Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 81.6,
+    "totalCorrect": 40,
+    "totalMistake": 9,
+    "totalChars": 50,
+    "totalTime": 11.078,
+    "kpm": 271,
+    "eScore": 147,
+    "eRank": "C+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "d17aea98-f723-4ef1-9b8c-d85f1979efa7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T05:58:54.367Z",
+    "gScore": 463,
+    "gRank": "C",
+    "kpm": 168,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "082af9a4-a4fb-4766-8b23-dc8a5bf0d91d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T05:59:14.657Z",
+    "gScore": 375,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "9338df26-ab7e-4911-bbd2-15f089e41250",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T05:59:41.302Z",
+    "gScore": 486,
+    "gRank": "C",
+    "kpm": 207,
+    "accuracy": 95,
+    "totalMistake": 4,
+    "defeatedCount": 6,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "abe057d7-9387-4e9f-a059-8344847c268c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T06:08:53.446Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 94.9,
+    "totalCorrect": 37,
+    "totalMistake": 2,
+    "totalChars": 41,
+    "totalTime": 16.444,
+    "kpm": 150,
+    "eScore": 128,
+    "eRank": "C",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "12d0072a-34c2-4fd8-ba56-5660d14228d7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T06:09:11.476Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 97.7,
+    "totalCorrect": 43,
+    "totalMistake": 1,
+    "totalChars": 49,
+    "totalTime": 12.911,
+    "kpm": 228,
+    "eScore": 213,
+    "eRank": "A-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "8f193166-52cc-42e7-9ef8-e24972b1843a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T06:10:17.824Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 44,
+    "totalMistake": 0,
+    "totalChars": 48,
+    "totalTime": 16.452,
+    "kpm": 175,
+    "eScore": 175,
+    "eRank": "B",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "7ddc9bcc-c60a-4306-863a-e7205436dd62",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T06:58:35.658Z",
+    "gScore": 137,
+    "gRank": "C",
+    "kpm": 93,
+    "accuracy": 76,
+    "totalMistake": 6,
+    "defeatedCount": 8,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "5168202a-6e9d-41fa-9fea-899a12284334",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T07:11:50.896Z",
+    "gScore": 98,
+    "gRank": "C",
+    "kpm": 51,
+    "accuracy": 78,
+    "totalMistake": 4,
+    "defeatedCount": 6,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "2e6fbf3b-77da-4746-8045-17f221d0f862",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T07:12:38.546Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 93.2,
+    "totalCorrect": 41,
+    "totalMistake": 3,
+    "totalChars": 49,
+    "totalTime": 10.551,
+    "kpm": 279,
+    "eScore": 226,
+    "eRank": "A",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "1e077274-5c54-4b38-9bd6-167704fbf923",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T07:12:56.585Z",
+    "gScore": 701,
+    "gRank": "B",
+    "kpm": 225,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 4,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "d4bc426f-4f7d-4e42-bb0b-c05067d141c8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T07:21:13.774Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 89.6,
+    "totalCorrect": 43,
+    "totalMistake": 5,
+    "totalChars": 49,
+    "totalTime": 25.622,
+    "kpm": 115,
+    "eScore": 83,
+    "eRank": "D",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "95c8f827-45aa-4ccd-8d4f-62aad42b93ab",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T07:23:12.176Z",
+    "gScore": 374,
+    "gRank": "C",
+    "kpm": 139,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "c62a676a-46ba-4b91-a144-f373f2552c08",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T07:25:20.142Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 95.3,
+    "totalCorrect": 41,
+    "totalMistake": 2,
+    "totalChars": 49,
+    "totalTime": 9.579,
+    "kpm": 307,
+    "eScore": 266,
+    "eRank": "S",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "56e73c44-4301-41ff-8610-70d78d1f7ff2",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:02:43.486Z",
+    "gScore": 198,
+    "gRank": "C",
+    "kpm": 132,
+    "accuracy": 83,
+    "totalMistake": 8,
+    "defeatedCount": 9,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "30cc4bb5-6bd1-4f2a-9d9c-3ffe4bbcb4eb",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:02:46.764Z",
+    "gScore": 199,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 9,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "b6a63dae-665e-4b5e-afbf-3e8ed831ec68",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:02:59.621Z",
+    "gScore": 311,
+    "gRank": "C",
+    "kpm": 107,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "d27bc1af-fb7b-4fbf-abdb-5ea5b617dcc0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:05:20.519Z",
+    "gScore": 263,
+    "gRank": "C",
+    "kpm": 175,
+    "accuracy": 95,
+    "totalMistake": 4,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "46594c5a-2b21-4432-9f5b-8cb511a716d7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:10:59.559Z",
+    "gScore": 208,
+    "gRank": "C",
+    "kpm": 106,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "93989532-7435-4315-ab10-dc6f37981c50",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:11:22.433Z",
+    "gScore": 210,
+    "gRank": "C",
+    "kpm": 88,
+    "accuracy": 80,
+    "totalMistake": 7,
+    "defeatedCount": 9,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "5d9d9fe6-d162-4955-b110-ed71373612ca",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:12:23.919Z",
+    "gScore": 131,
+    "gRank": "C",
+    "kpm": 53,
+    "accuracy": 94,
+    "totalMistake": 1,
+    "defeatedCount": 6,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "0e1b04c6-6fc7-4be4-bb35-37575184e688",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:13:21.936Z",
+    "gScore": 191,
+    "gRank": "C",
+    "kpm": 184,
+    "accuracy": 92,
+    "totalMistake": 4,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "2a9b3c74-29ca-41e4-8e4a-4df23ae46067",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:13:25.799Z",
+    "gScore": 200,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "810a6e69-6b58-446e-89b1-39cfd319590a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:13:28.053Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "9382242b-d1a9-4cd4-87ed-5d02ddcb1e17",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:16:56.342Z",
+    "gScore": 761,
+    "gRank": "B",
+    "kpm": 112,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "e33675a6-783d-4b5a-84c7-5bc36c8d6bc6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:18:24.855Z",
+    "gScore": 503,
+    "gRank": "B",
+    "kpm": 170,
+    "accuracy": 94,
+    "totalMistake": 1,
+    "defeatedCount": 6,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "e1218aa2-0a5f-4ec0-b79a-e2f276379bfe",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T14:18:55.290Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 95.2,
+    "totalCorrect": 40,
+    "totalMistake": 2,
+    "totalChars": 50,
+    "totalTime": 11.772000000000004,
+    "kpm": 255,
+    "eScore": 220,
+    "eRank": "A-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "ab0a3581-30be-4a23-9a6f-e5dea0adb26f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:19:53.739Z",
+    "gScore": 611,
+    "gRank": "B",
+    "kpm": 233,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "92c60c9c-bedb-4cbe-ac68-76be651b0822",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:20:24.175Z",
+    "gScore": 568,
+    "gRank": "B",
+    "kpm": 127,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "ff2f919f-b87d-435d-9a55-d747bd7df600",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:23:31.763Z",
+    "gScore": 208,
+    "gRank": "C",
+    "kpm": 309,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "499eac0f-f767-41fe-a626-2dc083a50f45",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:23:33.994Z",
+    "gScore": 200,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "92f24a8c-a5a2-4d41-b565-5ad1aa30ffb5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:24:15.606Z",
+    "gScore": 780,
+    "gRank": "B",
+    "kpm": 108,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "fac1ca9a-dd89-4825-b7b7-a8de2bcb21af",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:24:30.393Z",
+    "gScore": 647,
+    "gRank": "B",
+    "kpm": 132,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 4,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "74b6bf77-3024-4e18-8588-f1fec5ec8010",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:25:08.300Z",
+    "gScore": 739,
+    "gRank": "B",
+    "kpm": 133,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "c3c92a23-92b5-46cf-8f76-95fe662b9d51",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:28:15.050Z",
+    "gScore": 805,
+    "gRank": "B",
+    "kpm": 101,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "c464b097-4ff9-41bd-adf6-349b3f62909a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:28:32.697Z",
+    "gScore": 876,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "6419fd59-4dba-43c7-a99a-a4a8bda0edd9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:29:22.800Z",
+    "gScore": 779,
+    "gRank": "B",
+    "kpm": 87,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "30fa1852-f4af-405a-8955-380a20653904",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:34:23.334Z",
+    "gScore": 398,
+    "gRank": "C",
+    "kpm": 75,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "2a614160-5f45-47a7-a6ab-caa87d889d44",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:34:26.050Z",
+    "gScore": 357,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 8,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "d730c066-32c9-47f1-8ad8-0feb04e69e82",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:34:43.401Z",
+    "gScore": 582,
+    "gRank": "B",
+    "kpm": 104,
+    "accuracy": 87,
+    "totalMistake": 4,
+    "defeatedCount": 10,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "4ac1ee2f-9de6-489a-9964-36e0a1502492",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:38:19.585Z",
+    "gScore": 440,
+    "gRank": "C",
+    "kpm": 427,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "234a5b50-6517-43a7-8190-f31e9d89df66",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:38:49.147Z",
+    "gScore": 692,
+    "gRank": "B",
+    "kpm": 142,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "9700d60f-f546-4532-be60-872a3b4eee4d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T14:39:27.300Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "824e6285-a3e7-4457-8674-3da934bdbe9f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T15:00:21.741Z",
+    "gScore": 568,
+    "gRank": "B",
+    "kpm": 124,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "54b2eec5-4948-40f9-a834-c4cafa7906fc",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T15:00:41.343Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 87,
+    "totalCorrect": 40,
+    "totalMistake": 6,
+    "totalChars": 49,
+    "totalTime": 13.988000000000003,
+    "kpm": 210,
+    "eScore": 138,
+    "eRank": "C",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "f8a1174e-4e7b-4259-a894-524b941b98d3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T15:11:23.110Z",
+    "gScore": 655,
+    "gRank": "B",
+    "kpm": 239,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "a9b17375-e470-47c5-879b-372c43452129",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T15:27:35.025Z",
+    "gScore": 311,
+    "gRank": "C",
+    "kpm": 180,
+    "accuracy": 91,
+    "totalMistake": 3,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "78a89e32-7096-4a2c-bd7b-fd9b850e8cc0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-03-31T15:27:42.909Z",
+    "gScore": 625,
+    "gRank": "B",
+    "kpm": 128,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "ccfc9a07-b59d-4e46-ae3d-fe0bef92f1e0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-03-31T15:29:46.581Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 43,
+    "totalMistake": 0,
+    "totalChars": 49,
+    "totalTime": 10.222,
+    "kpm": 288,
+    "eScore": 288,
+    "eRank": "Great!",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "604e19da-d86c-4c06-b8a0-edd59a8c9532",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-03-31T15:45:59.061Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 97.4,
+    "totalCorrect": 37,
+    "totalMistake": 1,
+    "totalChars": 41,
+    "totalTime": 9.7,
+    "kpm": 254,
+    "eScore": 234,
+    "eRank": "A",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "e851b17b-776f-43c9-860e-37c596b18fa6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-03-31T16:01:37.223Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 100,
+    "totalCorrect": 44,
+    "totalMistake": 0,
+    "totalChars": 48,
+    "totalTime": 7.009,
+    "kpm": 411,
+    "eScore": 411,
+    "eRank": "Bullet",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "0840a19c-d1da-44be-9dba-535ee9ccdf09",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T02:12:10.757Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "4eb28549-24f8-498d-8a6a-2298588df928",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-04-01T02:17:04.096Z",
+    "mode": "normal",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 89.1,
+    "totalCorrect": 41,
+    "totalMistake": 5,
+    "totalChars": 49,
+    "totalTime": 18.911000000000005,
+    "kpm": 155,
+    "eScore": 110,
+    "eRank": "C-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "e5079ab9-ba02-4cd5-b30d-3f000915e94f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T02:34:14.167Z",
+    "gScore": 683,
+    "gRank": "B",
+    "kpm": 171,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "dcf44a81-4932-497a-ab0b-5926fa81e7b8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T04:45:59.732Z",
+    "gScore": 390,
+    "gRank": "C",
+    "kpm": 424,
+    "accuracy": 96,
+    "totalMistake": 1,
+    "defeatedCount": 3,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "f701d63e-38d8-4ce5-b32f-5db6146ddf6a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T04:46:11.316Z",
+    "gScore": 469,
+    "gRank": "C",
+    "kpm": 192,
+    "accuracy": 93,
+    "totalMistake": 1,
+    "defeatedCount": 4,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "7a360589-be75-4b03-a8b0-db16365f5182",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T04:48:25.910Z",
+    "gScore": 608,
+    "gRank": "B",
+    "kpm": 120,
+    "accuracy": 90,
+    "totalMistake": 3,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "614edcec-ad4d-486a-88a6-9cb40c87e87f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T05:15:44.687Z",
+    "gScore": 240,
+    "gRank": "C",
+    "kpm": 158,
+    "accuracy": 91,
+    "totalMistake": 3,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "7c6b87cb-bc2a-47be-89ea-2c9a6b47a2c0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T05:15:53.347Z",
+    "gScore": 230,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 9,
+    "maxChain": 9,
+    "isFreeMode": false,
+    "id": "ad979df3-013d-432d-8dce-3e454092062a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T05:15:58.227Z",
+    "gScore": 429,
+    "gRank": "C",
+    "kpm": 98,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 2,
+    "maxChain": 2,
+    "isFreeMode": false,
+    "id": "87a54182-e6ce-4dc8-8608-5ee5e29cb582",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T05:16:17.022Z",
+    "gScore": 811,
+    "gRank": "B",
+    "kpm": 132,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "3adad119-7614-4628-a071-7d81376c6868",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T08:07:05.217Z",
+    "gScore": 828,
+    "gRank": "B",
+    "kpm": 114,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "5c00769e-1c7e-474e-9cfd-38f8be3d23c9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T08:07:33.588Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "b84739d4-187b-4a1f-95ce-8e12f1460a62",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-01T08:27:18.859Z",
+    "gScore": 652,
+    "gRank": "B",
+    "kpm": 141,
+    "accuracy": 97,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "077d1375-789f-484b-86f9-7730616463a1",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-04-01T23:33:32.229Z",
+    "mode": "time_attack",
+    "difficulty": "advanced",
+    "difficultyName": "上級者",
+    "accuracy": 85.5,
+    "totalCorrect": 47,
+    "totalMistake": 8,
+    "totalChars": 57,
+    "totalTime": 13.289000000000465,
+    "kpm": 257,
+    "eScore": 160,
+    "eRank": "B-",
+    "solvedCount": 2,
+    "limitSec": 15,
+    "id": "e8259560-38db-4a6a-b6db-319e6aa13bc8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "time_attack": true
+    }
+  },
+  {
+    "date": "2026-04-02T05:06:10.389Z",
+    "mode": "normal",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 97.9,
+    "totalCorrect": 47,
+    "totalMistake": 1,
+    "totalChars": 57,
+    "totalTime": 9.014,
+    "kpm": 379,
+    "eScore": 356,
+    "eRank": "ShootingStar",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "e970ed31-faf9-4026-bf60-3c9ab44a269e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": true
+    }
+  },
+  {
+    "date": "2026-04-02T05:14:25.767Z",
+    "mode": "time_attack",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 88.9,
+    "totalCorrect": 40,
+    "totalMistake": 5,
+    "totalChars": 48,
+    "totalTime": 10.35,
+    "kpm": 278,
+    "eScore": 195,
+    "eRank": "B+",
+    "solvedCount": 2,
+    "limitSec": 15,
+    "id": "5516d8ca-c213-495d-baaa-f6b55d5c9a4f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "time_attack": true
+    }
+  },
+  {
+    "date": "2026-04-02T05:15:22.720Z",
+    "mode": "time_attack",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 93.5,
+    "totalCorrect": 43,
+    "totalMistake": 3,
+    "totalChars": 47,
+    "totalTime": 13.688,
+    "kpm": 206,
+    "eScore": 168,
+    "eRank": "B-",
+    "solvedCount": 2,
+    "limitSec": 15,
+    "id": "63da1937-8cb2-41dc-9287-c90a6e9f6737",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "time_attack": true
+    }
+  },
+  {
+    "date": "2026-04-02T05:36:21.919Z",
+    "mode": "time_attack",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 81,
+    "totalCorrect": 17,
+    "totalMistake": 4,
+    "totalChars": 21,
+    "totalTime": 12.221,
+    "kpm": 103,
+    "eScore": 55,
+    "eRank": "E+",
+    "solvedCount": 1,
+    "limitSec": 15,
+    "id": "ea42f853-5faa-403c-b989-6cea90252f32",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "time_attack": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-02T08:06:42.205Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "b1c45027-65eb-4483-a32e-5846ce8166f4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-02T08:11:34.893Z",
+    "gScore": 805,
+    "gRank": "B",
+    "kpm": 103,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "d4f8222e-6fb2-4081-b3f2-47ad1c73f2d6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-02T08:12:31.526Z",
+    "gScore": 804,
+    "gRank": "B",
+    "kpm": 98,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "886fc1d0-12ef-4b3f-bb2a-04e8327536df",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-02T08:29:41.722Z",
+    "gScore": 618,
+    "gRank": "B",
+    "kpm": 108,
+    "accuracy": 96,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "171426e5-8a3f-4223-9d51-b9955c73d973",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-02T08:32:29.339Z",
+    "gScore": 833,
+    "gRank": "B",
+    "kpm": 123,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "bf804715-e0fa-412d-a393-0972dd604436",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-02T08:36:18.092Z",
+    "gScore": 572,
+    "gRank": "B",
+    "kpm": 93,
+    "accuracy": 95,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "d545b538-e62f-4de8-9916-66cbc1001239",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-02T08:39:07.910Z",
+    "gScore": 788,
+    "gRank": "B",
+    "kpm": 120,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "c979e719-31ec-4cb5-883f-49384aad14b3",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-02T08:41:50.260Z",
+    "gScore": 579,
+    "gRank": "B",
+    "kpm": 110,
+    "accuracy": 86,
+    "totalMistake": 4,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "a0a85297-d536-4320-b1d0-f41218e414f1",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-04-03T02:06:24.910Z",
+    "mode": "normal",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 62.7,
+    "totalCorrect": 47,
+    "totalMistake": 28,
+    "totalChars": 57,
+    "totalTime": 33.835,
+    "kpm": 101,
+    "eScore": 25,
+    "eRank": "E",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "86aeb363-5cad-4679-871f-1c6796a35a82",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-04-03T02:22:05.911Z",
+    "mode": "normal",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 74.2,
+    "totalCorrect": 49,
+    "totalMistake": 17,
+    "totalChars": 59,
+    "totalTime": 22.422,
+    "kpm": 158,
+    "eScore": 65,
+    "eRank": "D-",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "0e3e6e84-e6d0-4bba-9ca1-b77ea0d03699",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-04-03T02:22:49.859Z",
+    "mode": "normal",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 82.5,
+    "totalCorrect": 47,
+    "totalMistake": 10,
+    "totalChars": 57,
+    "totalTime": 23.92,
+    "kpm": 143,
+    "eScore": 80,
+    "eRank": "D",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "7bf89d96-7ff9-46ab-bd9e-449db6ce9893",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:22:56.292Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "289b4692-7e51-45bb-b9fa-187159fe3620",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-04-03T02:24:30.809Z",
+    "mode": "normal",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 90.2,
+    "totalCorrect": 37,
+    "totalMistake": 4,
+    "totalChars": 42,
+    "totalTime": 23.620000000000005,
+    "kpm": 107,
+    "eScore": 79,
+    "eRank": "D",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "3ee1f16e-7a0d-4a29-9595-eb3a7be1783e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:42:25.755Z",
+    "gScore": 194,
+    "gRank": "C",
+    "kpm": 82,
+    "accuracy": 96,
+    "totalMistake": 1,
+    "defeatedCount": 8,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "bcb26e4c-16a0-4c03-a039-ef7e2d97fcee",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:42:27.872Z",
+    "gScore": 273,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 8,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "1c1e2248-ab3f-49a2-9944-fae6793a623e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:42:54.921Z",
+    "gScore": 186,
+    "gRank": "C",
+    "kpm": 104,
+    "accuracy": 90,
+    "totalMistake": 3,
+    "defeatedCount": 8,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "84b58807-7a5e-4ecd-a642-b16d20d24a15",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:42:56.600Z",
+    "gScore": 269,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 8,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "c38e8b18-6817-45bb-87fa-6a9edafcce4f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:43:27.055Z",
+    "gScore": 123,
+    "gRank": "C",
+    "kpm": 105,
+    "accuracy": 80,
+    "totalMistake": 4,
+    "defeatedCount": 7,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "e5329763-d4b2-4d00-bc74-4616bed5621c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:43:34.548Z",
+    "gScore": 245,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 7,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "980a6ff9-c3ec-4f0c-97dc-3f7e015fb43a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:43:55.151Z",
+    "gScore": 300,
+    "gRank": "C",
+    "kpm": 84,
+    "accuracy": 82,
+    "totalMistake": 2,
+    "defeatedCount": 6,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "4083d1c2-de1e-4344-b190-957e49d3fb47",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T02:50:11.892Z",
+    "gScore": 232,
+    "gRank": "C",
+    "kpm": 158,
+    "accuracy": 96,
+    "totalMistake": 1,
+    "defeatedCount": 8,
+    "maxChain": 4,
+    "isFreeMode": false,
+    "id": "86f50788-54e3-48fd-b542-42146cc9e5fa",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T03:00:45.518Z",
+    "gScore": 572,
+    "gRank": "B",
+    "kpm": 333,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "e6035c22-20ba-42f3-9ed2-fdcf75e24ba1",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T03:01:05.450Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "e9c84765-8b91-4824-a1d2-6f78e39f0f21",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T03:01:44.192Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "9b475304-0ea5-4998-91c4-90792dbcd4ec",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:00:13.923Z",
+    "gScore": 594,
+    "gRank": "B",
+    "kpm": 99,
+    "accuracy": 93,
+    "totalMistake": 2,
+    "defeatedCount": 10,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "37f265cf-d6ff-4a4b-9ae6-2105342ae8b4",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:14:43.408Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "0f7fc368-5232-4805-aad5-fe1cc825ab9b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:16:41.428Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "bdb20703-4a23-4cd6-a5d8-b56b12e748eb",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:16:45.843Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "a20800bd-37ad-4abf-84a9-7b029693c45a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:18:03.175Z",
+    "gScore": 615,
+    "gRank": "B",
+    "kpm": 146,
+    "accuracy": 91,
+    "totalMistake": 3,
+    "defeatedCount": 10,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "419db815-0400-4429-ad0a-92f2d045f9fc",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:18:05.273Z",
+    "gScore": 785,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "be45c29f-e062-4597-8b77-95219feb2765",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:18:28.642Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "82266324-72ac-4ad1-82d4-7bb5277bf33c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:29:41.060Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "cf23fb62-408a-40e5-920e-12ef70a51d83",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:36:39.647Z",
+    "gScore": 576,
+    "gRank": "B",
+    "kpm": 86,
+    "accuracy": 83,
+    "totalMistake": 5,
+    "defeatedCount": 10,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "bea96d85-d046-41ac-be3b-c1f6a9da1881",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:36:47.203Z",
+    "gScore": 778,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "d2774376-1833-4ba2-9165-78391f7a5912",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:37:10.079Z",
+    "gScore": 580,
+    "gRank": "B",
+    "kpm": 148,
+    "accuracy": 88,
+    "totalMistake": 3,
+    "defeatedCount": 10,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "721f6186-b658-49ca-9a73-24f03a087370",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:37:11.849Z",
+    "gScore": 777,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "ae57e208-3fd8-4cdc-9bea-b3c67e406e0e",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:37:29.787Z",
+    "gScore": 452,
+    "gRank": "C",
+    "kpm": 60,
+    "accuracy": 68,
+    "totalMistake": 6,
+    "defeatedCount": 7,
+    "maxChain": 7,
+    "isFreeMode": false,
+    "id": "5314690e-86df-4e6c-8f8e-103ce95dd521",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T04:37:52.147Z",
+    "gScore": 824,
+    "gRank": "B",
+    "kpm": 140,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 8,
+    "isFreeMode": false,
+    "id": "01204053-3e3f-471f-9ebd-7b5c0351dd3c",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T07:52:41.229Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "b2d83553-7eaf-4f13-bf74-823694606e93",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:01:37.095Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "d12497e5-43b0-45be-afef-e2aa64471477",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:17:35.911Z",
+    "gScore": 633,
+    "gRank": "B",
+    "kpm": 173,
+    "accuracy": 85,
+    "totalMistake": 5,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "436cbfea-1b58-488c-a960-9b1db43fa14a",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:17:37.605Z",
+    "gScore": 806,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "6450b8d8-4511-4478-8a8a-27cd11d3c18d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:17:39.797Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "c00487b2-fcdf-45d0-8429-9643df5f87e6",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:18:16.034Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "7cc30bf2-b75e-44a4-a387-b7dee565c202",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:39:05.243Z",
+    "gScore": 418,
+    "gRank": "C",
+    "kpm": 137,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "af0ee2da-0032-4f12-9bb2-4aeb510c2928",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:40:03.151Z",
+    "gScore": 167,
+    "gRank": "C",
+    "kpm": 137,
+    "accuracy": 77,
+    "totalMistake": 7,
+    "defeatedCount": 7,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "7fb7dac0-f2e2-4140-aa84-d5dd69e1fa5b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:40:39.469Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "8725f803-8339-4844-83b2-57f07080ff6b",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:40:52.672Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "c124b146-58ba-4ef4-97ed-4d3a10938a99",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:41:43.296Z",
+    "gScore": 550,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "8eecfa9d-c582-4152-8e0e-9bf9cc4b9a89",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T08:54:37.124Z",
+    "gScore": 332,
+    "gRank": "C",
+    "kpm": 133,
+    "accuracy": 94,
+    "totalMistake": 1,
+    "defeatedCount": 5,
+    "maxChain": 5,
+    "isFreeMode": false,
+    "id": "be997cef-4807-418c-9612-84d109de1245",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:24:07.318Z",
+    "gScore": 23,
+    "gRank": "C",
+    "kpm": 84,
+    "accuracy": 57,
+    "totalMistake": 6,
+    "defeatedCount": 2,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "1bc2faf7-7827-4f46-a213-8bf9c19adace",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:28:21.721Z",
+    "gScore": 569,
+    "gRank": "B",
+    "kpm": 212,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "669280d5-8038-43aa-9336-341cb5089667",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:28:37.155Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "a1a1ae5c-375a-4653-8a62-8cd94a8029cd",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:29:05.610Z",
+    "gScore": 367,
+    "gRank": "C",
+    "kpm": 188,
+    "accuracy": 95,
+    "totalMistake": 1,
+    "defeatedCount": 6,
+    "maxChain": 6,
+    "isFreeMode": false,
+    "id": "a167ac73-4b54-4f77-b895-bbad625c6895",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:34:31.500Z",
+    "gScore": 625,
+    "gRank": "B",
+    "kpm": 153,
+    "accuracy": 93,
+    "totalMistake": 2,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "40c2374f-d9ca-4de1-8240-1a791565a436",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:34:34.644Z",
+    "gScore": 803,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "86027b5d-0531-48eb-ab8a-6744bf378255",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:34:51.167Z",
+    "gScore": 591,
+    "gRank": "B",
+    "kpm": 112,
+    "accuracy": 92,
+    "totalMistake": 2,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "03215007-a200-42a4-927f-5cf6aeb35af7",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:34:55.025Z",
+    "gScore": 789,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "96d137b3-cc46-4a0e-89cc-08a7c760f3b8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:35:16.968Z",
+    "gScore": 145,
+    "gRank": "C",
+    "kpm": 197,
+    "accuracy": 87,
+    "totalMistake": 3,
+    "defeatedCount": 5,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "144c1a71-3e55-4e5b-9114-0a201e498061",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:35:19.222Z",
+    "gScore": 254,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 5,
+    "maxChain": 3,
+    "isFreeMode": false,
+    "id": "96ab2d36-e6e2-466f-bcb8-87a426aa5f2f",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T10:35:34.536Z",
+    "gScore": 13,
+    "gRank": "C",
+    "kpm": 133,
+    "accuracy": 67,
+    "totalMistake": 1,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "0618ba1f-f7a3-45ff-9e01-c53d31c6ae17",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T11:02:10.707Z",
+    "gScore": 204,
+    "gRank": "C",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 1,
+    "maxChain": 1,
+    "isFreeMode": false,
+    "id": "2e9311ad-fd4d-492f-b5b0-34ca1f1d1ac9",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T11:02:26.157Z",
+    "gScore": 858,
+    "gRank": "B",
+    "kpm": 133,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "cc127705-44dd-41f0-a4da-39cd2514abf8",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T11:02:29.053Z",
+    "gScore": 897,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "209c9117-591d-4c39-bb33-46a74836807d",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T11:02:44.623Z",
+    "gScore": 596,
+    "gRank": "B",
+    "kpm": 134,
+    "accuracy": 91,
+    "totalMistake": 2,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "3ac97f81-1627-4fb1-942d-25d22dc032e0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T11:02:45.986Z",
+    "gScore": 791,
+    "gRank": "B",
+    "kpm": 0,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "5c3b952e-2032-4339-9b22-18ed3d5f82d0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T11:03:28.969Z",
+    "gScore": null,
+    "gRank": "C",
+    "kpm": null,
+    "accuracy": 0,
+    "totalMistake": 0,
+    "defeatedCount": 0,
+    "maxChain": 0,
+    "isFreeMode": false,
+    "id": "6edf7cc6-c01f-4612-a708-c77770b3b6cd",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T11:03:45.557Z",
+    "gScore": 827,
+    "gRank": "B",
+    "kpm": 110,
+    "accuracy": 100,
+    "totalMistake": 0,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "49d64773-00bd-4270-bb30-1e90987da1a5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "date": "2026-04-03T11:04:56.669Z",
+    "mode": "normal",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 83.7,
+    "totalCorrect": 41,
+    "totalMistake": 8,
+    "totalChars": 49,
+    "totalTime": 11.107000000000232,
+    "kpm": 265,
+    "eScore": 155,
+    "eRank": "C+",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "f6538d84-a87d-4d28-b4b7-d0ed7b426982",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-04-03T11:05:13.862Z",
+    "mode": "normal",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 91.1,
+    "totalCorrect": 41,
+    "totalMistake": 4,
+    "totalChars": 50,
+    "totalTime": 11.838999999999768,
+    "kpm": 253,
+    "eScore": 191,
+    "eRank": "B",
+    "solvedCount": 0,
+    "questionLimit": 2,
+    "id": "bebcf712-3fe1-4757-a90e-a067fb697471",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "normal": false
+    }
+  },
+  {
+    "date": "2026-04-03T11:06:35.190Z",
+    "mode": "time_attack",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 85.4,
+    "totalCorrect": 41,
+    "totalMistake": 7,
+    "totalChars": 50,
+    "totalTime": 11.908,
+    "kpm": 252,
+    "eScore": 157,
+    "eRank": "C+",
+    "solvedCount": 2,
+    "limitSec": 15,
+    "id": "d34f15ae-ea34-4007-a5b3-c46dde07e442",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "time_attack": true
+    }
+  },
+  {
+    "date": "2026-04-03T11:06:53.258Z",
+    "mode": "time_attack",
+    "difficulty": "normal",
+    "difficultyName": "NORMAL",
+    "accuracy": 95.9,
+    "totalCorrect": 47,
+    "totalMistake": 2,
+    "totalChars": 57,
+    "totalTime": 10.156999999999535,
+    "kpm": 337,
+    "eScore": 297,
+    "eRank": "Great!",
+    "solvedCount": 2,
+    "limitSec": 15,
+    "id": "652ab563-4976-4d7c-9beb-b5d608620714",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "time_attack": true
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T12:34:05.320Z",
+    "gScore": 618,
+    "gRank": "B",
+    "kpm": 114,
+    "accuracy": 96,
+    "totalMistake": 1,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "c6ee0a60-3a44-43ef-82be-64425e0337e5",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  },
+  {
+    "mode": "enemy_mode",
+    "date": "2026-04-03T12:58:32.210Z",
+    "gScore": 577,
+    "gRank": "B",
+    "gKpm": 108,
+    "accuracy": 85,
+    "totalMistake": 4,
+    "defeatedCount": 10,
+    "maxChain": 10,
+    "isFreeMode": false,
+    "id": "683f88e0-f7a8-4a56-96bc-caeec28cc2e0",
+    "userProtectedModes": {},
+    "rankingProtectedModes": {
+      "enemy_mode": false
+    }
+  }
+]

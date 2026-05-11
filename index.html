@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111111">
+
+  <title>MameType</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css">
+  
+</head>
+
+<body tabindex="0">
+
+<!-- =====================================================
+  ローディング
+===================================================== -->
+<div id="loadingScreen">
+  <div class="loading-text">Loading...</div>
+</div>
+
+<!-- =====================================================
+  メインメニュー
+===================================================== -->
+<div id="menu">
+  <h1>MameType</h1>
+
+  <div class="player-name-box">
+    <input type="text" id="playerNameInput" maxlength="12" placeholder="プレイヤー名">
+    <button id="savePlayerNameBtn">保存</button>
+  </div>
+  
+  <button id="questMenuBtn">クエスト</button>
+  <button id="startMenuBtn">デイリー</button>
+  <button id="freeModeBtn">フリーモード</button>
+  <button id="recordsMenuBtn">レコード</button>
+  <button id="settingsBtn">設定</button>
+
+  <!-- サウンドON/OFF トグル -->
+  <label id="soundLabel">
+    <input type="checkbox" id="soundToggle">
+    <img id="soundIcon" src="./pic/sound1.png" alt="効果音ON">
+  </label>
+</div>
+
+<!-- =====================================================
+  「クエスト」サブメニュー
+===================================================== -->
+<div id="questMenu" style="display:none; margin-top:20px;">
+  <h2>クエストモードメニュー</h2>
+  
+  <button id="questStartBtn">つづきから</button>
+  <button id="questSaveBtn">セーブ／ロード</button>
+  <button id="questStartBtnFromBeginning">はじめから</button>
+  <button id="questStartMenuBackBtn">メニューに戻る</button>
+
+</div>
+<!-- =====================================================
+  「クエスト」セーブメニュー
+===================================================== -->
+<!-- セーブモーダル -->
+<div id="saveModal" class="save-modal hidden">
+  <div id="questSaveMenu" class="save-modal-content">
+    <h2>セーブ / ロード</h2>
+    
+    <div id="questSlots"></div>
+
+    <button id="saveToQuestMenuBackBtn">閉じる</button>
+  </div>
+</div>
+<!-- =====================================================
+  「デイリー」サブメニュー
+===================================================== -->
+<div id="startMenu" style="display:none; margin-top:20px;">
+  <h2>デイリーメニュー<span id="switchToFreeBtn" title="モード切替">🔄</span></h2>
+  
+  <button id="startBtn">スタンダード</button>
+  <button id="timeAttackBtn">タイムアタック</button>
+  <button id="longTextBtn">長文</button>
+  <button id="enemyModeBtn">エネミー</button>
+  <button id="startMenuBackBtn">メニューに戻る</button>
+
+</div>
+
+<!-- =====================================================
+  「フリーモード」サブメニュー
+===================================================== -->
+<div id="freeStartMenu" style="display:none; margin-top:20px;">
+  <h2>フリーモードメニュー<span id="switchToNormalBtn" title="モード切替">🔄</span></h2>
+
+    <!-- 難易度選択 -->
+  <div>
+    <label>
+      難易度:
+      <div id="difficultyButtons"></div>
+    </label>
+  </div>
+
+  <button id="freeStartBtn">スタンダード</button>
+  <button id="freeTimeAttackBtn">タイムアタック</button>
+  <button id="freeLongTextBtn">長文</button>
+  <button id="freeEnemyModeBtn">エネミー</button>
+  <button id="freeStartMenuBackBtn">メニューに戻る</button>
+
+</div>
+
+<!-- =====================================================
+  ポーズメニュー
+===================================================== -->
+<div id="pauseOverlay" class="pause-overlay">
+  <div class="pause-menu">
+    <p>PAUSED</p>
+    <p>再開（P）</p>
+    <p>リトライ（R）</p>
+    <p>戻る（B）</p>
+  </div>
+</div>
+
+
+<!-- =====================================================
+  設定画面
+===================================================== -->
+<div id="settings" style="display:none; margin-top:20px;">
+  <h2>設定</h2>
+
+  <!-- サウンド個別設定 -->
+  <fieldset>
+    <legend>サウンド設定</legend>
+
+    <label>
+      <input type="checkbox" id="bgmToggle">
+      BGM
+    </label>
+
+    <label>
+      <input type="checkbox" id="typeSoundToggle">
+      タイプ音
+    </label>
+
+    <label>
+      <input type="checkbox" id="missSoundToggle">
+      ミス音
+    </label>
+
+    <label>
+      <input type="checkbox" id="SEToggle">
+      SE
+    </label>
+  </fieldset>
+
+  <!-- フラッシュ設定 -->
+  <fieldset>
+    <legend>画面フラッシュ</legend>
+    <label>
+      <input type="checkbox" id="flashToggle">
+      ミスタイプ時に画面フラッシュ
+    </label>
+  </fieldset>
+
+  <!-- デイリーのバックアップ！ -->
+  <fieldset>
+    <legend>デイリーデータ</legend>
+
+    <button id="exportPlayerStatsBtn">📤 バックアップ</button>
+    <button id="importPlayerStatsBtn">📥 復元</button>
+    <button id="resetPlayerStatsBtn">🗑 リセット</button>
+
+    <!-- 復元用 -->
+    <input
+      type="file"
+      id="importPlayerStatsFile"
+      accept=".json"
+      style="display:none"
+    >
+  </fieldset>
+
+  <fieldset>
+    <legend>クエストデータ</legend>
+
+    <button id="exportQuestBtn">📤 バックアップ</button>
+    <button id="importQuestBtn">📥 復元</button>
+    <button id="resetQuestBtn">🗑 リセット</button>
+
+    <input
+      type="file"
+      id="importQuestFile"
+      accept=".json"
+      style="display:none"
+    >
+  </fieldset>
+
+  <button id="settingsBackBtn">メニューに戻る</button>
+
+</div>
+<!-- =====================================================
+  記録画面
+===================================================== -->
+  <div id="records" style="display:none; margin-top:20px;">
+    <div id="records-container">
+
+      <div id="records-top">
+
+        <!-- ヘッダー -->
+        <div id="records-header">
+          <h2>🏆 Records</h2>
+
+          <div id="records-controls">
+            <div id="recordsModeButtons" class="mode-buttons">
+              <button data-mode="normal" class="active">スタンダード</button>
+              <button data-mode="time_attack">タイムアタック</button>
+              <button data-mode="long_text">長文</button>
+              <button data-mode="enemy_mode">エネミー</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- summary -->
+        <div id="recordsSummary"></div>
+
+        <!-- メイン -->
+        <div id="records-main">
+
+          <section class="records-section">
+            <h3>📈 Best Scores Graph</h3>
+            <div id="records-left">
+              <div id="bestScoreGraph"></div>
+            </div>
+          </section>
+
+          <section class="records-section">
+            <h3>🏅 Ranking</h3>
+            <div id="records-ranking">
+              <div id="ranking"></div>
+            </div>
+          </section>
+
+        </div>
+
+      </div>
+
+      <!-- 下段 -->
+      <div id="records-bottom">
+        <h3>📜 History</h3>
+          <div id="history"></div>
+
+        <div id="records-buttons">
+          <button id="resetRecordsBtn">記録をリセット</button>
+          <button id="recordsBackBtn">メニューに戻る</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+<!-- =====================================================
+  プレイヤーHUD（常時表示ステータス）
+===================================================== -->
+<div id="playerHud" class="hud-window">
+
+  <button id="hudMiniBtn" class="hud-mini-btn" title="HUD縮小">−</button>
+
+  
+
+  <!-- ===================== -->
+  <!-- 通常HUD -->
+  <!-- ===================== -->
+  <div id="normalHud">
+    <div class="hud-header">DAILY STATUS</div>
+    <div class="hud-row">
+      <span>⚡ 平均KPM</span>
+      <span id="hudAvgSpeed">0</span>
+    </div>
+    <div class="hud-bar">
+      <div id="hudSpeedBar" class="hud-bar-fill speed"></div>
+    </div>
+    <div class="hud-rank">Rank: <span id="hudSpeedRank">-</span></div>
+
+    <div class="hud-row">
+      <span>🎯 正確性</span>
+      <span id="hudAvgAcc">0%</span>
+    </div>
+    <div class="hud-bar">
+      <div id="hudAccBar" class="hud-bar-fill acc"></div>
+    </div>
+    <div class="hud-rank">Rank: <span id="hudAccRank">-</span></div>
+
+    <div class="hud-row">
+      <span>🚀 最高KPM</span>
+      <span id="hudMaxSpeed">0</span>
+    </div>
+
+    <br>
+
+    <div style="text-align:left;">
+      総プレイ時間：<span id="totalPlayTime"></span>
+    </div>
+
+  </div>
+
+  <!-- ===================== -->
+  <!-- クエストHUD -->
+  <!-- ===================== -->
+  <div id="questHud" style="display:none;">
+    <div class="hud-header">QUEST STATUS</div>
+    <div class="hud-row"><span id="hudLevel">Lv 1</span></div>
+    <div class="hud-row"><span id="hudHp">HP 0</span></div>
+    <div class="hud-row"><span id="hudDef">DEF 0</span></div>
+   
+    <div class="hud-bar">
+      <div id="hudExpBar" class="hud-bar-fill exp"></div>
+    </div>
+    <div class="hud-row"><span id="hudExp">EXP 0 / 0</span></div>
+    <div class="hud-row"><span id="hudClear">CLEAR 0</span></div>
+
+  </div>
+
+  <!-- ボタンは共通 -->
+  <div class="hud-buttons">
+    <div id="hudAchievementsBtn" title="勲章">🏅</div>
+    <button id="hudDetailBtn" class="hud-detail-btn">≡</button>
+  </div>
+
+</div>
+
+<!-- ===================== -->
+  <!-- ステータスHUD -->
+<!-- ===================== -->
+<!--  デイリーステータス-->
+<div id="playerStatsModal" class="stats-modal">
+  <div class="stats-window">
+    <div class="stats-header">
+      DAILY STATS
+      <button id="statsClose">✕</button>
+    </div>
+
+    <div id="statsContent"></div>
+  </div>
+</div>
+
+<!--  クエストステータス-->
+<div id="questStatsModal" class="quest-stats-modal">
+
+  <div class="quest-stats-hud">
+    <button id="statsCloseQuest">✕</button>
+    <!-- 左 -->
+    <div class="hud-panel left">
+      <div class="connector-ring"></div>
+      <div id="questBasicStats"></div>
+    </div>
+
+    <!-- 中央 -->
+    <div class="hud-center">
+      <div class="hex-grid"></div>
+      <div class="cyber-core-dot"></div>
+
+      <!-- ここに今の円とかプレイヤー表示 -->
+      <canvas id="questCoreCanvas"></canvas>
+    </div>
+
+    <!-- 右 -->
+    <div class="hud-panel right">
+      <div class="hud-section-title">ACTIVE SKILLS</div>
+      <div id="questRight"></div>
+    </div>
+
+    <!-- 下 -->
+    <div id="questBottom" class="quest-bottom"></div>
+
+  </div>
+
+</div>
+
+<div id="achModal" class="modal">
+    <div class="ach-modal-content">
+      <div class="ach-title">勲章</div>
+      <div id="achList"></div>
+      <button id="achClose">閉じる</button>
+    </div>
+</div>
+<!-- =====================================================
+  ゲーム画面 エネミーモード
+===================================================== -->
+
+<div id="enemyModeContainer">
+
+  <canvas id="enemyModeCanvas" width="1200" height="700"></canvas>
+
+  <!-- <div id="enemyHUD">
+    HP: <span id="enemyModeHP"></span>
+  </div> -->
+
+<!-- チェインバー -->
+
+<div id="chainUI">
+    <div id="chainCount">
+      <div id="chainLabel">CHAIN</div>
+      <div id="chainValue">0</div>
+    </div>
+    <div id="chainBarContainer">
+        <div id="chainBar"></div>
+    </div>
+</div>
+
+<div class="hp-bar">
+  <div class="hp-fill" id="hpFill"></div>
+</div>
+
+</div>
+<!-- =====================================================
+  ゲームモーダル（追加）
+===================================================== -->
+<div id="gameModal" class="game-modal" style="display:none;">
+  <div class="game-modal-content">
+    <!-- 既存ゲームUIをここに移動 -->
+    <div id="gameContainer"></div>
+    
+    <!-- =====================================================
+  ゲーム画面
+===================================================== -->
+<div id="game">
+
+  <!-- 現在のモード表示 -->
+  <div id="modeLabel" style="margin-bottom:10px; font-weight:bold;"></div>
+  
+  <!-- ★ 追加：フリーモード表示 -->
+<div id="freeModeBadge">
+  FREE
+</div>
+
+<!-- カウントダウン表示 -->
+<div id="countdown" style="font-size:5rem; font-weight:bold; display:none; margin-bottom:20px;"></div>
+
+<!-- 正解数 -->
+  <div id="solvedCount" class="clear-circle">
+    <div class="label">CLEAR</div>
+    <div class="count">0</div>
+  </div>
+  <!-- 経過時間 -->
+<div id="time-circle-container">
+  <div id="time-circle">
+    <span class="label">TIME</span>
+    <span class="count">0</span>
+  </div>
+</div>
+  <!-- 出題単語 -->
+<div id="word-wrap">
+  <div id="word"></div>
+</div>
+
+<div id="word-scroll-wrap" style="display:none;">
+  <div id="word-scroll"></div>
+</div>
+  <!-- かな表示 -->
+  <div id="jp-wrap">
+    <div id="jp"></div>
+  </div>
+
+  <!-- ローマ字表示 -->
+  <div id="roma-wrap">
+    <div id="roma"></div>
+  </div>
+
+  <!-- 長文モード：全文固定表示 -->
+<div id="word-long-wrap" class="hidden">
+  <div id="word-long"></div>
+</div>
+
+  <!-- 長文モード：スクロール表示 -->
+  <div id="scroll-wrap">
+    <div id="kana-scroll"></div>
+    <div id="roma-scroll"></div>
+  </div>
+
+  <!-- 進捗バー -->
+  <div id="progress-container">
+    <div id="progress-text"></div>
+    <div id="progress-bar"></div>
+    <div id="progress-blocks"></div>
+  </div>
+
+  <!-- タイムアタック用 残り時間バー -->
+  <div id="time-bar-container">
+    <div id="timeLeft" class="time-left"></div>
+    <div id="time-bar"></div>
+  </div>
+
+  <!-- スピード表示 -->
+  <div id="speed-container">
+    <div id="speed-bar"></div>J
+  </div>
+  <div id="speed-label">0 KPM</div>
+
+
+  <!-- 統計表示（ミス数・正答数・正確性など） -->
+  <div id="stats"></div>
+
+  
+  <button id="gameBackBtn" class="game-back-btn">戻る</button>
+ 
+</div>
+</div>
+</div>
+
+<!-- =====================================================
+  スキルモード用達成条件
+===================================================== -->
+<div id="skillUnlockHint" class="skill-unlock-hint"></div>
+
+
+<!-- =====================================================
+ ゲーム終了のイントロ
+===================================================== -->
+<div id="endIntro" class="end-intro" style="display:none;">
+  <div class="introText"></div> <!-- 空でOK -->
+</div>
+
+
+<!-- =====================================================
+  結果画面
+===================================================== -->
+<div id="result" class="result-modal" style="display:none" tabindex="0">
+  <div class="result-card">
+    <div id="resultStats"></div>
+    <div class="result-actions">
+      <button id="playAgainBtn" class="result-btn">リトライ</button>
+      <button id="retryMissedBtn" class="result-btn secondary">間違えた問題だけ</button>
+      <button id="resultToStartMenuBtn" class="result-btn secondary">ゲーム選択に戻る</button>
+      <button id="resultToQuestMenuBtn" class="result-btn secondary">クエストメニューに戻る</button>
+      <button id="questBackBtn" class="result-btn secondary">マップに戻る</button> 
+      <button id="resultOpenRecordsBtn" class="result-btn secondary">レコードを見る</button>
+      <button id="resultBackBtn" class="result-btn secondary">メニューに戻る</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- =====================================================
+  クエストマップ
+===================================================== -->
+<div id="questMapScreen" style="display:none;">
+  <div id="mapContainer">
+    <canvas id="mapCanvas"></canvas>
+    <div id="mapNodes"></div>
+  </div>
+
+  <button id="mapBackBtn">戻る</button>
+</div>
+
+<!-- =====================================================
+  クエスト（スキル風）結果
+===================================================== -->
+<div id="questSkillResult" style="display:none;">
+  <div class="quest-skill-card">
+
+    <div id="questSkillResultContent"></div>
+
+    <div class="quest-skill-buttons">
+      <button id="questSkillRetryBtn">リトライ</button>
+      <button id="questSkillBackBtn">戻る</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- =====================================================
+  スキル結果
+===================================================== -->
+
+  <div id="skillResult" style="display:none;" class="result-modal">
+      <div id="skillResultText"></div>
+      <div id="skillSlotReward" style="display:none;"></div>
+      
+      <button id="skillRetryBtn">リトライ</button>
+      <button id="skillBackBtn">戻る</button>
+  </div>
+
+<!-- =====================================================
+  メインスクリプト
+===================================================== -->
+<script type="module" src="./js/main.js"></script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./service-worker.js");
+}
+</script>
+
+<div id="screenOverlay"></div>
+
+</body>
+</html>

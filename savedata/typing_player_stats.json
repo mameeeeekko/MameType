@@ -1,0 +1,78 @@
+{
+  "totalPlays": 56,
+  "regular": {
+    "totalPlays": 26,
+    "totalTyped": 1624,
+    "totalMiss": 87,
+    "totalGameTime": 269.85400000000004,
+    "maxEScore": 817,
+    "maxEScoreDate": "2026-04-08T07:35:57.241Z",
+    "maxSpeed": 870,
+    "maxSpeedDate": "2026-04-08T07:35:57.241Z",
+    "avgSpeed": 361.08414179519286,
+    "avgAccuracy": 94.91525423728814,
+    "modes": {
+      "normal": 16,
+      "time_attack": 7,
+      "miss_practice": 2,
+      "long_text": 1
+    }
+  },
+  "enemyMode": {
+    "totalPlays": 24,
+    "totalTyped": 379,
+    "totalMiss": 19,
+    "totalTypeTime": 200.04399999999998,
+    "totalPlayTime": 362.31100000000004,
+    "maxGScore": 909,
+    "maxGScoreDate": "2026-04-04",
+    "maxGKpm": 205.9025394646534,
+    "maxGKpmDate": "2026-04-04",
+    "avgGKpm": 113.6749915018696,
+    "avgAccuracy": 95.22613065326632,
+    "modes": {
+      "enemy_mode": 24
+    },
+    "totalKills": 154
+  },
+  "freeMode": {
+    "totalPlays": 6,
+    "totalTime": 0,
+    "modes": {
+      "enemy_mode": 6
+    }
+  },
+  "days": {
+    "unique": 7,
+    "streak": 7,
+    "maxStreak": 7,
+    "todayCount": 4,
+    "maxPerDay": 20,
+    "lastPlayDate": "2026-04-09",
+    "playedDates": {
+      "2026-04-03": 1,
+      "2026-04-04": 20,
+      "2026-04-05": 1,
+      "2026-04-06": 3,
+      "2026-04-07": 16,
+      "2026-04-08": 11,
+      "2026-04-09": 4
+    }
+  },
+  "achievements": [
+    "first_play",
+    "speed_300",
+    "play_10",
+    "streak_3",
+    "days_7",
+    "streak_7"
+  ],
+  "seenAchievements": [
+    "first_play",
+    "speed_300",
+    "play_10",
+    "streak_3",
+    "days_7",
+    "streak_7"
+  ]
+}
