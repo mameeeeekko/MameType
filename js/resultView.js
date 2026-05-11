@@ -51,10 +51,10 @@ export function showResult({
   if (!resultStats) return;
 
   let modeTitle = "RESULT";
-  if (mode?.id === "normal") modeTitle = "スタンダード";
-  else if (mode?.id === "time_attack") modeTitle = "タイムアタック";
-  else if (mode?.id === "long_text") modeTitle = "長文モード";
-  else if (mode?.id === "miss_practice") modeTitle = "ミス練習";
+  if (mode === "normal") modeTitle = "スタンダード";
+  else if (mode === "time_attack") modeTitle = "タイムアタック";
+  else if (mode === "long_text") modeTitle = "長文モード";
+  else if (mode === "miss_practice") modeTitle = "ミス練習";
 
   const totalInputs = totalCorrect + totalMistake;
   const accuracyText = totalInputs === 0 ? "―" : `${accuracy}%`;
@@ -66,7 +66,7 @@ export function showResult({
   <div class="result-title">${modeTitle}</div>
   `;
 
-  if (mode?.id === "time_attack") {
+  if (mode === "time_attack") {
     html += `
       <div class="result-score">
         <div class="result-rank">解答数</div>
