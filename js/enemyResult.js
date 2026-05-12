@@ -2,6 +2,7 @@
 
 import { gameState } from "./gameCore.js";
 import { resetResultButtons } from "./resultView.js";
+import { renderOnlineRanking } from "../online/getRanking.js";
 
 export function showEnemyResult({
     isNewRecord = false,
@@ -16,7 +17,6 @@ export function showEnemyResult({
     const resultDiv = document.getElementById("result");
     const resultStats = document.getElementById("resultStats");
     const gameScreen = document.getElementById("enemyModeContainer");
-    //const canvas = document.getElementById("enemyModeCanvas");
     const retryBtn = document.getElementById("retryMissedBtn");
     const showQuest = document.getElementById("resultToQuestMenuBtn");
     const showMap = document.getElementById("questBackBtn");
@@ -140,6 +140,14 @@ export function showEnemyResult({
     }
 
     if(resultDiv) resultDiv.style.display = "flex";
+
+    if (!stats.isInvalidRun && !gameState.isFreeMode) {
+        renderOnlineRanking(
+            stats.gScore ?? 0,
+            stats.defeatedCount ?? 0,
+            `enemy_mode`
+        );
+    }    
 }
 
 function playCalcAnimation() {

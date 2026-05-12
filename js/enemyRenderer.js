@@ -4,7 +4,7 @@ import { getDisplayFullRoma, getDisplayRomaForEnemy } from "./typingLogic.js";
 import { getDifficulty } from "./difficulties.js";
 import { buildClearText } from "./enemyModeConfig.js";
 import { getNow } from "./gameCore.js";
-import { getEvolutionStage } from "./questPlayerStats.js";
+
 
 // サイドを丸める関数
 function roundRect(ctx, x, y, w, h, r) {
@@ -438,9 +438,9 @@ function drawRing(ctx, x, y, type){
 }
 
 
-export function renderPlayer(ctx, player, isQuestMode) {
+export function renderPlayer(ctx, player, enemyStats) {
 
-    drawPlayerBody(ctx, player);
+    drawPlayerBody(ctx, player, enemyStats);
 
     const barWidth = 60;
     const barHeight = 6;
@@ -450,7 +450,7 @@ export function renderPlayer(ctx, player, isQuestMode) {
     // =====================
     // Lv（クエストのみ）
     // =====================
-    if (isQuestMode) {
+    if (enemyStats?.isQuestMode) {
 
         const level = player.level ?? 1;
 
@@ -513,8 +513,8 @@ export function renderPlayer(ctx, player, isQuestMode) {
 }
 
 
-function drawPlayerBody(ctx, player) {
-    const evo = getEvolutionStage();
+function drawPlayerBody(ctx, player, enemyStats) {
+    const evo = enemyStats?.evo ?? 0;
     const r = player.radius;
 
     ctx.save();

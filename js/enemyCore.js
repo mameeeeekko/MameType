@@ -25,6 +25,8 @@ import { getPlayerStats, updatePlayerStats } from "./playerStats.js";
 import { markCleared } from "./questProgress.js";
 import { STAR_EVALUATORS } from "./starEvaluator.js";
 import { setStar } from "./questProgress.js";
+import { submitScore } from "../online/submitScore.js";
+import { getEvolutionStage } from "./questPlayerStats.js";
 
 let currentStage = "STAGE1";
 let loopId = null;
@@ -35,6 +37,7 @@ const ctx = canvas.getContext("2d");
 
 const p = ENEMY_MODE_CONFIG.player;
 const player = {
+    level: p.level,
     maxHp: p.maxHp, 
     hp: p.maxHp,
     defense: p.defense,
@@ -194,7 +197,7 @@ function gameLoop() {
     enemies = enemies.filter(enemy => enemy && !enemy.isDead);
 
     renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies);
-    renderPlayer(ctx, player, lastEnemyConfig?.isQuestMode);
+    renderPlayer(ctx, player, gameState.enemyStats);
     renderScore(ctx, gameState); // ゲーム画面スコア描画
     renderEndCondition(          // ゲーム終了条件描画
         ctx,
@@ -727,6 +730,7 @@ function initPlayerByMode(isQuestMode){
         player.hp = p.maxHp;
         player.defense = p.defense;
         player.radius = p.radius;
+        player.level = 1;
     }
 
     player.x = canvas.width / 2;
@@ -818,6 +822,8 @@ export async function startEnemyMode(config = {}) {
         gScore: 0,           // エネミーモード専用スコア
         gKpm: 0,             // KPM
         rank: "C",           // 初期ランク
+
+        evo: config.isQuestMode ? getEvolutionStage() : 0, //見た目
 
         failed: false,
         tookDamage: false,   // ダメージを受けたフラグ
@@ -920,7 +926,7 @@ export function restartEnemyMode() {
 // ===============================
 // Enemyモード終了処理
 // ===============================
-export function endEnemyMode() {
+export async function endEnemyMode() {
 
     gameState.enemyMode = false;
 
@@ -1186,27 +1192,28 @@ export function endEnemyMode() {
     // 記録保存
     // ===============================
     const record = {
-    mode: "enemy_mode",
-    date: new Date().toISOString(),
+        mode: "enemy_mode",
+        date: new Date().toISOString(),
 
-    // スコア系
-    gScore: stats.gScore,
-    gRank: stats.rank,
+        // スコア系
+        gScore: stats.gScore,
+        gRank: stats.rank,
 
-    // タイピング系
-    gKpm: Math.round(stats.gKpm),
-    accuracy: Math.round(
-        (stats.correctCount /
-        Math.max(1, stats.totalTyped)) * 100
-    ),
+        // タイピング系
+        gKpm: Math.round(stats.gKpm),
+        accuracy: Math.round(
+            (stats.correctCount /
+            Math.max(1, stats.totalTyped)) * 100
+        ),
 
-    totalMistake: stats.mistakeCount,
+        totalMistake: stats.mistakeCount,
 
-    // エネミー専用
-    defeatedCount: stats.defeatedCount,
-    maxChain: stats.maxChainCount,
+        // エネミー専用
+        defeatedCount: stats.defeatedCount,
+        maxChain: stats.maxChainCount,
 
-    isFreeMode: gameState.isFreeMode
+        isFreeMode: gameState.isFreeMode
+        
     };
 
     const statsData = getPlayerStats();
@@ -1214,27 +1221,50 @@ export function endEnemyMode() {
     if (!stats.isInvalidRun && stats.totalTyped > 0) {
 
         updatePlayerStats(
-        statsData,
-        {
-            totalChars: stats.correctCount,
-            totalMistake: stats.mistakeCount,
-            totalTypeTime: (stats.typingActiveTime)/1000,
-            totalPlayTime: (stats.endTime - stats.startTime)/1000,
-            kpm: stats.gKpm,
-            eScore: stats.gScore,
-            defeatedCount: stats.defeatedCount
-        },
-        "enemy_mode",              // ← モード名
-        null,
-        gameState.isFreeMode       // ← ★これが超重要
+            statsData,
+            {
+                totalChars: stats.correctCount,
+                totalMistake: stats.mistakeCount,
+                totalTypeTime: (stats.typingActiveTime)/1000,
+                totalPlayTime: (stats.endTime - stats.startTime)/1000,
+                kpm: stats.gKpm,
+                eScore: stats.gScore,
+                defeatedCount: stats.defeatedCount
+            },
+            "enemy_mode",              // ← モード名
+            null,
+            gameState.isFreeMode       // ← ★これが超重要
         );
 
         // ランキング登録（自動で履歴にも入る）
         if (lastEnemyConfig?.isQuestMode || lastEnemyConfig?.isFreeMode) {
             return null; // ← 保存しない
         }
+
         const rankingResult = addRankingEntry(record);
-        return rankingResult;
+
+        // ===============================
+        // オンライン送信
+        // ===============================
+        let submitResult = null;
+
+        try {
+            submitResult = await submitScore({
+                player_name: localStorage.getItem("playerName") || "NO NAME",
+                mode: `enemy_mode`,
+                score: stats.gScore,
+                solvedCount: stats.defeatedCount,
+                accuracy: Number(stats.accuracy.toFixed(1)),
+                kpm: stats.gKpm
+            });
+        } catch (err) {
+            console.error("Enemy online submit failed:", err);
+        }
+
+        return {
+            ...rankingResult,
+            submitResult
+        };
     }
 
 }

@@ -32,7 +32,7 @@ import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./diff
 import { renderQuestMapUI, openQuestMenuModal } from "./questMapUI.js";
 import { reloadQuestProgress, resetQuestAll } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
-import { getPlayerName, setPlayerName } from "../online/playerProfile.js";
+import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from "../online/playerProfile.js";
 
 // ================================
 // 🔹DOM参照（グローバル）
@@ -69,6 +69,8 @@ let switchToFreeBtn, switchToNormalBtn;
 let resetQuestBtn;
 
 let playerNameInput, savePlayerNameBtn;
+
+let onlineRankingToggle;
 
 
 function cacheDOM() {
@@ -138,6 +140,8 @@ function cacheDOM() {
 
   playerNameInput = document.getElementById("playerNameInput");
   savePlayerNameBtn = document.getElementById("savePlayerNameBtn");
+
+  onlineRankingToggle = document.getElementById("onlineRankingToggle");
 }
 
 // =====================================================
@@ -226,10 +230,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   playerNameInput.value = getPlayerName();
 
+  onlineRankingToggle.checked = isOnlineEnabled();
+
+  playerNameInput.disabled = !isOnlineEnabled();
+  savePlayerNameBtn.disabled = !isOnlineEnabled();
+
+  onlineRankingToggle.addEventListener("change", () => {
+    const enabled = onlineRankingToggle.checked;
+
+    setOnlineEnabled(enabled);
+
+    playerNameInput.disabled = !enabled;
+    savePlayerNameBtn.disabled = !enabled;
+  });
+
   savePlayerNameBtn.addEventListener("click", () => {
     const name = playerNameInput.value.trim();
 
-    if (!name) return;
+    if (!name) {
+      alert("名前を入力してください");
+      return;
+    }
 
     setPlayerName(name);
     alert("保存しました");
@@ -623,7 +644,7 @@ function bindGameMenuEvents() {
     if (!confirm("ゲームを中断してメニューに戻りますか？")) return;
 
     Game.backToMenu();
-    if (Game.wasLastGameFree()) showFreeStartMenu();
+    if (gameState.isFreeMode) showFreeStartMenu();
     else showStartMenu();
   });
 
@@ -756,7 +777,7 @@ function bindResultEvents() {
   resultToStartMenuBtn?.addEventListener("click", () => {
     Game.fullResetGame(); 
     Game.backToMenu();
-    if (Game.wasLastGameFree()) showFreeStartMenu();
+    if (gameState.isFreeMode) showFreeStartMenu();
     else showStartMenu();
   });
 
@@ -921,7 +942,7 @@ function handlePauseKey(key) {
 
       // ★ 通常モード
       Game.backToMenu();
-      if (Game.wasLastGameFree()) showFreeStartMenu();
+      if (gameState.isFreeMode) showFreeStartMenu();
       else showStartMenu();
 
       break;
@@ -976,12 +997,14 @@ function handleGameKey(e, key) {
       endEnemyMode();
       Game.fullResetGame();
       gameState.typed = "";
+      if (gameState.isFreeMode) showFreeStartMenu();
+      else showStartMenu();
       return true;
     }
 
     // ★④ 通常
     Game.backToMenu();
-    if (Game.wasLastGameFree()) showFreeStartMenu();
+    if (gameState.isFreeMode) showFreeStartMenu();
     else showStartMenu();
     return true;
   }

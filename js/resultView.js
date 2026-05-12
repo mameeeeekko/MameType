@@ -1,6 +1,6 @@
 // resultView.js
+import { renderOnlineRanking } from "../online/getRanking.js";
 
-import { getRanking } from "../online/getRanking.js";
 
 // ======================================
 // 結果画面表示専用
@@ -127,47 +127,4 @@ export function showResult({
       if (el) el.innerHTML = "";
     }
   });
-}
-
-
-async function renderOnlineRanking(
-  currentScore,
-  currentSolvedCount = 0,
-  currentMode
-) {
-  console.log("ranking start");
-
-  try {
-    const ranking = await getRanking(currentMode);
-    console.log("ranking:", ranking);
-
-    if (!ranking || !ranking.length) return;
-
-    const el = document.getElementById("onlineRanking");
-    if (!el) return;
-
-    let rankIndex;
-
-    if (currentMode === "time_attack") {
-      rankIndex = ranking.findIndex(
-        r => (r.solvedCount || 0) <= currentSolvedCount
-      );
-    } else {
-      rankIndex = ranking.findIndex(
-        r => r.score <= currentScore
-      );
-    }
-
-    const rank =
-      rankIndex === -1
-        ? ranking.length + 1
-        : rankIndex + 1;
-
-    el.innerHTML = `
-      <div class="r-badge online">ONLINE RANK ${rank}位</div>
-    `;
-
-  } catch (err) {
-    console.error("renderOnlineRanking error:", err);
-  }
 }

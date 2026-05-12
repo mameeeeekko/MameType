@@ -10,6 +10,7 @@ export const ENEMY_MODE_CONFIG = {
     // プレイヤー（固定ステータス）
     // ===============================
     player: {
+        level: 1,
         maxHp: 40,
         defense: 0,
         radius: 20

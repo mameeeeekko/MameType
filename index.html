@@ -26,11 +26,6 @@
 ===================================================== -->
 <div id="menu">
   <h1>MameType</h1>
-
-  <div class="player-name-box">
-    <input type="text" id="playerNameInput" maxlength="12" placeholder="プレイヤー名">
-    <button id="savePlayerNameBtn">保存</button>
-  </div>
   
   <button id="questMenuBtn">クエスト</button>
   <button id="startMenuBtn">デイリー</button>
@@ -124,6 +119,21 @@
 ===================================================== -->
 <div id="settings" style="display:none; margin-top:20px;">
   <h2>設定</h2>
+  
+  <!-- online ranking設定 -->
+  <fieldset>
+    <legend>オンラインランキング</legend>
+
+    <label>
+      <input type="checkbox" id="onlineRankingToggle">
+      オンラインランキングに参加する
+    </label>
+
+    <div class="player-name-box">
+      <input type="text" id="playerNameInput" maxlength="12" placeholder="プレイヤー名">
+      <button id="savePlayerNameBtn">保存</button>
+    </div>
+  </fieldset>
 
   <!-- サウンド個別設定 -->
   <fieldset>
@@ -582,7 +592,6 @@
   メインスクリプト
 ===================================================== -->
 <script type="module" src="./js/main.js"></script>
-<script type="module" src="./online/testSubmit.js"></script>
 
 <script>
 if ("serviceWorker" in navigator) {

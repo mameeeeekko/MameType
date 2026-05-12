@@ -1,7 +1,22 @@
 import { supabase } from "./supabase.js";
+import {
+  isOnlineEnabled,
+  getPlayerName
+} from "./playerProfile.js";
 
 export async function submitScore(scoreData) {
-  // ① バリデーション追加（重要）
+
+  // ================================
+  // オンラインランキングOFFなら送信しない
+  // ================================
+  if (!isOnlineEnabled()) {
+    console.log("オンラインランキングOFF");
+    return { success: false, skipped: true };
+  }
+
+  // ================================
+  // バリデーション
+  // ================================
   if (
     !scoreData ||
     typeof scoreData.score !== "number" ||
@@ -11,12 +26,18 @@ export async function submitScore(scoreData) {
     return { success: false, error: "invalid data" };
   }
 
-  // ② insert
+  // ================================
+  // 名前自動付与
+  // ================================
+  scoreData.player_name = getPlayerName() || "NoName";
+
+  // ================================
+  // insert
+  // ================================
   const { data, error } = await supabase
     .from("scores")
     .insert([scoreData]);
 
-  // ③ エラーを見える化（超重要）
   if (error) {
     console.error("Score insert error:", error);
     return { success: false, error };

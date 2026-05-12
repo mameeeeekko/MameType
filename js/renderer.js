@@ -142,8 +142,8 @@ export function updateCircle() {
     circleRaf = requestAnimationFrame(updateCircle);
     return;
   }
-  const circle = dom.timeCircle();
 
+  const circle = dom.timeCircle();
   if (!circle) return;
 
   const label = circle.querySelector(".label");
@@ -152,22 +152,28 @@ export function updateCircle() {
   const now = getNow();
   const elapsed = now - circleStart;
 
-  const ratio = circleDuration > 0
-    ? Math.min(elapsed / circleDuration, 1)
-    : 0;
+  // 何周目か
+  const cycle = Math.floor(elapsed / circleDuration);
 
+  // 1周内の進行率 0〜1
+  const ratio = (elapsed % circleDuration) / circleDuration;
   const angle = ratio * 360;
 
+  // 周回ごとに色反転
+  const isFilling = cycle % 2 === 0;
+
+  const filledColor = isFilling ? "#616161" : "#e5e7eb";
+  const emptyColor = isFilling ? "#e5e7eb" : "#616161";
+
   circle.style.background = `conic-gradient(
-    #616161 0deg ${angle}deg,
-    #e5e7eb ${angle}deg 360deg
+    ${filledColor} 0deg ${angle}deg,
+    ${emptyColor} ${angle}deg 360deg
   )`;
 
   if (label) label.textContent = "TIME";
   if (count) count.textContent = Math.ceil(elapsed / 1000);
 
   circleRaf = requestAnimationFrame(updateCircle);
-
 }
 
 export function stopTimeCircle() {

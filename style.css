@@ -561,6 +561,24 @@ button {
   color: #374151;
 }
 
+.ranking-disabled {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  text-align: center;
+  color: #8d8d8d;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.ranking-disabled h3 {
+  margin: 0 0 5px;
+  font-size: 0.7rem;
+  color: #787878;
+}
+
 
 /* =====================================================
    フォント（日本語表示系を丸ゴ寄りに統一）
@@ -3853,6 +3871,12 @@ button {
   padding: 10px 16px;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.player-name-box button:disabled,
+.player-name-box input:disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* =====================================================
