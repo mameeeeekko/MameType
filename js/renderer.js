@@ -47,6 +47,7 @@ result: () => document.getElementById("result"),
 
 solvedCount: () => document.getElementById("solvedCount"),
 freeModeBadge: () => document.getElementById("freeModeBadge"),
+missModeBadge: () => document.getElementById("missModeBadge"),
 
 };
 
@@ -382,23 +383,26 @@ let pendingRender = false;
 
 
 export function render(state) {
-if (pendingRender) return;
-pendingRender = true;
 
-requestAnimationFrame(() => {
-  pendingRender = false;
+  if (pendingRender) return;
+  pendingRender = true;
 
-  renderWordDisplay(state);
+  requestAnimationFrame(() => {
+    pendingRender = false;
 
-  if (isLongTextMode) {
-    renderLongText(state);
-  } else {
-    renderNormal(state);
-  }
+    renderWordDisplay(state);
 
-  renderStats(state);
-  renderFreeModeBadge(state.isFreeMode);
-});
+    if (isLongTextMode) {
+      renderLongText(state);
+    } else {
+      renderNormal(state);
+    }
+
+    renderStats(state);
+    renderFreeModeBadge(state.isFreeMode);
+    renderMissModeBadge(state.isMissPractice)
+    console.log(state.isMissPractice);
+  });
 }
 
 let longWordSpans = [];
@@ -564,4 +568,16 @@ function renderFreeModeBadge(isFreeMode) {
   if (!badge) return;
 
   badge.style.display = isFreeMode ? "block" : "none";
+}
+
+/* =====================================================
+  ゲーム中のミスモード表示
+  ===================================================== */
+function renderMissModeBadge(isMissPractice) {
+  const badge = dom.missModeBadge();
+
+  if (!badge) return;
+  badge.style.display = isMissPractice ? "block" : "none";
+
+
 }

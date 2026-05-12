@@ -116,35 +116,39 @@ export function showResult({
 
   // ★ここを遅延させる
   requestAnimationFrame(() => {
-    renderOnlineRanking();
+    if (!isFreeMode) {
+      renderOnlineRanking(eScore);
+    } else {
+      const el = document.getElementById("onlineRanking");
+      if (el) el.innerHTML = "";
+    }
   });
 }
 
 
-async function renderOnlineRanking() {
+async function renderOnlineRanking(currentScore) {
   console.log("ranking start");
 
   try {
     const ranking = await getRanking();
     console.log("ranking:", ranking);
 
-    if (!ranking) {
-      console.warn("ranking is null/undefined");
-      return;
-    }
+    if (!ranking || !ranking.length) return;
 
     const el = document.getElementById("onlineRanking");
+    if (!el) return;
 
-    if (!el) {
-      console.warn("onlineRanking not found");
-      return;
-    }
+    // scoreが高い順で何位か探す
+    const rankIndex = ranking.findIndex(r => r.score <= currentScore);
 
-    el.innerHTML = ranking
-      .map((r, i) => {
-        return `<div>${i + 1}位 ${r.player_name} ${r.score}</div>`;
-      })
-      .join("");
+    const rank =
+      rankIndex === -1
+        ? ranking.length + 1
+        : rankIndex + 1;
+
+    el.innerHTML = `
+        <div class="r-badge online">ONLINE RANK ${rank}位</div>
+    `;
 
   } catch (err) {
     console.error("renderOnlineRanking error:", err);

@@ -413,95 +413,95 @@
   ゲームモーダル（追加）
 ===================================================== -->
 <div id="gameModal" class="game-modal" style="display:none;">
+  
   <div class="game-modal-content">
     <!-- 既存ゲームUIをここに移動 -->
     <div id="gameContainer"></div>
     
-    <!-- =====================================================
+<!-- =====================================================
   ゲーム画面
 ===================================================== -->
-<div id="game">
+    <div id="game">
 
-  <!-- 現在のモード表示 -->
-  <div id="modeLabel" style="margin-bottom:10px; font-weight:bold;"></div>
-  
-  <!-- ★ 追加：フリーモード表示 -->
-<div id="freeModeBadge">
-  FREE
-</div>
+      <!-- モード表示 -->
+      <div id="modeBadges">
+        <div id="missModeBadge">MISS PRACTICE</div>
+        <div id="freeModeBadge">FREE</div>
+      </div>
 
-<!-- カウントダウン表示 -->
-<div id="countdown" style="font-size:5rem; font-weight:bold; display:none; margin-bottom:20px;"></div>
+      <!-- カウントダウン表示 -->
+      <div id="countdown" style="font-size:5rem; font-weight:bold; display:none; margin-bottom:20px;"></div>
 
-<!-- 正解数 -->
-  <div id="solvedCount" class="clear-circle">
-    <div class="label">CLEAR</div>
-    <div class="count">0</div>
+      <!-- 正解数 -->
+      <div id="solvedCount" class="clear-circle">
+        <div class="label">CLEAR</div>
+        <div class="count">0</div>
+      </div>
+      <!-- 経過時間 -->
+      <div id="time-circle-container">
+        <div id="time-circle">
+          <span class="label">TIME</span>
+          <span class="count">0</span>
+        </div>
+      </div>
+        <!-- 出題単語 -->
+      <div id="word-wrap">
+        <div id="word"></div>
+      </div>
+
+      <div id="word-scroll-wrap" style="display:none;">
+        <div id="word-scroll"></div>
+      </div>
+        <!-- かな表示 -->
+      <div id="jp-wrap">
+        <div id="jp"></div>
+      </div>
+
+      <!-- ローマ字表示 -->
+      <div id="roma-wrap">
+        <div id="roma"></div>
+      </div>
+
+        <!-- 長文モード：全文固定表示 -->
+      <div id="word-long-wrap" class="hidden">
+        <div id="word-long"></div>
+      </div>
+
+        <!-- 長文モード：スクロール表示 -->
+      <div id="scroll-wrap">
+        <div id="kana-scroll"></div>
+        <div id="roma-scroll"></div>
+      </div>
+
+      <!-- 進捗バー -->
+      <div id="progress-container">
+        <div id="progress-text"></div>
+        <div id="progress-bar"></div>
+        <div id="progress-blocks"></div>
+      </div>
+
+      <!-- タイムアタック用 残り時間バー -->
+      <div id="time-bar-container">
+        <div id="timeLeft" class="time-left"></div>
+        <div id="time-bar"></div>
+      </div>
+
+      <!-- スピード表示 -->
+      <div id="speed-container">
+        <div id="speed-bar"></div>
+      </div>
+      <div id="speed-label">0 KPM</div>
+
+
+      <!-- 統計表示（ミス数・正答数・正確性など） -->
+      <div id="stats"></div>
+      
+      <button id="gameBackBtn" class="game-back-btn">戻る</button>
+      
+    </div>
+
   </div>
-  <!-- 経過時間 -->
-<div id="time-circle-container">
-  <div id="time-circle">
-    <span class="label">TIME</span>
-    <span class="count">0</span>
-  </div>
-</div>
-  <!-- 出題単語 -->
-<div id="word-wrap">
-  <div id="word"></div>
-</div>
 
-<div id="word-scroll-wrap" style="display:none;">
-  <div id="word-scroll"></div>
-</div>
-  <!-- かな表示 -->
-  <div id="jp-wrap">
-    <div id="jp"></div>
-  </div>
-
-  <!-- ローマ字表示 -->
-  <div id="roma-wrap">
-    <div id="roma"></div>
-  </div>
-
-  <!-- 長文モード：全文固定表示 -->
-<div id="word-long-wrap" class="hidden">
-  <div id="word-long"></div>
-</div>
-
-  <!-- 長文モード：スクロール表示 -->
-  <div id="scroll-wrap">
-    <div id="kana-scroll"></div>
-    <div id="roma-scroll"></div>
-  </div>
-
-  <!-- 進捗バー -->
-  <div id="progress-container">
-    <div id="progress-text"></div>
-    <div id="progress-bar"></div>
-    <div id="progress-blocks"></div>
-  </div>
-
-  <!-- タイムアタック用 残り時間バー -->
-  <div id="time-bar-container">
-    <div id="timeLeft" class="time-left"></div>
-    <div id="time-bar"></div>
-  </div>
-
-  <!-- スピード表示 -->
-  <div id="speed-container">
-    <div id="speed-bar"></div>J
-  </div>
-  <div id="speed-label">0 KPM</div>
-
-
-  <!-- 統計表示（ミス数・正答数・正確性など） -->
-  <div id="stats"></div>
-
-  
-  <button id="gameBackBtn" class="game-back-btn">戻る</button>
- 
-</div>
-</div>
 </div>
 
 <!-- =====================================================

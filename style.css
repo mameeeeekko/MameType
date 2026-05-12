@@ -1,6 +1,6 @@
 
 /* =====================================================
-style.scc
+style.css
    ・ページ全体のフォント / 背景 / 基本色
    ===================================================== */
 body {
@@ -519,6 +519,7 @@ button {
 .r-badge.timeup { background: #ef4444; color: #fff; }
 .r-badge.new    { background: #f59e0b; color: #fff; }
 .r-badge.rank   { background: #10b981; color: #fff; }
+.r-badge.online   { background: #2563eb; color: #fff; }
 
 
 .result-free-badge {
@@ -533,7 +534,6 @@ button {
   letter-spacing: 1px;
 
 }
-
 
 /* 結果ボタン */
 .result-actions {
@@ -561,6 +561,7 @@ button {
   color: #374151;
 }
 
+
 /* =====================================================
    フォント（日本語表示系を丸ゴ寄りに統一）
    ===================================================== */
@@ -574,19 +575,38 @@ button {
 /* =====================================================
    単語・入力表示（中央メインUI）
    ===================================================== */
-#freeModeBadge {
-  display: inline-block;
+#modeBadges {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px; /* バッジ間の余白 */
+  margin: 8px auto;
+}
+
+#modeBadges > div {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#freeModeBadge,
+#missModeBadge {
+  display: none; /* 初期非表示 */
   width: auto;
-  max-width: fit-content;
-  margin: 8px auto 8px;
   padding: 4px 10px;
   font-size: 12px;
   font-weight: bold;
   border-radius: 999px;
-  background: #4caf50;
   color: white;
   letter-spacing: 1px;
+}
 
+#freeModeBadge {
+  background: #4caf50;
+}
+
+#missModeBadge {
+  background: #dc5353;
 }
 
 

@@ -24,6 +24,7 @@ import { showResult } from "./resultView.js";
 import { getCurrentDifficulty, getDifficultyById } from "./difficulties.js";
 import { handleSkillModeResult } from "./skillTreeResult.js"
 import { initTimeCircle, stopTimeCircle, updateCircle } from "./renderer.js";
+import { submitScore } from "../online/submitScore.js";
 
 // ページロード時に HUD を更新
 updateHud();
@@ -264,7 +265,8 @@ export function renderState() {
         displayWord: gameState.displayWord, // gameState.displayWord に変更
         correctCount: gameState.correctCount,   // gameState.correctCount に変更
         mistakeCount: gameState.mistakeCount,   // gameState.mistakeCount に変更
-        isFreeMode: currentIsFreeMode
+        isFreeMode: currentIsFreeMode,
+        isMissPractice: gameState.currentMode === GameModes.MISS_PRACTICE
       });
 
       pendingRender = false;
@@ -600,23 +602,36 @@ async function finishGame(config = {}) {
     const diff = getCurrentDifficulty();
 
     if (shouldSaveRecord) {
-        rankingResult = addRankingEntry({
-            date: new Date().toISOString(),
-            mode: gameState.currentMode.id,
-            difficulty: diff.id,
-            difficultyName: diff.name,
-            accuracy,
-            totalCorrect: gameState.totalCorrect,   // gameState 経由
-            totalMistake: gameState.totalMistake,   // gameState 経由
-            totalChars: gameState.totalChars,       // gameState 経由
-            totalTime: totalElapsed,                // elapsed はそのまま
-            kpm: totalKpm,
-            eScore,
-            eRank,
-            solvedCount: gameState.solvedCount,     // gameState 経由
-            ...gameState.currentMode.buildResultExtra(buildState())
-        });
-    }
+      rankingResult = addRankingEntry({
+          date: new Date().toISOString(),
+          mode: gameState.currentMode.id,
+          difficulty: diff.id,
+          difficultyName: diff.name,
+          accuracy,
+          totalCorrect: gameState.totalCorrect,
+          totalMistake: gameState.totalMistake,
+          totalChars: gameState.totalChars,
+          totalTime: totalElapsed,
+          kpm: totalKpm,
+          eScore,
+          eRank,
+          solvedCount: gameState.solvedCount,
+          ...gameState.currentMode.buildResultExtra(buildState())
+      });
+
+      // =========================
+      // オンラインランキング送信
+      // =========================
+      const submitResult = await submitScore({
+          player_name: localStorage.getItem("playerName") || "NO NAME",
+          score: eScore,
+          kpm: totalKpm,
+          accuracy,
+          mode: gameState.currentMode.id
+      });
+
+      console.log("submit result:", submitResult);
+  }
 
     // ================================
     // プレイヤーステータス更新
