@@ -626,6 +626,7 @@ async function finishGame(config = {}) {
           player_name: localStorage.getItem("playerName") || "NO NAME",
           score: eScore,
           kpm: totalKpm,
+          solvedCount: gameState.solvedCount,
           accuracy,
           mode: gameState.currentMode.id
       });

@@ -117,7 +117,11 @@ export function showResult({
   // ★ここを遅延させる
   requestAnimationFrame(() => {
     if (!isFreeMode) {
-      renderOnlineRanking(eScore);
+      renderOnlineRanking(
+        eScore,
+        solvedCount,
+        mode,
+      );
     } else {
       const el = document.getElementById("onlineRanking");
       if (el) el.innerHTML = "";
@@ -126,11 +130,15 @@ export function showResult({
 }
 
 
-async function renderOnlineRanking(currentScore) {
+async function renderOnlineRanking(
+  currentScore,
+  currentSolvedCount = 0,
+  currentMode
+) {
   console.log("ranking start");
 
   try {
-    const ranking = await getRanking();
+    const ranking = await getRanking(currentMode);
     console.log("ranking:", ranking);
 
     if (!ranking || !ranking.length) return;
@@ -138,8 +146,17 @@ async function renderOnlineRanking(currentScore) {
     const el = document.getElementById("onlineRanking");
     if (!el) return;
 
-    // scoreが高い順で何位か探す
-    const rankIndex = ranking.findIndex(r => r.score <= currentScore);
+    let rankIndex;
+
+    if (currentMode === "time_attack") {
+      rankIndex = ranking.findIndex(
+        r => (r.solvedCount || 0) <= currentSolvedCount
+      );
+    } else {
+      rankIndex = ranking.findIndex(
+        r => r.score <= currentScore
+      );
+    }
 
     const rank =
       rankIndex === -1
@@ -147,7 +164,7 @@ async function renderOnlineRanking(currentScore) {
         : rankIndex + 1;
 
     el.innerHTML = `
-        <div class="r-badge online">ONLINE RANK ${rank}位</div>
+      <div class="r-badge online">ONLINE RANK ${rank}位</div>
     `;
 
   } catch (err) {
