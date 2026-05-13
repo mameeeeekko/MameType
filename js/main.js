@@ -34,6 +34,9 @@ import { reloadQuestProgress, resetQuestAll } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
+import { APP_VERSION } from "./version.js";
+import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
+
 
 // ================================
 // 🔹DOM参照（グローバル）
@@ -73,6 +76,8 @@ let resetQuestBtn;
 let playerNameInput, savePlayerNameBtn;
 
 let onlineRankingToggle;
+
+let unlock, autoLock, pause, saveKeybindBtn;
 
 
 function cacheDOM() {
@@ -147,6 +152,12 @@ function cacheDOM() {
   savePlayerNameBtn = document.getElementById("savePlayerNameBtn");
 
   onlineRankingToggle = document.getElementById("onlineRankingToggle");
+
+  unlock = document.getElementById("key-unlock");
+  autoLock = document.getElementById("key-autolock");
+  pause = document.getElementById("key-pause");
+  saveKeybindBtn = document.getElementById("saveKeybindBtn");
+
 }
 
 // =====================================================
@@ -206,10 +217,12 @@ updateHud();
 // DOM 取得・初期化
 // =====================================================
 document.addEventListener("DOMContentLoaded", () => {
+  
+  document.getElementById("versionLabel").textContent = `v${APP_VERSION}`;
 
   cacheDOM();
   initDifficultyButtons()
-
+  initKeybinds();
   // ゲーム画面描画準備
   Game.initRenderer();
 
@@ -534,6 +547,7 @@ function initSettingsUI() {
     hideAllScreens();
     if (settingsDiv) settingsDiv.style.display = "block";
     applySoundSettingsToUI();
+    applyKeybindsToUI();
   });
 
   settingsBackBtn?.addEventListener("click", showMainMenu);
@@ -558,6 +572,53 @@ function initSettingsUI() {
       saveSettings();
     });
   }
+
+  //keybinde
+
+  saveKeybindBtn?.addEventListener("click", () => {
+
+    const bind = {
+      unlock: unlock.value,
+      autoLock: autoLock.value,
+      pause: pause.value,
+    };
+    
+      // ★重複チェック
+    if (!validateKeybinds(bind)) {
+      showSaveMessage("⚠ キーが重複しています", "error");
+      return;
+    }
+
+    saveKeybinds(bind);
+
+    // ★保存完了メッセージ
+    showSaveMessage("キーバインドを保存しました");
+  });
+}
+
+function applyKeybindsToUI() {
+
+  const keybinds = loadKeybinds();
+
+  // UIに反映
+  unlock.value = keybinds.unlock;
+  autoLock.value = keybinds.autoLock;
+  pause.value = keybinds.pause;
+}
+
+// キーバインド重複チェック
+function validateKeybinds(bind) {
+
+  const values = Object.values(bind);
+
+  const unique = new Set(values);
+
+  // 重複がある = sizeが小さくなる
+  if (unique.size !== values.length) {
+    return false;
+  }
+
+  return true;
 }
 
 // =====================================================
@@ -853,17 +914,17 @@ export function backToQuestMap() {
 
 function bindKeyEvents() {
   document.addEventListener("keydown", (e) => {
-    const key = e.key.toLowerCase();
-
-    if (handleResultKey(key, e)) return;
-    if (handlePauseKey(key)) return;
-    if (handleGameKey(e, key)) return;
-    if (handleMenuKey(key, e)) return;
+    if (handleResultKey(e)) return;
+    if (handlePauseKey(e)) return;
+    if (handleGameKey(e)) return;
+    if (handleMenuKey(e)) return;
   });
 }
 
-function handleResultKey(key, e) {
+function handleResultKey(e) {
   if (resultDiv.style.display === "none") return false;
+
+  const key = e.key.toLowerCase(); // ここだけ残す（UI用）
 
   switch (key) {
     case "a":
@@ -905,8 +966,10 @@ function handleResultKey(key, e) {
   return true;
 }
 
-function handlePauseKey(key) {
+function handlePauseKey(e) {
   if (!getPaused()) return false;
+
+  const key = e.key.toLowerCase();
 
   switch (key) {
     case "enter":
@@ -967,13 +1030,16 @@ function handlePauseKey(key) {
   return true;
 }
 
-function handleGameKey(e, key) {
+function handleGameKey(e) {
+
+  const keybinds = loadKeybinds();
+
   if (!Game.isGameActive) return false;
 
   if (getPaused()) return true;
 
   // ポーズトグル
-  if (key === "enter") {
+  if (e.code === keybinds.pause) {
     e.preventDefault();
     const paused = Game.togglePause();
     const overlay = document.querySelector(".pause-overlay");
@@ -982,7 +1048,7 @@ function handleGameKey(e, key) {
   }
 
   // ESC終了
-  if (key === "escape") {
+  if (e.code === "Escape") {
     e.preventDefault();
 
       // ★① スキルモード（最優先）
@@ -1026,16 +1092,18 @@ function handleGameKey(e, key) {
 
   // 入力処理
   if (gameState.enemyMode) {
-    if (e.key === "Tab") e.preventDefault();
-    handleEnemyKey(key);
+    if (e.code === "Tab") e.preventDefault();
+    handleEnemyKey(e);
   } else {
-    handleKey(e.key);
+    handleKey(e);
   }
 
   return true;
 }
 
-function handleMenuKey(key, e) {
+function handleMenuKey(e) {
+
+  const key = e.key.toLowerCase();
 
   if (settingsDiv.style.display !== "none") {
     if (key === "b" || key === "escape") {
@@ -1161,3 +1229,40 @@ function initHudControls() {
   }
 }
 
+
+// =====================================================
+// メッセージ表示関数
+// =====================================================
+function showSaveMessage(text) {
+
+  let el = document.getElementById("saveMessage");
+
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "saveMessage";
+
+    // スタイル（簡易トースト）
+    el.style.position = "fixed";
+    el.style.bottom = "30px";
+    el.style.left = "50%";
+    el.style.transform = "translateX(-50%)";
+    el.style.background = "rgba(0,0,0,0.8)";
+    el.style.color = "#fff";
+    el.style.padding = "10px 20px";
+    el.style.borderRadius = "8px";
+    el.style.fontSize = "14px";
+    el.style.zIndex = "9999";
+    el.style.transition = "opacity 0.3s";
+
+    document.body.appendChild(el);
+  }
+
+  el.textContent = text;
+  el.style.opacity = "1";
+
+  // ★2秒後に消す
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => {
+    el.style.opacity = "0";
+  }, 2000);
+}

@@ -28,6 +28,9 @@ import { setStar } from "./questProgress.js";
 import { submitScore } from "../online/submitScore.js";
 import { getEvolutionStage } from "./questPlayerStats.js";
 import { RANKING_VERSION } from "../js/version.js";
+import { loadKeybinds } from "./keybinds.js";
+
+const keybinds = loadKeybinds();
 
 let currentStage = "STAGE1";
 let loopId = null;
@@ -385,10 +388,13 @@ function gameLoop() {
 // handle
 // ===========================================
 
-export function handleEnemyKey(key) {
+export function handleEnemyKey(e) {
 
-//実際のタイピング入力時間測定
+    //実際のタイピング入力時間測定
     const now = getNow();
+
+    // キーバインド読み込み
+    const keybinds = loadKeybinds();
 
     if (gameState.enemyStats.lastKeyTime > 0) {
 
@@ -399,79 +405,79 @@ export function handleEnemyKey(key) {
         }
 
     }
-//チェイン開始
-onTypingStart()
+    //チェイン開始
+    onTypingStart()
 
-gameState.enemyStats.lastKeyTime = now;
+    gameState.enemyStats.lastKeyTime = now;
 
- // =====================
- // TABターゲット切替 近くの敵をロック
- // =====================
-if (key === "tab") {
-    // ★今ロックしている敵がいたら入力状態を確定
-    if (lockedEnemy) {
+    // =====================
+    // TABターゲット切替 近くの敵をロック
+    // =====================
+    if (e.code === keybinds.autoLock) {
+        // ★今ロックしている敵がいたら入力状態を確定
+        if (lockedEnemy) {
 
-        const enemy = lockedEnemy;
+            const enemy = lockedEnemy;
 
-        // 残り文字に更新
-        enemy.text = enemy.text.slice(enemy.pos);
-        // ローマ字再構築
-        enemy.baseRomaji = buildBaseRomaji(enemy.text);
-        // 入力状態リセット
-        enemy.pos = 0;
-        enemy.typed = "";
-        enemy.inputedRomaji = "";
+            // 残り文字に更新
+            enemy.text = enemy.text.slice(enemy.pos);
+            // ローマ字再構築
+            enemy.baseRomaji = buildBaseRomaji(enemy.text);
+            // 入力状態リセット
+            enemy.pos = 0;
+            enemy.typed = "";
+            enemy.inputedRomaji = "";
+        }
+
+        const aliveEnemies = enemies.filter(e => e && !e.isDead);
+
+        if (aliveEnemies.length === 0) return;
+
+        let nearest = null;
+        let nearestDist = Infinity;
+
+        aliveEnemies.forEach(enemy => {
+
+            const dx = enemy.x - player.x;
+            const dy = enemy.y - player.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = enemy;
+            }
+
+        });
+
+        if (!nearest) return;
+
+        // ★新しい敵にロック
+        lockedEnemy = nearest;
+
+        gameState.text = lockedEnemy.text;
+        gameState.pos = 0;
+        gameState.inputedRomaji = "";
+        gameState.typed = "";
+
+        lockedEnemy.pos = 0;
+        lockedEnemy.typed = "";
+        lockedEnemy.inputedRomaji = "";
+
+        enemies.forEach(enemy=>{
+            if(enemy !== lockedEnemy){
+                resetEnemyInput(enemy);
+            }
+        });
+
+        candidateEnemies = [];
+        typedBuffer = "";
+
+        return;
     }
-
-    const aliveEnemies = enemies.filter(e => e && !e.isDead);
-
-    if (aliveEnemies.length === 0) return;
-
-    let nearest = null;
-    let nearestDist = Infinity;
-
-    aliveEnemies.forEach(enemy => {
-
-        const dx = enemy.x - player.x;
-        const dy = enemy.y - player.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-
-        if (dist < nearestDist) {
-            nearestDist = dist;
-            nearest = enemy;
-        }
-
-    });
-
-    if (!nearest) return;
-
-    // ★新しい敵にロック
-    lockedEnemy = nearest;
-
-    gameState.text = lockedEnemy.text;
-    gameState.pos = 0;
-    gameState.inputedRomaji = "";
-    gameState.typed = "";
-
-    lockedEnemy.pos = 0;
-    lockedEnemy.typed = "";
-    lockedEnemy.inputedRomaji = "";
-
-    enemies.forEach(enemy=>{
-        if(enemy !== lockedEnemy){
-            resetEnemyInput(enemy);
-        }
-    });
-
-    candidateEnemies = [];
-    typedBuffer = "";
-
-    return;
-}
     // =====================
-    // SPACE処理
+    // SPACE処理(ロック解除)
     // =====================
-    if (key === " ") {
+    if (e.code === keybinds.unlock) {
         // ロック解除
         if (lockedEnemy) {
             const enemy = lockedEnemy;
@@ -513,7 +519,7 @@ if (key === "tab") {
         // 正解判定用に事前保存
         const beforeCorrect = gameState.correctCount;
     
-        handleKey(key);
+        handleKey(e);
 
         // 正解入力ならチェイン増加
         if (gameState.correctCount > beforeCorrect) {
@@ -627,14 +633,15 @@ if (key === "tab") {
             }
 
         //=================================================
+        }
+        return;
     }
-       return;
-}
+
     // =====================
     // ロック前
     // =====================
 
-    typedBuffer += key;
+    typedBuffer += e.key;
 
     // 候補検索
     if (candidateEnemies.length === 0) {
@@ -679,7 +686,7 @@ if (key === "tab") {
         gameState.typed = "";
         // 今までの入力を適用
         for (const ch of typedBuffer) {
-            handleKey(ch);
+            handleKey({ key: ch });
         }
 
         lockedEnemy.pos = gameState.pos;

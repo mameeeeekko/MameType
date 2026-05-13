@@ -70,7 +70,7 @@ export function fullResetInput() {
 // 入力処理関数
 // キー入力を受け取り、正誤判定・候補更新・確定を行う
 // =====================================================
-  export function handleKey(key) {
+  export function handleKey(e) {
     //log
     // console.log("INPUT", {
     //   key,
@@ -80,8 +80,8 @@ export function fullResetInput() {
     // });
 
     safePlayTypeSound();   // タイプ音
-
-    key = key.toLowerCase(); // 大文字は小文字に統一
+    let code = e.key
+    let key = code.toLowerCase(); // 大文字は小文字に統一
     // 全角を半角に変換
     if (key === "！") key = "!";
     if (key === "？") key = "?";

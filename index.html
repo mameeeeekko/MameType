@@ -25,14 +25,19 @@
   メインメニュー
 ===================================================== -->
 <div id="menu">
-  <h1>MameType</h1>
-  
-  <button id="questMenuBtn">クエスト</button>
-  <button id="startMenuBtn">デイリー</button>
-  <button id="freeModeBtn">フリーモード</button>
-  <button id="recordsMenuBtn">RECORDS</button>
-  <button id="onlineRankingBtn">ONLINE RANKING</button>
-  <button id="settingsBtn">SETTING</button>
+    <div id="menuHeader">
+      <h1 id="gameTitle">MameType</h1>
+      <div id="versionLabel"></div>
+    </div>
+
+    <div id="menuButtons">
+      <button id="questMenuBtn">QUEST</button>
+      <button id="startMenuBtn">DAILY MODE</button>
+      <button id="freeModeBtn">FREE MODE</button>
+      <button id="recordsMenuBtn">RECORDS</button>
+      <button id="onlineRankingBtn">ONLINE RANKING</button>
+      <button id="settingsBtn">SETTING</button>
+    </div>
 
   <!-- サウンドON/OFF トグル -->
   <label id="soundLabel">
@@ -47,10 +52,10 @@
 <div id="questMenu" style="display:none; margin-top:20px;">
   <h2>クエストモードメニュー</h2>
   
-  <button id="questStartBtn">つづきから</button>
-  <button id="questSaveBtn">セーブ／ロード</button>
+  <button id="questStartBtn">CONTINUE</button>
+  <button id="questSaveBtn">SAVE／LOAD</button>
   <button id="questStartBtnFromBeginning">はじめから</button>
-  <button id="questStartMenuBackBtn">メニューに戻る</button>
+  <button id="questStartMenuBackBtn">MENU</button>
 
 </div>
 <!-- =====================================================
@@ -59,11 +64,11 @@
 <!-- セーブモーダル -->
 <div id="saveModal" class="save-modal hidden">
   <div id="questSaveMenu" class="save-modal-content">
-    <h2>セーブ / ロード</h2>
+    <h2>SAVE / LOAD</h2>
     
     <div id="questSlots"></div>
 
-    <button id="saveToQuestMenuBackBtn">閉じる</button>
+    <button id="saveToQuestMenuBackBtn">CLOSE</button>
   </div>
 </div>
 <!-- =====================================================
@@ -76,7 +81,7 @@
   <button id="timeAttackBtn">タイムアタック</button>
   <button id="longTextBtn">長文</button>
   <button id="enemyModeBtn">エネミー</button>
-  <button id="startMenuBackBtn">メニューに戻る</button>
+  <button id="startMenuBackBtn">MENU</button>
 
 </div>
 
@@ -98,7 +103,7 @@
   <button id="freeTimeAttackBtn">タイムアタック</button>
   <button id="freeLongTextBtn">長文</button>
   <button id="freeEnemyModeBtn">エネミー</button>
-  <button id="freeStartMenuBackBtn">メニューに戻る</button>
+  <button id="freeStartMenuBackBtn">MENU</button>
 
 </div>
 
@@ -119,7 +124,7 @@
   設定画面
 ===================================================== -->
 <div id="settings" style="display:none; margin-top:20px;">
-  <h2>設定</h2>
+  <h2>SETTING</h2>
   
   <!-- online ranking設定 -->
   <fieldset>
@@ -169,14 +174,48 @@
       ミスタイプ時に画面フラッシュ
     </label>
   </fieldset>
+  
+  <!-- キー設定 -->
+  <fieldset>
+  <legend>キー設定</legend>
+
+  <label>ロック解除</label>
+  <select id="key-unlock">
+    <option value="Space">SPACE</option>
+    <option value="Tab">TAB</option>
+    <option value="Enter">ENTER</option>
+    <option value="Backspace">BS</option>
+    <option value="Delete">DEL</option>
+  </select>
+
+  <label>自動ロック</label>
+  <select id="key-autolock">
+    <option value="Space">SPACE</option>
+    <option value="Tab">TAB</option>
+    <option value="Enter">ENTER</option>
+    <option value="Backspace">BS</option>
+    <option value="Delete">DEL</option>
+  </select>
+
+  <label>ポーズ</label>
+  <select id="key-pause">
+    <option value="Space">SPACE</option>
+    <option value="Tab">TAB</option>
+    <option value="Enter">ENTER</option>
+    <option value="Backspace">BS</option>
+    <option value="Delete">DEL</option>
+  </select>
+
+  <button id="saveKeybindBtn">保存</button>
+</fieldset>
 
   <!-- デイリーのバックアップ！ -->
   <fieldset>
     <legend>デイリーデータ</legend>
 
-    <button id="exportPlayerStatsBtn">📤 バックアップ</button>
+    <button id="exportPlayerStatsBtn">📤 BACKUP</button>
     <button id="importPlayerStatsBtn">📥 復元</button>
-    <button id="resetPlayerStatsBtn">🗑 リセット</button>
+    <button id="resetPlayerStatsBtn">🗑 RESET</button>
 
     <!-- 復元用 -->
     <input
@@ -190,9 +229,9 @@
   <fieldset>
     <legend>クエストデータ</legend>
 
-    <button id="exportQuestBtn">📤 バックアップ</button>
+    <button id="exportQuestBtn">📤 BACKUP</button>
     <button id="importQuestBtn">📥 復元</button>
-    <button id="resetQuestBtn">🗑 リセット</button>
+    <button id="resetQuestBtn">🗑 RESET</button>
 
     <input
       type="file"
@@ -202,7 +241,7 @@
     >
   </fieldset>
 
-  <button id="settingsBackBtn">メニューに戻る</button>
+  <button id="settingsBackBtn">MENU</button>
 
 </div>
 <!-- =====================================================
@@ -215,7 +254,7 @@
 
         <!-- ヘッダー -->
         <div id="records-header">
-          <h2>🏆 Records</h2>
+          <h2>🏆 RECORDS</h2>
 
           <div id="records-controls">
             <div id="recordsModeButtons" class="mode-buttons">
@@ -234,14 +273,14 @@
         <div id="records-main">
 
           <section class="records-section">
-            <h3>📈 Best Scores Graph</h3>
+            <h3>📈 BEST SCORES GRAPH</h3>
             <div id="records-left">
               <div id="bestScoreGraph"></div>
             </div>
           </section>
 
           <section class="records-section">
-            <h3>🏅 Ranking</h3>
+            <h3>🏅 RANKING</h3>
             <div id="records-ranking">
               <div id="ranking"></div>
             </div>
@@ -253,12 +292,12 @@
 
       <!-- 下段 -->
       <div id="records-bottom">
-        <h3>📜 History</h3>
+        <h3>📜 HISTORY</h3>
           <div id="history"></div>
 
         <div id="records-buttons">
-          <button id="resetRecordsBtn">記録をリセット</button>
-          <button id="recordsBackBtn">メニューに戻る</button>
+          <button id="resetRecordsBtn">RESET</button>
+          <button id="recordsBackBtn">MENU</button>
         </div>
       </div>
 
@@ -275,14 +314,14 @@
 
   <div class="ranking-tabs">
     <button class="ranking-tab active" data-mode="normal">STANDARD</button>
-    <button class="ranking-tab" data-mode="time_attack">TIME</button>
+    <button class="ranking-tab" data-mode="time_attack">TIME ATTACK</button>
     <button class="ranking-tab" data-mode="long_text">LONG</button>
     <button class="ranking-tab" data-mode="enemy_mode">ENEMY</button>
   </div>
 
   <div id="rankingList"></div>
 
-  <button id="rankingBackBtn">メニューに戻る</button>
+  <button id="rankingBackBtn">MENU</button>
 </div>
 
 
@@ -301,7 +340,7 @@
   <div id="normalHud">
     <div class="hud-header">DAILY STATUS</div>
     <div class="hud-row">
-      <span>⚡ 平均KPM</span>
+      <span>⚡ Avg.KPM</span>
       <span id="hudAvgSpeed">0</span>
     </div>
     <div class="hud-bar">
@@ -310,7 +349,7 @@
     <div class="hud-rank">Rank: <span id="hudSpeedRank">-</span></div>
 
     <div class="hud-row">
-      <span>🎯 正確性</span>
+      <span>🎯 Acc</span>
       <span id="hudAvgAcc">0%</span>
     </div>
     <div class="hud-bar">
@@ -319,14 +358,14 @@
     <div class="hud-rank">Rank: <span id="hudAccRank">-</span></div>
 
     <div class="hud-row">
-      <span>🚀 最高KPM</span>
+      <span>🚀 Max KPM</span>
       <span id="hudMaxSpeed">0</span>
     </div>
 
     <br>
 
     <div style="text-align:left;">
-      総プレイ時間：<span id="totalPlayTime"></span>
+      TotalPlayTime：<span id="totalPlayTime"></span>
     </div>
 
   </div>
@@ -408,7 +447,7 @@
     <div class="ach-modal-content">
       <div class="ach-title">勲章</div>
       <div id="achList"></div>
-      <button id="achClose">閉じる</button>
+      <button id="achClose">CLOSE</button>
     </div>
 </div>
 <!-- =====================================================
