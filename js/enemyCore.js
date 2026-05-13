@@ -27,6 +27,7 @@ import { STAR_EVALUATORS } from "./starEvaluator.js";
 import { setStar } from "./questProgress.js";
 import { submitScore } from "../online/submitScore.js";
 import { getEvolutionStage } from "./questPlayerStats.js";
+import { RANKING_VERSION } from "../js/version.js";
 
 let currentStage = "STAGE1";
 let loopId = null;
@@ -1259,7 +1260,8 @@ export async function endEnemyMode() {
                 score: stats.gScore,
                 solvedCount: stats.defeatedCount,
                 accuracy: Number(stats.accuracy.toFixed(1)),
-                kpm: stats.gKpm
+                kpm: stats.gKpm,
+                ranking_version: RANKING_VERSION,
             });
         } catch (err) {
             console.error("Enemy online submit failed:", err);

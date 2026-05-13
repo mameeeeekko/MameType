@@ -30,8 +30,9 @@
   <button id="questMenuBtn">クエスト</button>
   <button id="startMenuBtn">デイリー</button>
   <button id="freeModeBtn">フリーモード</button>
-  <button id="recordsMenuBtn">レコード</button>
-  <button id="settingsBtn">設定</button>
+  <button id="recordsMenuBtn">RECORDS</button>
+  <button id="onlineRankingBtn">ONLINE RANKING</button>
+  <button id="settingsBtn">SETTING</button>
 
   <!-- サウンドON/OFF トグル -->
   <label id="soundLabel">
@@ -265,6 +266,26 @@
   </div>
 
 </div>
+
+<!-- =====================================================
+  ONLINE RANKING
+===================================================== -->
+<div id="onlineRankingScreen" class="ranking-screen hidden">
+  <h2>ONLINE RANKING</h2>
+
+  <div class="ranking-tabs">
+    <button class="ranking-tab active" data-mode="normal">STANDARD</button>
+    <button class="ranking-tab" data-mode="time_attack">TIME</button>
+    <button class="ranking-tab" data-mode="long_text">LONG</button>
+    <button class="ranking-tab" data-mode="enemy_mode">ENEMY</button>
+  </div>
+
+  <div id="rankingList"></div>
+
+  <button id="rankingBackBtn">メニューに戻る</button>
+</div>
+
+
 <!-- =====================================================
   プレイヤーHUD（常時表示ステータス）
 ===================================================== -->

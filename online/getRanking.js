@@ -1,29 +1,35 @@
 import { supabase } from "./supabase.js";
 import { isOnlineEnabled } from "../online/playerProfile.js";
+import { RANKING_VERSION } from "../js/version.js";
 
-export async function getRanking(mode = null) {
+// ========================================================
+// ランキング一覧取得関数
+// ========================================================
+export async function getRanking(
+  mode = null,
+  from = 0,
+  to = 99
+) {
   let query = supabase
     .from("scores")
     .select("*")
-    .limit(10);
+    .eq("ranking_version", RANKING_VERSION);
 
   // モード絞り込み
   if (mode) {
     query = query.eq("mode", mode);
   }
 
-  // =========================
-  // モード別ソート条件
-  // =========================
+  // モード別ソート
   if (mode === "time_attack") {
-    // タイムアタックは解答数優先
     query = query
       .order("solvedCount", { ascending: false })
-      .order("score", { ascending: false }); // 同点時
+      .order("score", { ascending: false });
   } else {
-    // 通常はスコア
     query = query.order("score", { ascending: false });
   }
+
+  query = query.range(from, to);
 
   const { data, error } = await query;
 
@@ -32,9 +38,12 @@ export async function getRanking(mode = null) {
     return [];
   }
 
-  return data;
+  return data ?? [];
 }
 
+// ========================================================
+// オンラインでの順位獲得関数　結果で表示する用
+// ========================================================
 export async function renderOnlineRanking(
   currentScore,
   currentSolvedCount = 0,
@@ -61,7 +70,7 @@ export async function renderOnlineRanking(
     // ================================
     // ランキング取得
     // ================================
-    const ranking = await getRanking(currentMode);
+    const ranking = await getRanking(currentMode, 0, 99);
     console.log("ranking:", ranking);
 
     if (!ranking || !ranking.length) {
@@ -93,6 +102,7 @@ export async function renderOnlineRanking(
     el.innerHTML = `
       <div class="r-badge online">
         ONLINE RANK ${rank}位
+        <div class="ranking-season">${RANKING_VERSION}</div>
       </div>
     `;
 

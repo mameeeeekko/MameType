@@ -33,6 +33,7 @@ import { renderQuestMapUI, openQuestMenuModal } from "./questMapUI.js";
 import { reloadQuestProgress, resetQuestAll } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from "../online/playerProfile.js";
+import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 
 // ================================
 // 🔹DOM参照（グローバル）
@@ -40,9 +41,10 @@ import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from 
 let menuDiv, startMenuDiv, questMenuDiv, freeStartMenuDiv;
 let settingsDiv, gameDiv, resultDiv, recordsDiv;
 let questMapScreen, questSaveMenuDiv, skillTreeDiv;
-let hintDiv
+let hintDiv;
+let onlineRankingDiv;
 
-let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn;
+let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn, onlineRankingBtn;
 let startMenuBackBtn, freeStartMenuBackBtn, questStartMenuBackBtn;
 let saveToQuestMenuBackBtn, questSaveBtn;
 
@@ -50,7 +52,7 @@ let enemyModeBtn, freeEnemyModeBtn, questStartBtn, questStartBtnFromBeginning;
 let startBtn, timeAttackBtn, longTextBtn;
 let freeStartBtn, freeTimeAttackBtn, freeLongTextBtn;
 
-let backBtn, resultBackBtn, recordsBackBtn;
+let backBtn, resultBackBtn, recordsBackBtn, rankingBackBtn;
 let gameBackBtn;
 
 let playAgainBtn, retryBtn;
@@ -86,11 +88,13 @@ function cacheDOM() {
   questSaveMenuDiv = document.getElementById("saveModal");
   skillTreeDiv = document.getElementById("skillTree");
   hintDiv = document.getElementById("skillUnlockHint");
+  onlineRankingDiv = document.getElementById("onlineRankingScreen");
 
   startMenuBtn = document.getElementById("startMenuBtn");
   questMenuBtn = document.getElementById("questMenuBtn");
   freeModeBtn = document.getElementById("freeModeBtn");
   recordsMenuBtn = document.getElementById("recordsMenuBtn");
+  onlineRankingBtn = document.getElementById("onlineRankingBtn");
   startMenuBackBtn = document.getElementById("startMenuBackBtn");
   freeStartMenuBackBtn = document.getElementById("freeStartMenuBackBtn");
   questStartMenuBackBtn = document.getElementById("questStartMenuBackBtn");
@@ -111,6 +115,7 @@ function cacheDOM() {
   backBtn = document.getElementById("backBtn");
   resultBackBtn = document.getElementById("resultBackBtn");
   recordsBackBtn = document.getElementById("recordsBackBtn");
+  rankingBackBtn = document.getElementById("rankingBackBtn")
   gameBackBtn = document.getElementById("gameBackBtn");
 
   playAgainBtn = document.getElementById("playAgainBtn");
@@ -559,7 +564,7 @@ function initSettingsUI() {
 // 画面表示制御ユーティリティ
 // =====================================================
 export function hideAllScreens() {
-  [menuDiv, questMenuDiv, startMenuDiv, freeStartMenuDiv, settingsDiv, gameDiv, resultDiv, recordsDiv, questMapScreen, skillTreeDiv]
+  [menuDiv, questMenuDiv, startMenuDiv, freeStartMenuDiv, settingsDiv, gameDiv, resultDiv, recordsDiv, questMapScreen, skillTreeDiv, onlineRankingDiv]
     .forEach(div => { if (div) div.style.display = "none"; });
 }
 
@@ -603,6 +608,11 @@ function bindMenuEvents() {
   recordsMenuBtn?.addEventListener("click", () => {
     hideAllScreens();
     showRecordsView(Game.getLastGameMode?.() ?? GameModes.NORMAL);
+  });
+
+  onlineRankingBtn?.addEventListener("click", () => {
+    hideAllScreens();
+    openOnlineRanking();
   });
 
   startMenuBackBtn?.addEventListener("click", showMainMenu);
@@ -821,6 +831,11 @@ function bindMenuBackEvents() {
   });
 
   recordsBackBtn?.addEventListener("click", showMainMenu);
+
+  rankingBackBtn?.addEventListener("click", () => {
+    hideAllScreens();
+    showMainMenu();
+  });
 }
 
 //クエストサイドメニューの戻るボタン用
@@ -1034,6 +1049,14 @@ function handleMenuKey(key, e) {
     if (key === "b" || key === "escape") {
       e.preventDefault();
       recordsBackBtn?.click();
+    }
+    return true;
+  }
+
+  if (onlineRankingDiv.style.display !== "none") {
+    if (key === "b" || key === "escape") {
+      e.preventDefault();
+      rankingBackBtn?.click();
     }
     return true;
   }

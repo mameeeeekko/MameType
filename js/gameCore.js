@@ -25,6 +25,7 @@ import { getCurrentDifficulty, getDifficultyById } from "./difficulties.js";
 import { handleSkillModeResult } from "./skillTreeResult.js"
 import { initTimeCircle, stopTimeCircle, updateCircle } from "./renderer.js";
 import { submitScore } from "../online/submitScore.js";
+import { RANKING_VERSION } from "../js/version.js";
 
 // ページロード時に HUD を更新
 updateHud();
@@ -628,7 +629,8 @@ async function finishGame(config = {}) {
           kpm: totalKpm,
           solvedCount: gameState.solvedCount,
           accuracy,
-          mode: gameState.currentMode.id
+          mode: gameState.currentMode.id,
+          ranking_version: RANKING_VERSION
       });
 
       console.log("submit result:", submitResult);
