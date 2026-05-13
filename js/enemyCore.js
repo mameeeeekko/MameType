@@ -94,6 +94,7 @@ function updateChainBar(){
     // 減衰
     const diff = getCurrentDifficulty();
     const enemyDiff = diff.enemy;
+    // スキル計算　chainDecayRateがスキル　decayRateはDef enemyDill.chainDecayは難易度別の値
     stats.chainBar -= delta * CHAIN_CONFIG.decayRate * enemyDiff.chainDecay * stats.chainDecayRate;
     // 下限
     if(stats.chainBar <= 0){
@@ -129,11 +130,12 @@ function chainBurst(){
     stats.chainActive = false;
 }
 
-function getChainMultiplier(chainCount) {
+export function getChainMultiplier(chainCount) {
 
     const stats = gameState.enemyStats; 
     const table = ENEMY_MODE_CONFIG.chain.multipliers;
-
+    
+    // chainBonusがスキル分 つまりベース倍率×スキル倍率============
     for (const row of table) {
         if (chainCount >= row.count) {
             return row.value * stats.chainBonus;
@@ -534,6 +536,7 @@ if (key === "tab") {
                 stats.lastChainUpdate = getNow();
             }
 
+            // タイプでチェイン増加　スキル加算＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
             stats.chainBar += CHAIN_CONFIG.gainOnType * stats.chainRate;
 
             if (stats.chainBar > stats.chainBarMax) {
@@ -565,7 +568,7 @@ if (key === "tab") {
             lockedEnemy.isDead = true;
             gameState.enemyStats.defeatedCount++;
             gameState.enemyStats.processedCount++;
-            //敵スコア追加
+            // 敵スコア追加 getChainMultiplierでスキル分増加========
             const stats = gameState.enemyStats;
             const baseScore = lockedEnemy.type.score;
             const multiplier = getChainMultiplier(stats.chainCount);
@@ -585,7 +588,7 @@ if (key === "tab") {
             if(stats.chainCount > stats.maxChainCount){
             stats.maxChainCount = stats.chainCount;
             }
-            // チェインバー増加
+            // 敵倒したらチェインバー増加 スキルでの加算
             stats.chainBar += CHAIN_CONFIG.gainOnKill * stats.chainRate;
             if(stats.chainBar > stats.chainBarMax){
                 stats.chainBar = stats.chainBarMax;
@@ -823,6 +826,7 @@ export async function startEnemyMode(config = {}) {
         gKpm: 0,             // KPM
         rank: "C",           // 初期ランク
 
+        isQuestMode: config.isQuestMode ?? false,
         evo: config.isQuestMode ? getEvolutionStage() : 0, //見た目
 
         failed: false,

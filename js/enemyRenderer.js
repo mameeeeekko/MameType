@@ -4,7 +4,7 @@ import { getDisplayFullRoma, getDisplayRomaForEnemy } from "./typingLogic.js";
 import { getDifficulty } from "./difficulties.js";
 import { buildClearText } from "./enemyModeConfig.js";
 import { getNow } from "./gameCore.js";
-
+import { getChainMultiplier } from "./enemyCore.js"
 
 // サイドを丸める関数
 function roundRect(ctx, x, y, w, h, r) {
@@ -49,7 +49,7 @@ export function renderEnemyMode(state) {
     // 敵描画
     renderEnemies(ctx, state.enemies, state.lockedEnemy);
     // プレイヤー描画
-    renderPlayer(ctx, state.player, state);
+    renderPlayer(ctx, state.player, state.enemyStats);
  
 }
 
@@ -1257,6 +1257,7 @@ export function renderChainUI(gameState){
     const bar = document.getElementById("chainBar");
     const label = document.getElementById("chainLabel");
     const value = document.getElementById("chainValue");
+    const mul = document.getElementById("chainMultiplier");
     
 
     if(!bar || !label || !value) return;
@@ -1265,12 +1266,21 @@ export function renderChainUI(gameState){
 
     bar.style.width = (ratio * 100) + "%";
 
-    // 残り時間表示
-    // const sec = (stats.chainBar / 1000).toFixed(1);
-
-    // 表示
+    // 表示　チェインカウント
     label.textContent = "CHAIN";
-    value.textContent = stats.chainCount; // + "  |  " + sec + "s";
+    value.textContent = stats.chainCount;
+    // 表示　ボーナス倍率
+    const multiplier = getChainMultiplier(stats.chainCount);
+
+    if(mul){
+        const bonus = stats.chainBonus ?? 0;
+
+        const bonusText = bonus > 0
+            ? ` (×${bonus.toFixed(1)})`
+            : "";
+
+        mul.textContent = `x${multiplier.toFixed(1)}${bonusText}`;
+    }
 
     // 色変化
     if(ratio < 0.25){

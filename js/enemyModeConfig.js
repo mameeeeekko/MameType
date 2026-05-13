@@ -50,7 +50,7 @@ export const ENEMY_MODE_CONFIG = {
 
         // チェイン倍率テーブル（上から評価）
         multipliers: [
-            { count: 100, value: 5.0 },
+            { count: 100, value: 4.0 },
             { count: 80, value: 3.0 },
             { count: 60, value: 2.5 },
             { count: 50, value: 2.0 },

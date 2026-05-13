@@ -517,7 +517,7 @@ function showLevelUpEffect(i = 0) {
 
     // ★何回目か分かるように
     badge.textContent = `LEVEL UP! +${i + 1}`;
-
+    badge.classList.add("levelup-effect");
     badge.classList.add("pop");
 
     setTimeout(() => {
@@ -531,6 +531,7 @@ function showFinalLevelUp(startLv, endLv) {
     if (!badge) return;
 
     badge.textContent = `LEVEL UP! Lv ${startLv} → ${endLv}`;
+    badge.classList.add("levelup-effect");
     badge.classList.add("pop");
 
     setTimeout(() => {
