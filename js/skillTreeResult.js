@@ -4,7 +4,7 @@ import { showQuestMap } from "./main.js";
 import { openQuestMenuModal } from "./questMapUI.js"; 
 import { startSkillMode, checkSkillUnlocks, SKILL_TREE, checkUnlockByResult, getUnlockText } from "./skillTree.js";
 import { showSkillResultIntro } from "./skillTreeUI.js";
-import { PASSIVE_SKILLS } from "./questSkills.js";
+import { getSkillById } from "./questSkills.js";
 import { getPlayerStats } from "./questPlayerStats.js";
 
 export function handleSkillModeResult(nodeId) {
@@ -107,7 +107,7 @@ console.log("node:", SKILL_TREE[nodeId]);
         const isUnlockedNow = unlocked.includes(node.id);
         const isNewUnlock = isClear && !hadSkillBefore && isUnlockedNow;
 
-        const skill = isClear ? PASSIVE_SKILLS[node.skillId] : null;
+        const skill = isClear ? getSkillById(node.skillId) : null;
 
         const skillDiv = document.createElement("div");
         skillDiv.className = "result-block";
@@ -288,3 +288,4 @@ function formatTimeMMSS(seconds) {
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
 }
+

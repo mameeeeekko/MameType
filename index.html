@@ -176,38 +176,54 @@
   </fieldset>
   
   <!-- キー設定 -->
-  <fieldset>
-  <legend>キー設定</legend>
+  <fieldset class="keybind-fieldset">
+    <legend>KEY SETTING</legend>
 
-  <label>ロック解除</label>
-  <select id="key-unlock">
-    <option value="Space">SPACE</option>
-    <option value="Tab">TAB</option>
-    <option value="Enter">ENTER</option>
-    <option value="Backspace">BS</option>
-    <option value="Delete">DEL</option>
-  </select>
+    <div class="keybind-row">
 
-  <label>自動ロック</label>
-  <select id="key-autolock">
-    <option value="Space">SPACE</option>
-    <option value="Tab">TAB</option>
-    <option value="Enter">ENTER</option>
-    <option value="Backspace">BS</option>
-    <option value="Delete">DEL</option>
-  </select>
+      <div class="keybind-labels">
+        <label>ロック解除</label>
+        <label>自動ロック</label>
+        <label>ポーズ</label>
+        <label>アクティブスキル</label>
+      </div>
 
-  <label>ポーズ</label>
-  <select id="key-pause">
-    <option value="Space">SPACE</option>
-    <option value="Tab">TAB</option>
-    <option value="Enter">ENTER</option>
-    <option value="Backspace">BS</option>
-    <option value="Delete">DEL</option>
-  </select>
+      <div class="keybind-controls">
+        <select id="key-unlock">
+              <option value="Space">SPACE</option>
+              <option value="Tab">TAB</option>
+              <option value="Enter">ENTER</option>
+              <option value="Backspace">BS</option>
+              <option value="Delete">DEL</option>
+        </select>
+        <select id="key-autolock">
+              <option value="Space">SPACE</option>
+              <option value="Tab">TAB</option>
+              <option value="Enter">ENTER</option>
+              <option value="Backspace">BS</option>
+              <option value="Delete">DEL</option>
+        </select>
+        <select id="key-pause">
+              <option value="Space">SPACE</option>
+              <option value="Tab">TAB</option>
+              <option value="Enter">ENTER</option>
+              <option value="Backspace">BS</option>
+              <option value="Delete">DEL</option>
+        </select>
+        <select id="key-skill">
+              <option value="Space">SPACE</option>
+              <option value="Tab">TAB</option>
+              <option value="Enter">ENTER</option>
+              <option value="Backspace">BS</option>
+              <option value="Delete">DEL</option>
+        </select>
+      </div>
 
-  <button id="saveKeybindBtn">保存</button>
-</fieldset>
+    </div>
+
+    <button id="saveKeybindBtn">保存</button>
+  
+  </fieldset>
 
   <!-- デイリーのバックアップ！ -->
   <fieldset>
@@ -432,8 +448,23 @@
 
     <!-- 右 -->
     <div class="hud-panel right">
+
+      <!-- Active -->
       <div class="hud-section-title">ACTIVE SKILLS</div>
+
+      <div class="stock-row">
+        <div class="stock-label">STOCKS</div>
+        <div id="questActiveStock"></div>
+      </div>
+
+      <div id="questActiveSkills"></div>
+
+      <!-- Passive -->
+      <div class="hud-section-title passive-title">
+        PASSIVE SKILLS
+      </div>
       <div id="questRight"></div>
+
     </div>
 
     <!-- 下 -->
@@ -648,6 +679,159 @@
       <button id="skillRetryBtn">リトライ</button>
       <button id="skillBackBtn">戻る</button>
   </div>
+
+<!-- =====================================================
+  DIVパネル
+===================================================== -->
+<div id="devPanel" style="display:none">
+  <div id="devPanelHeader">
+    <div class="dev-title">DEV PANEL</div>
+  </div>
+  <!-- LEVEL -->
+  <div class="dev-row">
+    LV
+    <input type="number" id="levelInput">
+    <span id="viewLevel"></span>
+    <button onclick="dev.applyLevel()">S</button>
+  </div>
+
+  <div class="dev-row">
+    EXP Multiplier
+    <input type="number" id="expMultInput">
+    <span id="viewExpMultiplier"></span>
+    <button onclick="dev.applyExpMultiplier()">S</button>
+    <button onclick="dev.resetExpMultiplier()">R</button>
+
+  </div>
+
+  <hr>
+
+  <!-- Parameter -->
+  <fieldset>
+    <legend>Parameter</legend>
+
+    <div class="dev-row">
+      Chain <input type="number" id="chainInput">
+      <span id="viewChain"></span>
+      <button onclick="dev.applyChain()">S</button>
+      <button onclick="dev.resetChain()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Rate(skill) <input type="number" id="chainRateInput">
+      <span id="viewChainRate"></span>
+      <button onclick="dev.applyChainRate()">S</button>
+      <button onclick="dev.resetChainRate()">R</button>
+    </div>
+
+    <div class="dev-row">
+      DecayRate(skill) <input type="number" step="0.1" id="chainDecayInput">
+      <span id="viewChainDecayRate"></span>
+      <button onclick="dev.applyChainDecayRate()">S</button>
+      <button onclick="dev.resetChainDecayRate()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Bonus(skill) <input type="number" step="0.1" id="chainBonusInput">
+      <span id="viewChainBonus"></span>
+      <button onclick="dev.applyChainBonus()">S</button>
+      <button onclick="dev.resetChainBonus()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Gain-Type <input type="number" step="100" id="gainTypeInput">
+      <span id="viewGainOnType"></span>ms
+      <span id="viewDefGainOnType"></span>
+      <button onclick="dev.applyGainOnType()">S</button>
+      <button onclick="dev.resetGainOnType()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Gain-Kill <input type="number" step="100" id="gainKillInput">
+      <span id="viewGainOnKill"></span>ms
+      <span id="viewDefGainOnKill"></span>
+      <button onclick="dev.applyGainOnKill()">S</button>
+      <button onclick="dev.resetGainOnKill()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Loss-Miss <input type="number" step="100" id="missPenaltyInput">
+      <span id="viewMissPenalty"></span>ms
+      <span id="viewDefMissPenalty"></span>
+      <button onclick="dev.applyMissPenalty()">S</button>
+      <button onclick="dev.resetMissPenalty()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Decay(base) <input type="number" step="0.1" id="decayRateInput">
+      <span id="viewDecayRate"></span>
+      <span id="viewDefDecayRate"></span>
+      <button onclick="dev.applyDecayRate()">S</button>
+      <button onclick="dev.resetDecayRate()">R</button>
+    </div>
+
+    <div class="dev-row">
+      KnockBack <input type="number" step="0.1" id="knockbackInput">
+      <span id="viewKnockBackBonus"></span>
+      <button onclick="dev.applyKnockbackBonus()">S</button>
+      <button onclick="dev.resetKnockbackBonus()">R</button>
+    </div>
+
+    <div class="dev-row">
+      <button onclick="dev.resetParameterAll()">AllOtherReset</button>
+    </div>
+
+  </fieldset>
+
+  <hr>
+
+  <!-- STAGE -->
+  <fieldset>
+
+    <legend>Stage</legend>
+
+    <div class="dev-row">
+      <select id="devStageSelect"></select>
+      <div id="currentStageOverride">Stage: none</div>
+      <button onclick="dev.applySelectedStage()">S</button>
+      <button onclick="dev.resetStage()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Spawn Interval
+      <input type="number" step="100" id="spawnIntervalInput">
+      <span id="viewSpawnInterval"></span>ms
+      <button onclick="dev.applySpawnInterval()">S</button>
+      <button onclick="dev.resetSpawnInterval()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Max Alive
+      <input type="number" step="1" id="maxAliveInput">
+      <span id="viewMaxAlive"></span>
+      <button onclick="dev.applyMaxAlive()">S</button>
+      <button onclick="dev.resetMaxAlive()">R</button>
+    </div>
+    
+    <div class="dev-row">
+      <button onclick="dev.killAllEnemies()">AllKill</button>
+      <button onclick="dev.setKillLimit(1)">Kill1</button>
+      <button onclick="dev.resetStageOverrides()">ResetS</button>
+    </div>
+  </fieldset>
+
+  <hr>
+
+  <!-- SYSTEM -->
+  <div class="dev-row">
+    <button onclick="dev.toggleMapAdmin(this)">MAP ALL: OFF</button>
+    <button onclick="dev.toggleUnlockAllSkills(this)">SKILL ALL: OFF</button>
+    <button onclick="dev.logState()">Log</button>
+    <button onclick="dev.resetAll()">Reset</button>
+    <button onclick="dev.resetEnemyStats()">EnemyStatsReset</button>
+  </div>
+
+</div>
 
 <!-- =====================================================
   メインスクリプト

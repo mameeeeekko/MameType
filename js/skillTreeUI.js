@@ -1,11 +1,16 @@
-import { SKILL_TREE, startSkillMode, getUnlockText, getChallengeText} from "./skillTree.js";
-import { PASSIVE_SKILLS } from "./questSkills.js";
+import { SKILL_TREE, startSkillMode, getUnlockText, getChallengeText, getRequirementText, checkSkillRequirements } from "./skillTree.js";
+import { getSkillById } from "./questSkills.js";
 import { applySkillNodeEffect, getPlayerStats } from "./questPlayerStats.js";
 import { closeQuestModal, openQuestMenuModal } from "./questMapUI.js";
 import { backToMenu, exitSkillMode } from "./gameCore.js";
 import { backToQuestMap } from "./main.js";
+import { devOverride } from "../dev/devOverride.js";
+import { setupCanvasDPR } from "./canvasUtil.js";
 
+// =========================================================
 // ノード座標（固定配置）
+// ==========================================================
+
 const NODE_POS = {
     START: { x: 0, y: 0 },
 
@@ -20,7 +25,11 @@ const NODE_POS = {
     DEF_1: { x: 0, y: 120 },
 
     // 左（自由枠）
-    SLOT_1: { x: -120, y: 0 }
+    ACTIVE_1: { x: -120, y: 0 },
+    SLOT_1: { x: -120, y: 120 },
+    ACTIVE_2: { x: -240, y: 0 },
+    ACTIVE_3: { x: -360, y: 0 },
+    
 };
 
 export function renderSkillTreeUI(container){
@@ -28,6 +37,7 @@ export function renderSkillTreeUI(container){
     const canvas = document.createElement("canvas");
     canvas.className = "skill-tree-canvas";
     container.appendChild(canvas);
+
     //スキルツールチップ
     const tooltip = document.createElement("div");
     tooltip.className = "skill-tooltip";
@@ -35,24 +45,62 @@ export function renderSkillTreeUI(container){
 
     const ctx = canvas.getContext("2d");
 
-    const rect = container.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    const { width, height } = setupCanvasDPR(canvas, container, ctx);
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    const centerX = width / 2;
+    const centerY = height / 2;
 
     const stats = getPlayerStats();
 
     if (!stats.skillTreeProgress) {
         stats.skillTreeProgress = { unlockedNodes: ["START"] };
     }
-
-    const unlocked = stats.skillTreeProgress.unlockedNodes;
+    
+    // DEV対応　管理モード対応　全ノードチャレンジ可能にできる。
+    const unlocked = devOverride.unlockAllSkills
+        ? Object.keys(SKILL_TREE)
+        : stats.skillTreeProgress.unlockedNodes;
     
     const nodeRadius = 14;
 
     const nodeHitAreas = [];
+
+    // =========================
+    // ロック演出
+    // =========================
+    function showSkillTreeLockedFeedback(text) {
+
+        // ツールチップ表示
+        tooltip.style.display = "block";
+
+        tooltip.innerHTML = `
+            <div class="title locked">
+                LOCKED
+            </div>
+
+            <div class="desc">
+                ${text || "条件未達成"}
+            </div>
+        `;
+
+        // 中央寄せ表示
+        tooltip.style.left = `${window.innerWidth / 2 - 120}px`;
+        tooltip.style.top  = `${window.innerHeight / 2 + 120}px`;
+
+        // ブルっと
+        canvas.classList.add("shake");
+
+        setTimeout(() => {
+            canvas.classList.remove("shake");
+        }, 300);
+
+        // 自動で消える
+        clearTimeout(showSkillTreeLockedFeedback.timer);
+
+        showSkillTreeLockedFeedback.timer = setTimeout(() => {
+            tooltip.style.display = "none";
+        }, 1500);
+    }
 
     // =========================
     // 線描画
@@ -128,7 +176,13 @@ export function renderSkillTreeUI(container){
 
         // スキル名
         if (node.skillId) {
-            const skill = PASSIVE_SKILLS[node.skillId];
+            const skill = getSkillById(node.skillId);
+
+            if (!skill) {
+                console.warn("Skill not found:", node.skillId);
+                return;
+            }
+
             ctx.fillStyle = "#fff";
             ctx.font = "10px sans-serif";
             ctx.textAlign = "center";
@@ -167,9 +221,40 @@ export function renderSkillTreeUI(container){
                 // 未解放 → 解放
                 // =========================
                 if (!unlocked.includes(n.id)) {
-                    if (!n.canUnlock) return;
+
+                    // DEV対応　skill all がONだったら全てクリック可能
+                    if (!devOverride.unlockAllSkills && !n.canUnlock) {
+
+                        const requirementText =
+                            getRequirementText(node.requirements);
+
+                        showSkillTreeLockedFeedback(
+                            requirementText || "未解放ノード"
+                        );
+
+                        return;
+                    }
 
                     if (node.challenge) {
+
+                        // 解放済みでも他の条件（ステージやレベルなど）未達成なら開始しないようここで止める。
+                        // DEV対応
+                        const canChallenge =
+                            devOverride.unlockAllSkills || checkSkillRequirements(node);
+
+                        if (!canChallenge) {
+
+                            const requirementText =
+                                getRequirementText(node.requirements);
+
+                            showSkillTreeLockedFeedback(
+                                requirementText || "条件未達成"
+                            );
+
+                            return;
+                        }
+
+                        // チャレンジ開始
                         closeQuestModal(); 
                         showSkillIntro(
                             node, 
@@ -229,7 +314,7 @@ export function renderSkillTreeUI(container){
         }
 
         const node = SKILL_TREE[hitNode.id];
-        const skill = PASSIVE_SKILLS[node.skillId];
+        const skill = getSkillById(node.skillId);
 
         if (!skill) {
             tooltip.style.display = "none";
@@ -258,6 +343,7 @@ export function renderSkillTreeUI(container){
 
         const unlockText = getUnlockText(node.unlock);
         const challengeText = getChallengeText(node.challenge);
+        const requirementText = getRequirementText(node.requirements);
 
         tooltip.innerHTML = `
             <div class="title">
@@ -265,6 +351,17 @@ export function renderSkillTreeUI(container){
                 <span>${skill.name}</span>
             </div>
             <div class="desc">${skill.desc}</div>
+
+            ${
+                requirementText
+                ? `
+                    <div class="unlock">
+                        <div class="label">-挑戦条件-</div>
+                        <div class="value">${requirementText}</div>
+                    </div>
+                `
+                : ""
+            }
 
             ${
                 challengeText
@@ -338,7 +435,7 @@ export function showSkillIntro(node, onStart, onCancel) {
   const overlay = document.createElement("div");
   overlay.className = "stage-intro"; // ←流用OK
 
-  const skill = PASSIVE_SKILLS[node.skillId];
+  const skill = getSkillById(node.skillId);
 
   const unlockText = getUnlockText(node.unlock);
   const challengeText = getChallengeText(node.challenge);
@@ -387,6 +484,10 @@ export function showSkillIntro(node, onStart, onCancel) {
   function start(e) {
     const key = e.key;
 
+    // ★追加：ブラウザのデフォルト動作を抑制
+    e.preventDefault();
+    e.stopPropagation();
+
     // 開始
     if (key === "Enter" || key === " ") {
         document.removeEventListener("keydown", start);
@@ -415,7 +516,7 @@ export function showSkillResultIntro(node, isClear, onNext) {
   const overlay = document.createElement("div");
   overlay.className = "stage-intro";
 
-  const skill = PASSIVE_SKILLS[node.skillId];
+  const skill = getSkillById(node.skillId);
 
   const title = isClear ? "MISSION COMPLETE" : "FAILED";
 

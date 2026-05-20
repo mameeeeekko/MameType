@@ -1196,6 +1196,51 @@ button {
   box-shadow: 0 6px 14px rgba(0,0,0,0.2);
 }
 
+/* keybind */
+/* フィールドセット全体を中央寄せ */
+.keybind-fieldset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* タイトルと中身を横並び */
+.keybind-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 100px; /* ←タイトルと設定の距離 */
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+/* 左ラベル縦並び */
+.keybind-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  text-align: right;
+}
+
+/* 右セレクト縦並び */
+.keybind-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* セレクトを少し大きく */
+.keybind-controls select {
+  font-size: 16px;
+  padding: 6px 10px;
+  min-width: 140px;
+}
+
+/* 保存ボタンも中央 */
+#saveKeybindBtn {
+  margin-top: 20px;
+  padding: 8px 20px;
+}
 
 /* =====================================================
    記録画面 全体
@@ -2194,6 +2239,91 @@ button {
   opacity: 0.5;
   font-size: 12px;
 }
+
+/* =========================
+   右側アクティブストック
+========================= */
+
+.stock-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin: 10px 0 12px 0;
+
+  padding: 2px 0;
+}
+
+.stock-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(255,180,120,0.75);
+  width: 60px; /* 左寄せ固定 */
+}
+
+.stock-inline-bars {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.stock-mini-bar {
+  width: 2px;
+  height: 10px; /* ← かなり小さく（文字サイズに合わせる） */
+
+  border-radius: 1px;
+
+  background: rgba(255,140,40,0.12);
+  border: 1px solid rgba(255,180,120,0.25);
+  position: relative;
+}
+
+/* 中央ライン */
+.stock-mini-bar::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0.5px;
+  width: 1px;
+
+  background: rgba(255,200,140,0.5);
+}
+
+/* =========================
+   右側アクティブスキル
+========================= */
+#questActiveSkills {
+  margin-bottom: 18px;
+}
+
+.passive-title {
+  margin-top: 8px;
+}
+
+
+.active-name {
+  color: rgba(120,255,255,0.95);
+}
+
+.active-stock-row {
+  margin-top: 6px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  font-size: 10px;
+  letter-spacing: 1px;
+
+  color: rgba(180,255,255,0.7);
+}
+
+.active-stock-value {
+  color: rgba(255,255,255,0.95);
+  font-weight: bold;
+}
+
 
 /* ボトム部分のデザイン クエストステータス */
 .quest-bottom {
@@ -3554,6 +3684,51 @@ button {
     background: #ff8a8a;
 }
 
+/* スキルスロット情報  */
+.skill-slot-info.compact {
+    margin-top: 10px;
+    padding: 6px 10px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.02);
+}
+
+/* 横1行レイアウト */
+.slot-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 左タイトル */
+.slot-title {
+    font-size: 11px;
+    color: #aaa;
+    letter-spacing: 0.5px;
+}
+
+/* 右側数値 */
+.slot-value-group {
+    font-size: 12px;
+    color: #fff;
+    font-weight: bold;
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+}
+
+/* 合計 */
+.slot-total {
+    color: #fff;
+}
+
+/* 内訳 */
+.slot-breakdown {
+    font-size: 10px;
+    color: #777;
+    font-weight: normal;
+}
+
 /* =========================
    共通レイアウト
 ========================= */
@@ -3576,44 +3751,73 @@ button {
 }
 
 /* =========================
-   装備スロット
+   装備スロットレイアウト
 ========================= */
+
+.skill-equip-area {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+/* 左: active */
+.skill-equip-area .skill-equip:first-child {
+    width: 90px;
+    flex-shrink: 0;
+}
+
+/* 右: passive */
+.skill-equip-area .skill-equip:last-child {
+    flex: 1;
+}
+
+/* 共通box */
 .skill-equip {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    padding: 8px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
 }
 
+.skill-equip h3 {
+    margin: 0 0 6px;
+    font-size: 12px;
+    text-align: center;
+    color: #bbb;
+    letter-spacing: 1px;
+}
+
+/* slot grid */
 .equip-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 64px);
-    gap: 10px;
-    justify-content: start;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
+/* slot */
 .equip-slot {
-    width: 64px;
-    height: 64px;
-    border: 2px solid #555;
-    border-radius: 10px;
-    background: #1f1f1f;
+    width: 42px;
+    height: 42px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.02);
 
     display: flex;
-    justify-content: center;
     align-items: center;
-
-    cursor: pointer;
+    justify-content: center;
 }
 
 .equip-slot:hover {
     border-color: #aaa;
 }
 
+/* icon 少し小さく */
 .equip-slot-icon {
-    width: 44px;
-    height: 44px;
+    width: 26px;
+    height: 26px;
     object-fit: contain;
-    image-rendering: pixelated;
 }
 
 /* =========================
@@ -3640,8 +3844,8 @@ button {
 
 /* アイコン枠だけ独立 */
 .skill-grid-icon-wrap {
-    width: 64px;
-    height: 64px;
+    width: 42px;
+    height: 42px;
     border: 2px solid #444;
     border-radius: 10px;
     background: #262626;
@@ -3678,8 +3882,8 @@ button {
 }
 
 .skill-grid-icon {
-    width: 44px;
-    height: 44px;
+    width: 26px;
+    height: 26px;
     object-fit: contain;
     image-rendering: pixelated;
 }
@@ -3737,6 +3941,30 @@ button {
 .skill-tooltip .value {
     opacity: 0.85;
     padding-left: 4px;
+}
+
+
+/* =========================
+   skill Map のロックされたノード
+========================= */
+
+.skill-tree-canvas.shake {
+    animation: skillTreeShake 0.2s;
+}
+
+@keyframes skillTreeShake {
+
+    0%   { transform: translateX(0); }
+    25%  { transform: translateX(-2px); }
+    50%  { transform: translateX(2px); }
+    75%  { transform: translateX(-1px); }
+    100% { transform: translateX(0); }
+}
+
+.skill-tooltip .locked {
+    color: #ff7070;
+    font-weight: bold;
+    text-align: center;
 }
 
 /* =========================
@@ -4042,4 +4270,94 @@ button {
     min-width: 100%;
     font-size: 14px;
   }
+}
+
+
+/* =====================================================
+   DEVパネル　管理者用画面
+   ===================================================== */
+#devPanel {
+  position: fixed;
+  left: 10px;
+  top: 400px;
+  width: 360px; /* 後で広げる */
+  background: rgba(0,0,0,0.88);
+  color: white;
+  padding: 10px;
+  font-size: 12px;
+  border-radius: 8px;
+  z-index: 99999;
+  box-sizing: border-box;
+}
+
+.devPanelHeader {
+  cursor: grab;
+  user-select: none;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.devPanelHeader:active {
+  cursor: grabbing;
+}
+
+.dev-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+/* 超圧縮レイアウト */
+.dev-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin: 4px 0;
+}
+.dev-row label,
+.dev-row span:first-child {
+  width: 60px;
+}
+.dev-row input {
+  width: 70px;
+}
+
+.dev-row button {
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+#devPanel button {
+  font-size: 9px;
+  padding: 1px 3px;
+}
+
+#devPanel input {
+  font-size: 9px;
+  width: 45px;
+  height: 14px;
+}
+
+#devPanel select {
+  font-size: 9px;
+  width: 100%;
+}
+
+#devPanel fieldset {
+  padding: 3px;
+  margin: 3px 0;
+}
+
+#devPanel legend {
+  font-size: 9px;
+}
+
+#devPanel hr {
+  margin: 3px 0;
+  opacity: 0.3;
 }

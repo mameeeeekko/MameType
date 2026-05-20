@@ -9,6 +9,8 @@
 
 import { autoSaveQuest } from "./storage.js";
 import { PASSIVE_SKILLS } from "./questSkills.js";
+import { devOverride } from "../dev/devOverride.js";
+
 
 const DEFAULT_STATS = {
     level: 1,
@@ -20,6 +22,7 @@ const DEFAULT_STATS = {
 
     radius: 15,
 
+    //passiveSkill
     baseSkillSlot: 2,
     bonusSkillSlot: 0,
     slotHistory: {
@@ -30,7 +33,15 @@ const DEFAULT_STATS = {
     obtainedSlotStages: [], // スキルスロット取得済みステージ
 
     unlockedSkills: [], //所持
-    equippedSkills: [], //装備スキル
+    equippedSkills: [], //装備パッシブスキル
+    
+    //activeSkill
+    activeSkillSlot: 1,
+    activeSkill: null,  //装備するアクティブスキル
+    activeSkillCooldown: 0,
+    cooldownReduction: 1.0,
+    activeSkillStock: 0,
+    activeSkillStockMax: 3,   // 初期ストック最大
     skillTreeProgress: {
         unlockedNodes: ["START"]
         },
@@ -98,6 +109,8 @@ export function unlockSkillNode(nodeId) {
     }
 }
 
+// パッシブスキル ------------------------------
+
 export function equipSkill(skillId) {
     const stats = playerStats; // ←統一
 
@@ -124,6 +137,51 @@ export function unequipSkill(skillId) {
 
     saveStats();
 }
+
+// アクティブスキル装備 ------------------------------
+
+export function equipActiveSkill(skillId) {
+    const stats = playerStats;
+
+    if (!stats.equippedActiveSkills) {
+        stats.equippedActiveSkills = [];
+    }
+
+    // 今は1枠固定（必要なら増やせる）
+    const MAX = 1;
+
+    if (stats.equippedActiveSkills.includes(skillId)) return;
+
+    if (stats.equippedActiveSkills.length >= MAX) {
+        stats.equippedActiveSkills.shift();
+    }
+
+    stats.equippedActiveSkills.push(skillId);
+
+    saveStats();
+}
+
+export function unequipActiveSkill(skillId) {
+    const stats = playerStats;
+
+    if (!stats.equippedActiveSkills) {
+        stats.equippedActiveSkills = [];
+    }
+
+    stats.equippedActiveSkills =
+        stats.equippedActiveSkills.filter(id => id !== skillId);
+
+    saveStats();
+}
+
+export function getEquippedActiveSkills() {
+    if (!playerStats.equippedActiveSkills) {
+        playerStats.equippedActiveSkills = [];
+    }
+    return playerStats.equippedActiveSkills;
+}
+
+
 
 let playerStats = loadStats();
 
@@ -259,10 +317,51 @@ function levelUp() {
     return slotIncrease; 
 }
 
-// スコアの経験値変換
+// ===============================
+// DEV用レベルアップ指定関数　
+// ===============================
+export function forceSetLevel(targetLevel, progress = 0) {
+    targetLevel = Math.max(1, Math.min(99, Number(targetLevel) || 1));
+    progress = Math.max(0, Math.min(1, Number(progress) || 0));
+
+    // 初期化
+    playerStats.level = 1;
+    playerStats.exp = 0;
+    playerStats.nextExp = 500;
+
+    playerStats.maxHp = DEFAULT_STATS.maxHp;
+    playerStats.defense = DEFAULT_STATS.defense;
+    playerStats.radius = DEFAULT_STATS.radius;
+    playerStats.bonusSkillSlot = DEFAULT_STATS.bonusSkillSlot;
+
+    playerStats.slotHistory = structuredClone(
+        DEFAULT_STATS.slotHistory
+    );
+
+    // 正規レベルアップ
+    while (playerStats.level < targetLevel) {
+        levelUp();
+    }
+
+    // 現在レベル内の進捗
+    playerStats.exp = Math.floor(
+        playerStats.nextExp * progress
+    );
+
+    saveStats();
+    return playerStats;
+}
+
+// ===============================
+// スコアの経験値変換 (DEV対応)
+// ===============================
 export function scoreToExp(score) {
     if (score <= 0) return 0;
-    return Math.floor(score * 0.4);
+
+    const baseExp = Math.floor(score * 0.4);
+    const multiplier = devOverride.exp?.multiplier ?? 1;
+
+    return Math.floor(baseExp * multiplier);
 }
 
 // ===============================

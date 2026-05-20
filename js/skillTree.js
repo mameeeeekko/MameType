@@ -6,81 +6,17 @@ import { gameState } from "./gameCore.js";
 import { findParent } from "./skillTreeUI.js";
 import { getPlayerStats, reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { unlockNode } from "./skillTreeUI.js";
+import { isCleared } from "./questProgress.js";
+import { devOverride } from "../dev/devOverride.js";
 
-
-export const SKILL_TREE = {
-
-    START: {
-        id: "START",
-        children: ["CHAIN_1", "SCORE_1", "DEF_1", "SLOT_1"]
-    },
-
-    // ===== 上：チェイン =====
-    CHAIN_1: {
-        id: "CHAIN_1",
-        skillId: "chain_up_1",
-        unlock: { mode: "normal", type: "target", value: 3 },
-        challenge: {
-            mode: "normal",          // GameModesと一致させる
-            difficulty: "normal",
-            questionLimit: 3
-        },
-        children: ["CHAIN_2"]
-    },
-
-    CHAIN_2: {
-        id: "CHAIN_2",
-        skillId: "chain_decay_1",
-        unlock: { mode: "normal", type: "time", value: 10  },
-        challenge: {
-            mode: "normal",          // GameModesと一致させる
-            difficulty: "normal",
-            questionLimit: 2
-        },
-    },
-
-    // ===== 右：スコア =====
-    SCORE_1: {
-        id: "SCORE_1",
-        skillId: "chain_bonus_1",
-        unlock: { mode: "time_attack", type: "target", value: 2 },
-        challenge: {
-            mode: "time_attack",
-            difficulty: "hard",
-            limitSec: 15,
-        },
-    },
-
-    // ===== 下：耐久 =====
-    DEF_1: {
-        id: "DEF_1",
-        skillId: "kb_up_1",
-        unlock: { mode: "long_text", type: "time", value: 20 },
-        challenge: {
-            mode: "long_text",
-            difficulty: "hard",
-        },
-    },
-
-     // ===== 左：その他 =====
-
-     SLOT_1: {
-        id: "SLOT_1",
-        skillId: "slot_1",
-        unlock: { mode: "time_attack", type: "target", value: 2 },
-        challenge: {
-            mode: "time_attack",
-            difficulty: "hard",
-            limitSec: 15,
-        },
-        effect: {
-            type: "slot",
-            value: 1
-        },
-}
-};
+// =====================================================
+// skill関連関数
+// =====================================================
 
 export function checkSkillUnlocks(result, mode, nodeId){
+    
+    //DEV対応
+    if (devOverride.unlockAllSkills) return;
 
     reloadQuestPlayerStats();
     const stats = getPlayerStats();
@@ -245,3 +181,209 @@ export function startSkillMode(challenge, nodeId){
         }
     });
 }
+
+// =========================
+// スキル挑戦制限チェック
+// =========================
+export function checkSkillRequirements(node) {
+
+    if (!node?.requirements?.length) return true;
+
+    // DEV override
+    if (window.DEV_CONFIG?.ignoreSkillRequirements) {
+        return true;
+    }
+
+    const stats = getPlayerStats();
+
+    return node.requirements.every(req => {
+
+        switch (req.type) {
+
+            case "questClear":
+                return isCleared(req.value);
+
+            case "playerLevel":
+                return (stats.level || 1) >= req.value;
+
+            default:
+                console.warn("Unknown requirement:", req.type);
+                return false;
+        }
+    });
+}
+
+export function getRequirementText(requirements) {
+
+    if (!requirements?.length) return "";
+
+    return requirements.map(req => {
+
+        switch (req.type) {
+
+            case "questClear":
+                return `ステージ ${req.value} クリア`;
+
+            case "playerLevel":
+                return `Lv.${req.value}以上`;
+
+            default:
+                return "条件不明";
+        }
+
+    }).join(" / ");
+}
+
+
+// =====================================================
+// skillツリーの内容
+// 　unlock: skill獲得条件
+// 　challenge:　出題内容
+// 　children: 次に解放するノードのid
+// 　requirements: チャレンジ条件
+// =====================================================
+
+export const SKILL_TREE = {
+
+    START: {
+        id: "START",
+        children: ["CHAIN_1", "SCORE_1", "DEF_1", "ACTIVE_1"]
+    },
+
+    // ===== 上：チェイン =====
+    CHAIN_1: {
+        id: "CHAIN_1",
+        skillId: "chain_up_1",
+        unlock: { mode: "normal", type: "target", value: 3 },
+        challenge: {
+            mode: "normal",          // GameModesと一致させる
+            difficulty: "normal",
+            questionLimit: 3
+        },
+        children: ["CHAIN_2"],
+        requirements: [
+            {
+                type: "questClear",
+                value: "Q3"
+            },
+            {
+                type: "playerLevel",
+                value: 5
+            },
+        ],
+    },
+
+    CHAIN_2: {
+        id: "CHAIN_2",
+        skillId: "chain_decay_1",
+        unlock: { mode: "normal", type: "time", value: 10  },
+        challenge: {
+            mode: "normal",          // GameModesと一致させる
+            difficulty: "normal",
+            questionLimit: 2
+        },
+    },
+
+    // ===== 右：スコア =====
+    SCORE_1: {
+        id: "SCORE_1",
+        skillId: "chain_bonus_1",
+        unlock: { mode: "time_attack", type: "target", value: 2 },
+        challenge: {
+            mode: "time_attack",
+            difficulty: "hard",
+            limitSec: 15,
+        },
+    },
+
+    // ===== 下：耐久 =====
+    DEF_1: {
+        id: "DEF_1",
+        skillId: "kb_up_1",
+        unlock: { mode: "long_text", type: "time", value: 20 },
+        challenge: {
+            mode: "long_text",
+            difficulty: "hard",
+        },
+    },
+
+     // ===== 左：その他 =====
+
+     ACTIVE_1: {
+        id: "ACTIVE_1",
+        skillId: "heal_small",
+
+        unlock: {
+            mode: "normal",
+            type: "target",
+            value: 5
+        },
+
+        challenge: {
+            mode: "normal",
+            difficulty: "hard",
+            questionLimit: 5
+        },
+
+        children: ["SLOT_1","ACTIVE_2"],
+
+        requirements: [
+            {
+                type: "questClear",
+                value: "Q1"
+            }
+        ]
+    },
+
+     SLOT_1: {
+        id: "SLOT_1",
+        skillId: "slot_1",
+        unlock: { mode: "time_attack", type: "target", value: 2 },
+        challenge: {
+            mode: "time_attack",
+            difficulty: "hard",
+            limitSec: 15,
+        },
+
+        effect: {
+            type: "slot",
+            value: 1
+        },
+    },
+
+    ACTIVE_2: {
+        id: "ACTIVE_2",
+        skillId: "freeze_3",
+
+        unlock: {
+            mode: "time_attack",
+            type: "target",
+            value: 3
+        },
+
+        challenge: {
+            mode: "time_attack",
+            difficulty: "hard",
+            limitSec: 15
+        },
+
+        children: ["ACTIVE_3"]
+    },
+
+    ACTIVE_3: {
+        id: "ACTIVE_3",
+        skillId: "kill_nearest",
+
+        unlock: {
+            mode: "long_text",
+            type: "time",
+            value: 20
+        },
+
+        challenge: {
+            mode: "long_text",
+            difficulty: "hard"
+        }
+    },
+};
+

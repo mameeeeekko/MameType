@@ -5,6 +5,7 @@ export const defaultKeybinds = {
   unlock: "Space",
   autoLock: "Tab",
   pause: "Enter",
+  activeSkill: "Backspace"
 };
 
 export function loadKeybinds() {

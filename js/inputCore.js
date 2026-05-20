@@ -14,6 +14,7 @@ import { getKana, getRomajiCandidates, getSokuonCandidates,
 import { gameState, renderState, checkGameEnd, safePlayTypeSound, safePlayMissSound, safeFlashMiss, smoothKPM, calcKPM} from './gameCore.js';
 import { updateSpeedBar } from './renderer.js';
 import { ENEMY_MODE_CONFIG } from "./enemyModeConfig.js";
+import { devOverride } from '../dev/devOverride.js';
 
 const CHAIN_CONFIG = ENEMY_MODE_CONFIG.chain;
 // =====================================================
@@ -117,7 +118,14 @@ export function fullResetInput() {
       // Chain Penalty =================
       if(gameState.enemyMode){
         const stats = gameState.enemyStats;
-        stats.chainBar -= CHAIN_CONFIG.missPenalty;
+        
+        // DEV対応
+        const penalty =
+          devOverride.chain?.missPenalty ??
+          stats.missPenalty ??
+          CHAIN_CONFIG.missPenalty;
+
+        stats.chainBar -= penalty;
 
         if(stats.chainBar < 0){
           stats.chainBar = 0;

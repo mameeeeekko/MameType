@@ -36,6 +36,8 @@ import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from 
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
+import "../dev/devTools.js";
+
 
 
 // ================================
@@ -77,7 +79,7 @@ let playerNameInput, savePlayerNameBtn;
 
 let onlineRankingToggle;
 
-let unlock, autoLock, pause, saveKeybindBtn;
+let unlock, autoLock, pause, activeSkill, saveKeybindBtn;
 
 
 function cacheDOM() {
@@ -156,6 +158,7 @@ function cacheDOM() {
   unlock = document.getElementById("key-unlock");
   autoLock = document.getElementById("key-autolock");
   pause = document.getElementById("key-pause");
+  activeSkill = document.getElementById("key-skill");
   saveKeybindBtn = document.getElementById("saveKeybindBtn");
 
 }
@@ -581,6 +584,7 @@ function initSettingsUI() {
       unlock: unlock.value,
       autoLock: autoLock.value,
       pause: pause.value,
+      activeSkill: activeSkill.value,
     };
     
       // ★重複チェック
@@ -604,6 +608,7 @@ function applyKeybindsToUI() {
   unlock.value = keybinds.unlock;
   autoLock.value = keybinds.autoLock;
   pause.value = keybinds.pause;
+  if (activeSkill) activeSkill.value = keybinds.activeSkill;
 }
 
 // キーバインド重複チェック
@@ -910,10 +915,26 @@ export function backToQuestMap() {
 
 // ================================
 // 🔹キー入力制御（状態別ルーター）
+// Result画面なら handleResultKey で止まる
+// Pause中なら handlePauseKey で止まる
+// ゲーム中なら handleGameKey で止まる
+// それ以外だけ handleMenuKey
 // ================================
 
 function bindKeyEvents() {
+  
   document.addEventListener("keydown", (e) => {
+
+    // 管理者用DEVツール
+    if (e.shiftKey && e.key.toLowerCase() === "d") {
+      const panel = document.getElementById("devPanel");
+      if (!panel) return;
+
+      panel.style.display =
+        panel.style.display === "none" ? "block" : "none";
+    
+    }
+    
     if (handleResultKey(e)) return;
     if (handlePauseKey(e)) return;
     if (handleGameKey(e)) return;
@@ -1265,4 +1286,26 @@ function showSaveMessage(text) {
   el._timer = setTimeout(() => {
     el.style.opacity = "0";
   }, 2000);
+}
+
+
+// =====================================================
+// マウス座標取得
+// エネミーモード hover 用
+// =====================================================
+const enemyCanvas = document.getElementById("enemyModeCanvas");
+
+if (enemyCanvas) {
+    enemyCanvas.addEventListener("mousemove", (e) => {
+        const rect = enemyCanvas.getBoundingClientRect();
+
+        window.mousePos = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    });
+
+    enemyCanvas.addEventListener("mouseleave", () => {
+        window.mousePos = null;
+    });
 }

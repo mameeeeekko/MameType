@@ -778,6 +778,7 @@ function updateTimeAttack() {
 // 17. メニューに戻る
 // =====================================================
 export function backToMenu(){
+  stopBGM(); 
   isGameActive=false;
   stopTimeCircle();
   // モーダル閉じる

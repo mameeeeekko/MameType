@@ -9,9 +9,18 @@ import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./diff
 import { backToQuestMenu, backToQuestMap } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
-import { PASSIVE_SKILLS } from "./questSkills.js";
-import { equipSkill, unequipSkill, getSkillSlotMax, getPlayerStats } from "./questPlayerStats.js";
-import { buildClearText, buildEndText, buildStarText, STAGES } from "./enemyModeConfig.js";
+import { getSkillById, ACTIVE_SKILLS } from "./questSkills.js";
+import {
+    equipSkill,
+    unequipSkill,
+    getSkillSlotMax,
+    getPlayerStats,
+    equipActiveSkill,
+    unequipActiveSkill,
+    getEquippedActiveSkills
+} from "./questPlayerStats.js";
+import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } from "./enemyModeConfig.js";
+import { devOverride } from "../dev/devOverride.js";
 
 
 export function renderQuestMapUI(){
@@ -132,59 +141,68 @@ export function renderQuestMapUI(){
     // 線（そのままpx）
     // =========================
     const OFFSET_X = 150; // メニュー幅分右にずらす
-    
+
     const depthMap = getDepthFromCleared(world);
+
     world.nodes.forEach(node => {
 
-    if (!isNodeVisible(node, depthMap) && !window.QUEST_MAP_ADMIN_SHOW_ALL) return;
+        if (!isNodeVisible(node, depthMap) && !window.QUEST_MAP_ADMIN_SHOW_ALL) return;
 
         node.next.forEach(nextId => {
 
             const target = world.nodes.find(n => n.id === nextId);
-            
             if (!target) return;
 
-            // どちらか見えてないなら線も描かない
-            if (!isNodeVisible(node, depthMap) || !isNodeVisible(target, depthMap)) return;
+            // 通常時のみ、見えてない線は描かない
+            if (
+                !window.QUEST_MAP_ADMIN_SHOW_ALL &&
+                (!isNodeVisible(node, depthMap) || !isNodeVisible(target, depthMap))
+            ) {
+                return;
+            }
 
-                if(!target) return;
+            const fromCleared = isCleared(node.id);
+            const toCleared = isCleared(target.id);
 
-                const fromCleared = isCleared(node.id);
-                const toCleared = isCleared(target.id);
+            const fromUnlocked = canEnterNode(node, world);
+            const toUnlocked = canEnterNode(target, world);
 
-                const fromUnlocked = canEnterNode(node, world);
-                const toUnlocked = canEnterNode(target, world);
+            // =========================
+            // 線状態判定
+            // =========================
+            let lineType = "locked";
 
-                // ▼状態判定
-                let lineType = "locked";
+            if (fromCleared && toCleared) {
+                lineType = "cleared";
+            } else if (fromUnlocked && toUnlocked) {
+                lineType = "unlocked";
+            }
 
-                if (fromCleared && toCleared) {
-                    lineType = "cleared";        // 完全クリア
-                } else if (fromUnlocked && toUnlocked) {
-                    lineType = "unlocked";       // ★今回追加（到達済み）
-                }
+            ctx.beginPath();
+            ctx.moveTo(node.pos.x + OFFSET_X, node.pos.y);
+            ctx.lineTo(target.pos.x + OFFSET_X, target.pos.y);
 
-                ctx.beginPath();
-                ctx.moveTo(node.pos.x + OFFSET_X, node.pos.y);
-                ctx.lineTo(target.pos.x + OFFSET_X, target.pos.y);
+            // =========================
+            // 線見た目
+            // =========================
+            if (lineType === "cleared") {
+                ctx.strokeStyle = "#bfbfbf";
+                ctx.lineWidth = 4;
 
-                // ▼見た目
-                if (lineType === "cleared") {
-                    ctx.strokeStyle = "#bfbfbf";
-                    ctx.lineWidth = 4;
+            } else if (lineType === "unlocked") {
+                ctx.strokeStyle = "#8e8e8e";
+                ctx.lineWidth = 3;
 
-                } else if (lineType === "unlocked") {
-                    ctx.strokeStyle = "#8e8e8e";
-                    ctx.lineWidth = 3;
+            } else {
+                // locked線は管理者表示時のみ描画
+                if (!window.QUEST_MAP_ADMIN_SHOW_ALL) return;
 
-                } else {
-                    //ctx.strokeStyle = "#2b2b2b";
-                    //ctx.lineWidth = 2;
-                    return;
-                }
+                ctx.strokeStyle = "#3a3a3a";
+                ctx.lineWidth = 2;
+            }
 
-                ctx.stroke();
-            });
+            ctx.stroke();
+        });
     });
 
     // =========================
@@ -355,7 +373,9 @@ export function renderQuestMapUI(){
 
             el.onclick = ()=>{
                 const diff = getCurrentDifficulty("quest");
-                const stageData = STAGES[node.stage];
+                // DEV対応
+                const actualStage = devOverride.stage.current || node.stage;
+                const stageData = getStageConfig(actualStage);
                 const skillTreeDiv = document.getElementById("skill-tree");
 
                 showStageIntro(
@@ -363,7 +383,8 @@ export function renderQuestMapUI(){
                     node,
                     () => {
                         startEnemyMode({
-                            stage: node.stage,
+                            // DEV対応
+                            stage: actualStage,
                             difficulty: typeof diff === "string" ? diff : diff.id,
                             isQuestMode: true}
                         );
@@ -608,7 +629,7 @@ export function openQuestMenuModal(type = "difficulty") {
                 };
 
                 nextEquipped.forEach(id => {
-                    const skill = PASSIVE_SKILLS[id];
+                    const skill = getSkillById(id);
                     if (skill?.apply) skill.apply(preview);
                 });
 
@@ -729,9 +750,12 @@ export function openQuestMenuModal(type = "difficulty") {
             // =========================
             const equipBox = document.createElement("div");
             equipBox.className = "skill-equip";
+            const activeEquipBox = document.createElement("div");
+            activeEquipBox.className = "skill-equip";
 
+            // passive skill　装備
             function renderEquip() {
-                equipBox.innerHTML = "<h3>装備中</h3>";
+                equipBox.innerHTML = "<h3>PASSIVE</h3>";
 
                 const grid = document.createElement("div");
                 grid.className = "equip-grid";
@@ -746,7 +770,7 @@ export function openQuestMenuModal(type = "difficulty") {
                     const skillId = eq[i];
 
                     if (skillId) {
-                        const skill = PASSIVE_SKILLS[skillId];
+                        const skill = getSkillById(skillId);
 
                         slot.innerHTML = `
                             <img src="${skill.icon}" class="equip-slot-icon">
@@ -776,6 +800,44 @@ export function openQuestMenuModal(type = "difficulty") {
 
                 equipBox.appendChild(grid);
             }
+            
+            //active skill 装備
+            function renderActiveEquip() {
+                activeEquipBox.innerHTML = "<h3>ACTIVE</h3>";
+
+                const grid = document.createElement("div");
+                grid.className = "equip-grid";
+
+                const eq = getEquippedActiveSkills();
+                const MAX = 1;
+
+                for (let i = 0; i < MAX; i++) {
+                    const slot = document.createElement("div");
+                    slot.className = "equip-slot";
+
+                    const skillId = eq[i];
+
+                    if (skillId) {
+                        const skill = getSkillById(skillId);
+
+                        slot.innerHTML = `
+                            <img src="${skill.icon}" class="equip-slot-icon">
+                        `;
+
+                        slot.onclick = () => {
+                            unequipActiveSkill(skillId);
+                            refresh();
+                        };
+
+                        slot.onmousemove = (e) => showSkillTooltip(skill, e);
+                        slot.onmouseleave = hideQuestTooltip;
+                    }
+
+                    grid.appendChild(slot);
+                }
+
+                activeEquipBox.appendChild(grid);
+            }
 
             // =========================
             // スキル一覧
@@ -791,11 +853,12 @@ export function openQuestMenuModal(type = "difficulty") {
                 // =========================
                 // ▼ セクション作成
                 // =========================
+                //passive skill equip
                 const activeSection = document.createElement("div");
                 activeSection.className = "skill-section";
 
                 const activeTitle = document.createElement("h3");
-                activeTitle.textContent = "装備スキル";
+                activeTitle.textContent = "PASSIVE";
 
                 const activeList = document.createElement("div");
                 activeList.className = "skill-grid";
@@ -803,12 +866,12 @@ export function openQuestMenuModal(type = "difficulty") {
                 activeSection.appendChild(activeTitle);
                 activeSection.appendChild(activeList);
 
-
+                //passive skill no equip
                 const passiveSection = document.createElement("div");
                 passiveSection.className = "skill-section";
 
                 const passiveTitle = document.createElement("h3");
-                passiveTitle.textContent = "パッシブ";
+                passiveTitle.textContent = "AUTO";
 
                 const passiveList = document.createElement("div");
                 passiveList.className = "skill-grid";
@@ -816,13 +879,65 @@ export function openQuestMenuModal(type = "difficulty") {
                 passiveSection.appendChild(passiveTitle);
                 passiveSection.appendChild(passiveList);
 
+                // active skill equip
+                const activeSkillSection = document.createElement("div");
+                activeSkillSection.className = "skill-section";
+
+                const activeSkillTitle = document.createElement("h3");
+                activeSkillTitle.textContent = "ACTIVE";
+
+                const activeSkillList = document.createElement("div");
+                activeSkillList.className = "skill-grid";
+
+                activeSkillSection.appendChild(activeSkillTitle);
+                activeSkillSection.appendChild(activeSkillList);
+ 
+                //処理
                 unlockedNodes.forEach(nodeId => {
 
                     const node = SKILL_TREE[nodeId];
                     if (!node || !node.skillId) return;
 
-                    const skill = PASSIVE_SKILLS[node.skillId];
+                    const skill = getSkillById(node.skillId);
                     if (!skill) return;
+
+                    // =========================
+                    // ▼ アクティブスキル
+                    // =========================
+                    if (ACTIVE_SKILLS[node.skillId]) {
+
+                        const item = document.createElement("div");
+                        item.className = "skill-grid-item";
+
+                        item.innerHTML = `
+                            <div class="skill-grid-icon-wrap">
+                                <img src="${skill.icon}" class="skill-grid-icon">
+                            </div>
+                            <div class="skill-grid-name">${skill.name}</div>
+                        `;
+
+                        const eq = getEquippedActiveSkills();
+                        const isEquipped = eq.includes(node.skillId);
+
+                        if (isEquipped) {
+                            item.classList.add("equipped");
+                        }
+
+                        item.onclick = () => {
+                            if (isEquipped) {
+                                unequipActiveSkill(node.skillId);
+                            } else {
+                                equipActiveSkill(node.skillId);
+                            }
+                            refresh();
+                        };
+
+                        item.onmousemove = (e) => showSkillTooltip(skill, e);
+                        item.onmouseleave = hideQuestTooltip;
+
+                        activeSkillList.appendChild(item);
+                        return;
+                    }
 
                     // =========================
                     // ▼ パッシブ（装備不可）
@@ -918,6 +1033,7 @@ export function openQuestMenuModal(type = "difficulty") {
                 // ▼ 追加
                 // =========================
                 list.appendChild(activeSection);
+                list.appendChild(activeSkillSection);
                 list.appendChild(passiveSection);
             }
 
@@ -926,12 +1042,14 @@ export function openQuestMenuModal(type = "difficulty") {
             // =========================
             function refresh() {
                 renderEquip();
+                renderActiveEquip();
                 renderList();
                 renderStats();
             }
 
             // 初期描画
             renderEquip();
+            renderActiveEquip();
             renderList();
 
             wrapper.appendChild(statBox);
@@ -940,7 +1058,7 @@ export function openQuestMenuModal(type = "difficulty") {
             // skillslot表示
             // =========================
             const slotInfo = document.createElement("div");
-            slotInfo.className = "skill-slot-info";
+            slotInfo.className = "skill-slot-info compact"; 
 
             const totalSlots = getSkillSlotMax();
             const levelSlots = stats.slotHistory?.totalGained || 0;
@@ -948,17 +1066,27 @@ export function openQuestMenuModal(type = "difficulty") {
             const skillSlots = stats.slotHistory?.skillTreeGained || 0;
 
             slotInfo.innerHTML = `
-                <div>スロット合計: ${totalSlots}</div>
-                <div class="skill-slot-breakdown">
-                    <div>レベルアップ: +${levelSlots}</div>
-                    <div>ステージ報酬: +${stageSlots}</div>
-                    <div>スキルツリー: +${skillSlots}</div>
+                <div class="slot-row">
+                    <div class="slot-title">P.Skill Slots（Lv/Stage/Skill）</div>
+
+                    <div class="slot-value-group">
+                        <span class="slot-total">${totalSlots}</span>
+                        <span class="slot-breakdown">
+                            (${levelSlots} / ${stageSlots} / ${skillSlots})
+                        </span>
+                    </div>
                 </div>
             `;
 
             wrapper.appendChild(slotInfo);
   
-            wrapper.appendChild(equipBox);
+            const equipArea = document.createElement("div");
+            equipArea.className = "skill-equip-area";
+
+            equipArea.appendChild(activeEquipBox);
+            equipArea.appendChild(equipBox);
+
+            wrapper.appendChild(equipArea);
             wrapper.appendChild(list);
 
             content.appendChild(wrapper);

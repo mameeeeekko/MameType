@@ -5,6 +5,7 @@ import { playDamageSound, spawnHitWave, spawnDamagePopup } from "./effectManager
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { getRandomWordForType } from "./enemySpawner.js"; 
+import { devOverride } from "../dev/devOverride.js";
 
 export class Enemy {
 
@@ -30,16 +31,23 @@ export class Enemy {
    
   }
 
-    update(player, difficulty){
+    update(player, difficulty, state){
+
+        // ★フリーズ判定（最優先）
+        const frozen = state?.enemyStats?.freezeTimer > 0;
+
+        if (frozen) {
+            state.enemyStats.freezeTimer--;
+            return true; // 完全停止
+        }
 
         const dx = player.x - this.x;
         const dy = player.y - this.y;
-        const dist = Math.hypot(dx,dy);
-        if(dist === 0) return true;
+        const dist = Math.hypot(dx, dy) || 0.0001;
         // ダメージを受けた時
         if(dist < player.radius + this.type.size){
             if (getSoundEnabled() && getSoundSettings().soundeffect) {
-                playDamageSound(EnemyTypes.damageSound);
+                playDamageSound(this.type.damageSound);
             }
             spawnHitWave(player.x, player.y);
 
@@ -61,7 +69,7 @@ export class Enemy {
         // UI侵入防止
         const uiTop = getUISafeTop();
         if(this.y < uiTop){
-            this.y = uiTop;
+            this.y = Math.max(this.y, uiTop);
         }
 
         return !this.isDead;
@@ -77,7 +85,14 @@ export class Enemy {
             const dx = this.x - player.x;
             const dy = this.y - player.y;
             const dist = Math.hypot(dx, dy) || 1;
-            const knockbackPower = (this.type.knockback || 30) * (player.knockbackBonus || 1);
+            const knockbackBonus =
+                devOverride.other?.knockbackBonus
+                ?? player.knockbackBonus
+                ?? 1;
+
+            const knockbackPower =
+                (this.type.knockback || 30) * knockbackBonus;
+                
             this.x += dx / dist * knockbackPower;
             this.y += dy / dist * knockbackPower;
 

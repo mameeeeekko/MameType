@@ -116,8 +116,9 @@ export function spawnEnemy(player, enemies = [], canvas, stage, diff) {
     dist  : プレイヤーからの距離
     */
     const padding = 10;     // 文字やマージンの余白
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
+    const rect = canvas.getBoundingClientRect();
+    const canvasWidth = rect.width;
+    const canvasHeight = rect.height;
 
     // ==============================
     // UIセーフエリア取得
@@ -156,12 +157,12 @@ export function spawnEnemy(player, enemies = [], canvas, stage, diff) {
     text : タイピング判定用（かな）
     */
     const enemy = new Enemy(
-    target.word,
-    target.text,
-    x,
-    y,
-    type.speed,
-    type 
+        target.word,
+        target.text,
+        x,
+        y,
+        type.speed,
+        type 
     );
 
     // ===============================

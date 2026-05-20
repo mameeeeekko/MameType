@@ -2,7 +2,7 @@ import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEM
 import { savePlayerStats } from "./storage.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getClearedStageCount, getTotalStars, getAvailableMaxStars } from "./questProgress.js";
-import { PASSIVE_SKILLS } from "./questSkills.js";
+import { PASSIVE_SKILLS, ACTIVE_SKILLS } from "./questSkills.js";
 
 function formatDateOnly(dateStr){
   if(!dateStr) return "";
@@ -283,6 +283,8 @@ function renderQuestStatsModal() {
   }
 
   // 右（スキル）
+  renderQuestActiveStock();
+  renderQuestActiveSkills();  
   renderQuestEquipmentSkills();
 
   // 中央リング
@@ -390,6 +392,75 @@ function renderQuestEquipmentSkills() {
   });
 }
 
+function renderQuestActiveSkills() {
+  const el = document.getElementById("questActiveSkills");
+  if (!el) return;
+
+  const stats = getPlayerStatsForEnemy() || {};
+
+  // 装備中アクティブ
+  const equipped = stats.equippedActiveSkills || [];
+
+  // 最大ストック
+  const maxStock = stats.activeSkillStockMax || 1;
+
+  el.innerHTML = "";
+
+  if (equipped.length === 0) {
+    el.innerHTML = `<div class="skill-empty">NO EQUIP</div>`;
+    return;
+  }
+
+  equipped.forEach(id => {
+
+    // ACTIVE_SKILLS を import 必須
+    const skill = ACTIVE_SKILLS?.[id];
+    if (!skill) return;
+
+    const item = document.createElement("div");
+    item.className = "skill-item equipped active";
+
+    item.innerHTML = `
+      <div class="skill-icon-wrap">
+        <img src="${skill.icon}" class="skill-icon">
+      </div>
+
+      <div class="skill-main">
+        <div class="skill-name active-name">
+          ◆ ${skill.name}
+        </div>
+
+        <div class="skill-desc">
+          ${skill.desc ?? ""}
+        </div>
+      </div>
+    `;
+
+    el.appendChild(item);
+  });
+}
+
+function renderQuestActiveStock() {
+  const el = document.getElementById("questActiveStock");
+  if (!el) return;
+
+  const s = getPlayerStatsForEnemy() || {};
+  const stockMax = Number(s.activeSkillStockMax || 1);
+
+  el.innerHTML = "";
+
+  const wrap = document.createElement("div");
+  wrap.className = "stock-inline-bars";
+
+  for (let i = 0; i < stockMax; i++) {
+    const bar = document.createElement("div");
+    bar.className = "stock-mini-bar";
+    wrap.appendChild(bar);
+  }
+
+  el.appendChild(wrap);
+}
+
 
 function renderQuestRing(s) {
   const canvas = document.getElementById("questCoreCanvas");
@@ -411,7 +482,6 @@ function renderQuestRing(s) {
   const ratio = Math.min(exp / nextExp, 1);
 
   const level = s.level || 1;
-  const slots = s.skillSlots || s.slotCount || 3;
 
   /* =========================
      外側リング背景
@@ -476,17 +546,51 @@ function renderQuestRing(s) {
   ctx.textAlign = "left";
   ctx.fillText(String(level), cx + 4, levelY);
 
+
   /* =========================
-     右側 スキルスロット
+    右側 スキルスロット
   ========================= */
+
+  const passiveSlots =
+    Number(
+      (s.baseSkillSlot || 0) +
+      (s.bonusSkillSlot || 0)
+    );
+
+  const activeSlots = Number(
+    s.activeSkillSlots ??
+    1
+  );
+
+  const equippedPassive =
+    s.equippedSkills?.length || 0;
+
+  const equippedActive =
+    s.equippedActiveSkills?.length || 0;
+
   const slotX = cx + 114;
-  const startY = cy - ((slots - 1) * 22) / 2;
 
-  for (let i = 0; i < slots; i++) {
-    const y = startY + i * 22;
+  /* =========================
+    ACTIVE
+  ========================= */
 
-    ctx.fillStyle = "rgba(0,255,255,0.12)";
-    ctx.strokeStyle = "rgba(0,255,255,0.45)";
+  const activeStartY =
+    cy - 54;
+
+  for (let i = 0; i < activeSlots; i++) {
+
+    const y = activeStartY + i * 22;
+
+    const filled = i < equippedActive;
+
+    ctx.fillStyle = filled
+      ? "rgba(255,140,40,0.28)"
+      : "rgba(255,140,40,0.06)";
+
+    ctx.strokeStyle = filled
+      ? "rgba(255,200,120,0.95)"
+      : "rgba(255,180,80,0.35)";
+
     ctx.lineWidth = 1.5;
 
     ctx.beginPath();
@@ -495,8 +599,53 @@ function renderQuestRing(s) {
     ctx.stroke();
 
     /* 内部ライン */
-    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.strokeStyle = filled
+      ? "rgba(255,255,255,0.9)"
+      : "rgba(255,255,255,0.25)";
+
     ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(slotX + 2.5, y + 7);
+    ctx.lineTo(slotX + 11, y + 7);
+    ctx.stroke();
+  }
+
+  /* =========================
+    PASSIVE
+  ========================= */
+
+  const passiveStartY =
+    cy - 4;
+
+  for (let i = 0; i < passiveSlots; i++) {
+
+    const y = passiveStartY + i * 22;
+
+    const filled = i < equippedPassive;
+
+    ctx.fillStyle = filled
+      ? "rgba(0,255,255,0.22)"
+      : "rgba(0,255,255,0.05)";
+
+    ctx.strokeStyle = filled
+      ? "rgba(120,255,255,0.95)"
+      : "rgba(0,255,255,0.35)";
+
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.roundRect(slotX, y, 14, 14, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    /* 内部ライン */
+    ctx.strokeStyle = filled
+      ? "rgba(255,255,255,0.85)"
+      : "rgba(255,255,255,0.2)";
+
+    ctx.lineWidth = 1;
+
     ctx.beginPath();
     ctx.moveTo(slotX + 2.5, y + 7);
     ctx.lineTo(slotX + 11, y + 7);

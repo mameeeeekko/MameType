@@ -1,4 +1,15 @@
 //questSkills.js
+import { killEnemy } from "./enemyCore.js";
+
+export function getSkillById(skillId) {
+  return PASSIVE_SKILLS[skillId] || ACTIVE_SKILLS[skillId];
+}
+
+// ===========================================
+// 常時発動スキル。
+//   装備して使うものと、自動スキルあり。
+//
+// ============================================
 
 export const PASSIVE_SKILLS = {
 
@@ -70,3 +81,149 @@ export const PASSIVE_SKILLS = {
   }
 
 };
+
+// ===========================================
+// アクティブスキル。
+//   装備して使う。ゲーム中に発動できる。
+//
+// ============================================
+
+export function activateSkill(skillId, gameState, enemies = []) {
+  const skill = ACTIVE_SKILLS[skillId];
+  if (!skill) return;
+
+  const handler = SKILL_HANDLERS[skill.type];
+  if (!handler) return;
+
+  handler(skill.value, gameState, enemies);
+}
+
+// ===========================================
+// アクティブスキルtype別発動関数
+// ============================================
+
+const SKILL_HANDLERS = {
+
+  heal: (value, state) => {
+    const player = state.player;
+
+    if (!player) return;
+
+    player.hp = Math.min(
+      player.maxHp,
+      player.hp + value
+    );
+  },
+
+  freeze: (value, state) => {
+    state.enemyStats.freezeTimer = value * 60; // fps換算
+  },
+
+  kill: (value, state, enemiesList = []) => {
+
+    const aliveEnemies = enemiesList.filter(e => e && !e.isDead);
+
+    if (aliveEnemies.length === 0) return;
+
+    // =========================
+    // 全滅
+    // =========================
+    if (value === "all") {
+      aliveEnemies.forEach(e => {
+        killEnemy(e, state, {
+          cause: "normal",
+          fromSkill: true
+        });
+      });
+      return;
+    }
+
+    // =========================
+    // ランダム
+    // =========================
+    if (value === "random") {
+      const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+      killEnemy(target, state, {
+        cause: "normal",
+        fromSkill: true
+      });
+      return;
+    }
+
+    // =========================
+    // 数値指定（近い順）
+    // =========================
+    if (typeof value === "number") {
+
+      const sorted = [...aliveEnemies].sort((a, b) => {
+        const dx1 = a.x - state.player.x;
+        const dy1 = a.y - state.player.y;
+        const dx2 = b.x - state.player.x;
+        const dy2 = b.y - state.player.y;
+        return (dx1*dx1 + dy1*dy1) - (dx2*dx2 + dy2*dy2);
+      });
+
+      for (let i = 0; i < Math.min(value, sorted.length); i++) {
+        killEnemy(sorted[i], state, {
+          cause: "normal",
+          fromSkill: true
+        });
+      }
+
+      return;
+    }
+
+    // =========================
+    // デフォルト（最寄り）
+    // =========================
+    const target = [...aliveEnemies].sort((a, b) => {
+      const dx1 = a.x - state.player.x;
+      const dy1 = a.y - state.player.y;
+      const dx2 = b.x - state.player.x;
+      const dy2 = b.y - state.player.y;
+      return (dx1*dx1 + dy1*dy1) - (dx2*dx2 + dy2*dy2);
+    })[0];
+
+    if (target) {
+      killEnemy(target, state, {
+        cause: "normal",
+        fromSkill: true
+      });
+    }
+  },
+};
+
+// ===========================================
+// アクティブスキル
+// ============================================
+
+export const ACTIVE_SKILLS = {
+
+  heal_small: {
+    name: "リカバー",
+    icon: "💚",
+    desc: "HPを回復",
+    cooldown: 300,
+    type: "heal",
+    value: 30,
+  },
+
+  freeze_3: {
+    name: "フリーズ",
+    icon: "❄️",
+    desc: "敵を一定時間停止",
+    cooldown: 360,
+    type: "freeze",
+    value: 3, // seconds
+  },
+
+  kill_nearest: {
+    name: "処刑",
+    icon: "./assets/pic/chain_up.jpeg",
+    desc: "最も近い敵を撃破",
+    cooldown: 500,
+    type: "kill",
+    value: 1,
+  }
+};
+

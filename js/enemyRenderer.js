@@ -5,6 +5,9 @@ import { getDifficulty } from "./difficulties.js";
 import { buildClearText } from "./enemyModeConfig.js";
 import { getNow } from "./gameCore.js";
 import { getChainMultiplier } from "./enemyCore.js"
+import { getEquippedActiveSkills } from "./questPlayerStats.js";
+import { ACTIVE_SKILLS } from "./questSkills.js";
+
 
 // サイドを丸める関数
 function roundRect(ctx, x, y, w, h, r) {
@@ -41,16 +44,6 @@ function adjustColor(hex, amount) {
     b = Math.max(0, Math.min(255, b));
 
     return `rgb(${r}, ${g}, ${b})`;
-}
-
-export function renderEnemyMode(state) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 敵描画
-    renderEnemies(ctx, state.enemies, state.lockedEnemy);
-    // プレイヤー描画
-    renderPlayer(ctx, state.player, state.enemyStats);
- 
 }
 
 export function renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies = []) {
@@ -1303,13 +1296,13 @@ export function renderChainUI(gameState){
 // ===============================
 export function renderScore(ctx, gameState) {
 
-     const startTime = gameState.enemyStats.startTime;
-     if (!startTime) return;
-
     const stats = gameState.enemyStats;
-    if (!stats) return;
+    if (!stats?.startTime) return;
 
-    const x = ctx.canvas.width - 12;
+    // ★これ追加（重要）
+    ctx.save();
+
+    const x = ctx.canvas.clientWidth - 12;
     let y = 12;
 
     ctx.save();
@@ -1538,4 +1531,376 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
      ctx.restore();
 }
 
- 
+// ===============================
+// Active Skill UI
+// ===============================
+
+export function renderActiveSkillUI(ctx, state, canvas) {
+    const equipped = getEquippedActiveSkills();
+    const skillId = equipped?.[0];
+    const skill = ACTIVE_SKILLS?.[skillId];
+    if (!skill) return;
+
+    const chainUI = document.getElementById("chainUI");
+    if (!chainUI) return;
+
+    const rect = chainUI.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+
+    // 少しコンパクト化
+    const size = 40;
+    // 表示座標
+    const x = rect.right - canvasRect.left + 22;
+    const y = rect.top - canvasRect.top + 15;
+
+    const cooldownMax = skill.cooldown ?? 100;
+    const current = state.activeSkillCooldown ?? 0;
+
+    const stock = state.activeSkillStock ?? 0;
+    const maxStock =
+        state.player?.activeSkillStockMax ??
+        state.activeSkillStockMax ??
+        1;
+
+    // 次チャージ進行率
+    const rawRatio = 1 - current / cooldownMax;
+    const ratio = Number.isFinite(rawRatio)
+        ? Math.max(0, Math.min(1, rawRatio))
+        : 0;
+
+    // 1個でもあれば使用可能
+    const ready = stock > 0;
+
+    // 最大まで溜まってるか
+    const fullyCharged = stock >= maxStock && current <= 0;
+
+    ctx.save();
+
+    // 外側リング（クールダウン）
+    drawCooldownCircle(
+        ctx,
+        x + size / 2,
+        y + size / 2,
+        size / 2 + 3,
+        ratio,
+        ready,
+        fullyCharged
+    );
+
+    // セパレーター
+    drawSkillSeparatorRing(
+        ctx,
+        x + size / 2,
+        y + size / 2,
+        size / 2 - 0.5
+    );
+
+    // 中身（円アイコン）
+    drawSkillIconCircle(
+        ctx,
+        skill,
+        x + size / 2,
+        y + size / 2,
+        size - 12,
+        ready
+    );
+
+    // 内側リング（ストック）
+    if (maxStock > 1) {
+        drawStockSegments(
+            ctx,
+            x + size / 2,
+            y + size / 2,
+            size / 2 - 3,
+            stock,
+            maxStock
+        );
+    }
+
+    ctx.restore();
+
+    // ストック数字
+    if (stock > 1) {
+        drawSkillStockNumber(
+            ctx,
+            x + size - 2,
+            y + size - 2,
+            stock
+        );
+    }
+
+    if (isMouseHoverRect(x, y, size, size)) {
+        drawSkillTooltip(ctx, skill, x, y + size + 8);
+    }
+}
+
+function drawSkillIconCircle(ctx, skill, x, y, size, ready) {
+    ctx.save();
+
+    if (!skill._img) {
+        skill._img = new Image();
+        skill._img.src = skill.icon;
+    }
+
+    if (
+        !skill._img.complete ||
+        skill._img.naturalWidth === 0
+    ) {
+        ctx.restore();
+        return;
+    }
+
+    const r = size / 2;
+
+    // 背景円（リング内側を埋める）
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(12,16,24,0.92)";
+    ctx.fill();
+
+    // 丸クリップ
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r - 1, 0, Math.PI * 2);
+    ctx.clip();
+
+    // CD中はグレー
+    if (!ready) {
+        ctx.filter = "grayscale(1) brightness(0.45)";
+    } else {
+        ctx.filter = "none";
+    }
+
+    ctx.drawImage(
+        skill._img,
+        x - r,
+        y - r,
+        size,
+        size
+    );
+
+    ctx.restore();
+
+    // ready時だけ発光
+    if (ready) {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(143,211,255,0.45)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+function drawCooldownCircle(
+    ctx,
+    x,
+    y,
+    r,
+    ratio,
+    ready,
+    fullyCharged
+) {
+    ctx.save();
+
+    // 背景リング
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(172, 172, 172, 0.3)";
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // MAX時は満タン固定
+    const displayRatio = Number.isFinite(ratio)
+        ? (fullyCharged ? 1 : ratio)
+        : 0;
+
+    ctx.beginPath();
+    ctx.arc(
+        x,
+        y,
+        r,
+        -Math.PI / 2,
+        -Math.PI / 2 + Math.PI * 2 * displayRatio
+    );
+
+    // 色分け
+    if (fullyCharged) {
+        ctx.strokeStyle = "rgba(91, 189, 255, 0.95)";
+    } else if (ready) {
+        ctx.strokeStyle = "rgba(135, 205, 252, 0.76)";
+    } else {
+        ctx.strokeStyle = "rgba(116, 115, 115, 0.76)";
+    }
+
+    // 外周リングの線の太さ
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function isMouseHoverRect(x, y, w, h) {
+
+    if (!window.mousePos) return false;
+
+    return (
+        window.mousePos.x >= x &&
+        window.mousePos.x <= x + w &&
+        window.mousePos.y >= y &&
+        window.mousePos.y <= y + h
+    );
+}
+
+function drawSkillTooltip(ctx, skill, x, y) {
+
+    const w = 180;
+    const h = 64;
+
+    ctx.save();
+
+    roundRect(ctx, x, y, w, h, 10);
+    ctx.fillStyle = "rgba(10,14,22,0.96)";
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(143,211,255,0.18)";
+    ctx.stroke();
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+
+    ctx.font = "bold 14px sans-serif";
+    ctx.fillStyle = "#e7f3ff";
+    ctx.fillText(skill.name, x + 10, y + 8);
+
+    ctx.font = "12px sans-serif";
+    ctx.fillStyle = "rgba(220,235,255,0.7)";
+    ctx.fillText(skill.desc ?? "", x + 10, y + 30);
+
+    ctx.restore();
+}
+
+// ===============================
+// Active Skill Stock UI
+// ===============================
+function drawSkillStockNumber(ctx, x, y, stock) {
+    ctx.save();
+
+    // 少し左上へ寄せる（右下から呼ばれても見切れにくい）
+    const offsetX = -2;
+    const offsetY = -2;
+
+    const cx = x + offsetX;
+    const cy = y + offsetY;
+
+    // stock数でサイズ微調整
+    const text = String(stock);
+    const radius = text.length >= 2 ? 10 : 8;
+
+    // バッジ背景
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(8,12,18,0.92)";
+    ctx.fill();
+
+    // 枠線
+    ctx.strokeStyle = "rgba(120,190,255,0.65)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 数字
+    ctx.font = text.length >= 2
+        ? "bold 9px sans-serif"
+        : "bold 11px sans-serif";
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#d8ecff";
+    ctx.fillText(text, cx, cy + 0.5);
+
+    ctx.restore();
+}
+
+function drawStockSegments(
+    ctx,
+    x,
+    y,
+    r,
+    stock,
+    maxStock
+) {
+    if (maxStock <= 1) return;
+
+    ctx.save();
+
+    const gap = 0.2; // セグメント隙間
+    const startAngle = -Math.PI / 2;
+    const segmentAngle =
+        (Math.PI * 2) / maxStock;
+
+    for (let i = 0; i < maxStock; i++) {
+
+        const filled = i < stock;
+
+        const a0 =
+            startAngle +
+            segmentAngle * i +
+            gap / 2;
+
+        const a1 =
+            startAngle +
+            segmentAngle * (i + 1) -
+            gap / 2;
+
+        ctx.beginPath();
+        ctx.arc(x, y, r, a0, a1);
+
+        if (filled) {
+
+            // 発光
+            ctx.strokeStyle =
+                "rgba(102, 191, 250, 0.95)";
+
+            ctx.shadowBlur = 4;
+            ctx.shadowColor =
+                "rgba(143, 210, 255, 0.52)";
+
+        } else {
+
+            // 空
+            ctx.strokeStyle =
+                "rgba(103, 120, 137, 0.4)";
+
+            ctx.shadowBlur = 0;
+        }
+
+        ctx.lineWidth = 3;
+        //ctx.lineCap = "round";
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+function drawSkillSeparatorRing(
+    ctx,
+    x,
+    y,
+    r
+) {
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+
+    ctx.strokeStyle =
+        "rgba(102, 191, 250, 0.95)";
+
+    ctx.lineWidth = 2.5;
+
+    ctx.stroke();
+
+    ctx.restore();
+}

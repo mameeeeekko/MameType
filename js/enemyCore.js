@@ -5,8 +5,10 @@ import {
     renderPlayer,
     renderChainUI,
     renderScore,
-    renderEndCondition
+    renderEndCondition,
+    renderActiveSkillUI,
 } from "./enemyRenderer.js";
+import { setupCanvasDPR } from "./canvasUtil.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,
      spawnChainBurstEffect, renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups, renderDamagePopups, playHitEffect, 
@@ -29,8 +31,9 @@ import { submitScore } from "../online/submitScore.js";
 import { getEvolutionStage } from "./questPlayerStats.js";
 import { RANKING_VERSION } from "../js/version.js";
 import { loadKeybinds } from "./keybinds.js";
-
-const keybinds = loadKeybinds();
+import { devOverride, applyOverride } from "../dev/devOverride.js";
+import { activateSkill, ACTIVE_SKILLS } from "./questSkills.js";
+import { getEquippedActiveSkills } from "./questPlayerStats.js";
 
 let currentStage = "STAGE1";
 let loopId = null;
@@ -99,7 +102,7 @@ function updateChainBar(){
     const diff = getCurrentDifficulty();
     const enemyDiff = diff.enemy;
     // スキル計算　chainDecayRateがスキル　decayRateはDef enemyDill.chainDecayは難易度別の値
-    stats.chainBar -= delta * CHAIN_CONFIG.decayRate * enemyDiff.chainDecay * stats.chainDecayRate;
+    stats.chainBar -= delta * stats.decayRate * enemyDiff.chainDecay * stats.chainDecayRate;
     // 下限
     if(stats.chainBar <= 0){
         chainBurst();
@@ -149,6 +152,72 @@ export function getChainMultiplier(chainCount) {
     return 1.0;
 }
 
+// =============================================================
+// 敵を殺した場合演出、スコア、チェインなど
+// =============================================================
+export function killEnemy(enemy, state, options = {}) {
+    if (!enemy) return;
+
+    const stats = state.enemyStats;
+    if (!stats) return;
+
+    // すでに死んでても統計未加算なら通す
+    if (!enemy.isDead) {
+        enemy.isDead = true;
+    }
+
+    const fromSkill = options.fromSkill ?? false;
+
+    // =====================================================
+    // ✅ 通常・スキルキル（完全同一処理）
+    // =====================================================
+
+    stats.defeatedCount = (stats.defeatedCount ?? 0) + 1;
+    stats.processedCount = (stats.processedCount ?? 0) + 1;
+
+    // =========================
+    // チェイン
+    // =========================
+    stats.chainCount++;
+    stats.chainActive = true;
+    stats.lastChainUpdate = getNow();
+
+    stats.chainBar += stats.gainOnKill * stats.chainRate;
+    if (stats.chainBar > stats.chainBarMax) {
+        stats.chainBar = stats.chainBarMax;
+    }
+
+    // =========================
+    // スコア
+    // =========================
+    const baseScore = enemy.type.score;
+    const multiplier = getChainMultiplier(stats.chainCount);
+    const gainedScore = Math.floor(baseScore * multiplier);
+
+    stats.gScore += gainedScore;
+
+    spawnScorePopup(enemy.x, enemy.y, baseScore, multiplier);
+
+    // =========================
+    // 演出（共通）
+    // =========================
+    //チェイン増えた時のポップ演出
+    const chainText = document.getElementById("chainCount");
+    chainText.style.transform = "scale(1.3)";
+    setTimeout(()=>{
+        chainText.style.transform = "scale(1)";
+    },120);
+
+    spawnEnemyEffect(enemy.x, enemy.y);
+    playEnemyKillSound(enemy.type.killSound);
+
+    // skillフラグ（今後拡張用）
+    if (fromSkill) {
+        stats._lastKillFromSkill = true;
+    }
+}
+
+
 // ===============================
 // ゲームループ
 // ===============================
@@ -164,9 +233,60 @@ function gameLoop() {
 
     const diff = getCurrentDifficulty();
     const enemyDiff = diff.enemy;
-    const stage = STAGES[currentStage];
+    const stage = gameState.stage;
     const spawnInterval = stage.spawn.interval * enemyDiff.spawnRate;
     const now = getNow();  // ★現在時刻取得
+
+    // ===============================
+    // Active Skill Charge Update
+    // ===============================
+    if (gameState.activeSkillStock == null) {
+        gameState.activeSkillStock = 0;
+    }
+
+    const maxStock =
+        gameState.player?.activeSkillStockMax ??
+        gameState.activeSkillStockMax ??
+        1;
+
+    // 上限未満だけチャージ
+    if (gameState.activeSkillStock < maxStock) {
+
+        if (gameState.activeSkillCooldown > 0) {
+            gameState.activeSkillCooldown--;
+        }
+
+        if (gameState.activeSkillCooldown <= 0) {
+
+            gameState.activeSkillStock++;
+
+            // clamp
+            if (gameState.activeSkillStock > maxStock) {
+                gameState.activeSkillStock = maxStock;
+            }
+
+            console.log(
+                "CHARGE COMPLETE:",
+                gameState.activeSkillStock,
+                "/",
+                maxStock
+            );
+
+            // まだ満タンじゃないなら次チャージ
+            if (gameState.activeSkillStock < maxStock) {
+
+                const equipped = getEquippedActiveSkills();
+                const skillId = equipped?.[0];
+                const skill = ACTIVE_SKILLS?.[skillId];
+
+                gameState.activeSkillCooldown =
+                    skill?.cooldown || 60 * 20;
+
+            } else {
+                gameState.activeSkillCooldown = 0;
+            }
+        }
+    }
 
     // Chain Update
     updateChainBar();
@@ -182,7 +302,7 @@ function gameLoop() {
     // 敵更新
     enemies.forEach(enemy => {
         if (enemy && !enemy.isDead) {
-            enemy.update(player, enemyDiff);
+            enemy.update(player, enemyDiff, gameState);
         }
     });
 
@@ -212,6 +332,9 @@ function gameLoop() {
         timerStarted ? now : null,
         timerStarted ? enemyStartTime : null 
     );
+
+    renderActiveSkillUI(ctx, gameState, canvas);
+
     // エフェクト描画
     renderEnemyEffects(ctx);
     renderHitWaveEffects(ctx);
@@ -225,14 +348,34 @@ function gameLoop() {
     renderScorePopups(ctx);
     renderDamagePopups(ctx);
 
- 
-    // スポーン処理
+        // =============================================================
+        // スポーン処理
+        // =============================================================
         // ★一定時間ごとに敵出現
-        if (now - lastSpawnTime > spawnInterval)  {
-            // ★追加：上限チェック
-             if ( stage.spawn.limit == null || spawnedCount < stage.spawn.limit){
+        if (now - lastSpawnTime > spawnInterval) {
 
-                const enemy = spawnEnemy(player, enemies, canvas, stage, enemyDiff);
+            const spawnLimitOk =
+                stage.spawn.limit == null ||
+                spawnedCount < stage.spawn.limit;
+
+            // maxAlive未設定なら無制限 DEV対応
+            const maxAlive =
+                devOverride.spawn?.maxAlive ??
+                stage.spawn.maxAlive;
+
+            const aliveLimitOk =
+                maxAlive == null ||
+                enemies.length < maxAlive;
+
+            if (spawnLimitOk && aliveLimitOk) {
+
+                const enemy = spawnEnemy(
+                    player,
+                    enemies,
+                    canvas,
+                    stage,
+                    enemyDiff
+                );
 
                 if (enemy && enemy.word) {
 
@@ -411,6 +554,14 @@ export function handleEnemyKey(e) {
     gameState.enemyStats.lastKeyTime = now;
 
     // =====================
+    // Active Skill 使用
+    // =====================
+    if (e.code === keybinds.activeSkill) {
+        tryUseActiveSkill();
+        return;
+    }
+
+    // =====================
     // TABターゲット切替 近くの敵をロック
     // =====================
     if (e.code === keybinds.autoLock) {
@@ -544,7 +695,7 @@ export function handleEnemyKey(e) {
             }
 
             // タイプでチェイン増加　スキル加算＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
-            stats.chainBar += CHAIN_CONFIG.gainOnType * stats.chainRate;
+            stats.chainBar += stats.gainOnType * stats.chainRate;
 
             if (stats.chainBar > stats.chainBarMax) {
                 stats.chainBar = stats.chainBarMax;
@@ -566,47 +717,7 @@ export function handleEnemyKey(e) {
 
             if (isKilled) {
              // ===== 完全撃破 =====
-            if (getSoundEnabled() && getSoundSettings().soundeffect) {
-                playEnemyKillSound(lockedEnemy.type.killSound);
-            }
-
-            spawnEnemyEffect(lockedEnemy.x, lockedEnemy.y);
-
-            lockedEnemy.isDead = true;
-            gameState.enemyStats.defeatedCount++;
-            gameState.enemyStats.processedCount++;
-            // 敵スコア追加 getChainMultiplierでスキル分増加========
-            const stats = gameState.enemyStats;
-            const baseScore = lockedEnemy.type.score;
-            const multiplier = getChainMultiplier(stats.chainCount);
-            const gainedScore = Math.floor(baseScore * multiplier);
-
-            spawnScorePopup(
-                lockedEnemy.x,
-                lockedEnemy.y,
-                baseScore,
-                multiplier
-            );
-
-            stats.gScore += gainedScore;
-
-            // Chain System ===================
-            stats.chainCount++;
-            if(stats.chainCount > stats.maxChainCount){
-            stats.maxChainCount = stats.chainCount;
-            }
-            // 敵倒したらチェインバー増加 スキルでの加算
-            stats.chainBar += CHAIN_CONFIG.gainOnKill * stats.chainRate;
-            if(stats.chainBar > stats.chainBarMax){
-                stats.chainBar = stats.chainBarMax;
-            }
-            //チェイン増えた時のポップ演出
-            const chainText = document.getElementById("chainCount");
-            chainText.style.transform = "scale(1.3)";
-            setTimeout(()=>{
-                chainText.style.transform = "scale(1)";
-            },120);
-           // =================================
+            killEnemy(lockedEnemy, gameState);
 
             resetCandidates();
             lockedEnemy = null;
@@ -638,28 +749,55 @@ export function handleEnemyKey(e) {
     }
 
     // =====================
-    // ロック前
+    // ロック前入力処理
     // =====================
-
     typedBuffer += e.key;
 
-    // 候補検索
+    // いまの候補は保持したまま、次候補を仮計算
+    let nextCandidates = [];
+
     if (candidateEnemies.length === 0) {
-        candidateEnemies = enemies.filter(enemy => {
+        nextCandidates = enemies.filter(enemy => {
             if (!enemy || enemy.isDead) return false;
             return enemy.baseRomaji.startsWith(typedBuffer);
         });
     } else {
-        candidateEnemies = candidateEnemies.filter(enemy => {
+        nextCandidates = candidateEnemies.filter(enemy => {
             return enemy.baseRomaji.startsWith(typedBuffer);
         });
     }
 
-    // 候補なし
-    if (candidateEnemies.length === 0) {
-        typedBuffer = "";
+    // =====================
+    // ミス時
+    // 候補は維持・入力1文字だけ取り消す
+    // =====================
+    if (nextCandidates.length === 0) {
+
+        // 今回押した1文字だけなかったことにする
+        typedBuffer = typedBuffer.slice(0, -1);
+
+        gameState.mistakeCount++;
+        gameState.currentCombo = 0;
+
+        if (gameState.enemyStats) {
+            const stats = gameState.enemyStats;
+            stats.mistakeCount++;
+
+            // Chain penalty
+            stats.chainBar -= stats.missPenalty;
+
+            if (stats.chainBar < 0) {
+                stats.chainBar = 0;
+                stats.chainCount = 0;
+            }
+        }
+
         return;
     }
+
+    // 候補更新（成功時のみ）
+    candidateEnemies = nextCandidates;
+
     // 候補敵更新
     candidateEnemies.forEach(enemy => {
         enemy.typed = typedBuffer;
@@ -720,7 +858,7 @@ export function showHud(show){
 }
 
 // プレイヤーステータス初期化関数
-function initPlayerByMode(isQuestMode){
+function initPlayerByMode(isQuestMode, canvasSize) {
 
     const p = ENEMY_MODE_CONFIG.player;
 
@@ -744,8 +882,8 @@ function initPlayerByMode(isQuestMode){
         player.level = 1;
     }
 
-    player.x = canvas.width / 2;
-    player.y = canvas.height / 2;
+    player.x = canvasSize.width / 2;
+    player.y = canvasSize.height / 2;
 }
 
 //敵が画面内に入ったらタイマースタートさせる用の関数
@@ -773,9 +911,34 @@ export async function startEnemyMode(config = {}) {
         isQuestMode: config.isQuestMode ?? false,
     };
 
-    currentStage = lastEnemyConfig.stage;
-    const stage = STAGES[currentStage];
+    // === Devなしはこっち =================
+    // currentStage = lastEnemyConfig.stage;
+    // const stage = STAGES[currentStage];
+    // gameState.stage = stage;
+    // ====================================
+
+    // === Dev 用 ===================
+    currentStage =
+        devOverride.stage.current ||
+        lastEnemyConfig.stage;
+
+    const stage = getStageSafe(currentStage);
     gameState.stage = stage;
+
+    function getStageSafe(id) {
+        const base = STAGES[id];
+        if (!base) return null;
+
+        let stage = base;
+
+        // global override
+        if (devOverride.stage.global) {
+            stage = applyOverride(stage, devOverride.stage.global);
+        }
+
+        return stage;
+    }
+    // ==============================
 
     resetGameState();
     fullResetInput();
@@ -812,6 +975,16 @@ export async function startEnemyMode(config = {}) {
     }
     
     const playerStats = getPlayerStatsForEnemy();
+
+    // ===============================
+    // Active Skill Stock上限設定
+    // ===============================
+    player.activeSkillStockMax =
+        playerStats.activeSkillStockMax ?? 1;
+
+    gameState.activeSkillStockMax =
+        playerStats.activeSkillStockMax ?? 1;
+
     // ★ここで統計を初期化
     const diff = currentEnemyDifficulty;
 
@@ -854,6 +1027,61 @@ export async function startEnemyMode(config = {}) {
         chainBonus: playerStats.chainBonus, //skill
         knockbackBonus: playerStats.knockbackBonus ?? 1,
     };
+    
+    // ===============================
+    // アクティブスキル戦闘開始リセット
+    // ===============================
+    const equippedSkills = getEquippedActiveSkills();
+    const activeSkillId = equippedSkills?.[0];
+    const activeSkill = ACTIVE_SKILLS?.[activeSkillId];
+
+    gameState.activeSkillStock = 0;
+
+    // cooldown初期化
+    gameState.activeSkillCooldown =
+        activeSkill?.cooldown || 60 * 20;
+
+    //スキルと描画を state.player に統一
+    gameState.player = player;
+
+    // ===============================
+    // Dev Override適用（追加ここ）
+    // ===============================
+    const devChain = devOverride.chain || {};
+    const devOther = devOverride.other || {};
+    const baseSkill = playerStats;
+
+    // chain skill系
+    gameState.enemyStats.chainRate =
+        devChain.chainRate ?? baseSkill.chainRate;
+
+    gameState.enemyStats.chainDecayRate =
+        devChain.chainDecayRate ?? baseSkill.chainDecayRate;
+
+    gameState.enemyStats.chainBonus =
+        devChain.chainBonus ?? baseSkill.chainBonus;
+
+    // gain系（CHAIN_CONFIG上書き）
+    gameState.enemyStats.gainOnType =
+        devChain.gainOnType ?? CHAIN_CONFIG.gainOnType;
+
+    gameState.enemyStats.gainOnKill =
+        devChain.gainOnKill ?? CHAIN_CONFIG.gainOnKill;
+
+    gameState.enemyStats.missPenalty =
+        devChain.missPenalty ?? CHAIN_CONFIG.missPenalty;
+
+    gameState.enemyStats.decayRate =
+        devChain.decayRate ?? CHAIN_CONFIG.decayRate;
+
+    // その他パラメータ
+    gameState.enemyStats.knockbackBonus =
+        devOther.knockbackBonus ?? baseSkill.knockbackBonus ?? 1;    
+    
+    //デバッグ適用済み確認    
+    gameState.enemyStats._devApplied = true;    
+
+    // =========================================    
 
     gameState.questStats = {
         slotIncreased: false,
@@ -867,21 +1095,20 @@ export async function startEnemyMode(config = {}) {
 
     const canvas = document.getElementById("enemyModeCanvas");
     const container = document.getElementById("enemyModeContainer");
-
+    let canvasSize = null;
+    
     if (canvas && container) {
         canvas.style.display = "block";
         container.style.display = "block";
 
         // 安定してサイズ取得
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
-
         const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // ★DPR初期化（これだけで全部揃う）
+        canvasSize = setupCanvasDPR(canvas, container, ctx);
     }
 
     //player初期化
-    initPlayerByMode(config.isQuestMode);
+    initPlayerByMode(config.isQuestMode, canvasSize);
 
     setGameActive(true);
     gameState.enemyMode = true;   // ←追加
@@ -1063,7 +1290,8 @@ export async function endEnemyMode() {
     if (canvas) {
         canvas.style.display = "none";
         const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // ←必ずクリア
+        const rect = canvas.getBoundingClientRect();
+        ctx.clearRect(0, 0, rect.width, rect.height);// ←必ずクリア
     }
     // 通常モード描画再開
     showHud(true);
@@ -1288,4 +1516,50 @@ function resetEnemyInput(enemy){
     enemy.inputedRomaji = "";
     enemy.typed = "";
 
+}
+
+// ===============================
+// アクティブスキル使用
+// ===============================
+function tryUseActiveSkill() {
+
+    if (!gameState.enemyMode) return;
+
+    console.log("TRY STOCK:", gameState.activeSkillStock);
+
+    const equipped = getEquippedActiveSkills();
+    if (!equipped?.length) return;
+
+    const skillId = equipped[0];
+    const skill = ACTIVE_SKILLS?.[skillId];
+    if (!skill) return;
+
+    if ((gameState.activeSkillStock ?? 0) <= 0) {
+        console.log("NO STOCK");
+        return;
+    }
+
+    activateSkill(skillId, gameState, enemies || []);
+
+    gameState.activeSkillStock--;
+
+    const maxStock =
+        gameState.player?.activeSkillStockMax ??
+        gameState.activeSkillStockMax ??
+        1;
+
+    // まだ満タンじゃないなら再チャージ開始
+    if (gameState.activeSkillStock < maxStock) {
+        gameState.activeSkillCooldown =
+            skill.cooldown || 60 * 20;
+    } else {
+        gameState.activeSkillCooldown = 0;
+    }
+
+    console.log(
+        "ACTIVE USED:",
+        gameState.activeSkillStock,
+        "/",
+        maxStock
+    );
 }
