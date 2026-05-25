@@ -39,7 +39,7 @@ const DEFAULT_STATS = {
     activeSkillSlot: 1,
     activeSkill: null,  //装備するアクティブスキル
     activeSkillCooldown: 0,
-    cooldownReduction: 1.0,
+    cooldownSpeed: 1.0, //skill
     activeSkillStock: 0,
     activeSkillStockMax: 3,   // 初期ストック最大
     skillTreeProgress: {
@@ -70,11 +70,22 @@ const DEFAULT_STATS = {
       unique: 0
     },
     
+    maxCombo: 0,
+    maxChain: 0,
+
+    activeSkillUseCount: {},   // { skillId: count }
+
+    stageAttemptCount: {},     // { stageId: count }
+
+    nodeAttemptCount: {}, 
   },
 };
 
 
 function buildFinalStats(base) {
+
+    const isQuest = base._mode === "quest";
+
     const result = {
         ...base,
 
@@ -83,14 +94,16 @@ function buildFinalStats(base) {
         chainBonus: 1,
         knockbackBonus: 1,
 
-        // ★ここで合成
         skillSlotMax: (base.baseSkillSlot || 0) + (base.bonusSkillSlot || 0)
     };
 
-    for (const id of base.equippedSkills || []) {
-        const skill = PASSIVE_SKILLS[id];
-        if (skill?.apply) {
-            skill.apply(result);
+    // ★ここで分岐
+    if (isQuest) {
+        for (const id of base.equippedSkills || []) {
+            const skill = PASSIVE_SKILLS[id];
+            if (skill?.apply) {
+                skill.apply(result);
+            }
         }
     }
 
@@ -238,12 +251,16 @@ function saveStats() {
 // ===============================
 // 取得
 // ===============================
-export function getPlayerStatsForEnemy() {
+export function getPlayerStatsForEnemy(mode = "enemy") {
+
   const data = JSON.parse(localStorage.getItem("questPlayerStats"));
 
   const base = {
     ...DEFAULT_STATS,
-    ...(data || {})
+    ...(data || {}),
+
+    // ★重要：モードタグ
+    _mode: mode
   };
 
   return buildFinalStats(base);
@@ -406,46 +423,179 @@ export function getSkillSlotMax() {
 }
 
 // ===============================
+// Combo Tier
+// ===============================
+export const OVERDRIVE_COMBO = 60;
+export const OVERDRIVE_SPEED = 3.0;
+
+export const COMBO_TIERS = [
+    {
+        min: 1,
+        max: 15,
+        cooldownSpeed: 1.00,
+    },
+    {
+        min: 16,
+        max: 30,
+        cooldownSpeed: 1.5,
+    },
+    {
+        min: 31,
+        max: OVERDRIVE_COMBO - 1,
+        cooldownSpeed: 2.0,
+    },
+];
+
+
+
+// ===============================
+// 現在Tier取得
+// ===============================
+export function getComboTier(comboCount = 0) {
+
+    for (const tier of COMBO_TIERS) {
+
+        if (
+            comboCount >= tier.min &&
+            comboCount <= tier.max
+        ) {
+            return { ...tier }; // ← コピー
+        }
+    }
+
+    return { ...COMBO_TIERS[0] };
+}
+
+// ===============================
+// Tier進行率
+// 0.0 ~ 1.0
+// ===============================
+export function getComboTierProgress(
+    comboCount = 0
+) {
+
+    const tier =
+        getComboTier(comboCount);
+
+    // =====================
+    // 最終Tierだけ特別処理
+    // =====================
+    if (tier.max >= OVERDRIVE_COMBO) {
+
+        const displayMax = OVERDRIVE_COMBO;
+
+        const range =
+            displayMax - tier.min + 1;
+
+        const current =
+            Math.min(comboCount, displayMax)
+            - tier.min + 1;
+
+        return Math.max(
+            0,
+            Math.min(1, current / range)
+        );
+    }
+
+    const range =
+        tier.max - tier.min + 1;
+
+    const current =
+        comboCount - tier.min + 1;
+
+    return Math.max(
+        0,
+        Math.min(1, current / range)
+    );
+}
+
+// ===============================
+// 現在Tier Index
+// 0 ~
+// ===============================
+export function getComboTierIndex(
+    comboCount = 0
+) {
+
+    return COMBO_TIERS.findIndex(
+        tier =>
+            comboCount >= tier.min &&
+            comboCount <= tier.max
+    );
+}
+
+// ===============================
+// 現在のCooldown Speed取得
+// ===============================
+export function getCooldownSpeed(
+    comboCount = 0
+) {
+
+    // 完全MAX
+    if (comboCount >= OVERDRIVE_COMBO) {
+        return OVERDRIVE_SPEED;
+    }
+
+    // 通常Tier
+    const tier = getComboTier(comboCount);
+
+    return tier.cooldownSpeed;
+}
+
+// ===============================
 // クエストモード詳細ステータス更新
 // ===============================
 export function updateQuestStats(result = {}) {
-  const stats = playerStats.questRecord;
+    const stats = playerStats.questRecord;
 
-  stats.totalPlays++;
-  stats.totalPlayTime += result.playTime || 0;
-  stats.totalKills += result.kills || 0;
-  stats.totalTyped += result.typed || 0;
-  stats.totalMiss += result.miss || 0;
+    stats.totalPlays++;
+    stats.totalPlayTime += result.playTime || 0;
+    stats.totalKills += result.kills || 0;
+    stats.totalTyped += result.typed || 0;
+    stats.totalMiss += result.miss || 0;
 
-  // =========================
-  // 最高KPM更新
-  // =========================
-  const currentKpm = result.kpm || 0;
+    // =========================
+    // 最高KPM更新
+    // =========================
+    const currentKpm = result.kpm || 0;
 
-  if (currentKpm > (stats.maxKpm || 0)) {
-    stats.maxKpm = currentKpm;
-    stats.maxKpmDate = new Date().toISOString();
-  }
+    if (currentKpm > (stats.maxKpm || 0)) {
+        stats.maxKpm = currentKpm;
+        stats.maxKpmDate = new Date().toISOString();
+    }
 
-  // =========================
-  // 平均
-  // =========================
-  const totalAll = stats.totalTyped + stats.totalMiss;
+    // =========================
+    // 最大Combo / Chain
+    // =========================
+    stats.maxCombo = Math.max(
+    stats.maxCombo || 0,
+    result.maxCombo || 0
+    );
 
-  stats.avgKpm = stats.totalPlayTime > 0
-    ? (stats.totalTyped / stats.totalPlayTime) * 60
-    : 0;
+    stats.maxChain = Math.max(
+    stats.maxChain || 0,
+    result.maxChain || 0
+    );
 
-  stats.avgAccuracy = totalAll > 0
-    ? (stats.totalTyped / totalAll) * 100
-    : 0;
+    // =========================
+    // 平均
+    // =========================
+    const totalAll = stats.totalTyped + stats.totalMiss;
 
-  // =========================
-  // 日数
-  // =========================
-  updateQuestDays(stats.days);
+    stats.avgKpm = stats.totalPlayTime > 0
+        ? (stats.totalTyped / stats.totalPlayTime) * 60
+        : 0;
 
-  saveStats();
+    stats.avgAccuracy = totalAll > 0
+        ? (stats.totalTyped / totalAll) * 100
+        : 0;
+
+    // =========================
+    // 日数
+    // =========================
+    updateQuestDays(stats.days);
+
+    saveStats();
 }
 
 function updateQuestDays(days) {

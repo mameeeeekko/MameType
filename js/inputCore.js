@@ -68,6 +68,100 @@ export function fullResetInput() {
 }
 
 // =====================================================
+// 正解時処理関数
+// 1英文字成功時の処理　コンボ、スピードバー、正解数、処理
+// =====================================================
+function onCorrectType(count = 1) {
+
+    gameState.correctCount += count;
+
+    // Enemy Combo数追加
+    addCombo(count);
+
+    gameState.speedCorrectChars += count;
+
+    const now = performance.now();
+    const elapsed =
+        now - gameState.speedStartTime;
+
+    updateSpeedBar(
+        smoothKPM(
+            calcKPM(
+                gameState.speedCorrectChars,
+                elapsed
+            )
+        )
+    );
+}
+
+
+// =====================================================
+// ミス時処理関数
+// ミスサウンド、フラッシュ、ミスカウント、チェイン、チェインバー、コンボ処理
+// =====================================================
+  function handleMiss() {
+    
+    safePlayMissSound();
+    safeFlashMiss();
+
+    gameState.mistakeCount++;
+    // コンボ０にする
+    resetCombo();
+
+    // Chain Penalty =================
+    if(gameState.enemyMode){
+      const stats = gameState.enemyStats;
+      
+      // DEV対応
+      const penalty =
+        devOverride.chain?.missPenalty ??
+        stats.missPenalty ??
+        CHAIN_CONFIG.missPenalty;
+
+      stats.chainBar -= penalty;
+
+      if(stats.chainBar < 0){
+        stats.chainBar = 0;
+        stats.chainCount = 0;
+      }
+    }
+    // ================================
+    updateRender();
+  }
+
+// =====================================================
+// コンボ処理
+// =====================================================  
+
+function getComboTarget() {
+
+  // enemy mode
+  if (gameState.enemyStats) {
+    return gameState.enemyStats;
+  }
+
+  // normal mode
+  return gameState;
+}
+
+function addCombo(value) {
+
+  const target = getComboTarget();
+
+  target.currentCombo += value;
+
+  if (target.currentCombo > target.maxCombo) {
+    target.maxCombo = target.currentCombo;
+  }
+}
+
+function resetCombo() {
+
+  const target = getComboTarget();
+  target.currentCombo = 0;
+}
+
+// =====================================================
 // 入力処理関数
 // キー入力を受け取り、正誤判定・候補更新・確定を行う
 // =====================================================
@@ -106,36 +200,6 @@ export function fullResetInput() {
     // candidates
     // });
 
-    // ミスした時の処理関数
-    function handleMiss() {
-      
-      safePlayMissSound();
-      safeFlashMiss();
-
-      gameState.mistakeCount++;
-      gameState.currentCombo = 0;
-
-      // Chain Penalty =================
-      if(gameState.enemyMode){
-        const stats = gameState.enemyStats;
-        
-        // DEV対応
-        const penalty =
-          devOverride.chain?.missPenalty ??
-          stats.missPenalty ??
-          CHAIN_CONFIG.missPenalty;
-
-        stats.chainBar -= penalty;
-
-        if(stats.chainBar < 0){
-          stats.chainBar = 0;
-          stats.chainCount = 0;
-        }
-      }
-     // ================================
-      updateRender();
-    }
-
     // ==============================
     // 「ん」の特殊処理（IME互換）
     // ==============================
@@ -146,6 +210,9 @@ export function fullResetInput() {
       if (!nextKana) {
         if (key === "n") {
           gameState.inputedRomaji += "n"; // 確定
+          
+          onCorrectType(1); //正解処理
+
           gameState.typed = "";            // typed をクリア
           gameState.pos += kana.length;    // pos を進める
           resetCandidates();     // 次の候補をセット
@@ -170,6 +237,9 @@ export function fullResetInput() {
         // nn → 確定
         if (key === "n") {
           gameState.inputedRomaji += "nn";
+          //正解処理
+          onCorrectType(2);
+
           gameState.typed = "";
           gameState.pos += kana.length;
           resetCandidates();
@@ -200,15 +270,23 @@ export function fullResetInput() {
         const nextNextCandidates = getRomajiCandidates(nextKana);
 
         const canStartNext =
-          /^[kstnhmyrwgjdbz]$/.test(key) &&
+          /^[kstnhmyrwgjdbzp]$/.test(key) &&
           nextNextCandidates.some(c => c.startsWith(key));
 
         if (canStartNext) {
-          // ん確定 + 次の文字へ
+
+          // ん確定
           gameState.inputedRomaji += "n";
-          gameState.typed = key;
+          onCorrectType(1);
+
+          // 次のかなへ移動
           gameState.pos += kana.length;
+
+          // 次候補生成
           resetCandidates();
+
+          // 押したキーを次文字へ引き継ぐ
+          gameState.typed = key;
 
           updateRender();
           return { confirmed: true };
@@ -253,33 +331,19 @@ export function fullResetInput() {
     const complete = candidates.some(r => r === gameState.typed); // 候補と完全一致判定
 
     if (complete) {
-        gameState.inputedRomaji += gameState.typed;        // 確定
-        gameState.correctCount += gameState.typed.length;  // 正解数加算
-        gameState.currentCombo += gameState.typed.length; 
+        gameState.inputedRomaji += gameState.typed;
 
-          if(gameState.currentCombo > gameState.maxCombo){
-              gameState.maxCombo = gameState.currentCombo;
-          }
-
-        gameState.speedCorrectChars += gameState.typed.length;
-
-        const now = performance.now();
-        const elapsed = now - gameState.speedStartTime;
-        updateSpeedBar(smoothKPM(calcKPM(gameState.speedCorrectChars, elapsed)));
-
+        onCorrectType(gameState.typed.length);
         
         const nextKana = getKana(gameState.text, gameState.pos + kana.length);
         gameState.pos += kana.length;
 
         if (isSmallTsu(kana) && nextKana) {
-
             const firstChar = gameState.typed[0];
-
             // 子音重ね（tta など）のときだけ次の文字をスキップ
             if (gameState.typed.length > 1 && firstChar !== "l" && firstChar !== "x") {
                 gameState.pos += nextKana.length;
             }
-
         }
 
         gameState.typed = "";                     // typed リセット

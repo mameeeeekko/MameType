@@ -5,7 +5,7 @@ import { getDifficulty } from "./difficulties.js";
 import { buildClearText } from "./enemyModeConfig.js";
 import { getNow } from "./gameCore.js";
 import { getChainMultiplier } from "./enemyCore.js"
-import { getEquippedActiveSkills } from "./questPlayerStats.js";
+import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, } from "./questPlayerStats.js";
 import { ACTIVE_SKILLS } from "./questSkills.js";
 
 
@@ -1250,8 +1250,7 @@ export function renderChainUI(gameState){
     const bar = document.getElementById("chainBar");
     const label = document.getElementById("chainLabel");
     const value = document.getElementById("chainValue");
-    const mul = document.getElementById("chainMultiplier");
-    
+    const mul = document.getElementById("chainMultiplier");    
 
     if(!bar || !label || !value) return;
 
@@ -1273,6 +1272,11 @@ export function renderChainUI(gameState){
             : "";
 
         mul.textContent = `x${multiplier.toFixed(1)}${bonusText}`;
+        // 上表示用
+        mul.style.order = "-1";
+        // 少し余白
+        mul.style.marginBottom = "4px";
+
     }
 
     // 色変化
@@ -1289,6 +1293,176 @@ export function renderChainUI(gameState){
         "linear-gradient(90deg,#4ecdc4,#44aaff)";
     }
 
+}
+
+// =====================
+// Combo Tier Bar
+// =====================
+
+const tierCount = 3;
+
+// 前回tier記録用
+let prevTierIndex = -1;
+
+/* =====================
+初期生成
+===================== */
+
+export function initComboTierBar() {
+
+    const tierWrapper =
+    document.getElementById(
+        "comboTierWrapper"
+    );
+
+    if (!tierWrapper) return;
+
+       tierWrapper.innerHTML = "";
+
+    for (let i = 0; i < tierCount; i++) {
+
+        const block =
+            document.createElement("div");
+
+        block.className =
+            "combo-tier-block";
+
+        tierWrapper.appendChild(
+            block
+        );
+    }
+}
+
+/* =====================
+更新
+===================== */
+
+let prevComboTier = -1;
+
+export function updateComboTierBar(stats) {
+
+    const tierWrapper =
+        document.getElementById(
+            "comboTierWrapper"
+        );
+
+    if (!tierWrapper) return;
+
+    const combo =
+        stats.currentCombo;
+
+    const blocks =
+        tierWrapper.children;
+
+    const isOverdrive =
+        combo >= OVERDRIVE_COMBO;    
+
+    // =====================
+    // tier判定
+    // =====================
+
+    let currentTier = -1;
+
+    for (let i = 0; i < COMBO_TIERS.length; i++) {
+
+        if (
+            combo >= COMBO_TIERS[i].min
+        ) {
+            currentTier = i;
+        }
+    }
+
+    // =====================
+    // block更新
+    // =====================
+
+    for (let i = 0; i < blocks.length; i++) {
+
+        const block = blocks[i];
+
+        block.classList.remove(
+            "filled",
+            "active",
+            "overdrive-all"
+        );
+
+        block.style.setProperty(
+            "--fill",
+            `0%`
+        );
+
+        if (isOverdrive) {
+
+            block.classList.add(
+                "overdrive-all"
+            );
+        }
+
+        // 達成済みtier
+        if (
+            currentTier >= 0 &&
+            i < currentTier
+        ) {
+            block.classList.add(
+                "filled"
+            );
+        }
+
+        // 現在tier
+        if (i === currentTier) {
+
+            block.classList.add(
+                "active"
+            );
+
+            const tier =
+                COMBO_TIERS[i];
+
+            const range =
+                tier.max - tier.min;
+
+            const value =
+                combo - tier.min;
+
+            const progress =
+                    Math.max(0,Math.min(1,value / range)
+                    );
+
+            block.style.setProperty(
+                "--fill",
+                `${progress * 100}%`
+            );
+        }
+
+    }
+
+    // =====================
+    // Flash
+    // =====================
+
+    if (
+        currentTier > prevComboTier &&
+        currentTier > 0
+    ) {
+
+        const flashBlock =
+            blocks[currentTier - 1];
+
+        if (flashBlock) {
+
+            flashBlock.classList.remove(
+                "flash"
+            );
+
+            void flashBlock.offsetWidth;
+
+            flashBlock.classList.add(
+                "flash"
+            );
+        }
+    }
+
+    prevComboTier = currentTier;
 }
 
 // ===============================
@@ -1548,12 +1722,14 @@ export function renderActiveSkillUI(ctx, state, canvas) {
     const canvasRect = canvas.getBoundingClientRect();
 
     // 少しコンパクト化
-    const size = 40;
+    const size = 36;
     // 表示座標
-    const x = rect.right - canvasRect.left + 22;
-    const y = rect.top - canvasRect.top + 15;
+    const OFFSET_X = 22;
+    const OFFSET_Y = 5; // ← 15 → 5 に減らす（上へ約10px）
+    const x = rect.right - canvasRect.left + OFFSET_X;
+    const y = rect.top - canvasRect.top + OFFSET_Y;
 
-    const cooldownMax = skill.cooldown ?? 100;
+    const cooldownMax = state.activeSkillCooldownMax ?? 1;
     const current = state.activeSkillCooldown ?? 0;
 
     const stock = state.activeSkillStock ?? 0;
@@ -1581,7 +1757,7 @@ export function renderActiveSkillUI(ctx, state, canvas) {
         ctx,
         x + size / 2,
         y + size / 2,
-        size / 2 + 3,
+        size / 2 + 2.5,
         ratio,
         ready,
         fullyCharged
@@ -1619,15 +1795,15 @@ export function renderActiveSkillUI(ctx, state, canvas) {
 
     ctx.restore();
 
-    // ストック数字
-    if (stock > 1) {
-        drawSkillStockNumber(
-            ctx,
-            x + size - 2,
-            y + size - 2,
-            stock
-        );
-    }
+    // // ストック数字
+    // if (stock > 0) {
+    //     drawSkillStockNumber(
+    //         ctx,
+    //         x + size - 2,
+    //         y + size - 2,
+    //         stock
+    //     );
+    // }
 
     if (isMouseHoverRect(x, y, size, size)) {
         drawSkillTooltip(ctx, skill, x, y + size + 8);
@@ -1727,11 +1903,11 @@ function drawCooldownCircle(
 
     // 色分け
     if (fullyCharged) {
-        ctx.strokeStyle = "rgba(91, 189, 255, 0.95)";
+        ctx.strokeStyle = "rgba(86, 107, 143, 0.95)";
     } else if (ready) {
-        ctx.strokeStyle = "rgba(135, 205, 252, 0.76)";
+        ctx.strokeStyle = "rgba(152, 174, 213, 0.69)";
     } else {
-        ctx.strokeStyle = "rgba(116, 115, 115, 0.76)";
+        ctx.strokeStyle = "rgba(152, 174, 213, 0.69)";
     }
 
     // 外周リングの線の太さ
@@ -1785,43 +1961,43 @@ function drawSkillTooltip(ctx, skill, x, y) {
 // ===============================
 // Active Skill Stock UI
 // ===============================
-function drawSkillStockNumber(ctx, x, y, stock) {
-    ctx.save();
+// function drawSkillStockNumber(ctx, x, y, stock) {
+//     ctx.save();
 
-    // 少し左上へ寄せる（右下から呼ばれても見切れにくい）
-    const offsetX = -2;
-    const offsetY = -2;
+//     // 少し左上へ寄せる（右下から呼ばれても見切れにくい）
+//     const offsetX = -2;
+//     const offsetY = -2;
 
-    const cx = x + offsetX;
-    const cy = y + offsetY;
+//     const cx = x + offsetX;
+//     const cy = y + offsetY;
 
-    // stock数でサイズ微調整
-    const text = String(stock);
-    const radius = text.length >= 2 ? 10 : 8;
+//     // stock数でサイズ微調整
+//     const text = String(stock);
+//     const radius = text.length >= 2 ? 10 : 8;
 
-    // バッジ背景
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(8,12,18,0.92)";
-    ctx.fill();
+//     // バッジ背景
+//     ctx.beginPath();
+//     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+//     ctx.fillStyle = "rgba(8,12,18,0.92)";
+//     ctx.fill();
 
-    // 枠線
-    ctx.strokeStyle = "rgba(120,190,255,0.65)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+//     // 枠線
+//     ctx.strokeStyle = "rgba(120,190,255,0.65)";
+//     ctx.lineWidth = 1.5;
+//     ctx.stroke();
 
-    // 数字
-    ctx.font = text.length >= 2
-        ? "bold 9px sans-serif"
-        : "bold 11px sans-serif";
+//     // 数字
+//     ctx.font = text.length >= 2
+//         ? "bold 9px sans-serif"
+//         : "bold 11px sans-serif";
 
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#d8ecff";
-    ctx.fillText(text, cx, cy + 0.5);
+//     ctx.textAlign = "center";
+//     ctx.textBaseline = "middle";
+//     ctx.fillStyle = "#d8ecff";
+//     ctx.fillText(text, cx, cy + 0.5);
 
-    ctx.restore();
-}
+//     ctx.restore();
+// }
 
 function drawStockSegments(
     ctx,
@@ -1858,25 +2034,15 @@ function drawStockSegments(
         ctx.arc(x, y, r, a0, a1);
 
         if (filled) {
-
-            // 発光
-            ctx.strokeStyle =
-                "rgba(102, 191, 250, 0.95)";
-
-            ctx.shadowBlur = 4;
-            ctx.shadowColor =
-                "rgba(143, 210, 255, 0.52)";
-
+            ctx.strokeStyle = "rgb(57, 79, 121)";
+            ctx.shadowBlur = 10; // 少し強め
+            ctx.shadowColor = "rgba(0,0,0,0.3)";
         } else {
-
-            // 空
-            ctx.strokeStyle =
-                "rgba(103, 120, 137, 0.4)";
-
+            ctx.strokeStyle = "rgba(120, 140, 160, 0.25)";
             ctx.shadowBlur = 0;
         }
 
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         //ctx.lineCap = "round";
         ctx.stroke();
     }
@@ -1896,11 +2062,98 @@ function drawSkillSeparatorRing(
     ctx.arc(x, y, r, 0, Math.PI * 2);
 
     ctx.strokeStyle =
-        "rgba(102, 191, 250, 0.95)";
+        "rgba(255, 255, 255, 0.94)";
 
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 1;
 
     ctx.stroke();
+
+    ctx.restore();
+}
+
+
+// =======================================================
+// ゲーム中に表示するメッセージ
+// =======================================================
+export function showGameMessage(
+    gameState,
+    text,
+    duration = 120
+) {
+
+    gameState.systemMessage = text;
+    gameState.systemMessageTimer = duration;
+}
+
+// =======================================================
+// ゲーム中に表示するメッセージ描画
+// =======================================================
+export function renderSystemMessage(
+    ctx,
+    gameState,
+    canvas
+) {
+
+    if (!gameState.systemMessageTimer) return;
+
+    gameState.systemMessageTimer--;
+
+    const chainUI = document.getElementById("chainUI");
+    if (!chainUI) return;
+
+    const rect = chainUI.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const size = 40;
+
+    const skillX =
+        rect.right - canvasRect.left + 22;
+
+    const skillY =
+        rect.top - canvasRect.top + 15;
+
+    // スキル右下あたり
+    const x = skillX + size + 10;
+    const y = skillY + size - 2;
+
+    const text = gameState.systemMessage ?? "";
+
+    ctx.save();
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+
+    // 小さめ
+    ctx.font = "bold 11px sans-serif";
+
+    const metrics = ctx.measureText(text);
+
+    const w = metrics.width + 10;
+    const h = 18;
+
+    // 背景
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+
+    roundRect(
+        ctx,
+        x,
+        y - h / 2,
+        w,
+        h,
+        6
+    );
+
+    ctx.fill();
+
+    // 文字
+    ctx.fillStyle =
+        "rgba(230,240,255,0.88)";
+
+    ctx.fillText(
+        text,
+        x + 5,
+        y
+    );
 
     ctx.restore();
 }

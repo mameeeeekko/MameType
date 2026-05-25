@@ -84,7 +84,8 @@ export function wasLastGameEnemyMode() {
 // =====================================================
 export const gameState = {
     currentMode: null,
-    isQuestMode: false,  
+    isQuestMode: false,
+    isEnding: false, //イントロ中にポーズを走らせないために使う  
     typed: "",
     inputedRomaji: "",
     pos: 0,
@@ -106,7 +107,7 @@ export const gameState = {
         // ★追加
     enemyStats: {
         startTime: 0,
-        endTime: 0
+        endTime: 0,
     }
 };
 
@@ -351,7 +352,8 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   isRetrying = false;
   stopTimeAttackTimer();
   isTimeUp = false;
-
+  gameState.isEnding = false;
+  
   // 最後に開始したゲームを保存
   if (normalizedConfig.mode !== GameModes.MISS_PRACTICE) {
     lastGameByType[currentIsFreeMode ? "free":"normal"] = { ...normalizedConfig };
@@ -552,6 +554,7 @@ export function checkGameEnd(){
 async function finishGame(config = {}) {
     if (isFinishing) return;
     isFinishing = true;
+    gameState.isEnding = true; //pauseを終了後イントロでださないため。
 
     stopTimeAttackTimer();
     stopTimeCircle(); 
@@ -589,12 +592,22 @@ async function finishGame(config = {}) {
 
     // ★スキルモード専用分岐
     if (gameState.currentChallenge?.isSkillMode) {
+
         const hint = document.getElementById("skillUnlockHint");
         if (hint) hint.style.display = "none";
+
         handleSkillModeResult(gameState.currentSkillNodeId);
+
+        // ★超重要
+        gameState.currentChallenge = null;
+        gameState.currentSkillNodeId = null;
+
         isGameActive = false;
+        isFinishing = false;
+        gameState.isEnding = false;
+
         return;
-    }    
+    }
 
     // ================================
     // 記録保存・ランキング
@@ -708,6 +721,9 @@ async function finishGame(config = {}) {
         isRankIn: rankingResult?.isRankIn ?? false,
         rankPos: rankingResult?.rankPos ?? null,
     });
+    
+    // 結果表示後にオフ。イントロ中にポーズを起動させないために使っている。
+    gameState.isEnding = false;
 
     const retryBtn = document.getElementById("retryMissedBtn");
     if (retryBtn) {

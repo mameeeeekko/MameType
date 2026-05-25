@@ -1057,6 +1057,9 @@ function handleGameKey(e) {
 
   if (!Game.isGameActive) return false;
 
+  // ★終了演出中は入力停止
+  if (gameState.isEnding) return true;
+
   if (getPaused()) return true;
 
   // ポーズトグル

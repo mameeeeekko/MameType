@@ -7,7 +7,6 @@ import { forceSetLevel } from "../js/questPlayerStats.js";
 import { updateHud } from "../js/hud.js";
 import { STAGES, ENEMY_MODE_CONFIG } from "../js/enemyModeConfig.js";
 import { renderQuestMapUI } from "../js/questMapUI.js";
-import { renderSkillTreeUI } from "../js/skillTreeUI.js";
 
 
 // =====================================================

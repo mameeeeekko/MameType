@@ -245,7 +245,7 @@ export const STAGES = {
   STAGE2: {
     spawn: {
       interval: 1500,
-      limit: 8,
+      limit: 15,
       maxAlive: null,
     },
     enemyTable: [
@@ -282,6 +282,32 @@ export const STAGES = {
         timerMs: 30000,
         hpZero: true,
         killCount: 4,
+        allSpawnedDefeated: false
+    },
+    clearConditions: {
+        killCount: 4
+    },
+    star: {
+      type: "accuracy",
+      thresholds: [0.2, 0.4, 0.6, 0.8, 0.9]
+    }
+  },
+
+  STAGE4: {
+    spawn: {
+      interval: 1000,
+      limit: null,
+      maxAlive: null,
+    },
+    enemyTable: [
+      { type: "SLIME", weight: 40 },
+      { type: "GOBLIN", weight: 40 },
+      { type: "OGRE", weight: 20 },
+      { type: "BOSS", weight: 5 }
+    ],
+    endConditions: {
+        hpZero: true,
+        killCount: 15,
         allSpawnedDefeated: false
     },
     clearConditions: {

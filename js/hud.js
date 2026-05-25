@@ -279,6 +279,8 @@ function renderQuestStatsModal() {
         <div class="stats-row"><span>Avg.KPM</span><span>${(r.avgKpm || 0).toFixed(1)}</span></div>
         <div class="stats-row"><span>Max KPM</span><span>${r.maxKpm || 0}</span></div>
         <div class="stats-row"><span>Accuracy</span><span>${(r.avgAccuracy || 0).toFixed(1)}%</span></div>
+        <div class="stats-row"><span>Max Combo</span><span>${r.maxCombo || 0}</span></div>
+        <div class="stats-row"><span>Max Chain</span><span>${r.maxChain || 0}</span></div>
     `;
   }
 
@@ -773,6 +775,8 @@ function renderStatsModal(sArg) {
       ${e.maxGKpmDate ? `(${formatDateOnly(e.maxGKpmDate)})` : ""}
     </span>
   </div>
+  <div class="stats-row"><span>最大チェイン</span><span>${e.maxChain || 0}</span></div>
+  <div class="stats-row"><span>最大コンボ</span><span>${e.maxCombo || 0}</span></div>  
   
   <div class="stats-row"><span>累計タイプ数</span><span>${e.totalTyped || 0}</span></div>
   <div class="stats-row"><span>累計ミス数</span><span>${e.totalMiss || 0}</span></div>

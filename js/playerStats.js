@@ -43,6 +43,8 @@ const defaultStats = {
     modes: {} ,         // モード別回数（mode名 → 回数）
 
     totalKills: 0,     // 倒した敵総
+    maxChain: 0,
+    maxCombo: 0,
   },
 
   // ========================
@@ -161,6 +163,8 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   const totalPlayTime = result.totalPlayTime ?? 0;  // エネミーモードのプレイ時間（秒）
   const kpm = !isFree ? result.kpm ?? 0 : null;  // 通常のみKPM
   const eScore = !isFree ? (result.eScore ?? 0) : null;
+  const chain = result.maxChain ?? 0;
+  const combo = result.maxCombo ?? 0;
 
   // ========================
   // 全体回数
@@ -211,6 +215,14 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
     if (gScore > e.maxGScore) {
       e.maxGScore = gScore;
       e.maxGScoreDate = date;
+    }
+
+    if (chain > e.maxChain) {
+      e.maxChain = chain;
+    }
+
+    if (combo > e.maxCombo) {
+      e.maxCombo = combo;
     }
 
     // 平均
@@ -265,63 +277,63 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
     stats.freeMode.modes[mode] = (stats.freeMode.modes[mode] || 0) + 1; // モード回数++
   }
 
-// ========================
-// 日数統計
-// ========================
-const days = stats.days || (stats.days = {
-  playedDates: {},
-  unique: 0,
-  todayCount: 0,
-  maxPerDay: 0,
-  streak: 0,
-  maxStreak: 0,
-  lastPlayDate: null
-});
+  // ========================
+  // 日数統計
+  // ========================
+  const days = stats.days || (stats.days = {
+    playedDates: {},
+    unique: 0,
+    todayCount: 0,
+    maxPerDay: 0,
+    streak: 0,
+    maxStreak: 0,
+    lastPlayDate: null
+  });
 
-// ★日付は必ず YYYY-MM-DD
-const today = new Date().toISOString().slice(0, 10);
+  // ★日付は必ず YYYY-MM-DD
+  const today = new Date().toISOString().slice(0, 10);
 
-// 初回日
-if (!days.playedDates[today]) {
-  days.playedDates[today] = 0;
-  days.unique++;
-}
+  // 初回日
+  if (!days.playedDates[today]) {
+    days.playedDates[today] = 0;
+    days.unique++;
+  }
 
-// 当日回数
-days.playedDates[today]++;
-days.todayCount = days.playedDates[today];
+  // 当日回数
+  days.playedDates[today]++;
+  days.todayCount = days.playedDates[today];
 
-// 最大
-days.maxPerDay = Math.max(days.maxPerDay, days.todayCount);
+  // 最大
+  days.maxPerDay = Math.max(days.maxPerDay, days.todayCount);
 
-// 連続判定
-if (days.lastPlayDate) {
-  const prev = new Date(days.lastPlayDate);
-  const curr = new Date(today);
-  const diff = (curr - prev) / 86400000;
+  // 連続判定
+  if (days.lastPlayDate) {
+    const prev = new Date(days.lastPlayDate);
+    const curr = new Date(today);
+    const diff = (curr - prev) / 86400000;
 
-  if (diff === 1) days.streak++;
-  else if (diff > 1) days.streak = 1;
-} else {
-  days.streak = 1;
-}
+    if (diff === 1) days.streak++;
+    else if (diff > 1) days.streak = 1;
+  } else {
+    days.streak = 1;
+  }
 
-// 最大連続
-days.maxStreak = Math.max(days.maxStreak, days.streak);
+  // 最大連続
+  days.maxStreak = Math.max(days.maxStreak, days.streak);
 
-// 最終日
-days.lastPlayDate = today;
+  // 最終日
+  days.lastPlayDate = today;
 
 
-// ========================
-// 勲章判定
-// ========================
-const newAchievements = updateAchievements(stats);
+  // ========================
+  // 勲章判定
+  // ========================
+  const newAchievements = updateAchievements(stats);
 
-// ★新規取得があれば通知
-if (newAchievements.length > 0) {
-  showAchievementPopup(newAchievements);
-}
+  // ★新規取得があれば通知
+  if (newAchievements.length > 0) {
+    showAchievementPopup(newAchievements);
+  }
 
   // ========================
   // 保存

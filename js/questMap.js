@@ -38,7 +38,7 @@ export const QUEST_MAP = {
             {
                 id: "Q4",
                 name: "ボス戦2",
-                stage: "STAGE3",
+                stage: "STAGE4",
                 next: [],
                 pos: { x: 400, y: 200 }
             },  

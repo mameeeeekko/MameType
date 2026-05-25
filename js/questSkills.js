@@ -203,7 +203,7 @@ export const ACTIVE_SKILLS = {
     name: "リカバー",
     icon: "💚",
     desc: "HPを回復",
-    cooldown: 300,
+    cooldown: 30, //sec
     type: "heal",
     value: 30,
   },
@@ -212,16 +212,16 @@ export const ACTIVE_SKILLS = {
     name: "フリーズ",
     icon: "❄️",
     desc: "敵を一定時間停止",
-    cooldown: 360,
+    cooldown: 36,
     type: "freeze",
-    value: 3, // seconds
+    value: 5, // seconds
   },
 
   kill_nearest: {
     name: "処刑",
     icon: "./assets/pic/chain_up.jpeg",
     desc: "最も近い敵を撃破",
-    cooldown: 500,
+    cooldown: 50,
     type: "kill",
     value: 1,
   }
