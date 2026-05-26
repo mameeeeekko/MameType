@@ -27,6 +27,7 @@ const NODE_POS = {
     // 左（自由枠）
     ACTIVE_1: { x: -120, y: 0 },
     SLOT_1: { x: -120, y: 120 },
+    STOCK_1: { x: -120, y: -120 },
     ACTIVE_2: { x: -240, y: 0 },
     ACTIVE_3: { x: -360, y: 0 },
     

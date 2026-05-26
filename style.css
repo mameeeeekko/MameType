@@ -2423,13 +2423,16 @@ button {
   justify-content: center;
 }
 
+/* クエストモードステータスサイズはこれ */
 .quest-stats-hud {
   position: relative;
   display: grid;
   grid-template-columns: 1fr 1.2fr 1fr;
   grid-template-rows: 1fr auto;
-  width: min(1000px, 92vw);
-  height: 82vh;
+  width: min(1000px, 95vw);
+  height: 90vh;
+  /* スクロール */
+  overflow-y: auto; 
 
   background: rgba(10,10,15,0.97);
   border: 1px solid rgba(0,255,255,0.15);
@@ -2647,6 +2650,9 @@ button {
 /* 左ラベル */
 .quest-bottom-label {
   color: #8ba7b8;
+  display:flex;
+  align-items:center;
+  gap:4px;
 }
 
 /* 右数値 */
@@ -2662,6 +2668,64 @@ button {
 .quest-bottom-value.gold {
   color: #ffd166;
   text-shadow: 0 0 8px rgba(255,209,102,0.35);
+}
+
+.quest-skill-bottom-icon{
+    width:14px;
+    height:14px;
+
+    object-fit:cover;
+    border-radius:3px;
+
+    display:inline-block;
+    vertical-align:middle;
+
+    margin-right:4px;
+
+    transform:translateY(-1px);
+
+    flex-shrink:0;
+}
+
+#questBottom {
+  height: 320px;        /* ←固定 */
+  overflow: hidden;     /* 外にはみ出さない */
+  display: flex;
+  flex-direction: column;
+}
+
+/* クエストステータスボトムタブ */
+
+.quest-tabs{
+    display:flex;
+    gap:6px;
+    margin-bottom:10px;
+}
+
+.quest-tab{
+    flex:1;
+    padding:6px;
+    font-size:12px;
+    background:#111;
+    border:1px solid rgba(0,255,255,0.2);
+    color:#aaa;
+    cursor:pointer;
+}
+
+.quest-tab.active{
+    color:#0ff;
+    border-color:#0ff;
+}
+
+.quest-tab-content {
+  display: none;
+  flex: 1;
+  overflow-y: auto;   /* ←ここがポイント */
+  padding-right: 6px;
+}
+
+.quest-tab-content.active{
+    display:block;
 }
 
 /* EXPバー関連 クエストステータス */
@@ -3465,6 +3529,17 @@ button {
     animation: pop 0.5s;
 }
 
+/* STOCK */
+#questSkillResult .r-badge.stockup {
+    background: #ff8d0a;
+    color: #fff;
+    padding: 6px 10px;
+    margin-top: 18px;
+    border-radius: 6px;
+    font-weight: bold;
+    animation: pop 0.5s;
+}
+
 /* 途中レベルアップ演出 */
 .r-badge.levelup.levelup-effect {
     color: #ffd700;
@@ -3946,36 +4021,53 @@ button {
 
 /* 横1行レイアウト */
 .slot-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* ← 横並び */
+  gap: 12px;
+}
+
+/* カード */
+.slot-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* 行内レイアウト */
+.slot-line {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
 }
 
 /* 左タイトル */
 .slot-title {
-    font-size: 11px;
-    color: #aaa;
+    font-size: 12px;
+    color: #c8c8c8;
     letter-spacing: 0.5px;
+    font-weight: bold;
+    margin-right: 16px;
 }
 
-/* 右側数値 */
+/* 数値行はそのまま横 */
 .slot-value-group {
-    font-size: 12px;
-    color: #fff;
-    font-weight: bold;
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
 /* 合計 */
 .slot-total {
     color: #fff;
+    font-size: 16px;
+    font-weight: bold;
 }
 
 /* 内訳 */
 .slot-breakdown {
-    font-size: 10px;
+    font-size: 12px;
     color: #777;
     font-weight: normal;
 }
@@ -4355,6 +4447,14 @@ button {
 
 /* ===== SLOT増加表示 ===== */
 .slot-up {
+    margin-top: 10px;
+    color: #4fc3f7;
+    font-weight: bold;
+    animation: pop 0.4s ease;
+}
+
+/* ===== STOCK増加表示 ===== */
+.stock-up {
     margin-top: 10px;
     color: #4fc3f7;
     font-weight: bold;

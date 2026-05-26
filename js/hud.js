@@ -3,6 +3,7 @@ import { savePlayerStats } from "./storage.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getClearedStageCount, getTotalStars, getAvailableMaxStars } from "./questProgress.js";
 import { PASSIVE_SKILLS, ACTIVE_SKILLS } from "./questSkills.js";
+import { QUEST_MAP } from "./questMap.js";
 
 function formatDateOnly(dateStr){
   if(!dateStr) return "";
@@ -215,6 +216,8 @@ function updateNormalHud(stats) {
   const el = document.getElementById("totalPlayTime");
   if (el) el.textContent = totalTimeText;
 }
+
+
 //=======================================================
 //クエストモードステータス詳細画面
 //=======================================================
@@ -296,68 +299,289 @@ function renderQuestStatsModal() {
   const bottom = document.getElementById("questBottom");
 
   if (bottom) {
+
     const r = s.questRecord || {};
 
     bottom.innerHTML = `
-      <div class="quest-bottom-grid">
+  
+      <div class="quest-log">
 
-        <div class="quest-bottom-card">
-          <div class="quest-bottom-title">RECORD</div>
+        <!-- ======================================================
+          TAB BUTTONS
+          ・ここで表示カテゴリを切り替える
+          ・UIの意味を分けるのが目的
+        ====================================================== -->
+        <div class="quest-tabs">
 
-          <div class="quest-bottom-row">
-            <span class="quest-bottom-label">CLEAR</span>
-            <span class="quest-bottom-value">${getClearedStageCount()}</span>
-          </div>
+          <!-- STATUS = ステータス・活動系 -->
+          <button class="quest-tab active" data-tab="status">
+            STATUS
+          </button>
 
-          <div class="quest-bottom-row">
-            <span class="quest-bottom-label">★</span>
-            <span class="quest-bottom-value gold">
-              ${totalStars} / ${maxStars} (${starsPercent}%)
-            </span>
-          </div>
+          <!-- PROGRESSION = ステージ・ノード進行ログ -->
+          <button class="quest-tab" data-tab="progression">
+            PROGRESSION
+          </button>
 
-          <div class="quest-bottom-row">
-            <span class="quest-bottom-label">PLAY</span>
-            <span class="quest-bottom-value">${r.totalPlays || 0}</span>
-          </div>
+          <!-- SKILL = スキル使用履歴 -->
+          <button class="quest-tab" data-tab="skill">
+            SKILL
+          </button>
 
-          <div class="quest-bottom-row">
-            <span class="quest-bottom-label">KILL</span>
-            <span class="quest-bottom-value">${r.totalKills || 0}</span>
-          </div>
-
-          <div class="quest-bottom-row">
-            <span class="quest-bottom-label">TIME</span>
-            <span class="quest-bottom-value">
-              ${formatPlayTime(r.totalPlayTime || 0)}
-            </span>
-          </div>
         </div>
 
-        <div class="quest-bottom-card">
-          <div class="quest-bottom-title">ACTIVITY</div>
+        <!-- ======================================================
+          STATUS TAB
+          ・旧 RECORD + ACTIVITY を統合
+          ・プレイヤーの現在状態 + 行動統計
+        ====================================================== -->
+       <div class="quest-tab-content active" id="tab-status">
 
-          <div class="quest-bottom-row">
-            <span class="quest-bottom-label">TODAY</span>
-            <span class="quest-bottom-value">${r.days?.todayCount || 0}</span>
+          <!-- ======================================================
+            STATUS GRID WRAP
+            ・RECORD + ACTIVITY を横2列で並べる
+          ====================================================== -->
+          <div class="quest-status-grid">
+
+            <!-- ======================================================
+              RECORD（完全版復元）
+              ・戦績 / 進行 / 総合実績
+            ====================================================== -->
+            <div class="quest-bottom-grid">
+
+              <div class="quest-bottom-card">
+
+                <div class="quest-bottom-title">RECORD</div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">CLEAR</span>
+                  <span class="quest-bottom-value">${getClearedStageCount()}</span>
+                </div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">★</span>
+                  <span class="quest-bottom-value gold">
+                    ${totalStars} / ${maxStars} (${starsPercent}%)
+                  </span>
+                </div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">PLAY</span>
+                  <span class="quest-bottom-value">${r.totalPlays || 0}</span>
+                </div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">KILL</span>
+                  <span class="quest-bottom-value">${r.totalKills || 0}</span>
+                </div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">TIME</span>
+                  <span class="quest-bottom-value">
+                    ${formatPlayTime(r.totalPlayTime || 0)}
+                  </span>
+                </div>
+      
+                <!-- ★追加：総入力量 -->
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">TYPED</span>
+                  <span class="quest-bottom-value">
+                    ${r.totalTyped || 0}
+                  </span>
+                </div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">MISS</span>
+                  <span class="quest-bottom-value">
+                    ${r.totalMiss || 0}
+                  </span>
+                </div>
+
+              </div>
+
+              <!-- ======================================================
+                ACTIVITY（継続ログ）
+              ====================================================== -->
+              <div class="quest-bottom-card">
+
+                <div class="quest-bottom-title">ACTIVITY</div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">TODAY</span>
+                  <span class="quest-bottom-value">
+                    ${r.days?.todayCount || 0}
+                  </span>
+                </div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">BEST / DAY</span>
+                  <span class="quest-bottom-value">
+                    ${r.days?.maxPerDay || 0}
+                  </span>
+                </div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">STREAK</span>
+                  <span class="quest-bottom-value gold">
+                    ${r.days?.streak || 0}
+                  </span>
+                </div>
+
+                <!-- ★追加：ユニーク日数 -->
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">ACTIVE DAYS</span>
+                  <span class="quest-bottom-value">
+                    ${r.days?.unique || 0}
+                  </span>
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
 
-          <div class="quest-bottom-row">
-            <span class="quest-bottom-label">BEST / DAY</span>
-            <span class="quest-bottom-value">${r.days?.maxPerDay || 0}</span>
+        </div>
+
+        <!-- ======================================================
+          PROGRESSION TAB
+          ・ステージ / ノードの進行履歴
+          ・成長・解放系データ
+        ====================================================== -->
+        <div class="quest-tab-content" id="tab-progression">
+
+          <div class="quest-status-grid">
+
+            <div class="quest-bottom-grid">
+              <!-- ===== STAGE LOG ===== -->
+              <div class="quest-bottom-card">
+                <div class="quest-bottom-title">STAGE LOG</div>
+
+                ${
+                  Object.entries(r.stageAttemptCount || {})
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 6)
+                    .map(([id, count]) => {
+
+                      // =========================
+                      // ★正しい検索（nodes配列から探す）
+                      // =========================
+                      const node = findQuestNode(id);
+
+                      const name = node?.name || id;
+
+                      const stage = node?.stage || "-";
+
+                      return `
+                        <div class="quest-bottom-row">
+
+                          <span class="quest-bottom-label">
+                            ${id} (${name})
+                          </span>
+
+                          <span class="quest-bottom-value">
+                            ${count}
+                          </span>
+
+                        </div>
+                      `;
+                    })
+                    .join("")
+                }
+              </div>
+
+              <!-- ===== NODE LOG ===== -->
+              <div class="quest-bottom-card">
+                <div class="quest-bottom-title">SKILL NODE LOG</div>
+
+                ${
+                  Object.entries(r.skillNodeAttemptCount || {})
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 6)
+                    .map(([id, count]) => `
+                      <div class="quest-bottom-row">
+                        <span class="quest-bottom-label">
+                          ${id}
+                        </span>
+                        <span class="quest-bottom-value">
+                          ${count}
+                        </span>
+                      </div>
+                    `).join("")
+                }
+              </div>
+
+            </div>
+          
           </div>
 
-          <div class="quest-bottom-row">
-            <span class="quest-bottom-label">連続日数</span>
-            <span class="quest-bottom-value gold">
-              ${r.days?.streak || 0}
-            </span>
+        </div>
+
+        <!-- ======================================================
+          SKILL TAB
+          ・スキル使用履歴 + 戦闘スタイル
+        ====================================================== -->
+        <div class="quest-tab-content" id="tab-skill">
+
+          <div class="quest-status-grid">
+            
+            <div class="quest-bottom-grid">
+
+              <!-- ===== SKILL USE HISTORY ===== -->
+              <div class="quest-bottom-card">
+                <div class="quest-bottom-title">SKILL USES</div>
+
+                ${
+                  Object.entries(r.activeSkillUseCount || {})
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5)
+                    .map(([id, count]) => {
+
+                      const skill = ACTIVE_SKILLS[id];
+                      const name = skill?.name || id;
+                      const icon = skill?.icon || "";
+
+                      const isImage =
+                        typeof icon === "string" &&
+                        (icon.includes("/") ||
+                        icon.endsWith(".png") ||
+                        icon.endsWith(".jpg") ||
+                        icon.endsWith(".jpeg") ||
+                        icon.endsWith(".webp"));
+
+                      const iconHtml = isImage
+                        ? `<img src="${icon}" class="quest-skill-bottom-icon">`
+                        : `<span>${icon}</span>`;
+
+                      return `
+                        <div class="quest-bottom-row">
+
+                          <span class="quest-bottom-label">
+                            ${iconHtml}
+                            ${name}
+                          </span>
+
+                          <span class="quest-bottom-value">
+                            ${count}
+                          </span>
+
+                        </div>
+                      `;
+                    }).join("")
+                }
+              </div>
+
+            </div>
+
           </div>
+
         </div>
 
       </div>
     `;
   }
+  // DOM生成後に初期化
+  initQuestTabs();
 }
 
 function renderQuestEquipmentSkills() {
@@ -391,6 +615,30 @@ function renderQuestEquipmentSkills() {
     `;
 
     el.appendChild(item);
+  });
+}
+
+function initQuestTabs() {
+
+  document.querySelectorAll(".quest-tab").forEach(btn => {
+
+    btn.onclick = () => {
+
+      // 全タブボタン解除
+      document.querySelectorAll(".quest-tab")
+        .forEach(b => b.classList.remove("active"));
+
+      // 全コンテンツ非表示
+      document.querySelectorAll(".quest-tab-content")
+        .forEach(c => c.classList.remove("active"));
+
+      // 選択状態
+      btn.classList.add("active");
+
+      document
+        .getElementById("tab-" + btn.dataset.tab)
+        .classList.add("active");
+    };
   });
 }
 
@@ -829,4 +1077,15 @@ function renderStatsModal(sArg) {
 }
 
  
+// ノードをフラット検索（クエストモードのステータス表示でステージ名を取得するため）
+function findQuestNode(id) {
 
+  for (const world of Object.values(QUEST_MAP)) {
+
+    const node = world.nodes?.find(n => n.id === id);
+
+    if (node) return node;
+  }
+
+  return null;
+}

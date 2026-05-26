@@ -26,9 +26,9 @@ const DEFAULT_STATS = {
     baseSkillSlot: 2,
     bonusSkillSlot: 0,
     slotHistory: {
-        totalGained: 0,      // レベルアップ
-        rewardGained: 0,
-        skillTreeGained: 0       // ★ステージ報酬
+        totalGained: 0,      //level
+        rewardGained: 0,  //stage
+        skillTreeGained: 0       // skill
     },
     obtainedSlotStages: [], // スキルスロット取得済みステージ
 
@@ -36,52 +36,61 @@ const DEFAULT_STATS = {
     equippedSkills: [], //装備パッシブスキル
     
     //activeSkill
-    activeSkillSlot: 1,
+    activeSkillSlot: 1,  //基本的にアクティブスキルスロットは１
     activeSkill: null,  //装備するアクティブスキル
     activeSkillCooldown: 0,
     cooldownSpeed: 1.0, //skill
     activeSkillStock: 0,
-    activeSkillStockMax: 3,   // 初期ストック最大
+    baseActiveSkillStockMax: 1,   // 初期ストック最大
+    bonusActiveSkillStockMax: 0, 
+    stockHistory: {
+        totalGained: 0,      // level
+        rewardGained: 0,     // stage
+        skillTreeGained: 0       // skill
+    },
+
     skillTreeProgress: {
         unlockedNodes: ["START"]
         },
     
-  //クエストモード詳細ステータス
-  questRecord: {
-    totalPlayTime: 0,
-    totalPlays: 0,
-    totalKills: 0,
-    totalTyped: 0,
-    totalMiss: 0,
+    //クエストモード詳細ステータス
+    questRecord: {
+        totalPlayTime: 0,
+        totalPlays: 0,
+        totalKills: 0,
+        totalTyped: 0,
+        totalMiss: 0,
 
-    avgKpm: 0,
-    avgAccuracy: 0,
+        avgKpm: 0,
+        avgAccuracy: 0,
 
-    maxKpm: 0,
-    maxKpmDate: null,
+        maxKpm: 0,
+        maxKpmDate: null,
 
-    totalStars: 0, //現在取得済みスター数
-    maxStars: 0,   //取得できる最大のスター数
+        totalStars: 0, //現在取得済みスター数
+        maxStars: 0,   //取得できる最大のスター数
 
-    days: {
-      todayCount: 0,
-      maxPerDay: 0,
-      streak: 0,
-      unique: 0
+        days: {
+        todayCount: 0,
+        maxPerDay: 0,
+        streak: 0,
+        unique: 0
+        },
+        
+        maxCombo: 0,
+        maxChain: 0,
+
+        activeSkillUseCount: {},   // { skillId: count }
+
+        stageAttemptCount: {},     // { stageId: count }
+
+        skillNodeAttemptCount: {},  // { skillNodeId : count}
     },
-    
-    maxCombo: 0,
-    maxChain: 0,
-
-    activeSkillUseCount: {},   // { skillId: count }
-
-    stageAttemptCount: {},     // { stageId: count }
-
-    nodeAttemptCount: {}, 
-  },
 };
 
-
+// ================================================
+// 戦闘用リアルタイム計算
+// ================================================
 function buildFinalStats(base) {
 
     const isQuest = base._mode === "quest";
@@ -94,7 +103,8 @@ function buildFinalStats(base) {
         chainBonus: 1,
         knockbackBonus: 1,
 
-        skillSlotMax: (base.baseSkillSlot || 0) + (base.bonusSkillSlot || 0)
+        skillSlotMax: (base.baseSkillSlot || 0) + (base.bonusSkillSlot || 0),
+        activeSkillStockMax: (base.baseActiveSkillStockMax || 0) + (base.bonusActiveSkillStockMax || 0)
     };
 
     // ★ここで分岐
@@ -209,7 +219,9 @@ function loadStats() {
     const parsed = JSON.parse(data);
 
     if (parsed.skillSlotMax !== undefined) {
-        parsed.bonusSkillSlot = parsed.skillSlotMax - (parsed.baseSkillSlot || 2);
+        parsed.bonusSkillSlot =
+            parsed.skillSlotMax - (parsed.baseSkillSlot || 2);
+
         delete parsed.skillSlotMax;
     }
 
@@ -217,7 +229,19 @@ function loadStats() {
         ...DEFAULT_STATS,
         ...parsed,
 
-        // ★ここが超重要（深いマージ）
+        // ★ questRecord 深いマージ
+        questRecord: {
+            ...DEFAULT_STATS.questRecord,
+            ...(parsed.questRecord || {}),
+
+            // ★ days も深いマージ
+            days: {
+                ...DEFAULT_STATS.questRecord.days,
+                ...(parsed.questRecord?.days || {})
+            }
+        },
+
+        // ★ skillTreeProgress 深いマージ
         skillTreeProgress: {
             ...DEFAULT_STATS.skillTreeProgress,
             ...(parsed.skillTreeProgress || {})
@@ -225,8 +249,10 @@ function loadStats() {
     };
 }
 
-export function reloadQuestPlayerStats(){
+
+export function reloadQuestPlayerStats() {
     const data = localStorage.getItem("questPlayerStats");
+
     if (!data) return;
 
     const parsed = JSON.parse(data);
@@ -235,7 +261,19 @@ export function reloadQuestPlayerStats(){
         ...DEFAULT_STATS,
         ...parsed,
 
-        // ★これ追加
+        // ★ questRecord 深いマージ
+        questRecord: {
+            ...DEFAULT_STATS.questRecord,
+            ...(parsed.questRecord || {}),
+
+            // ★ days も深いマージ
+            days: {
+                ...DEFAULT_STATS.questRecord.days,
+                ...(parsed.questRecord?.days || {})
+            }
+        },
+
+        // ★ skillTreeProgress 深いマージ
         skillTreeProgress: {
             ...DEFAULT_STATS.skillTreeProgress,
             ...(parsed.skillTreeProgress || {})
@@ -272,25 +310,29 @@ export function getPlayerStatsForEnemy(mode = "enemy") {
 export function addExp(amount) {
     playerStats.exp += amount;
 
-    let totalSlotIncrease = 0; // ★追加
+    let totalSlotIncrease = 0; // skillslot増加
+    let totalStockIncrease = 0; // activeSkillStock増加
     let levelUpCount = 0;
 
     while (
         playerStats.level < 99 &&
         playerStats.exp >= playerStats.nextExp
     ) {
-        const inc = levelUp();
-        totalSlotIncrease += inc;
+        const { slotIncrease, stockIncrease } = levelUp();
+        totalSlotIncrease += slotIncrease;
+        totalStockIncrease += stockIncrease;
         levelUpCount++;
     }
 
     saveStats();
 
     playerStats.slotHistory.totalGained += totalSlotIncrease;
+    playerStats.stockHistory.totalGained += totalStockIncrease;
 
     return {
         levelUpCount,
-        slotIncrease: totalSlotIncrease
+        slotIncrease: totalSlotIncrease,
+        stockIncrease: totalStockIncrease
     };
 }
 
@@ -308,6 +350,7 @@ function levelUp() {
     playerStats.level++;
 
     let slotIncrease = 0;
+    let stockIncrease = 0;
 
     // 次の必要経験値（指数カーブ）
     playerStats.nextExp = Math.floor(
@@ -326,12 +369,14 @@ function levelUp() {
         playerStats.defense + 1
     );
 
-    //skill slot 増加
-    if (playerStats.level === 2) { playerStats.bonusSkillSlot++; slotIncrease++; }//test
+    //skill slot ,activeSkill stock増加
+    if (playerStats.level === 2) { playerStats.bonusSkillSlot++; slotIncrease++; playerStats.bonusActiveSkillStockMax++; stockIncrease++; }//test
     if (playerStats.level === 15) { playerStats.bonusSkillSlot++; slotIncrease++; }
+    if (playerStats.level === 30) { playerStats.bonusActiveSkillStockMax++; stockIncrease++;}
     if (playerStats.level === 35) { playerStats.bonusSkillSlot++; slotIncrease++; }
     if (playerStats.level === 70) { playerStats.bonusSkillSlot++; slotIncrease++; }
-    return slotIncrease; 
+    return {slotIncrease, stockIncrease}; 
+
 }
 
 // ===============================
@@ -390,26 +435,51 @@ export function applySkillNodeEffect(reward, source = "stage") {
 
     if (!reward) return;
 
+    // =========================
+    // スキルスロット
+    // =========================
     if (reward.type === "slot") {
 
         const value = reward.value || 1;
 
         stats.bonusSkillSlot += value;
 
-        // ★履歴初期化
         if (!stats.slotHistory) {
             stats.slotHistory = {
                 totalGained: 0,
                 rewardGained: 0,
-                skillTreeGained: 0 
+                skillTreeGained: 0,
             };
         }
 
-        // ★ステージ報酬として加算
         if (source === "stage") {
             stats.slotHistory.rewardGained += value;
         } else if (source === "skill") {
             stats.slotHistory.skillTreeGained += value;
+        }
+    }
+
+    // =========================
+    // ★アクティブスキルストック上限
+    // =========================
+    if (reward.type === "activeStock") {
+
+        const value = reward.value || 1;
+
+        stats.bonusActiveSkillStockMax += value;
+
+        if (!stats.stockHistory) {
+            stats.stockHistory = {
+                totalGained: 0,
+                rewardGained: 0,
+                skillTreeGained: 0,
+            };
+        }
+
+        if (source === "stage") {
+            stats.stockHistory.rewardGained += value;
+        } else if (source === "skill") {
+            stats.stockHistory.skillTreeGained += value;
         }
     }
 
@@ -420,6 +490,11 @@ export function applySkillNodeEffect(reward, source = "stage") {
 export function getSkillSlotMax() {
     const stats = getPlayerStatsForEnemy(); // buildFinalStats通る
     return stats.skillSlotMax;
+}
+
+export function getActiveSkillStockMax() {
+    const stats = getPlayerStatsForEnemy(); // buildFinalStats通る
+    return stats.activeSkillStockMax;
 }
 
 // ===============================
@@ -543,7 +618,7 @@ export function getCooldownSpeed(
 }
 
 // ===============================
-// クエストモード詳細ステータス更新
+// クエストモード詳細ステータス更新 記録用
 // ===============================
 export function updateQuestStats(result = {}) {
     const stats = playerStats.questRecord;
@@ -562,6 +637,16 @@ export function updateQuestStats(result = {}) {
     if (currentKpm > (stats.maxKpm || 0)) {
         stats.maxKpm = currentKpm;
         stats.maxKpmDate = new Date().toISOString();
+    }
+
+    // =========================
+    // アクティブスキルストックの最大値更新
+    // =========================
+    if (result.activeSkillStockMax !== undefined) {
+        stats.maxActiveSkillStock = Math.max(
+            stats.maxActiveSkillStock || 0,
+            result.activeSkillStockMax
+        );
     }
 
     // =========================
@@ -625,6 +710,60 @@ function updateQuestDays(days) {
   }
 
   days.lastPlayDate = today;
+}
+
+// ===============================
+// クエスト統計：アクティブスキル使用回数
+// ===============================
+export function addQuestActiveSkillUse(skillId, count = 1) {
+    if (!skillId) return;
+
+    const stats = playerStats.questRecord;
+
+    if (!stats.activeSkillUseCount) {
+        stats.activeSkillUseCount = {};
+    }
+
+    stats.activeSkillUseCount[skillId] =
+        (stats.activeSkillUseCount[skillId] || 0) + count;
+
+    saveStats();
+}
+
+// ===============================
+// クエスト統計：ステージ挑戦回数
+// ===============================
+export function addQuestStageAttempt(stageId, count = 1) {
+    if (!stageId) return;
+
+    const stats = playerStats.questRecord;
+
+    if (!stats.stageAttemptCount) {
+        stats.stageAttemptCount = {};
+    }
+
+    stats.stageAttemptCount[stageId] =
+        (stats.stageAttemptCount[stageId] || 0) + count;
+
+    saveStats();
+}
+
+// ===============================
+// クエスト統計：スキルノード挑戦回数
+// ===============================
+export function addQuestSkillNodeAttempt(nodeId, count = 1) {
+    if (!nodeId) return;
+
+    const stats = playerStats.questRecord;
+
+    if (!stats.skillNodeAttemptCount) {
+        stats.skillNodeAttemptCount = {};
+    }
+
+    stats.skillNodeAttemptCount[nodeId] =
+        (stats.skillNodeAttemptCount[nodeId] || 0) + count;
+
+    saveStats();
 }
 
 // ===============================

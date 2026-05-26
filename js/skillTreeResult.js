@@ -69,6 +69,7 @@ console.log("node:", SKILL_TREE[nodeId]);
     const retryBtn = document.getElementById("skillRetryBtn");
     const backBtn = document.getElementById("skillBackBtn");
     const slotDiv = document.getElementById("skillSlotReward");
+    const stockDiv = document.getElementById("skillStockReward");
 
     showSkillResultIntro(node, isClear, () => {
 
@@ -218,6 +219,24 @@ console.log("node:", SKILL_TREE[nodeId]);
                 slotDiv.innerHTML = `
                     <span class="slot-up">
                         SLOT +${resultData.slotIncrease}
+                    </span>
+                `;
+            }
+        }
+
+        // =========================
+        // ストック表示（そのまま）
+        // =========================
+        if (stockDiv) {
+            stockDiv.style.display = "none";
+            stockDiv.innerHTML = "";
+
+            resultData.stockIncrease = node?.reward?.stockIncrease;
+            if (resultData.stockIncrease) {
+                stockDiv.style.display = "block";
+                stockDiv.innerHTML = `
+                    <span class="stock-up">
+                        STOCK +${resultData.stockIncrease}
                     </span>
                 `;
             }

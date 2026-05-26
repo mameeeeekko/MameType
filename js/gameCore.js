@@ -26,6 +26,7 @@ import { handleSkillModeResult } from "./skillTreeResult.js"
 import { initTimeCircle, stopTimeCircle, updateCircle } from "./renderer.js";
 import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "../js/version.js";
+import { addQuestSkillNodeAttempt } from "./questPlayerStats.js";
 
 // ページロード時に HUD を更新
 updateHud();
@@ -596,9 +597,28 @@ async function finishGame(config = {}) {
         const hint = document.getElementById("skillUnlockHint");
         if (hint) hint.style.display = "none";
 
+        // ==============================
+        // ★ノード取得（安全に確保）
+        // ==============================
+        const node = gameState.currentQuestNode
+            || gameState.currentSkillNode
+            || { id: gameState.currentSkillNodeId };
+
+        // ==============================
+        // ★ノード挑戦回数を記録
+        // ==============================
+        if (node?.id) {
+            addQuestSkillNodeAttempt(node.id);
+        }
+
+        // ==============================
+        // ★結果処理
+        // ==============================
         handleSkillModeResult(gameState.currentSkillNodeId);
 
-        // ★超重要
+        // ==============================
+        // ★状態リセット
+        // ==============================
         gameState.currentChallenge = null;
         gameState.currentSkillNodeId = null;
 

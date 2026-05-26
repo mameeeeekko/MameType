@@ -25,7 +25,7 @@ import { addRankingEntry } from "./storage.js";
 import { ENEMY_MODE_CONFIG, STAGES } from "./enemyModeConfig.js";
 import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats, 
     applySkillNodeEffect, hasReceivedStageReward, markStageRewardReceived,
-    getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed  } from "./questPlayerStats.js";
+    getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed, addQuestActiveSkillUse, addQuestStageAttempt, getActiveSkillStockMax  } from "./questPlayerStats.js";
 import { getCurrentDifficulty, getDifficulty } from "./difficulties.js";
 import { getPlayerStats, updatePlayerStats } from "./playerStats.js";
 import { markCleared, setStar  } from "./questProgress.js";
@@ -1082,7 +1082,7 @@ export async function startEnemyMode(config = {}) {
         rank: "C",           // 初期ランク
 
         isQuestMode: config.isQuestMode ?? false,
-        evo: config.isQuestMode ? getEvolutionStage() : 0, //見た目
+        evo: config.isQuestMode ? getEvolutionStage() : 0, //playerの見た目
 
         failed: false,
         tookDamage: false,   // ダメージを受けたフラグ
@@ -1168,7 +1168,9 @@ export async function startEnemyMode(config = {}) {
 
     gameState.questStats = {
         slotIncreased: false,
-        slotIncreaseCount: 0
+        slotIncreaseCount: 0,
+        stockIncreased: false,
+        stockIncreaseCount: 0,
     };
     
     await initAudio();   // ← 音読み込み
@@ -1408,27 +1410,43 @@ export async function endEnemyMode() {
         
         const stats = gameState.enemyStats;
         const node = gameState.currentQuestNode;
+
         //マップのノード解放
         if (!stats.failed && node) {
             markCleared(node.id, node.next);
 
-            // ★ステージ報酬
+            // ★ステージ報酬（slot + stock）
             if (
-                node.reward?.type === "slot" &&
+                (node.reward?.type === "slot" || node.reward?.type === "activeStock") &&
                 !hasReceivedStageReward(node.id)
             ) {
-                const before = getPlayerStatsForEnemy().skillSlotMax;
+
+                const beforeSlot = getPlayerStatsForEnemy().skillSlotMax;
+                const beforeStock = getActiveSkillStockMax();
 
                 applySkillNodeEffect(node.reward, "stage");
 
-                const after = getPlayerStatsForEnemy().skillSlotMax;
+                const afterSlot = getPlayerStatsForEnemy().skillSlotMax;
+                const afterStock = getActiveSkillStockMax();
 
-                gameState.questStats.rewardSlotIncrease = after - before;
+                // =========================
+                // 差分記録
+                // =========================
+                if (node.reward?.type === "slot") {
+                    gameState.questStats.rewardSlotIncrease =
+                        (gameState.questStats.rewardSlotIncrease || 0) + (afterSlot - beforeSlot);
+                }
+
+                if (node.reward?.type === "activeStock") {
+                    gameState.questStats.rewardStockIncrease =
+                        (gameState.questStats.rewardStockIncrease || 0) + (afterStock - beforeStock);
+                }
 
                 // ★ここ超重要
                 markStageRewardReceived(node.id);
             }
         }
+
         // ⭐ ① 先に取得（これを追加）
         const playerBefore = structuredClone(getPlayerStatsForEnemy());
         // EXP計算（補正版）
@@ -1466,6 +1484,10 @@ export async function endEnemyMode() {
             (expResult.slotIncrease || 0) +
             (gameState.questStats.rewardSlotIncrease || 0);
 
+        const totalStockIncrease =
+            (expResult.stockIncrease || 0) +
+            (gameState.questStats.rewardStockIncrease || 0);
+
         // ★星保存
         if (lastEnemyConfig?.isQuestMode && gameState.currentQuestNode) {
             setStar(gameState.currentQuestNode.id, starCount);
@@ -1482,17 +1504,20 @@ export async function endEnemyMode() {
             nextExp: afterStats.nextExp,
             prevExp: prevExp,
 
-            // ★ここが重要
+            // level up
             leveledUp: expResult.levelUpCount > 0,
             levelUpCount: expResult.levelUpCount,
-
+            // slot
             slotIncreased: totalSlotIncrease > 0,
             slotIncreaseCount: totalSlotIncrease,
-
             slotFromLevel: expResult.slotIncrease,
             slotFromReward: gameState.questStats.rewardSlotIncrease || 0,
-
-
+            // active stock
+            stockIncreased: totalStockIncrease > 0,
+            stockIncreaseCount: totalStockIncrease,
+            stockFromLevel: expResult.stockIncrease,
+            stockFromReward: gameState.questStats.rewardStockIncrease || 0,
+            // result
             isClear: !stats.failed,
             stars: starCount
         };
@@ -1507,6 +1532,13 @@ export async function endEnemyMode() {
             maxCombo: stats.maxCombo || stats.maxComboCount || 0,
             maxChain: stats.maxChainCount || 0,
         });
+
+        // ===============================
+        // 挑戦回数記録
+        // ===============================
+        if (node?.id) {
+            addQuestStageAttempt(node.id);
+        }
 
         resetGameState();
         fullResetInput();
@@ -1609,11 +1641,14 @@ function resetEnemyInput(enemy){
 // ===============================
 // アクティブスキル使用
 // ===============================
+// ===============================
+// アクティブスキル使用
+// ===============================
 function tryUseActiveSkill() {
 
     if (!gameState.currentQuestNode) {
         return;
-    }    
+    }
 
     console.log("TRY STOCK:", gameState.activeSkillStock);
 
@@ -1635,7 +1670,6 @@ function tryUseActiveSkill() {
 
             console.log("HP FULL");
 
-            // 好きな表示関数に合わせて変更
             showGameMessage(
                 gameState,
                 "HP FULL"
@@ -1650,8 +1684,19 @@ function tryUseActiveSkill() {
         return;
     }
 
+    // ===============================
+    // 発動
+    // ===============================
     activateSkill(skillId, gameState, enemies || []);
 
+    // ===============================
+    // 使用回数記録
+    // ===============================
+    addQuestActiveSkillUse(skillId);
+
+    // ===============================
+    // ストック消費
+    // ===============================
     gameState.activeSkillStock--;
 
     const maxStock =
@@ -1662,9 +1707,11 @@ function tryUseActiveSkill() {
     // まだ満タンじゃないなら再チャージ開始
     if (gameState.activeSkillStock < maxStock) {
 
-        gameState.activeSkillCooldownMax = (skill?.cooldown || 20);
+        gameState.activeSkillCooldownMax =
+            (skill?.cooldown || 20);
 
-        gameState.activeSkillCooldown = gameState.activeSkillCooldownMax;
+        gameState.activeSkillCooldown =
+            gameState.activeSkillCooldownMax;
 
         gameState._lastCooldownUpdate = getNow();
 

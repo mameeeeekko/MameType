@@ -17,7 +17,8 @@ import {
     getPlayerStats,
     equipActiveSkill,
     unequipActiveSkill,
-    getEquippedActiveSkills
+    getEquippedActiveSkills,
+    getActiveSkillStockMax,
 } from "./questPlayerStats.js";
 import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } from "./enemyModeConfig.js";
 import { devOverride } from "../dev/devOverride.js";
@@ -351,6 +352,8 @@ export function renderQuestMapUI(){
                 if (node.reward) {
                     if (node.reward.type === "slot") {
                         rewardText.push(`スロット +${node.reward.value ?? 1}`);
+                    } else if (node.reward.type === "activeStock") {
+                        rewardText.push(`アクティブスキルストック +${node.reward.value ?? 1}`);
                     } else {
                         rewardText.push("報酬あり");
                     }
@@ -506,6 +509,9 @@ export function openQuestMenuModal(type = "difficulty") {
 
     const box = document.createElement("div");
     box.className = "quest-modal-box";
+
+    // メニューによってサイズを変えるため
+    box.classList.add(`quest-modal-${type}`);
 
     function closeModal() {
         document.removeEventListener("keydown", onKeyDown);
@@ -1065,18 +1071,36 @@ export function openQuestMenuModal(type = "difficulty") {
             const stageSlots = stats.slotHistory?.rewardGained || 0;
             const skillSlots = stats.slotHistory?.skillTreeGained || 0;
 
+            const totalStocks = getActiveSkillStockMax();
+            const levelStocks = stats.stockHistory?.totalGained || 0;
+            const stageStocks = stats.stockHistory?.rewardGained || 0;
+            const skillStocks = stats.stockHistory?.skillTreeGained || 0;
+
             slotInfo.innerHTML = `
                 <div class="slot-row">
-                    <div class="slot-title">P.Skill Slots（Lv/Stage/Skill）</div>
 
-                    <div class="slot-value-group">
+                    <div class="slot-card">
+                    <div class="slot-line">
+                        <span class="slot-title">P.Skill Slots（Lv/Stage/Skill）</span>
                         <span class="slot-total">${totalSlots}</span>
                         <span class="slot-breakdown">
-                            (${levelSlots} / ${stageSlots} / ${skillSlots})
+                        (${levelSlots} / ${stageSlots} / ${skillSlots})
                         </span>
                     </div>
+                    </div>
+
+                    <div class="slot-card">
+                    <div class="slot-line">
+                        <span class="slot-title">A.Skill Stocks（Lv/Stage/Skill）</span>
+                        <span class="slot-total">${totalStocks}</span>
+                        <span class="slot-breakdown">
+                        (${levelStocks} / ${stageStocks} / ${skillStocks})
+                        </span>
+                    </div>
+                    </div>
+
                 </div>
-            `;
+                `;
 
             wrapper.appendChild(slotInfo);
   
@@ -1188,6 +1212,8 @@ function showStageIntro(stage, node, onStart, onCancel) {
 
         if (node.reward.type === "slot") {
             rewardText = `スロット +${node.reward.value ?? 1}`;
+        } else if (node.reward.type === "activeStock") {
+            rewardText = `アクティブスキルスタック +${node.reward.value ?? 1}`;
         } else {
             rewardText = "報酬あり";
         }

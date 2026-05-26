@@ -196,7 +196,7 @@ export function showQuestResult(stats) {
     `;
 
     // =========================
-    // slot用
+    // slot / stack 用
     // =========================
     const slotHTML = `
         ${(stats.slotFromLevel > 0) ? `
@@ -208,6 +208,18 @@ export function showQuestResult(stats) {
         ${(stats.slotFromReward > 0) ? `
             <div class="r-badge slotup reward">
                 SLOT +${stats.slotFromReward} (STAGE)
+            </div>
+        ` : ""}
+
+        ${(stats.stockFromLevel > 0) ? `
+            <div class="r-badge stockup">
+                STACK +${stats.stockFromLevel} (LEVEL)
+            </div>
+        ` : ""}
+
+        ${(stats.stockFromReward > 0) ? `
+            <div class="r-badge stockup reward">
+                STACK +${stats.stockFromReward} (STAGE)
             </div>
         ` : ""}
     `;

@@ -241,6 +241,10 @@ export function getRequirementText(requirements) {
 // 　challenge:　出題内容
 // 　children: 次に解放するノードのid
 // 　requirements: チャレンジ条件
+//  
+//  effect:{type: slot or activeStock
+//          value: 通常１    
+//  }
 // =====================================================
 
 export const SKILL_TREE = {
@@ -325,7 +329,7 @@ export const SKILL_TREE = {
             questionLimit: 5
         },
 
-        children: ["SLOT_1","ACTIVE_2"],
+        children: ["SLOT_1","ACTIVE_2","STOCK_1"],
 
         requirements: [
             {
@@ -347,6 +351,22 @@ export const SKILL_TREE = {
 
         effect: {
             type: "slot",
+            value: 1
+        },
+    },
+
+    STOCK_1: {
+        id: "STOCK_1",
+        skillId: "skill_stock_1",
+        unlock: { mode: "time_attack", type: "target", value: 2 },
+        challenge: {
+            mode: "time_attack",
+            difficulty: "hard",
+            limitSec: 15,
+        },
+
+        effect: {
+            type: "activeStock",
             value: 1
         },
     },

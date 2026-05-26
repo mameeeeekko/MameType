@@ -22,6 +22,10 @@ export const QUEST_MAP = {
                 name: "森の奥へ",
                 stage: "STAGE2",
                 next: ["Q3", "Q4"], // 分岐
+                reward: {
+                    type: "activeStock",
+                    value: 1
+                },
                 pos: { x: 250, y: 150 }
             },
             {
