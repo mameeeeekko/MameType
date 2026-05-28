@@ -15,7 +15,7 @@ import { buildBaseRomaji } from "./typingLogic.js";
 import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,
      spawnChainBurstEffect, renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups, renderDamagePopups, playHitEffect, 
      renderHitParticles, renderShotEffects, spawnShotEffect } from "./effectManager.js";
-import { spawnEnemy } from "./enemySpawner.js";
+import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
 import { handleKey, resetCandidates, fullResetInput } from "./inputCore.js";
@@ -63,6 +63,7 @@ let lastEnemyConfig = null; //もう一回ように
 
 let spawnedCount = 0;
 let lastSpawnTime = 0;     // ★最後に敵を出した時間
+let lastItemSpawnTime = 0;
 let enemyStartTime = null;    // タイマー用
 let timerStarted = false;  // 敵が出てからタイマースタートさせるため
 
@@ -169,14 +170,15 @@ export function killEnemy(enemy, state, options = {}) {
     }
 
     const fromSkill = options.fromSkill ?? false;
+    const isItem = enemy.isItem === true;
 
     // =====================================================
     // ✅ 通常・スキルキル（完全同一処理）
     // =====================================================
-
-    stats.defeatedCount = (stats.defeatedCount ?? 0) + 1;
-    stats.processedCount = (stats.processedCount ?? 0) + 1;
-
+    if (!isItem) {
+        stats.defeatedCount = (stats.defeatedCount ?? 0) + 1;
+        stats.processedCount = (stats.processedCount ?? 0) + 1;
+    }
     // =========================
     // チェイン
     // =========================
@@ -197,13 +199,16 @@ export function killEnemy(enemy, state, options = {}) {
     // =========================
     // スコア
     // =========================
-    const baseScore = enemy.type.score;
-    const multiplier = getChainMultiplier(stats.chainCount);
-    const gainedScore = Math.floor(baseScore * multiplier);
+    if (!isItem) {
 
-    stats.gScore += gainedScore;
+        const baseScore = enemy.type.score;
+        const multiplier = getChainMultiplier(stats.chainCount);
+        const gainedScore = Math.floor(baseScore * multiplier);
 
-    spawnScorePopup(enemy.x, enemy.y, baseScore, multiplier);
+        stats.gScore += gainedScore;
+
+        spawnScorePopup(enemy.x, enemy.y, baseScore, multiplier);
+    }
 
     // =========================
     // 演出（共通）
@@ -231,21 +236,26 @@ export function killEnemy(enemy, state, options = {}) {
 // ===============================
 // ゲームループ
 // ===============================
-function gameLoop() {
+function gameLoop(timestamp) {
 
     if (!enemyLoopActive) return;
 
     // ★ポーズ中でもループは維持
     if (getPaused()) {
+        // ポーズ中も現在時刻を同期
+        gameState._lastFrameTime = timestamp;
         loopId = requestAnimationFrame(gameLoop);
         return;
     }
-
+    
+    const now = timestamp; 
     const diff = getCurrentDifficulty();
     const enemyDiff = diff.enemy;
     const stage = gameState.stage;
-    const spawnInterval = stage.spawn.interval * enemyDiff.spawnRate;
-    const now = getNow();  // ★現在時刻取得
+    const spawnInterval = stage.spawn.interval * enemyDiff.spawnRate; //ms
+    const deltaTime = (now - (gameState._lastFrameTime || now)) / 1000; //sec
+
+    gameState._lastFrameTime = now;
 
     const isPureEnemyMode =
         gameState.mode === GameModes.ENEMY_MODE &&
@@ -254,7 +264,7 @@ function gameLoop() {
     // ===============================
     // Active Skill Charge Update
     // ===============================
-    if (!isPureEnemyMode) {
+    if (!isPureEnemyMode) { //クエストモード処理
 
         if (gameState.activeSkillStock == null) {
             gameState.activeSkillStock = 0;
@@ -265,15 +275,6 @@ function gameLoop() {
             gameState.activeSkillStockMax ??
             1;
 
-        // 実時間delta
-        const cooldownNow = getNow();
-
-        const deltaSec =
-            (cooldownNow - gameState.enemyStats.lastCooldownUpdate) / 1000;
-
-        gameState.enemyStats.lastCooldownUpdate =
-            cooldownNow;
-
         // 上限未満だけチャージ
         if (gameState.activeSkillStock < maxStock) {
 
@@ -283,28 +284,17 @@ function gameLoop() {
             // ======================================
             if (gameState.activeSkillCooldown > 0) {
 
-                const combo =
-                    gameState.enemyStats.currentCombo || 0;
-
+                const combo = gameState.enemyStats.currentCombo || 0;
                 // コンボ倍率
                 const comboSpeed = getCooldownSpeed(combo);
-
                 // skill補正
                 const skillCooldownSpeed = gameState.enemyStats.cooldownSpeed ?? 1;    
-
                 // 実時間差分（秒）
-                const deltaSec = (now - (gameState._lastCooldownUpdate || now)) / 1000;
-
-                gameState._lastCooldownUpdate = now;
-
-                gameState.activeSkillCooldown -= deltaSec * comboSpeed * skillCooldownSpeed;
+                gameState.activeSkillCooldown -= deltaTime * comboSpeed * skillCooldownSpeed;
 
                 if (gameState.activeSkillCooldown < 0) {
                     gameState.activeSkillCooldown = 0;
                 }
-            }
-            else {
-                gameState._lastCooldownUpdate = now;
             }
 
             if (gameState.activeSkillCooldown <= 0) {
@@ -339,7 +329,16 @@ function gameLoop() {
             }
         }
     }
+    
+    // itemのfreezeの時間を減らす
+    if (gameState.enemyStats.freezeTimer > 0) {
 
+        gameState.enemyStats.freezeTimer -= deltaTime;
+
+        if (gameState.enemyStats.freezeTimer < 0) {
+            gameState.enemyStats.freezeTimer = 0;
+        }
+    }
     // Chain Update
     updateChainBar();
     renderChainUI(gameState);
@@ -358,7 +357,7 @@ function gameLoop() {
     // 敵更新
     enemies.forEach(enemy => {
         if (enemy && !enemy.isDead) {
-            enemy.update(player, enemyDiff, gameState);
+            enemy.update(player, enemyDiff, gameState, deltaTime);
         }
     });
 
@@ -455,6 +454,26 @@ function gameLoop() {
                         spawnedCount++;
                         // ★成功した時だけ時間更新
                         lastSpawnTime = now;
+                    }
+
+                    // ======================================
+                    // アイテムスポーン
+                    // ======================================
+                    if (stage.itemSpawn) {
+
+                        const itemInterval =
+                            stage.itemSpawn.interval ?? 10000;
+
+                        if (now - lastItemSpawnTime >= itemInterval) {
+
+                            spawnItemEnemy({
+                                enemies,
+                                player,
+                                canvas
+                            }, stage);
+
+                            lastItemSpawnTime = now;
+                        }
                     }
                 }
             }
@@ -755,7 +774,7 @@ export function handleEnemyKey(e) {
                 stats.lastChainUpdate = getNow();
             }
 
-            // タイプでチェイン増加　スキル加算＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+            // タイプでチェイン増加 スキル加算＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
             stats.chainBar += stats.gainOnType * stats.chainRate;
 
             if (stats.chainBar > stats.chainBarMax) {
@@ -774,7 +793,7 @@ export function handleEnemyKey(e) {
         if (lockedEnemy.pos >= lockedEnemy.text.length) {
             const enemy = lockedEnemy;
             // ★ここが今回のコア
-            const isKilled = enemy.onWordComplete(player);
+            const isKilled = enemy.onWordComplete(player, gameState, enemies);
 
             if (isKilled) {
                 // ===== 完全撃破 =====
@@ -1089,6 +1108,8 @@ export async function startEnemyMode(config = {}) {
         remainingSpawn: 0,
         totalSpawn: 0,
 
+        freezeTimer: 0,     // itemのfreeze用のtimer
+
         // Chain System
         chainCount: 0,     // 現在チェイン数
         maxChainCount: 0,
@@ -1208,11 +1229,11 @@ export async function startEnemyMode(config = {}) {
     lockedEnemy = null;
     candidateEnemies = []; // ★追加
     typedBuffer = ""; 
-    lastSpawnTime = getNow();
-    gameState._lastCooldownUpdate = getNow();
+    lastSpawnTime = performance.now();
+    gameState._lastFrameTime = performance.now();
     enemyLoopActive = true;
 
-    gameLoop();
+    loopId = requestAnimationFrame(gameLoop);
 }
 
 // チェインモードのスタート用
@@ -1578,27 +1599,37 @@ export async function endEnemyMode() {
     
     if (!stats.isInvalidRun && stats.totalTyped > 0) {
 
-        updatePlayerStats(
-            statsData,
-            {
-                totalChars: stats.correctCount,
-                totalMistake: stats.mistakeCount,
-                totalTypeTime: (stats.typingActiveTime)/1000,
-                totalPlayTime: (stats.endTime - stats.startTime)/1000,
-                kpm: stats.gKpm,
-                eScore: stats.gScore,
-                defeatedCount: stats.defeatedCount,
-                maxChain: stats.maxChainCount,
-                maxCombo: stats.maxComboCount
-            },
-            "enemy_mode",              // ← モード名
-            null,
-            gameState.isFreeMode       // ← ★これが超重要
-        );
+        // ==========================================
+        // 通常エネミー / デイリーのみ
+        // ==========================================
+        if (!lastEnemyConfig?.isQuestMode) {
 
-        // ランキング登録（自動で履歴にも入る）
+            updatePlayerStats(
+                statsData,
+                {
+                    totalChars: stats.correctCount,
+                    totalMistake: stats.mistakeCount,
+                    totalTypeTime: (stats.typingActiveTime)/1000,
+                    totalPlayTime: (stats.endTime - stats.startTime)/1000,
+                    kpm: stats.gKpm,
+
+                    // enemy専用
+                    eScore: stats.gScore,
+                    defeatedCount: stats.defeatedCount,
+                    maxChain: stats.maxChainCount,
+                    maxCombo: stats.maxComboCount
+                },
+                "enemy_mode",
+                null,
+                gameState.isFreeMode
+            );
+        }
+
+        // ==========================================
+        // ランキング
+        // ==========================================
         if (lastEnemyConfig?.isQuestMode || lastEnemyConfig?.isFreeMode) {
-            return null; // ← 保存しない
+            return null;
         }
 
         const rankingResult = addRankingEntry(record);
@@ -1712,8 +1743,6 @@ function tryUseActiveSkill() {
 
         gameState.activeSkillCooldown =
             gameState.activeSkillCooldownMax;
-
-        gameState._lastCooldownUpdate = getNow();
 
     } else {
         gameState.activeSkillCooldown = 0;

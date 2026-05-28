@@ -60,6 +60,8 @@ const DEFAULT_STATS = {
         totalKills: 0,
         totalTyped: 0,
         totalMiss: 0,
+        
+        itemPickupCount: {}, // { itemId: count }
 
         avgKpm: 0,
         avgAccuracy: 0,
@@ -118,6 +120,25 @@ function buildFinalStats(base) {
     }
 
     return result;
+}
+
+// ===============================
+// クエスト統計：アイテム取得回数
+// ===============================
+export function addQuestItemPickup(itemId, count = 1) {
+
+    if (!itemId) return;
+
+    const stats = playerStats.questRecord;
+
+    if (!stats.itemPickupCount) {
+        stats.itemPickupCount = {};
+    }
+
+    stats.itemPickupCount[itemId] =
+        (stats.itemPickupCount[itemId] || 0) + count;
+
+    saveStats();
 }
 
 // ===============================
@@ -203,7 +224,6 @@ export function getEquippedActiveSkills() {
     }
     return playerStats.equippedActiveSkills;
 }
-
 
 
 let playerStats = loadStats();
@@ -520,8 +540,6 @@ export const COMBO_TIERS = [
         cooldownSpeed: 2.0,
     },
 ];
-
-
 
 // ===============================
 // 現在Tier取得

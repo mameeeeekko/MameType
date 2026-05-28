@@ -672,6 +672,7 @@ export function deleteQuestSlot(slotIndex) {
 export function resetQuestData() {
   localStorage.removeItem("questProgress");
   localStorage.removeItem("questPlayerStats");
+  localStorage.removeItem("questStars");
   localStorage.removeItem(QUEST_SLOTS_KEY); // ★変更
   localStorage.removeItem(QUEST_AUTO_KEY);
 }
@@ -680,6 +681,9 @@ export function resetQuestData() {
 // 🔹はじめから（スロットは保持）
 // ================================
 export function startQuestFromBeginning(defaultStats = null) {
+
+  // ★ 星リセット
+  localStorage.removeItem("questStars");
 
   // 進行リセット
   const initialProgress = {

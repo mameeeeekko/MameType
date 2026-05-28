@@ -1,11 +1,13 @@
 // enemy.js
 
-import { getUISafeTop, markDamageTaken, onEnemyRemovedByDamage } from "./enemyCore.js";
+import { getUISafeTop, markDamageTaken, onEnemyRemovedByDamage, killEnemy } from "./enemyCore.js";
 import { playDamageSound, spawnHitWave, spawnDamagePopup } from "./effectManager.js";
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { getRandomWordForType } from "./enemySpawner.js"; 
 import { devOverride } from "../dev/devOverride.js";
+import { addQuestItemPickup } from "./questPlayerStats.js";
+
 
 export class Enemy {
 
@@ -31,13 +33,12 @@ export class Enemy {
    
   }
 
-    update(player, difficulty, state){
+    update(player, difficulty, state, deltaTime){
 
         // ★フリーズ判定（最優先）
         const frozen = state?.enemyStats?.freezeTimer > 0;
 
         if (frozen) {
-            state.enemyStats.freezeTimer--;
             return true; // 完全停止
         }
 
@@ -62,9 +63,11 @@ export class Enemy {
             return false;
         }
 
-        this.x += dx/dist * this.speed;
-        this.y += dy/dist * this.speed;
-        this.rotation += this.rotationSpeed;
+        const scale = deltaTime * 60;
+
+        this.x += dx / dist * this.speed * scale;
+        this.y += dy / dist * this.speed * scale;
+        this.rotation += this.rotationSpeed * scale;
 
         // UI侵入防止
         const uiTop = getUISafeTop();
@@ -115,121 +118,6 @@ export class Enemy {
     }
 }
 
-// =====================================================
-// 敵パラメータ
-// =====================================================
-/*
-shape: "circle" "square" "pinwheel"
-pattern: "stripe"  "ring"
-tags: ["句読点","促音","英語", "記号","ことわざ","擬音"]
-*/
-
-export const EnemyTypes = {
-
-    SLIME:{
-        id:"slime",
-        name:"スライム",
-
-        size:16,
-        damage:10,
-        hitCount:1, 
-        speed:0.7,
-
-        score:10,
-        killSound:1,
-        damageSound:1,
-
-        tags:[], // ← 制限なし
-        minLen:2,
-        maxLen:3,
-        //spawnWeight:50,
-
-        // 見た目設定
-        shape:"circle",     // 形（circle / square など）
-        pattern:"stripe", // 模様（かざぐるま）
-        rotationSpeed: 0,
-        color:"#66ccff",
-    },
-
-    GOBLIN:{
-        id:"goblin",
-        name:"ゴブリン",
-
-        size:18,
-        damage:5,
-        hitCount:1, 
-        speed:1.0,
-
-        score:20,
-        killSound:2,
-        damageSound:1,
-
-        tags:["英語"],
-        minLen:3,
-        maxLen:6,
-        //spawnWeight:30,
-
-        // 見た目設定
-        shape:"square",     // 四角
-        pattern:null,
-        rotationSpeed: 0.02,  
-        color:"#a3a3a3",
-    },
-
-    OGRE:{
-        id:"orge",
-        name:"オーガ",
-
-        size:25,
-        damage:10,
-        hitCount:1, 
-        speed:0.5,
-
-        score:40,
-        killSound:3,
-        damageSound:1,
-
-        tags:["句読点","促音"],
-        minLen:5,
-        maxLen:20,
-        //spawnWeight:20,
-
-        // 見た目設定
-        shape:"pinwheel",
-        pattern:null,     // 同心円
-        rotationSpeed: 0.03,
-        color:"#525252",
-    },
-
-    BOSS:{
-        id:"boss",
-        name:"ボス",
-
-        size:28,
-        damage:30,
-        hitCount:2,
-        knockback:50, 
-        speed:0.3,
-
-        score:200,
-        killSound:3,
-        damageSound:1,
-
-        tags:["句読点","促音","英語"],
-        minLen:5,
-        maxLen:20,
-        //spawnWeight:5,
-
-        // 見た目設定
-        shape:"circle",
-        pattern:"ring", // 回転＋強調でボス感
-        rotationSpeed: 0,
-        color:"#474747",
-    }
-
-};
-
-
 // =================================
 // ダメージ計算
 // =================================
@@ -260,3 +148,434 @@ function calcDamage(enemyType, player, difficulty) {
     // ★整数化
     return Math.floor(damage);
 }
+
+
+export class ItemEnemy extends Enemy {
+
+    constructor(word, text, x, y, type){
+
+        super(word, text, x, y, 0, type);
+
+        this.isItem = true;
+        // 秒
+        this.maxLifetime = type.lifetime || 300;
+        this.lifetime = this.maxLifetime;
+
+        this.baseRomaji = buildBaseRomaji(this.text, 0);
+    }
+
+    update(player, difficulty, state, deltaTime){
+
+        this.lifetime -= deltaTime;
+
+        // 点滅
+        if (this.lifetime < 120) {
+            this.flash = Math.floor(this.lifetime / 10) % 2;
+        }
+
+        // 時間切れ
+        if (this.lifetime <= 0) {
+            this.isDead = true;
+            return false;
+        }
+
+        this.rotation += this.rotationSpeed || 0;
+
+        return true;
+    }
+
+    onWordComplete(player, state, enemies){
+
+        // ★アイテム取得記録
+        addQuestItemPickup(this.type.id);
+
+        applyItemEffect(this.type, player, state, enemies);
+
+        this.isDead = true;
+
+        return true;
+    }
+}
+
+
+function applyItemEffect(type, player, state = {}, enemies = []){
+
+    switch(type.effect){
+
+        case "heal":
+
+            if(type.value === "full"){
+                player.hp = player.maxHp;
+            } else {
+                player.hp += type.value;
+                player.hp = Math.min(player.hp, player.maxHp);
+            }
+
+            break;
+
+        case "kill":
+
+            const aliveEnemies =
+                enemies.filter(
+                    e => e && !e.isDead && !e.isItem
+                );
+
+            if (aliveEnemies.length === 0) break;
+
+            if(type.value === "all"){
+
+                aliveEnemies.forEach(enemy => {
+
+                    killEnemy(enemy, state, {
+                        fromItem: true
+                    });
+
+                });
+
+            } else {
+
+                const count = type.value;
+
+                aliveEnemies
+                    .slice(0, count)
+                    .forEach(enemy => {
+
+                        killEnemy(enemy, state, {
+                            fromItem: true
+                        });
+
+                    });
+            }
+
+            break;
+    
+        case "freeze":
+
+            if (!state.enemyStats) {
+                state.enemyStats = {};
+            }
+
+            state.enemyStats.freezeTimer =
+                (state.enemyStats.freezeTimer || 0)
+                + type.value;
+
+            break;
+
+        case "cooldown":
+
+            state.activeSkillCooldown =
+                Math.max(
+                    0,
+                    (state.activeSkillCooldown || 0) - type.value
+                );
+
+            break;
+    }
+}
+
+// =================================
+// アイテム説明文
+// =================================
+export function getItemDescription(type){
+
+    switch(type.effect){
+
+        case "heal":
+
+            if(type.value === "full"){
+                return "FULL";
+            }
+
+            return `+${type.value}`;
+
+        case "freeze":
+
+            return `${type.value}sec`;
+
+        case "kill":
+
+            if(type.value === "all"){
+                return "ALL";
+            }
+
+            return `${type.value}`;
+
+        case "cooldown":
+
+            return `-${type.value}sec`;
+
+        default:
+            return "";
+    }
+}
+
+// =====================================================
+// 敵パラメータ
+/*
+shape: "circle" "square" "pinwheel"
+pattern: "stripe"  "ring"
+tags: ["句読点","促音","英語", "記号","ことわざ","擬音"]
+*/
+// =====================================================
+
+export const EnemyTypes = {
+
+    SLIME:{
+        id:"slime",
+        name:"スライム",
+
+        size:16,
+        damage:10,
+        hitCount:1, 
+        speed:0.7,
+
+        score:10,
+        killSound:1,
+        killedEffect:1,
+        damageSound:1,
+
+        tags:[], // ← 制限なし
+        minLen:2,
+        maxLen:3,
+        //spawnWeight:50,
+
+        // 見た目設定
+        shape:"circle",     // 形（circle / square など）
+        pattern:"stripe", // 模様（かざぐるま）
+        rotationSpeed: 0,
+        color:"#66ccff",
+    },
+
+    GOBLIN:{
+        id:"goblin",
+        name:"ゴブリン",
+
+        size:18,
+        damage:5,
+        hitCount:1, 
+        speed:1.0,
+
+        score:20,
+        killSound:2,
+        killedEffect:1,
+        damageSound:1,
+
+        tags:["英語"],
+        minLen:3,
+        maxLen:6,
+        //spawnWeight:30,
+
+        // 見た目設定
+        shape:"square",     // 四角
+        pattern:null,
+        rotationSpeed: 0.02,  
+        color:"#a3a3a3",
+    },
+
+    OGRE:{
+        id:"orge",
+        name:"オーガ",
+
+        size:25,
+        damage:10,
+        hitCount:1, 
+        speed:0.5,
+
+        score:40,
+        killSound:3,
+        killedEffect:1,
+        damageSound:1,
+
+        tags:["句読点","促音"],
+        minLen:5,
+        maxLen:20,
+        //spawnWeight:20,
+
+        // 見た目設定
+        shape:"pinwheel",
+        pattern:null,     // 同心円
+        rotationSpeed: 0.03,
+        color:"#525252",
+    },
+
+    BOSS:{
+        id:"boss",
+        name:"ボス",
+
+        size:28,
+        damage:30,
+        hitCount:2,
+        knockback:50, 
+        speed:0.3,
+
+        score:200,
+        killSound:3,
+        killedEffect:1,
+        damageSound:1,
+
+        tags:["句読点","促音","英語"],
+        minLen:5,
+        maxLen:20,
+        //spawnWeight:5,
+
+        // 見た目設定
+        shape:"circle",
+        pattern:"ring", // 回転＋強調でボス感
+        rotationSpeed: 0,
+        color:"#474747",
+    }
+
+};
+
+
+// =================================
+// アイテム
+/*
+shape: "circle" "square" "pinwheel"
+pattern: "stripe"  "ring"
+tags: ["句読点","促音","英語", "記号","ことわざ","擬音"]
+*/
+// =================================
+
+export const ItemTypes = {
+
+    HEAL_SMALL:{
+        id:"heal_small",
+        name:"回復",
+
+        effect:"heal",
+        value:20,
+
+        killSound:2,
+        killedEffect:1,
+
+        tags:[], // ← 制限なし
+        minLen:2,
+        maxLen:3,
+
+        lifetime:6, //消えるまでの時間 sec
+
+        size:14,
+        speed:0,
+
+        color:"#4ade80",
+        shape:"circle",
+        pattern:"ring",
+    },
+
+    HEAL_FULL:{
+        id:"heal_full",
+        name:"全回復",
+
+        effect:"heal",
+        value:"full",
+
+        killSound:2,
+        killedEffect:1,
+
+        tags:[], // ← 制限なし
+        minLen:2,
+        maxLen:3,
+
+        lifetime:5,
+
+        size:18,
+        speed:0,
+
+        color:"#22c55e",
+        shape:"circle",
+        pattern:"ring",
+    },
+
+    BOMB:{
+        id:"bomb",
+        name:"ボム",
+
+        effect:"kill",
+        value:3,
+
+        killSound:2,
+        killedEffect:1,
+
+        tags:[], // ← 制限なし
+        minLen:2,
+        maxLen:3,
+
+        lifetime:6,
+
+        size:16,
+
+        color:"#f87171",
+        shape:"square",
+        pattern:"stripe",
+    },
+
+    BOMB_ALL:{
+        id:"bomb_all",
+        name:"殲滅",
+
+        effect:"kill",
+        value:"all",
+
+        killSound:2,
+        killedEffect:1,
+
+        tags:[], // ← 制限なし
+        minLen:2,
+        maxLen:3,
+
+        lifetime:6,
+
+        size:22,
+
+        color:"#dc2626",
+        shape:"pinwheel",
+        rotationSpeed:0.08,
+    },
+
+    FREEZE:{
+        id:"freeze",
+        name:"フリーズ",
+
+        effect:"freeze",
+        value:5, //秒
+
+        killSound:2,
+        killedEffect:1,
+
+        tags:[], // ← 制限なし
+        minLen:2,
+        maxLen:3,
+
+        lifetime:5,
+
+        size:18,
+
+        color:"#60a5fa",
+        shape:"circle",
+        pattern:"stripe",
+    },
+
+    SKILL_CD:{
+        id:"skill_cd",
+        name:"短縮",
+
+        effect:"cooldown",
+        value:15, //sec
+
+        killSound:2,
+        killedEffect:1,
+
+        tags:[], // ← 制限なし
+        minLen:2,
+        maxLen:3,
+
+        lifetime:5,
+
+        size:16,
+
+        color:"#c084fc",
+        shape:"square",
+        pattern:"ring",
+    }
+};

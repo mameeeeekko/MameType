@@ -7,6 +7,7 @@ import { getNow } from "./gameCore.js";
 import { getChainMultiplier } from "./enemyCore.js"
 import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, } from "./questPlayerStats.js";
 import { ACTIVE_SKILLS } from "./questSkills.js";
+import { getItemDescription } from "./enemy.js";
 
 
 // サイドを丸める関数
@@ -155,7 +156,7 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
 
-        // 背景（ちょいオシャレ）
+        // 背景
         const textWidth = ctx.measureText(countText).width;
         const padding = 4;
 
@@ -178,6 +179,172 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
         }
     }
 
+    // =====================
+    // アイテム説明
+    // =====================
+    if (enemy.isItem) {
+
+        drawItemLabel(ctx, enemy);
+    }
+    
+    // ======================================
+    // Item Lifetime Ring
+    // ======================================
+    if (enemy.isItem) {
+
+        const ratio =
+            Math.max(0, enemy.lifetime / enemy.maxLifetime);
+
+        // ★点滅（ここで抜けるのはOK）
+        if (ratio < 0.2) {
+
+            const blink =
+                Math.floor(performance.now() / 120) % 2;
+
+            if (!blink) {
+                ctx.restore();
+                return;
+            }
+        }
+
+        ctx.save();
+
+        // 色
+        if (ratio < 0.25) {
+            ctx.strokeStyle = "#ef4444";
+        } else {
+            ctx.strokeStyle = "rgba(171, 171, 171, 0.9)";
+        }
+
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+
+        const end = Math.PI; // 左固定
+
+        const start =
+            Math.PI * (1 - ratio);
+
+        ctx.beginPath();
+        ctx.arc(
+            enemy.x,
+            enemy.y,
+            enemy.type.size + 6,
+            start,
+            end,
+            false 
+        );
+
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+// ===============================
+// アイテムラベル
+// ===============================
+function drawItemLabel(ctx, enemy){
+
+    const text =
+        getItemDescription(enemy.type);
+
+    if (!text) return;
+
+    const y =
+        enemy.y +
+        enemy.type.size +
+        10;
+
+    ctx.save();
+
+    ctx.font =
+        "bold 10px monospace";
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const textW =
+        ctx.measureText(text).width;
+
+    const padX = 6;
+    const w = textW + padX * 2;
+    const h = 14;
+
+    const x =
+        enemy.x - w / 2;
+
+    // =====================
+    // 色
+    // =====================
+    let bg =
+        "rgba(0,0,0,0.55)";
+
+    let border =
+        "rgba(255,255,255,0.2)";
+
+    switch(enemy.type.effect){
+
+        case "heal":
+            bg =
+            "rgba(34,197,94,0.22)";
+            border =
+            "rgba(74,222,128,0.7)";
+            break;
+
+        case "freeze":
+            bg =
+            "rgba(96,165,250,0.22)";
+            border =
+            "rgba(147,197,253,0.7)";
+            break;
+
+        case "kill":
+            bg =
+            "rgba(239,68,68,0.22)";
+            border =
+            "rgba(248,113,113,0.7)";
+            break;
+
+        case "cooldown":
+            bg =
+            "rgba(192,132,252,0.22)";
+            border =
+            "rgba(216,180,254,0.7)";
+            break;
+    }
+    // =====================
+    // 背景
+    // =====================
+    roundRect(
+        ctx,
+        x,
+        y,
+        w,
+        h,
+        6
+    );
+
+    ctx.fillStyle = bg;
+    ctx.fill();
+
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // =====================
+    // 文字
+    // =====================
+    ctx.fillStyle =
+        "rgba(255,255,255,0.95)";
+
+    ctx.fillText(
+        text,
+        enemy.x,
+        y + h / 2 + 0.5
+    );
+
     ctx.restore();
 }
 
@@ -189,6 +356,15 @@ function drawEnemyBody(ctx, enemy, color){
     const { x, y, type } = enemy;
 
     ctx.save();
+
+    // =========================
+    // アイテムの発光
+    // =========================
+    if (enemy.isItem) {
+
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 14;
+    }
 
     // =========================
     // 少し回転（動きが出る）
@@ -416,10 +592,17 @@ function drawStripe(ctx, x, y, type){
 
 function drawRing(ctx, x, y, type){
 
-    for(let i = 0; i < 4; i++){
+    if (!type) return;
+    if (!Number.isFinite(type.size)) return;
+
+    const maxRing = Math.floor(type.size / 5);
+
+    for(let i = 0; i < maxRing; i++){
+
+        const radius = type.size - i * 5;
 
         ctx.beginPath();
-        ctx.arc(x, y, type.size - i * 5, 0, Math.PI * 2);
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
 
         ctx.strokeStyle = i % 2 === 0
             ? "rgba(255,255,255,0.45)"

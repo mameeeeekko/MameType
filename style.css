@@ -2517,18 +2517,18 @@ button {
 
 .stock-inline-bars {
   display: flex;
-  gap: 3px;
+  gap: 5px;
   align-items: center;
 }
 
 .stock-mini-bar {
-  width: 2px;
-  height: 10px; /* ← かなり小さく（文字サイズに合わせる） */
+  width: 4px;
+  height: 12px; /* ← かなり小さく（文字サイズに合わせる） */
 
   border-radius: 1px;
 
-  background: rgba(255,140,40,0.12);
-  border: 1px solid rgba(255,180,120,0.25);
+  background: rgba(255, 140, 40, 0.21);
+  border: 1px solid rgba(255, 181, 120, 0.306);
   position: relative;
 }
 
@@ -2536,12 +2536,12 @@ button {
 .stock-mini-bar::after {
   content: "";
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 0.5px;
-  width: 1px;
+  top: 3px;
+  bottom: 3px;
+  left: 1px;
+  width: 2px;
 
-  background: rgba(255,200,140,0.5);
+  background: rgba(255, 199, 140, 0.658);
 }
 
 /* =========================
@@ -2887,6 +2887,12 @@ button {
     0 0 15px #00ffff,
     0 0 35px rgba(0,255,255,0.6);
   animation: pulseCore 1.4s ease-in-out infinite alternate;
+}
+
+#questCoreCanvas {
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 /* アニメーション */

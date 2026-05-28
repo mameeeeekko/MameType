@@ -2,8 +2,10 @@ import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEM
 import { savePlayerStats } from "./storage.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getClearedStageCount, getTotalStars, getAvailableMaxStars } from "./questProgress.js";
-import { PASSIVE_SKILLS, ACTIVE_SKILLS } from "./questSkills.js";
+import { PASSIVE_SKILLS, ACTIVE_SKILLS, getSkillById } from "./questSkills.js";
 import { QUEST_MAP } from "./questMap.js";
+import { SKILL_TREE } from "./skillTree.js";
+import { openQuestMenuModal } from "./questMapUI.js";
 
 function formatDateOnly(dateStr){
   if(!dateStr) return "";
@@ -223,6 +225,7 @@ function updateNormalHud(stats) {
 //=======================================================
 
 function renderQuestStatsModal() {
+
   const skillData = calcQuestSkillStats();
   const skillStats = skillData;
   const s = getPlayerStatsForEnemy() || {};
@@ -233,6 +236,13 @@ function renderQuestStatsModal() {
   const exp = Number(s.exp) || 0;
   const nextExp = Number(s.nextExp) || 1;
   const expPercent = Math.min(exp / nextExp, 1) * 100;
+
+  const unlockedNodes =
+    s.skillTreeProgress?.unlockedNodes || [];
+  
+  const itemPickupTotal =
+    Object.values(r.itemPickupCount || {})
+      .reduce((sum, v) => sum + v, 0);
 
   // 左
   const left = document.getElementById("questBasicStats");
@@ -373,6 +383,13 @@ function renderQuestStatsModal() {
                 <div class="quest-bottom-row">
                   <span class="quest-bottom-label">KILL</span>
                   <span class="quest-bottom-value">${r.totalKills || 0}</span>
+                </div>
+
+                <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">ITEM</span>
+                  <span class="quest-bottom-value">
+                    ${itemPickupTotal}
+                  </span>
                 </div>
 
                 <div class="quest-bottom-row">
@@ -571,15 +588,63 @@ function renderQuestStatsModal() {
                 }
               </div>
 
+              <!-- ===== AUTO PASSIVE SKILL ===== -->
+              <div class="quest-bottom-card">
+                <div class="quest-bottom-title">AUTO PASSIVE SKILLS</div>
+
+                ${
+                    unlockedNodes
+                    .map(nodeId => SKILL_TREE[nodeId])
+                    .filter(node => node?.skillId)
+
+                    // active除外
+                    .filter(node => !ACTIVE_SKILLS[node.skillId])
+
+                    .map(node => getSkillById(node.skillId))
+
+                    // 非装備のみ
+                    .filter(skill => skill?.equipable === false)
+                    .map(skill => {
+
+                      const name = skill?.name || "UNKNOWN";
+                      const icon = skill?.icon || "";
+
+                      const isImage =
+                        typeof icon === "string" &&
+                        (
+                          icon.includes("/") ||
+                          icon.endsWith(".png") ||
+                          icon.endsWith(".jpg") ||
+                          icon.endsWith(".jpeg") ||
+                          icon.endsWith(".webp")
+                        );
+
+                      const iconHtml = isImage
+                        ? `<img src="${icon}" class="quest-skill-bottom-icon">`
+                        : `<span>${icon}</span>`;
+
+                      return `
+                        <div class="quest-bottom-row">
+
+                          <span class="quest-bottom-label">
+                            ${iconHtml}
+                            ${name}
+                          </span>
+
+                        </div>
+                      `;
+                    }).join("")
+                  }
+
+              </div>
+
             </div>
-
           </div>
-
         </div>
-
       </div>
     `;
   }
+
   // DOM生成後に初期化
   initQuestTabs();
 }
@@ -901,6 +966,106 @@ function renderQuestRing(s) {
     ctx.lineTo(slotX + 11, y + 7);
     ctx.stroke();
   }
+
+  /* =========================
+    スキルスロット当たり判定
+  ========================= */
+
+  function isSkillSlotHit(mx, my) {
+
+    // ACTIVE
+    for (let i = 0; i < activeSlots; i++) {
+
+      const y = activeStartY + i * 22;
+
+      const hit =
+        mx >= slotX &&
+        mx <= slotX + 14 &&
+        my >= y &&
+        my <= y + 14;
+
+      if (hit) return true;
+    }
+
+    // PASSIVE
+    for (let i = 0; i < passiveSlots; i++) {
+
+      const y = passiveStartY + i * 22;
+
+      const hit =
+        mx >= slotX &&
+        mx <= slotX + 14 &&
+        my >= y &&
+        my <= y + 14;
+
+      if (hit) return true;
+    }
+
+    return false;
+  }
+
+  /* =========================
+    hover cursor
+  ========================= */
+
+  canvas.onmousemove = (e) => {
+
+    const rect = canvas.getBoundingClientRect();
+
+    const mx =
+      (e.clientX - rect.left) *
+      (canvas.width / rect.width);
+
+    const my =
+      (e.clientY - rect.top) *
+      (canvas.height / rect.height);
+
+    const hovering =
+      isSkillSlotHit(mx, my);
+
+    canvas.style.cursor =
+      hovering
+        ? "pointer"
+        : "default";
+  };
+
+  /* =========================
+    skillスロットコンテナのclick 
+  ========================= */
+
+  canvas.onclick = (e) => {
+
+    const rect = canvas.getBoundingClientRect();
+
+    const mx =
+      (e.clientX - rect.left) *
+      (canvas.width / rect.width);
+
+    const my =
+      (e.clientY - rect.top) *
+      (canvas.height / rect.height);
+
+    const hit =
+      isSkillSlotHit(mx, my);
+
+    if (!hit) return;
+
+    closeQuestStatsModal();
+
+    openQuestMenuModal("skill");
+
+  };
+
+}
+
+function closeQuestStatsModal() {
+
+  const modal =
+    document.getElementById("questStatsModal");
+
+  if (!modal) return;
+
+  modal.style.display = "none";
 }
 
 //=== skillパラメータ関連関数 ======================

@@ -1213,7 +1213,7 @@ function showStageIntro(stage, node, onStart, onCancel) {
         if (node.reward.type === "slot") {
             rewardText = `スロット +${node.reward.value ?? 1}`;
         } else if (node.reward.type === "activeStock") {
-            rewardText = `アクティブスキルスタック +${node.reward.value ?? 1}`;
+            rewardText = `アクティブスキルストック +${node.reward.value ?? 1}`;
         } else {
             rewardText = "報酬あり";
         }

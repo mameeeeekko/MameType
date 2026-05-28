@@ -225,9 +225,23 @@ export const STAGES = {
       limit: 10,
       maxAlive: null,
     },
+    itemSpawn: {
+      interval: 5000,
+      chance: 0.8,
+      limit: null,
+      maxAlive: 1,
+    },
     enemyTable: [
       { type: "SLIME", weight: 70 },
       { type: "GOBLIN", weight: 30 }
+    ],
+    itemTable: [
+      { type: "HEAL_SMALL", weight: 10 },
+      { type: "FREEZE", weight: 10 },
+      { type: "BOMB", weight: 20 },
+      { type: "BOMB_ALL", weight: 20 },
+      { type: "HEAL_FULL", weight: 20 },
+      { type: "SKILL_CD", weight: 20 },
     ],
     endConditions: {
       hpZero: true,
@@ -239,7 +253,8 @@ export const STAGES = {
     star: {
       type: "clearTime",
       thresholds: [70000,60000,50000, 40000, 30000] //ms
-    }
+    },
+
   },
 
   STAGE2: {

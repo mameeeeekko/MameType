@@ -45,74 +45,73 @@ const SKILL_HANDLERS = {
 
   kill: (value, state, enemiesList = []) => {
 
-    const aliveEnemies = enemiesList.filter(e => e && !e.isDead);
+    const aliveEnemies =
+      enemiesList.filter(e => e && !e.isDead && !e.isItem);
 
     if (aliveEnemies.length === 0) return;
+
+    const mode = value.mode;
+    const count = value.count ?? 1;
 
     // =========================
     // 全滅
     // =========================
-    if (value === "all") {
-      aliveEnemies.forEach(e => {
-        killEnemy(e, state, {
-          cause: "normal",
+    if (mode === "all") {
+
+      aliveEnemies.forEach(enemy => {
+        killEnemy(enemy, state, {
           fromSkill: true
         });
       });
+
       return;
     }
 
     // =========================
     // ランダム
     // =========================
-    if (value === "random") {
-      const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
-      killEnemy(target, state, {
-        cause: "normal",
-        fromSkill: true
-      });
+    if (mode === "random") {
+
+      const shuffled = [...aliveEnemies]
+        .sort(() => Math.random() - 0.5);
+
+      shuffled
+        .slice(0, count)
+        .forEach(enemy => {
+          killEnemy(enemy, state, {
+            fromSkill: true
+          });
+        });
+
       return;
     }
 
     // =========================
-    // 数値指定（近い順）
+    // 最寄り順
     // =========================
-    if (typeof value === "number") {
+    if (mode === "nearest") {
 
       const sorted = [...aliveEnemies].sort((a, b) => {
+
         const dx1 = a.x - state.player.x;
         const dy1 = a.y - state.player.y;
+
         const dx2 = b.x - state.player.x;
         const dy2 = b.y - state.player.y;
-        return (dx1*dx1 + dy1*dy1) - (dx2*dx2 + dy2*dy2);
+
+        return (dx1*dx1 + dy1*dy1)
+            - (dx2*dx2 + dy2*dy2);
       });
 
-      for (let i = 0; i < Math.min(value, sorted.length); i++) {
-        killEnemy(sorted[i], state, {
-          cause: "normal",
-          fromSkill: true
+      sorted
+        .slice(0, count)
+        .forEach(enemy => {
+          killEnemy(enemy, state, {
+            fromSkill: true
+          });
         });
-      }
 
       return;
-    }
-
-    // =========================
-    // デフォルト（最寄り）
-    // =========================
-    const target = [...aliveEnemies].sort((a, b) => {
-      const dx1 = a.x - state.player.x;
-      const dy1 = a.y - state.player.y;
-      const dx2 = b.x - state.player.x;
-      const dy2 = b.y - state.player.y;
-      return (dx1*dx1 + dy1*dy1) - (dx2*dx2 + dy2*dy2);
-    })[0];
-
-    if (target) {
-      killEnemy(target, state, {
-        cause: "normal",
-        fromSkill: true
-      });
     }
   },
 };
@@ -205,6 +204,19 @@ export const PASSIVE_SKILLS = {
 
 // ===========================================
 // アクティブスキル
+/* ===========================================
+  kill_nearest: 
+    name: "処刑",
+    icon: "./assets/pic/chain_up.jpeg",
+    desc: "最も近い敵を撃破",
+    cooldown: 10, //sec
+    type: "kill" or "heal" or "freeze"
+    
+    //killの場合 (kill以外の場合はvalueのみ)
+    value: 
+      mode: "random" or  "nearest" of "all"
+      count: 2, //allの場合は記載しない。
+*/
 // ============================================
 
 export const ACTIVE_SKILLS = {
@@ -231,9 +243,12 @@ export const ACTIVE_SKILLS = {
     name: "処刑",
     icon: "./assets/pic/chain_up.jpeg",
     desc: "最も近い敵を撃破",
-    cooldown: 50,
+    cooldown: 10,
     type: "kill",
-    value: 1,
+    value: {
+      mode: "all",
+      //count: 2,
+    }
   }
 };
 
