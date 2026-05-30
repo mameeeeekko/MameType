@@ -14,7 +14,7 @@ import { setupCanvasDPR } from "./canvasUtil.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,
      spawnChainBurstEffect, renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups, renderDamagePopups, playHitEffect, 
-     renderHitParticles, renderShotEffects, spawnShotEffect } from "./effectManager.js";
+     renderHitParticles, renderShotEffects, spawnShotEffect, renderItemSkillEffects, clearAllEffects } from "./effectManager.js";
 import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
@@ -66,6 +66,8 @@ let lastSpawnTime = 0;     // ★最後に敵を出した時間
 let lastItemSpawnTime = 0;
 let enemyStartTime = null;    // タイマー用
 let timerStarted = false;  // 敵が出てからタイマースタートさせるため
+
+let endingSequence = false; //終了待機用フラグ
 
 // ===============================
 // 敵が来ないUI表示場所設定
@@ -223,7 +225,11 @@ export function killEnemy(enemy, state, options = {}) {
         chainText.style.transform = "scale(1)";
     }, 120);
 
-    spawnEnemyEffect(enemy.x, enemy.y);
+    spawnEnemyEffect(
+        enemy.x,
+        enemy.y,
+        enemy.type.killedEffect || "enemy1"
+    );
     playEnemyKillSound(enemy.type.killSound);
 
     // skillフラグ（今後拡張用）
@@ -237,6 +243,11 @@ export function killEnemy(enemy, state, options = {}) {
 // ゲームループ
 // ===============================
 function gameLoop(timestamp) {
+
+    if (endingSequence) {
+        loopId = requestAnimationFrame(gameLoop);
+        return;
+    }
 
     if (!enemyLoopActive) return;
 
@@ -396,6 +407,7 @@ function gameLoop(timestamp) {
 
     // エフェクト描画
     renderEnemyEffects(ctx);
+    renderItemSkillEffects(ctx);
     renderHitWaveEffects(ctx);
 
     renderLockOnEffects(ctx);
@@ -410,6 +422,8 @@ function gameLoop(timestamp) {
         // =============================================================
         // スポーン処理
         // =============================================================
+        if (endingSequence) return;
+
         // ★一定時間ごとに敵出現
         if (now - lastSpawnTime > spawnInterval) {
 
@@ -509,18 +523,16 @@ function gameLoop(timestamp) {
     if (
         end.allSpawnedDefeated &&
         stage.spawn.limit != null &&
-        spawnedCount >= stage.spawn.limit &&
-        enemies.length === 0
+        gameState.enemyStats.processedCount >= stage.spawn.limit
     ) {
         shouldEnd = true;
     }
      // killCount救済：全処理終了
     if (
-        end.killCount != null &&
+         end.killCount != null &&
         !end.allSpawnedDefeated &&
         stage.spawn.limit != null &&
-        spawnedCount >= stage.spawn.limit &&
-        enemies.length === 0
+        gameState.enemyStats.processedCount >= stage.spawn.limit
     ) {
         shouldEnd = true;
     }
@@ -533,8 +545,7 @@ function gameLoop(timestamp) {
     if (
         noExplicitEnd &&
         stage.spawn.limit != null &&
-        spawnedCount >= stage.spawn.limit &&
-        enemies.length === 0
+        gameState.enemyStats.processedCount >= stage.spawn.limit
     ) {
         shouldEnd = true;
     }
@@ -571,7 +582,10 @@ function gameLoop(timestamp) {
     }
 
     // 終了条件満たした場合
-    if (shouldEnd) {
+    if (shouldEnd && !endingSequence) {
+
+        endingSequence = true;
+        
         // すでに失敗確定してない場合のみ判定
         if (!gameState.enemyStats.failed) {
             if (!isClear) {
@@ -579,27 +593,35 @@ function gameLoop(timestamp) {
             }
         }
 
-        const rankingResult = endEnemyMode();
+        // エフェクト表示待ち
+        setTimeout(async () => {
 
-        // 終了
-        const isFailed = gameState.enemyStats.failed;
-        const introText = isFailed ? "FAILED" : "MISSION COMPLETE";
+            const rankingResult = await endEnemyMode();
 
-        showEnemyEndIntro(introText, () => {
+            const isFailed = gameState.enemyStats.failed;
+            const introText = isFailed
+                ? "FAILED"
+                : "MISSION COMPLETE";
 
-            if (lastEnemyConfig?.isQuestMode) {
-                showQuestResult(gameState.questStats);
-            } else {
-                showEnemyResult({
-                    isNewRecord: rankingResult?.isNewRecord ?? false,
-                    isRankIn: rankingResult?.isRankIn ?? false,
-                    rankPos: rankingResult?.rankPos ?? null
-                });
-            }
+            showEnemyEndIntro(introText, () => {
 
-        });
+                if (lastEnemyConfig?.isQuestMode) {
 
-        return;
+                    showQuestResult(gameState.questStats);
+
+                } else {
+
+                    showEnemyResult({
+                        isNewRecord: rankingResult?.isNewRecord ?? false,
+                        isRankIn: rankingResult?.isRankIn ?? false,
+                        rankPos: rankingResult?.rankPos ?? null
+                    });
+
+                }
+
+            });
+
+        }, 700); // ← 好きな時間
     }
 
     renderChainBurstEffects(ctx);
@@ -790,7 +812,7 @@ export function handleEnemyKey(e) {
         lockedEnemy.inputedRomaji = gameState.inputedRomaji;
 
         // 敵撃破 =========================================
-        if (lockedEnemy.pos >= lockedEnemy.text.length) {
+            if (lockedEnemy.pos >= lockedEnemy.text.length) {
             const enemy = lockedEnemy;
             // ★ここが今回のコア
             const isKilled = enemy.onWordComplete(player, gameState, enemies);
@@ -902,6 +924,7 @@ export function handleEnemyKey(e) {
         gameState.pos = 0;
         gameState.inputedRomaji = "";
         gameState.typed = "";
+        
         // 今までの入力を適用
         for (const ch of typedBuffer) {
 
@@ -1025,6 +1048,7 @@ export async function startEnemyMode(config = {}) {
 
     resetGameState();
     fullResetInput();
+    clearAllEffects();
 
     spawnedCount = 0;
 
@@ -1196,7 +1220,7 @@ export async function startEnemyMode(config = {}) {
     
     await initAudio();   // ← 音読み込み
     if (getSoundEnabled() && getSoundSettings().bgm) {
-    playBGM("bgm_enemy1",0.2);
+        playBGM("bgm_enemy1",0.2);
     }
 
     const canvas = document.getElementById("enemyModeCanvas");
@@ -1231,6 +1255,8 @@ export async function startEnemyMode(config = {}) {
     typedBuffer = ""; 
     lastSpawnTime = performance.now();
     gameState._lastFrameTime = performance.now();
+
+    endingSequence = false;
     enemyLoopActive = true;
 
     loopId = requestAnimationFrame(gameLoop);
@@ -1374,6 +1400,8 @@ export async function endEnemyMode() {
     // ループ停止
     enemyLoopActive = false;
     cancelAnimationFrame(loopId);
+
+    clearAllEffects();
     // Enemyモードフラグ解除
     gameState.enemyMode = false;
     // ★ゲーム状態停止
@@ -1658,7 +1686,7 @@ export async function endEnemyMode() {
             submitResult
         };
     }
-
+    endingSequence = false;
 }
 
 function resetEnemyInput(enemy){
@@ -1669,9 +1697,6 @@ function resetEnemyInput(enemy){
 
 }
 
-// ===============================
-// アクティブスキル使用
-// ===============================
 // ===============================
 // アクティブスキル使用
 // ===============================

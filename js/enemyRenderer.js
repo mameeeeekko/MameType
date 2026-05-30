@@ -2340,3 +2340,88 @@ export function renderSystemMessage(
 
     ctx.restore();
 }
+
+// ===========================================
+// UI Anchor Position
+// エネミーモードに表示されるUIの場所記録
+// ===========================================
+
+export function getUIAnchorPosition(type = "skill") {
+
+    const canvas =
+        document.getElementById("gameCanvas");
+
+    // fallback
+    if (!canvas) {
+
+        return {
+            x: window.innerWidth * 0.5,
+            y: window.innerHeight - 80
+        };
+    }
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    // ======================================
+    // Skill UI
+    // ======================================
+    if (type === "skill") {
+
+        return {
+
+            x:
+                rect.left +
+                rect.width * 0.5,
+
+            y:
+                rect.top +
+                rect.height - 90
+        };
+    }
+
+    // ======================================
+    // HP UI
+    // ======================================
+    else if (type === "hp") {
+
+        return {
+
+            x:
+                rect.left + 110,
+
+            y:
+                rect.top + 42
+        };
+    }
+
+    // ======================================
+    // Combo UI
+    // ======================================
+    else if (type === "combo") {
+
+        return {
+
+            x:
+                rect.left +
+                rect.width * 0.5,
+
+            y:
+                rect.top + 80
+        };
+    }
+
+    // ======================================
+    // default
+    // ======================================
+    return {
+
+        x:
+            rect.left +
+            rect.width * 0.5,
+
+        y:
+            rect.top +
+            rect.height * 0.5
+    };
+}

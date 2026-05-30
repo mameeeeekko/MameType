@@ -333,19 +333,92 @@ export function renderHitWaveEffects(ctx){
 // ===============================
 // 敵エフェクト
 // ===============================
-// 消滅時
 let particles = [];
 
-export function spawnEnemyEffect(x, y) {
+export function spawnEnemyEffect(x, y, effect = "enemy1") {
 
-    for (let i = 0; i < 12; i++) {
+    // =====================================
+    // 通常敵
+    // =====================================
+    if (effect === "enemy1") {
+
+        for (let i = 0; i < 12; i++) {
+
+            particles.push({
+                type: "enemy1",
+
+                x,
+                y,
+
+                vx: (Math.random() - 0.5) * 5,
+                vy: (Math.random() - 0.5) * 5,
+
+                radius: 3,
+                life: 30,
+                maxLife: 30
+            });
+        }
+    }
+
+    // =====================================
+    // アイテム取得
+    // =====================================
+    else if (effect === "item1") {
 
         particles.push({
-            x: x,
-            y: y,
-            vx: (Math.random() - 0.5) * 5,
-            vy: (Math.random() - 0.5) * 5,
-            life: 30
+            type: "item1_wave",
+
+            x,
+            y,
+
+            radius: 10,
+            maxRadius: 80,
+
+            // 表示速度感
+            life: 20,
+            maxLife: 20
+        });
+    }
+
+    // =====================================
+    // ボス撃破
+    // =====================================
+    else if (effect === "boss1") {
+
+        // 中央爆発
+        for (let i = 0; i < 24; i++) {
+
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 5;
+
+            particles.push({
+                type: "boss1_particle",
+
+                x,
+                y,
+
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+
+                radius: 3 + Math.random() * 4,
+
+                life: 40,
+                maxLife: 40
+            });
+        }
+
+        // 巨大波紋
+        particles.push({
+            type: "boss1_wave",
+
+            x,
+            y,
+
+            radius: 15,
+            maxRadius: 1400,
+
+            life: 80,
+            maxLife: 80
         });
     }
 }
@@ -356,18 +429,178 @@ export function renderEnemyEffects(ctx) {
 
     for (const p of particles) {
 
-        p.x += p.vx;
-        p.y += p.vy;
+        if (p.vx != null) p.x += p.vx;
+        if (p.vy != null) p.y += p.vy;
+
         p.life--;
 
-        ctx.globalAlpha = p.life / 30;
+        const alpha = p.life / p.maxLife;
 
-        ctx.fillStyle = "orange";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.save();
 
+        ctx.globalAlpha = alpha;
+
+        // =====================================
+        // 通常敵
+        // =====================================
+        if (p.type === "enemy1") {
+
+            ctx.fillStyle = "orange";
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // =====================================
+        // アイテム取得：灰色エネルギー
+        // =====================================
+        else if (p.type === "item1_wave") {
+
+            const t =
+                1 - (p.life / p.maxLife);
+
+            let radius;
+
+            // 前半：膨張
+            if (t < 0.5) {
+
+                const tt = t / 0.5;
+
+                radius =
+                    p.radius +
+                    (p.maxRadius - p.radius)
+                    * tt;
+
+            }
+
+            // 後半：収束
+            else {
+
+                const tt =
+                    (t - 0.5) / 0.5;
+
+                radius =
+                    p.maxRadius *
+                    (1 - tt);
+            }
+
+            ctx.save();
+
+            // 少し濃く
+            ctx.globalAlpha = alpha * 0.7;
+
+            // グラデーション
+            const grad =
+                ctx.createRadialGradient(
+                    p.x,
+                    p.y,
+                    radius * 0.15,
+
+                    p.x,
+                    p.y,
+                    radius
+                );
+
+            grad.addColorStop(
+                0,
+                "rgba(255,255,255,0.9)"
+            );
+
+            grad.addColorStop(
+                0.35,
+                "rgba(220,220,220,0.75)"
+            );
+
+            grad.addColorStop(
+                0.7,
+                "rgba(170,170,170,0.45)"
+            );
+
+            grad.addColorStop(
+                1,
+                "rgba(120,120,120,0)"
+            );
+
+            ctx.fillStyle = grad;
+
+            ctx.shadowBlur = 24;
+            ctx.shadowColor = "#d0d0d0";
+
+            ctx.beginPath();
+            ctx.arc(
+                p.x,
+                p.y,
+                radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // =====================================
+        // ボス撃破：爆発粒子
+        // =====================================
+        else if (p.type === "boss1_particle") {
+
+            ctx.fillStyle = "#f89a42";
+
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "#ffb347";
+
+            ctx.beginPath();
+            ctx.arc(
+                p.x,
+                p.y,
+                p.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        // =====================================
+        // ボス撃破：巨大波紋
+        // =====================================
+        else if (p.type === "boss1_wave") {
+
+            const t =
+                1 - (p.life / p.maxLife);
+
+            const radius =
+                p.radius +
+                (p.maxRadius - p.radius) * t;
+
+            ctx.save();
+
+            ctx.globalAlpha = alpha;
+
+            ctx.strokeStyle = "#ffb560";
+
+            ctx.lineWidth =
+                18 * alpha;
+
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = "#febe5c";
+
+            ctx.beginPath();
+            ctx.arc(
+                p.x,
+                p.y,
+                radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        ctx.restore();
     }
+
     ctx.globalAlpha = 1;
 }
 
@@ -734,4 +967,782 @@ export function renderDamagePopups(ctx) {
             damagePopups.splice(i, 1);
         }
     }
+}
+
+// ============================================
+// Item / Skill Effects
+// sourceごとに演出を分離
+// ============================================
+// 【構造】
+// spawnItemSkillEffect({
+//     category,
+//     source,
+//     level,
+//     ...
+// })
+// ---------------------------------
+// category : 演出カテゴリ
+// ---------------------------------
+// "kill" 敵撃破系演出
+// "heal" 回復系演出
+// "freeze" 凍結・拘束系演出
+// "cooldown" クールダウン短縮系演出 itemのみ
+// ---------------------------------
+// source : 演出ソース
+// ---------------------------------
+// "item"
+//   アイテム発動演出
+//   粒子・霧・流線など
+//   カジュアル寄り
+// "skill"
+//   スキル発動演出
+//   HUD・レーザー・魔法陣など
+//   メカ/高級感寄り
+// ---------------------------------
+// level : 演出強度
+// ---------------------------------
+// "small" 軽量・単発向け
+// "medium" 通常
+// "large" 大技・レア演出向け
+// ---------------------------------
+// 現在の演出一覧
+// ---------------------------------
+// [skill]
+// kill
+//   - 白HUDロック
+//   - 上空レーザー
+//   - 白インパクトリング
+// heal - 回転魔法陣
+// freeze - 六角拘束
+// [item]
+// kill - 爆散粒子
+// heal - 泡粒子
+// freeze - 氷霧
+// cooldown - 流線HUD
+// ================================================
+
+const itemSkillEffects = [];
+
+// ======================================
+// Public
+// ======================================
+
+export function spawnItemSkillEffect(opts = {}) {
+
+    const {
+        category = "kill",
+        source = "item",
+        level = "small"
+    } = opts;
+
+    // sound
+    playEffectSound(category, level, source);
+
+    // source別
+    if (source === "skill") {
+
+        if (category === "kill") {
+            spawnSkillKillEffect(opts);
+        }
+
+        else if (category === "heal") {
+            spawnSkillHealEffect(opts);
+        }
+
+        else if (category === "freeze") {
+            spawnSkillFreezeEffect(opts);
+        }
+
+    }
+
+    // item
+    else {
+
+        if (category === "kill") {
+            spawnItemKillEffect(opts);
+        }
+
+        else if (category === "heal") {
+            spawnItemHealEffect(opts);
+        }
+
+        else if (category === "freeze") {
+            spawnItemFreezeEffect(opts);
+        }
+
+        else if (category === "cooldown") {
+            spawnItemCooldownEffect(opts);
+        }
+    }
+}
+
+// ======================================
+// SOUND
+// ======================================
+
+export function playEffectSound(
+    category,
+    level,
+    source
+) {
+
+    // kill
+    if (category === "kill") {
+
+        if (source === "skill") {
+
+            playTone(
+                level === "large" ? 120 : 180,
+                0.12,
+                "sawtooth",
+                0.45
+            );
+
+            setTimeout(() => {
+                playTone(
+                    70,
+                    0.08,
+                    "square",
+                    0.25
+                );
+            }, 40);
+        }
+
+        else {
+
+            playSE(
+                "kill3",
+                level === "large" ? 0.65 : 0.45,
+                level === "large" ? 0.7 : 1
+            );
+        }
+    }
+
+    // heal
+    else if (category === "heal") {
+
+        playTone(
+            source === "skill" ? 740 : 620,
+            0.18,
+            "triangle",
+            0.28
+        );
+
+        setTimeout(() => {
+            playTone(
+                source === "skill" ? 980 : 880,
+                0.2,
+                "sine",
+                0.2
+            );
+        }, 60);
+    }
+
+    // freeze
+    else if (category === "freeze") {
+
+        playNoise(0.06, 0.15);
+
+        setTimeout(() => {
+
+            playTone(
+                180,
+                0.08,
+                "square",
+                0.15
+            );
+
+        }, 20);
+    }
+
+    // cooldown
+    else if (category === "cooldown") {
+
+        playTone(
+            1200,
+            0.05,
+            "triangle",
+            0.15
+        );
+
+        setTimeout(() => {
+            playTone(
+                1500,
+                0.04,
+                "triangle",
+                0.12
+            );
+        }, 30);
+    }
+}
+
+// ======================================
+// SKILL : KILL
+// 白HUDレーザー
+// ======================================
+
+function spawnSkillKillEffect({
+    targets = [],
+    level = "small"
+}) {
+
+    const laserCount =
+        level === "small" ? 1 :
+        level === "medium" ? 3 :
+        6;
+
+    for (const t of targets) {
+
+        // lock
+        itemSkillEffects.push({
+            type: "skill_kill_lock",
+            x: t.x,
+            y: t.y,
+            radius:
+                level === "large" ? 90 : 60,
+            angle: 0,
+            life: 18,
+            maxLife: 18
+        });
+
+        // laser
+        for (let i = 0; i < laserCount; i++) {
+
+            itemSkillEffects.push({
+
+                type: "skill_kill_laser",
+
+                sx:
+                    t.x +
+                    (Math.random() - 0.5) * 500,
+
+                sy:
+                    -200 -
+                    Math.random() * 400,
+
+                tx: t.x,
+                ty: t.y,
+
+                width:
+                    level === "large" ? 7 : 4,
+
+                life: 10,
+                maxLife: 10
+            });
+        }
+
+        // impact
+        itemSkillEffects.push({
+            type: "skill_kill_impact",
+            x: t.x,
+            y: t.y,
+            radius:
+                level === "large" ? 90 : 50,
+            life: 16,
+            maxLife: 16
+        });
+    }
+}
+
+// ======================================
+// ITEM : KILL
+// 崩壊爆散
+// ======================================
+
+function spawnItemKillEffect({
+    targets = [],
+    level = "small"
+}) {
+
+    const count =
+        level === "small" ? 12 :
+        level === "medium" ? 24 :
+        48;
+
+    for (const t of targets) {
+
+        for (let i = 0; i < count; i++) {
+
+            const angle =
+                Math.random() * Math.PI * 2;
+
+            const speed =
+                1 + Math.random() * 7;
+
+            itemSkillEffects.push({
+
+                type: "item_kill_particle",
+
+                x: t.x,
+                y: t.y,
+
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+
+                radius:
+                    2 + Math.random() * 4,
+
+                life: 30,
+                maxLife: 30
+            });
+        }
+    }
+}
+
+// ======================================
+// SKILL : HEAL
+// 魔法陣
+// ======================================
+
+function spawnSkillHealEffect({
+    x,
+    y,
+    level = "small"
+}) {
+
+    itemSkillEffects.push({
+
+        type: "skill_heal_circle",
+
+        x,
+        y,
+
+        radius:
+            level === "large" ? 180 : 120,
+
+        angle: 0,
+
+        life: 40,
+        maxLife: 40
+    });
+}
+
+// ======================================
+// ITEM : HEAL
+// 泡・粒子
+// ======================================
+
+function spawnItemHealEffect({
+    x,
+    y,
+    level = "small"
+}) {
+
+    const count =
+        level === "small" ? 10 :
+        level === "medium" ? 20 :
+        40;
+
+    for (let i = 0; i < count; i++) {
+
+        const angle =
+            Math.random() * Math.PI * 2;
+
+        const speed =
+            0.5 + Math.random() * 2;
+
+        itemSkillEffects.push({
+
+            type: "item_heal_particle",
+
+            x,
+            y,
+
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1.5,
+
+            radius:
+                3 + Math.random() * 5,
+
+            life: 40,
+            maxLife: 40
+        });
+    }
+}
+
+// ======================================
+// SKILL : FREEZE
+// 六角拘束
+// ======================================
+
+function spawnSkillFreezeEffect({
+    targets = []
+}) {
+
+    for (const t of targets) {
+
+        itemSkillEffects.push({
+
+            type: "skill_freeze_hex",
+
+            x: t.x,
+            y: t.y,
+
+            angle: 0,
+
+            radius: 50,
+
+            life: 30,
+            maxLife: 30
+        });
+    }
+}
+
+// ======================================
+// ITEM : FREEZE
+// 氷霧
+// ======================================
+
+function spawnItemFreezeEffect({
+    targets = [],
+    level = "small"
+}) {
+
+    const count =
+        level === "small" ? 10 :
+        level === "medium" ? 20 :
+        40;
+
+    for (const t of targets) {
+
+        for (let i = 0; i < count; i++) {
+
+            itemSkillEffects.push({
+
+                type: "item_freeze_mist",
+
+                x:
+                    t.x +
+                    (Math.random() - 0.5) * 80,
+
+                y:
+                    t.y +
+                    (Math.random() - 0.5) * 80,
+
+                radius:
+                    8 + Math.random() * 12,
+
+                life: 30,
+                maxLife: 30
+            });
+        }
+    }
+}
+
+
+// ======================================
+// ITEM : COOLDOWN
+// 流線
+// ======================================
+
+function spawnItemCooldownEffect({
+    uiX,
+    uiY,
+    level = "small"
+}) {
+
+    const count =
+        level === "small" ? 8 :
+        level === "medium" ? 16 :
+        28;
+
+    for (let i = 0; i < count; i++) {
+
+        itemSkillEffects.push({
+
+            type: "item_cooldown_line",
+
+            x: uiX - 40,
+            y:
+                uiY +
+                (Math.random() - 0.5) * 40,
+
+            vx:
+                8 + Math.random() * 8,
+
+            life: 14,
+            maxLife: 14
+        });
+    }
+}
+
+// ======================================
+// RENDER
+// ======================================
+
+export function renderItemSkillEffects(ctx) {
+
+    for (
+        let i = itemSkillEffects.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const e = itemSkillEffects[i];
+
+        e.life--;
+
+        const alpha =
+            e.life / e.maxLife;
+
+        ctx.save();
+
+        ctx.globalAlpha = alpha;
+
+        // ======================================
+        // Skill Kill Laser
+        // ======================================
+        if (e.type === "skill_kill_laser") {
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = e.width;
+
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = "#ffffff";
+
+            ctx.beginPath();
+            ctx.moveTo(e.sx, e.sy);
+            ctx.lineTo(e.tx, e.ty);
+            ctx.stroke();
+        }
+
+        // ======================================
+        // Skill Kill Lock
+        // ======================================
+        else if (e.type === "skill_kill_lock") {
+
+            e.angle += 0.15;
+
+            ctx.translate(e.x, e.y);
+            ctx.rotate(e.angle);
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+
+            ctx.strokeRect(
+                -e.radius / 2,
+                -e.radius / 2,
+                e.radius,
+                e.radius
+            );
+        }
+
+        // ======================================
+        // Skill Kill Impact
+        // ======================================
+        else if (e.type === "skill_kill_impact") {
+
+            const r =
+                e.radius *
+                (1 - alpha);
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 8 * alpha;
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                r,
+                0,
+                Math.PI * 2
+            );
+            ctx.stroke();
+        }
+
+        // ======================================
+        // Item Kill Particle
+        // ======================================
+        else if (e.type === "item_kill_particle") {
+
+            e.x += e.vx;
+            e.y += e.vy;
+
+            ctx.fillStyle = "#ffb347";
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                e.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        // ======================================
+        // Skill Heal Circle
+        // ======================================
+        else if (e.type === "skill_heal_circle") {
+
+            e.angle += 0.05;
+
+            ctx.translate(e.x, e.y);
+            ctx.rotate(e.angle);
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 4;
+
+            ctx.beginPath();
+            ctx.arc(
+                0,
+                0,
+                e.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.stroke();
+
+            ctx.strokeRect(
+                -e.radius * 0.5,
+                -e.radius * 0.5,
+                e.radius,
+                e.radius
+            );
+        }
+
+        // ======================================
+        // Item Heal Particle
+        // ======================================
+        else if (e.type === "item_heal_particle") {
+
+            e.x += e.vx;
+            e.y += e.vy;
+
+            ctx.fillStyle = "#79ff93";
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                e.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        // ======================================
+        // Skill Freeze Hex
+        // ======================================
+        else if (e.type === "skill_freeze_hex") {
+
+            e.angle += 0.05;
+
+            ctx.translate(e.x, e.y);
+            ctx.rotate(e.angle);
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+
+            for (let j = 0; j < 6; j++) {
+
+                const a =
+                    (Math.PI * 2 / 6) * j;
+
+                const px =
+                    Math.cos(a) * e.radius;
+
+                const py =
+                    Math.sin(a) * e.radius;
+
+                if (j === 0) {
+                    ctx.moveTo(px, py);
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // ======================================
+        // Item Freeze Mist
+        // ======================================
+        else if (e.type === "item_freeze_mist") {
+
+            ctx.fillStyle =
+                "rgba(180,220,255,0.5)";
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                e.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        // ======================================
+        // Skill Cooldown HUD
+        // ======================================
+        else if (e.type === "skill_cooldown_hud") {
+
+            e.angle += 0.25;
+
+            ctx.translate(e.x, e.y);
+            ctx.rotate(e.angle);
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3;
+
+            ctx.strokeRect(
+                -e.radius,
+                -e.radius,
+                e.radius * 2,
+                e.radius * 2
+            );
+        }
+
+        // ======================================
+        // Item Cooldown Line
+        // ======================================
+        else if (e.type === "item_cooldown_line") {
+
+            e.x += e.vx;
+
+            ctx.strokeStyle = "#d0d0d0";
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.moveTo(e.x, e.y);
+            ctx.lineTo(
+                e.x - 24,
+                e.y
+            );
+            ctx.stroke();
+        }
+
+        ctx.restore();
+
+        if (e.life <= 0) {
+            itemSkillEffects.splice(i, 1);
+        }
+    }
+}
+
+export function clearAllEffects() {
+
+    particles.length = 0;
+
+    hitWaveEffects.length = 0;
+    knockbackEffects.length = 0;
+
+    lockOnEffects.length = 0;
+    shotEffects.length = 0;
+
+    hitEffects.length = 0;
+
+    chainBurstEffects.length = 0;
+
+    scorePopups.length = 0;
+    damagePopups.length = 0;
+
+    itemSkillEffects.length = 0;
 }

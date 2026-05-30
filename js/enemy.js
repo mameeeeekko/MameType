@@ -1,12 +1,13 @@
 // enemy.js
 
 import { getUISafeTop, markDamageTaken, onEnemyRemovedByDamage, killEnemy } from "./enemyCore.js";
-import { playDamageSound, spawnHitWave, spawnDamagePopup } from "./effectManager.js";
+import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect } from "./effectManager.js";
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { getRandomWordForType } from "./enemySpawner.js"; 
 import { devOverride } from "../dev/devOverride.js";
 import { addQuestItemPickup } from "./questPlayerStats.js";
+import { getUIAnchorPosition } from "./enemyRenderer.js";
 
 
 export class Enemy {
@@ -204,6 +205,20 @@ function applyItemEffect(type, player, state = {}, enemies = []){
 
         case "heal":
 
+            spawnItemSkillEffect({
+
+                category: "heal",
+                source: "item",
+
+                level:
+                    type.value === "full"
+                        ? "large"
+                        : "medium",
+
+                x: player.x,
+                y: player.y
+            });
+
             if(type.value === "full"){
                 player.hp = player.maxHp;
             } else {
@@ -222,34 +237,65 @@ function applyItemEffect(type, player, state = {}, enemies = []){
 
             if (aliveEnemies.length === 0) break;
 
-            if(type.value === "all"){
+            // =========================
+            // targets
+            // =========================
 
-                aliveEnemies.forEach(enemy => {
+            const targets =
+                type.value === "all"
+                    ? aliveEnemies
+                    : aliveEnemies.slice(0, type.value);
 
-                    killEnemy(enemy, state, {
-                        fromItem: true
-                    });
+            // =========================
+            // Effect
+            // =========================
 
+            spawnItemSkillEffect({
+
+                category: "kill",
+                source: "item",
+
+                level:
+                    type.value === "all"
+                        ? "large"
+                        : type.value >= 5
+                            ? "medium"
+                            : "small",
+
+                targets
+            });
+
+            // =========================
+            // Kill
+            // =========================
+
+            targets.forEach(enemy => {
+
+                killEnemy(enemy, state, {
+                    fromItem: true
                 });
 
-            } else {
-
-                const count = type.value;
-
-                aliveEnemies
-                    .slice(0, count)
-                    .forEach(enemy => {
-
-                        killEnemy(enemy, state, {
-                            fromItem: true
-                        });
-
-                    });
-            }
+            });
 
             break;
     
         case "freeze":
+
+            spawnItemSkillEffect({
+
+                category: "freeze",
+                source: "item",
+
+                level:
+                    type.value >= 5
+                        ? "large"
+                        : "medium",
+
+                targets:
+                    enemies.filter(
+                        e => e && !e.isDead && !e.isItem
+                    )
+            });
 
             if (!state.enemyStats) {
                 state.enemyStats = {};
@@ -262,6 +308,19 @@ function applyItemEffect(type, player, state = {}, enemies = []){
             break;
 
         case "cooldown":
+
+            const uiPos = getUIAnchorPosition("skill");
+
+             spawnItemSkillEffect({
+
+                category: "cooldown",
+                source: "item",
+
+                level: "medium",
+
+                uiX: uiPos.x,
+                uiY: uiPos.y
+            });
 
             state.activeSkillCooldown =
                 Math.max(
@@ -331,7 +390,7 @@ export const EnemyTypes = {
 
         score:10,
         killSound:1,
-        killedEffect:1,
+        killedEffect:"enemy1",
         damageSound:1,
 
         tags:[], // ← 制限なし
@@ -353,11 +412,11 @@ export const EnemyTypes = {
         size:18,
         damage:5,
         hitCount:1, 
-        speed:1.0,
+        speed:0.6,
 
         score:20,
         killSound:2,
-        killedEffect:1,
+        killedEffect:"enemy1",
         damageSound:1,
 
         tags:["英語"],
@@ -383,7 +442,7 @@ export const EnemyTypes = {
 
         score:40,
         killSound:3,
-        killedEffect:1,
+        killedEffect:"enemy1",
         damageSound:1,
 
         tags:["句読点","促音"],
@@ -410,7 +469,7 @@ export const EnemyTypes = {
 
         score:200,
         killSound:3,
-        killedEffect:1,
+        killedEffect:"boss1",
         damageSound:1,
 
         tags:["句読点","促音","英語"],
@@ -447,7 +506,7 @@ export const ItemTypes = {
         value:20,
 
         killSound:2,
-        killedEffect:1,
+        killedEffect:"item1",
 
         tags:[], // ← 制限なし
         minLen:2,
@@ -471,7 +530,7 @@ export const ItemTypes = {
         value:"full",
 
         killSound:2,
-        killedEffect:1,
+        killedEffect:"item1",
 
         tags:[], // ← 制限なし
         minLen:2,
@@ -495,7 +554,7 @@ export const ItemTypes = {
         value:3,
 
         killSound:2,
-        killedEffect:1,
+        killedEffect:"item1",
 
         tags:[], // ← 制限なし
         minLen:2,
@@ -518,7 +577,7 @@ export const ItemTypes = {
         value:"all",
 
         killSound:2,
-        killedEffect:1,
+        killedEffect:"item1",
 
         tags:[], // ← 制限なし
         minLen:2,
@@ -541,7 +600,7 @@ export const ItemTypes = {
         value:5, //秒
 
         killSound:2,
-        killedEffect:1,
+        killedEffect:"item1",
 
         tags:[], // ← 制限なし
         minLen:2,
@@ -564,7 +623,7 @@ export const ItemTypes = {
         value:15, //sec
 
         killSound:2,
-        killedEffect:1,
+        killedEffect:"item1",
 
         tags:[], // ← 制限なし
         minLen:2,

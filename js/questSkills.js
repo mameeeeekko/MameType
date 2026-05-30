@@ -1,5 +1,6 @@
 //questSkills.js
 import { killEnemy } from "./enemyCore.js";
+import { spawnItemSkillEffect } from "./effectManager.js";
 
 
 export function getSkillById(skillId) {
@@ -9,17 +10,82 @@ export function getSkillById(skillId) {
 // ===========================================
 // アクティブスキル。
 //   装備して使う。ゲーム中に発動できる。
-//
+//   effectも対応
 // ============================================
 
 export function activateSkill(skillId, gameState, enemies = []) {
-  const skill = ACTIVE_SKILLS[skillId];
-  if (!skill) return;
 
-  const handler = SKILL_HANDLERS[skill.type];
-  if (!handler) return;
+    const skill = ACTIVE_SKILLS[skillId];
+    if (!skill) return;
 
-  handler(skill.value, gameState, enemies);
+    // =========================
+    // Effect
+    // =========================
+
+    if (skill.type === "kill") {
+
+        spawnItemSkillEffect({
+            category: "kill",
+            source: "skill",
+
+            level:
+                skill.value === "all"
+                    ? "large"
+                    : skill.value >= 5
+                        ? "medium"
+                        : "small",
+
+            targets:
+                enemies.filter(
+                    e => e && !e.isDead && !e.isItem
+                )
+        });
+    }
+
+    else if (skill.type === "heal") {
+
+        spawnItemSkillEffect({
+
+            category: "heal",
+            source: "skill",
+
+            level:
+                skill.value >= 50
+                    ? "large"
+                    : "medium",
+
+            x: gameState.player.x,
+            y: gameState.player.y
+        });
+    }
+
+    else if (skill.type === "freeze") {
+
+        spawnItemSkillEffect({
+
+            category: "freeze",
+            source: "skill",
+
+            level:
+                skill.value >= 5
+                    ? "large"
+                    : "medium",
+
+            targets:
+                enemies.filter(
+                    e => e && !e.isDead && !e.isItem
+                )
+        });
+    }
+
+    // =========================
+    // Skill
+    // =========================
+
+    const handler = SKILL_HANDLERS[skill.type];
+    if (!handler) return;
+
+    handler(skill.value, gameState, enemies);
 }
 
 // ===========================================
@@ -40,7 +106,7 @@ const SKILL_HANDLERS = {
   },
 
   freeze: (value, state) => {
-    state.enemyStats.freezeTimer = value * 60; // fps換算
+    state.enemyStats.freezeTimer = value;
   },
 
   kill: (value, state, enemiesList = []) => {
