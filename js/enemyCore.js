@@ -13,6 +13,7 @@ import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
 import { handleKey, resetCandidates, fullResetInput } from "./inputCore.js";
+import { handleGlobalSoundToggle } from "./main.js";
 import { gameState, setGameActive, renderState, setLastWasEnemyMode, getSoundSettings, getSoundEnabled, resetGameState, setPaused, getPaused, getNow } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
 import { addRankingEntry } from "./storage.js";
@@ -664,6 +665,17 @@ function gameLoop(timestamp) {
 
 export function handleEnemyKey(e) {
 
+    // ===============================
+    // 入力文字の正規化（記号・大文字対応）
+    // ===============================
+    let key = e.key.toLowerCase();
+    if (key === "！") key = "!";
+    if (key === "？") key = "?";
+    if (key === "ー") key = "-";
+
+    // a-z , . , ! , ? 以外の特殊キー（Shift, Enter等）はロック用入力を無視する
+    const isTypingKey = /^[a-z.,!?-]$/.test(key);
+
     //実際のタイピング入力時間測定
     const now = getNow();
 
@@ -693,6 +705,110 @@ export function handleEnemyKey(e) {
         return;
     }
 
+    // =====================
+    // TABターゲット切替 近くの敵をロック
+    // =====================
+    if (e.code === keybinds.autoLock) {
+        // ★今ロックしている敵がいたら入力状態を確定
+        if (lockedEnemy) {
+
+            const enemy = lockedEnemy;
+
+            // 残り文字に更新
+            enemy.text = enemy.text.slice(enemy.pos);
+            // ローマ字再構築
+            enemy.baseRomaji = buildBaseRomaji(enemy.text);
+            // 入力状態リセット
+            enemy.pos = 0;
+            enemy.typed = "";
+            enemy.inputedRomaji = "";
+        }
+
+        const aliveEnemies = [
+            ...enemies,
+            ...enemyBullets
+        ].filter(
+            e => e && !e.isDead
+        );
+
+        if (aliveEnemies.length === 0) return;
+
+        let nearest = null;
+        let nearestDist = Infinity;
+
+        aliveEnemies.forEach(enemy => {
+
+            const dx = enemy.x - player.x;
+            const dy = enemy.y - player.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = enemy;
+            }
+
+        });
+
+        if (!nearest) return;
+
+        // ★新しい敵にロック
+        lockedEnemy = nearest;
+
+        gameState.text = lockedEnemy.text;
+        gameState.pos = 0;
+        gameState.inputedRomaji = "";
+        gameState.typed = "";
+
+        lockedEnemy.pos = 0;
+        lockedEnemy.typed = "";
+        lockedEnemy.inputedRomaji = "";
+
+        enemies.forEach(enemy=>{
+            if(enemy !== lockedEnemy){
+                resetEnemyInput(enemy);
+            }
+        });
+
+        candidateEnemies = [];
+        typedBuffer = "";
+
+        return;
+    }
+    // =====================
+    // SPACE処理(ロック解除)
+    // =====================
+    if (e.code === keybinds.unlock) {
+        // ロック解除
+        if (lockedEnemy) {
+            const enemy = lockedEnemy;
+            // 残り文字を新しいtextにする
+            enemy.text = enemy.text.slice(enemy.pos);
+            // ローマ字再構築
+            enemy.baseRomaji = buildBaseRomaji(enemy.text);
+            // 入力状態リセット
+            enemy.pos = 0;
+            enemy.typed = "";
+            enemy.inputedRomaji = "";
+
+            lockedEnemy = null;
+            resetCandidates();
+            return;
+        }
+
+        // 候補解除
+        if (candidateEnemies.length > 0) {
+            candidateEnemies.forEach(enemy=>{
+                resetEnemyInput(enemy);
+            });
+            candidateEnemies = [];
+            typedBuffer = "";
+            return;
+        }
+        return;
+    }
+
+    if (!isTypingKey) return; // 以降、文字入力以外のキーは処理しない
+
     // ===============================
     // ★1文字敵の即時処理（最優先）
     // ===============================
@@ -700,12 +816,12 @@ export function handleEnemyKey(e) {
 
     for (const enemy of allTargets) {
 
-        if (!enemy || enemy.isDead) continue;
+        if (!enemy || enemy.isDead || !isEnemyVisible(enemy)) continue;
 
         const romaji = enemy.baseRomaji;
 
         // ★1文字だけ特別処理
-        if (!lockedEnemy && romaji?.length === 1 && e.key === romaji) {
+        if (!lockedEnemy && romaji?.length === 1 && key === romaji) {
 
             lockedEnemy = enemy;
 
@@ -935,14 +1051,14 @@ export function handleEnemyKey(e) {
     // =====================
     // ロック前入力処理
     // =====================
-    typedBuffer += e.key;
+    typedBuffer += key;
 
     // いまの候補は保持したまま、次候補を仮計算
     let nextCandidates = [];
 
     if (candidateEnemies.length === 0) {
         nextCandidates = allTargets.filter(enemy => {
-            if (!enemy || enemy.isDead) return false;
+            if (!enemy || enemy.isDead || !isEnemyVisible(enemy)) return false;
             return enemy.baseRomaji.startsWith(typedBuffer);
         });
     } else {
@@ -1150,6 +1266,7 @@ export async function startEnemyMode(config = {}) {
     document.getElementById("chainUI").style.display = "block";
 
     // コンボバー初期化
+    ensureEnemySoundToggle();
     initComboTierBar();
 
     if (enemyLoopActive) {
@@ -1352,6 +1469,33 @@ export async function startEnemyMode(config = {}) {
     loopId = requestAnimationFrame(gameLoop);
 }
 
+// ===============================
+// 🔊 エネミーモード専用サウンドトグル
+// ===============================
+function ensureEnemySoundToggle() {
+    const container = document.getElementById("enemyModeContainer");
+    if (!container) return;
+
+    let toggle = document.getElementById("enemySoundToggle");
+    if (!toggle) {
+        toggle = document.createElement("div");
+        toggle.id = "enemySoundToggle";
+        toggle.className = "enemy-sound-toggle sound-toggle-btn";
+        toggle.onclick = (e) => {
+            e.stopPropagation();
+            handleGlobalSoundToggle();
+        };
+        container.appendChild(toggle);
+    }
+
+    const enabled = getSoundEnabled();
+    toggle.innerHTML = `
+        <img src="${enabled ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png"}" class="global-sound-toggle-img">
+        <span class="global-sound-toggle-txt">${enabled ? "sound on" : "sound off"}</span>
+    `;
+    toggle.style.display = "flex";
+}
+
 // チェインモードのスタート用
 function onTypingStart(){
 
@@ -1400,6 +1544,9 @@ export async function endEnemyMode() {
     const stats = gameState.enemyStats;
     const enemyContainer = document.getElementById("enemyModeContainer");
     const chainUI = document.getElementById("chainUI")
+
+    const toggle = document.getElementById("enemySoundToggle");
+    if (toggle) toggle.style.display = "none";
 
     enemyContainer.style.display = "none";
     chainUI.style.display = "none";
@@ -1882,5 +2029,3 @@ function tryUseActiveSkill() {
         maxStock
     );
 }
-
-

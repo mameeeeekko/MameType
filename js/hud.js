@@ -6,6 +6,8 @@ import { PASSIVE_SKILLS, ACTIVE_SKILLS, getSkillById } from "./questSkills.js";
 import { QUEST_MAP } from "./questMap.js";
 import { SKILL_TREE } from "./skillTree.js";
 import { openQuestMenuModal } from "./questMapUI.js";
+import { handleGlobalSoundToggle } from "./main.js";
+import { getSoundEnabled } from "./gameCore.js";
 
 function formatDateOnly(dateStr){
   if(!dateStr) return "";
@@ -113,9 +115,37 @@ export function updateHud(statsArg, options = {}) {
     updateNormalHud(stats); // ← 通常
   }
 
+  updateHudSoundBtn();
   setupStatsModal(options); // ← イベントは分離
 }
 
+function updateHudSoundBtn() {
+  const hud = document.getElementById("playerHud");
+  if (!hud) return;
+
+  let soundCtrl = hud.querySelector(".hud-sound-ctrl");
+  if (!soundCtrl) {
+    soundCtrl = document.createElement("div");
+    soundCtrl.className = "hud-row hud-sound-ctrl";
+    soundCtrl.innerHTML = `
+      <div class="sound-toggle-btn" style="cursor:pointer">
+        <img src="" class="global-sound-toggle-img">
+        <span class="global-sound-toggle-txt"></span>
+      </div>
+    `;
+    soundCtrl.onclick = (e) => {
+      e.stopPropagation();
+      handleGlobalSoundToggle();
+    };
+    hud.appendChild(soundCtrl);
+  }
+
+  const enabled = getSoundEnabled();
+  const img = soundCtrl.querySelector(".global-sound-toggle-img");
+  const txt = soundCtrl.querySelector(".global-sound-toggle-txt");
+  if (img) img.src = enabled ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png";
+  if (txt) txt.textContent = enabled ? "sound on" : "sound off";
+}
 function setupStatsModal(options = {}) {
   const modal = document.getElementById("playerStatsModal");
   const modalQuest = document.getElementById("questStatsModal");

@@ -24,10 +24,9 @@ import * as Game from './gameCore.js';
 import { gameState , wasLastGameEnemyMode, getPaused, setPaused, backToMenu } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
 import { getPlayerStats } from "./playerStats.js";
-import { updateHud } from "./hud.js";
+import { updateHud, initAchievementsUI } from "./hud.js";
 import { handleKey } from './inputCore.js';
 import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode } from './enemyCore.js';
-import { initAudio, playBGM, stopBGM } from "./effectManager.js";
 import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
 import { renderQuestMapUI, openQuestMenuModal } from "./questMapUI.js";
 import { reloadQuestProgress, resetQuestAll } from "./questProgress.js";
@@ -196,6 +195,10 @@ function hideLoading() {
 function showBootScreen() {
   hideAllScreens();
   if (bootScreen) {
+    // 最初の画面ではHUDを非表示にする
+    const hud = document.getElementById("playerHud");
+    if (hud) hud.style.display = "none";
+
     bootScreen.style.display = "flex"; // 画面を表示するために必要
     bootScreen.style.cursor = "pointer";
     // インラインスタイルを削除し、CSSでスタイリングするためのクラスを付与
@@ -204,15 +207,43 @@ function showBootScreen() {
   if (loadingScreen) loadingScreen.style.display = "none";
 }
 
-// ページ読み込み時に HUD を更新
-updateHud();
+// =====================================================
+// 🔊 音量トグル・同期処理
+// =====================================================
+export function handleGlobalSoundToggle() {
+  const enabled = Game.toggleSoundGlobal();
+  
+  // 設定画面のチェックボックスとアイコンを同期
+  if (soundToggle) soundToggle.checked = enabled;
+  if (soundIcon) {
+    soundIcon.src = enabled ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png";
+  }
+
+  // 全ての音量切り替えテキスト/画像クラスを持つ要素を更新
+  updateAllSoundToggleUI(enabled);
+  
+  // 保存
+  saveSettings();
+}
+
+function updateAllSoundToggleUI(enabled) {
+  const icon = enabled ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png";
+  const text = enabled ? "sound on" : "sound off";
+  document.querySelectorAll(".global-sound-toggle-img").forEach(img => img.src = icon);
+  document.querySelectorAll(".global-sound-toggle-txt").forEach(span => span.textContent = text);
+}
 
 // =====================================================
 // DOM 取得・初期化
 // =====================================================
 document.addEventListener("DOMContentLoaded", () => {
   cacheDOM();
+  
+  if (checkMobile()) return; // モバイルなら初期化を中断
+
   showBootScreen();
+
+  updateHud(); // DOM取得後にHUDを初期化
 
   if (bootScreen) {
     bootScreen.addEventListener("click", async () => {
@@ -237,6 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initDifficultyButtons()
   initKeybinds();
+  initAchievementsUI();
   // ゲーム画面描画準備
   Game.initRenderer();
 
@@ -643,7 +675,14 @@ export function hideAllScreens() {
     .forEach(div => { if (div) div.style.display = "none"; });
 }
 
-function showMainMenu() { hideAllScreens(); if (menuDiv) menuDiv.style.display = "block"; }
+function showMainMenu() {
+  hideAllScreens();
+  if (menuDiv) menuDiv.style.display = "block";
+
+  // メインメニューが表示されたタイミングでHUDを表示する
+  const hud = document.getElementById("playerHud");
+  if (hud) hud.style.display = "block";
+}
 function showQuestMenu() {
   hideAllScreens();
   if (questMenuDiv) questMenuDiv.style.display = "block";
@@ -1320,4 +1359,29 @@ if (enemyCanvas) {
     enemyCanvas.addEventListener("mouseleave", () => {
         window.mousePos = null;
     });
+}
+
+/**
+ * モバイルデバイスの判定と警告表示
+ */
+function checkMobile() {
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const isSmallScreen = window.innerWidth <= 1024;
+
+  if (isTouchDevice || isSmallScreen) {
+    const warning = document.createElement("div");
+    warning.id = "mobileWarning";
+    warning.style.display = "flex";
+    warning.innerHTML = `
+      <div>
+        <h2>PC Only Game</h2>
+        <p>このゲームはPCおよび物理キーボード専用です。<br>
+        スマートフォンやタブレットには対応しておりません。</p>
+        <p style="margin-top:20px; color:#888;">PCからアクセスしてプレイしてください。</p>
+      </div>
+    `;
+    document.body.appendChild(warning);
+    return true;
+  }
+  return false;
 }

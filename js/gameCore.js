@@ -15,7 +15,7 @@ import {
   setLongTextMode, setUIMode,
   initTimeBar, setTimeLeft, setSolvedCount
 } from './renderer.js';
-import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM } from "./effectManager.js";
+import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume } from "./effectManager.js";
 import { GameModes} from "./gameModes.js";
 import { updatePlayerStats, getPlayerStats} from "./playerStats.js";
 import { updateHud , initAchievementsUI} from "./hud.js";
@@ -28,11 +28,19 @@ import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "../js/version.js";
 import { addQuestSkillNodeAttempt } from "./questPlayerStats.js";
 
-// ページロード時に HUD を更新
-updateHud();
-initAchievementsUI();
-requestAnimationFrame(speedTick);
+// =====================================================
+// 1.5 グローバル定数・変数の初期化（TDZ回避のため先頭へ）
+// =====================================================
+export let soundEnabled = true;
+export let soundSettings = {
+        bgm: true,
+        type: true,
+        miss: true,
+        flash: true,
+        soundeffect: true
+      };
 
+requestAnimationFrame(speedTick);
 
 // =====================================================
 // 2. 内部フラグ・モード管理
@@ -223,20 +231,20 @@ export function smoothKPM(kpm) {
 // =====================================================
 // 7. サウンド設定
 // =====================================================
-export let soundEnabled = true;
-export let soundSettings = {
-        bgm: true,
-        type: true,
-        miss: true,
-        flash: true,
-        soundeffect: true
-      };
 
 export function getSoundEnabled() { return soundEnabled; }
-export function setSoundEnabled(val) { soundEnabled = !!val; }
+export function setSoundEnabled(val) {
+  soundEnabled = !!val;
+  setMasterVolume(soundEnabled ? 1 : 0);
+}
+
 export function getSoundSettings() { return { ...soundSettings }; }
 export function setSoundSetting(key, val) { if (key in soundSettings) soundSettings[key] = !!val; }
-export function toggleSound(enabled) { setSoundEnabled(enabled); }
+export function toggleSoundGlobal() {
+  soundEnabled = !soundEnabled;
+  setMasterVolume(soundEnabled ? 1 : 0);
+  return soundEnabled;
+}
 
 // 安全ラッパー（音・フラッシュ）
 export function safePlayTypeSound(){ if(soundEnabled&&isGameActive&&soundSettings.type) playTypeSound(); }

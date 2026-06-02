@@ -6,7 +6,7 @@ import { startEnemyMode, endEnemyMode } from "./enemyCore.js";
 import { gameState } from "./gameCore.js";
 import * as Game from "./gameCore.js";
 import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
-import { backToQuestMenu, backToQuestMap } from "./main.js";
+import { backToQuestMenu, backToQuestMap, handleGlobalSoundToggle } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
 import { getSkillById, ACTIVE_SKILLS } from "./questSkills.js";
@@ -433,6 +433,21 @@ function renderQuestSideMenu(container){
         btn.textContent = label;
         btn.className = "quest-side-btn";
         btn.onclick = onClick;
+        return btn;
+    }
+
+    function createSoundBtn() {
+        const btn = document.createElement("button");
+        btn.className = "quest-side-btn sound-toggle-btn";
+        const enabled = Game.getSoundEnabled();
+        btn.innerHTML = `
+            <img src="${enabled ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png"}" class="global-sound-toggle-img">
+            <span class="global-sound-toggle-txt">${enabled ? "sound on" : "sound off"}</span>
+        `;
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            handleGlobalSoundToggle();
+        };
         return btn;
     }
 

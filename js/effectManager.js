@@ -13,6 +13,16 @@ let bgmSource = null;
 
 let initialized = false;
 
+let masterVolume = 1;
+
+// 全体の音量を設定（ミュート用）
+export function setMasterVolume(v) {
+    masterVolume = v;
+    if (masterGain && audioCtx) {
+        masterGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    }
+}
+
 // ===========================================
 // AudioContext
 // ===========================================
@@ -32,7 +42,7 @@ function getAudioContext() {
         bgmGain.connect(masterGain);
         seGain.connect(masterGain);
 
-        masterGain.gain.value = 1;
+        masterGain.gain.value = masterVolume;
         bgmGain.gain.value = 0.8;
         seGain.gain.value = 0.7;
     }

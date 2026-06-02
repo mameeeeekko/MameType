@@ -318,6 +318,7 @@ export const STAGES = {
       timerMs: 30000,
     },
     clearConditions: {
+      killCount: 10,
     },
     star: {
       type: "typingSpeed",
