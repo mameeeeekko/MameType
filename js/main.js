@@ -1365,18 +1365,26 @@ if (enemyCanvas) {
  * モバイルデバイスの判定と警告表示
  */
 function checkMobile() {
-  // 1. タッチ操作・画面幅・UserAgentを総合的に判定
+  // 1. 判定基準の強化（iPad等のデスクトップモードも考慮）
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const isSmallScreen = window.innerWidth <= 1024;
+  const isSmallScreen = window.innerWidth <= 1024 || window.innerHeight <= 600;
   const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   if (isTouchDevice || isSmallScreen || isMobileUA) {
-    // 2. 警告を出す前に全てのゲーム画面を隠す
+    // 2. 警告を出す前に、BootScreen や Loading 画面を含め全てのUIを「強制消去」する
     hideAllScreens();
+    if (bootScreen) bootScreen.style.setProperty("display", "none", "important");
+    if (loadingScreen) loadingScreen.style.setProperty("display", "none", "important");
 
-    const warning = document.createElement("div");
-    warning.id = "mobileWarning";
-    warning.style.display = "flex"; // style.cssの display:none を上書き
+    // 3. 警告画面を取得、なければ作成して最前面に表示
+    let warning = document.getElementById("mobileWarning");
+    if (!warning) {
+      warning = document.createElement("div");
+      warning.id = "mobileWarning";
+      document.body.appendChild(warning);
+    }
+
+    warning.style.setProperty("display", "flex", "important");
     warning.innerHTML = `
       <div>
         <h2>PC Only Game</h2>
