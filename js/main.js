@@ -1365,13 +1365,18 @@ if (enemyCanvas) {
  * モバイルデバイスの判定と警告表示
  */
 function checkMobile() {
+  // 1. タッチ操作・画面幅・UserAgentを総合的に判定
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const isSmallScreen = window.innerWidth <= 1024;
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-  if (isTouchDevice || isSmallScreen) {
+  if (isTouchDevice || isSmallScreen || isMobileUA) {
+    // 2. 警告を出す前に全てのゲーム画面を隠す
+    hideAllScreens();
+
     const warning = document.createElement("div");
     warning.id = "mobileWarning";
-    warning.style.display = "flex";
+    warning.style.display = "flex"; // style.cssの display:none を上書き
     warning.innerHTML = `
       <div>
         <h2>PC Only Game</h2>
