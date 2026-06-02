@@ -105,8 +105,23 @@ const SKILL_HANDLERS = {
     );
   },
 
-  freeze: (value, state) => {
-    state.enemyStats.freezeTimer = value;
+  freeze: (value, state, enemiesList = []) => {
+      //表示している敵と弾丸が止まる
+      const targets = [
+          ...enemiesList.filter(
+              e => e && !e.isDead && !e.isItem
+          ),
+          ...(state.enemyBullets || []).filter(
+              b => b && !b.isDead
+          )
+      ];
+
+      targets.forEach(target => {
+          target.freezeTimer = Math.max(
+              target.freezeTimer || 0,
+              value
+          );
+      });
   },
 
   kill: (value, state, enemiesList = []) => {
@@ -300,7 +315,7 @@ export const ACTIVE_SKILLS = {
     name: "フリーズ",
     icon: "❄️",
     desc: "敵を一定時間停止",
-    cooldown: 36,
+    cooldown: 5,
     type: "freeze",
     value: 5, // seconds
   },

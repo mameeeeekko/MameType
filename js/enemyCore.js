@@ -1,20 +1,14 @@
 // enemyCore.js
 
-import {
-    renderEnemies,
-    renderPlayer,
-    renderChainUI,
-    renderScore,
-    renderEndCondition,
-    renderActiveSkillUI,
-    showGameMessage,
-    renderSystemMessage,  updateComboTierBar, initComboTierBar 
-} from "./enemyRenderer.js";
+import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI,
+    showGameMessage,renderSystemMessage,  updateComboTierBar, initComboTierBar } from "./enemyRenderer.js";
 import { setupCanvasDPR } from "./canvasUtil.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,
-     spawnChainBurstEffect, renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups, renderDamagePopups, playHitEffect, 
-     renderHitParticles, renderShotEffects, spawnShotEffect, renderItemSkillEffects, clearAllEffects } from "./effectManager.js";
+import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, 
+    renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBurstEffect, 
+    renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
+    renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, 
+    renderItemSkillEffects, clearAllEffects, playErrorSound} from "./effectManager.js";
 import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
@@ -57,6 +51,7 @@ const player = {
 let candidateEnemies = []; // ロック前の候補敵
 let typedBuffer = "";      // ロック前に入力した文字
 let enemies = [];
+let enemyBullets = [];
 let lockedEnemy = null;
 let enemyLoopActive = false;
 let lastEnemyConfig = null; //もう一回ように
@@ -173,13 +168,19 @@ export function killEnemy(enemy, state, options = {}) {
 
     const fromSkill = options.fromSkill ?? false;
     const isItem = enemy.isItem === true;
+    const isBullet = enemy.isBullet === true;
 
     // =====================================================
     // ✅ 通常・スキルキル（完全同一処理）
     // =====================================================
-    if (!isItem) {
+    if (!isItem && !isBullet) {
         stats.defeatedCount = (stats.defeatedCount ?? 0) + 1;
-        stats.processedCount = (stats.processedCount ?? 0) + 1;
+
+        const isObjectiveEnemy = enemy.isObjective === true;
+        if (isObjectiveEnemy) {
+            stats.objectiveDefeated = (stats.objectiveDefeated ?? 0) + 1;
+            stats.processedCount = (stats.processedCount ?? 0) + 1;
+        }
     }
     // =========================
     // チェイン
@@ -201,7 +202,7 @@ export function killEnemy(enemy, state, options = {}) {
     // =========================
     // スコア
     // =========================
-    if (!isItem) {
+    if (!isItem && !isBullet) {
 
         const baseScore = enemy.type.score;
         const multiplier = getChainMultiplier(stats.chainCount);
@@ -341,15 +342,6 @@ function gameLoop(timestamp) {
         }
     }
     
-    // itemのfreezeの時間を減らす
-    if (gameState.enemyStats.freezeTimer > 0) {
-
-        gameState.enemyStats.freezeTimer -= deltaTime;
-
-        if (gameState.enemyStats.freezeTimer < 0) {
-            gameState.enemyStats.freezeTimer = 0;
-        }
-    }
     // Chain Update
     updateChainBar();
     renderChainUI(gameState);
@@ -368,7 +360,25 @@ function gameLoop(timestamp) {
     // 敵更新
     enemies.forEach(enemy => {
         if (enemy && !enemy.isDead) {
-            enemy.update(player, enemyDiff, gameState, deltaTime);
+
+            enemy.update(
+                player,
+                enemyDiff,
+                gameState,
+                deltaTime
+            );
+        }
+    });
+
+    // 弾更新
+    enemyBullets.forEach(bullet => {
+        if (bullet && !bullet.isDead) {
+            bullet.update(
+                player,
+                enemyDiff,
+                gameState,
+                deltaTime
+            );
         }
     });
 
@@ -386,9 +396,25 @@ function gameLoop(timestamp) {
     }
 
     // 死亡した敵を削除
-    enemies = enemies.filter(enemy => enemy && !enemy.isDead);
+    const aliveEnemies =
+        enemies.filter(
+            enemy => enemy && !enemy.isDead
+        );
+
+    enemies.length = 0;
+    enemies.push(...aliveEnemies);
+
+    // 撃ち落とした弾を削除
+    const aliveBullets =
+        enemyBullets.filter(
+            bullet => bullet && !bullet.isDead
+        );
+
+    enemyBullets.length = 0;
+    enemyBullets.push(...aliveBullets);
 
     renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies);
+    renderEnemies(ctx, enemyBullets, lockedEnemy, []);
     renderPlayer(ctx, player, gameState.enemyStats);
     renderScore(ctx, gameState); // ゲーム画面スコア描画
     renderEndCondition(          // ゲーム終了条件描画
@@ -458,15 +484,19 @@ function gameLoop(timestamp) {
                     enemy.typed = "";
                     enemy.baseRomaji = buildBaseRomaji(enemy.text,0);
 
-                    if (enemy) { // ← nullチェック必須
+                    if (enemy) {
+
                         enemies.push(enemy);
+
+                        if (enemy.isObjective) {
+                            gameState.enemyStats.objectiveSpawned++;
+                        }
 
                         if (stage.spawn?.limit != null) {
                             gameState.enemyStats.remainingSpawn--;
                         }
 
                         spawnedCount++;
-                        // ★成功した時だけ時間更新
                         lastSpawnTime = now;
                     }
 
@@ -512,7 +542,7 @@ function gameLoop(timestamp) {
         shouldEnd = true;
     }
     // 指定数の敵を処理（撃破）
-    if (end.killCount != null && gameState.enemyStats.defeatedCount >= end.killCount) {
+    if (end.killCount != null && gameState.enemyStats.objectiveDefeated >= end.killCount) {
         shouldEnd = true;
     }
     // タイマー終了
@@ -555,7 +585,7 @@ function gameLoop(timestamp) {
     if (
         !gameState.enemyStats.failed &&
         clear.killCount != null &&
-        gameState.enemyStats.defeatedCount >= clear.killCount
+        gameState.enemyStats.objectiveDefeated >= clear.killCount
     ) {
         isClear = true;
     }
@@ -566,13 +596,13 @@ function gameLoop(timestamp) {
         clear.killCount == null // 条件がない＝生存系
     ) {
         // タイマー終了でクリア
-        if (timerStarted && end.timerMs != null && now - enemyStartTime >= end.timerMs) {
+        if (timerStarted && clear.timerMs != null && now - enemyStartTime <= clear.timerMs) {
             isClear = true;
         }
 
         // または全処理終了（フォールバック）
         if (
-            end.timerMs == null &&
+            clear.timerMs == null &&
             stage.spawn.limit != null &&
             spawnedCount >= stage.spawn.limit &&
             enemies.length === 0
@@ -621,7 +651,7 @@ function gameLoop(timestamp) {
 
             });
 
-        }, 700); // ← 好きな時間
+        }, 900); // ← 好きな時間
     }
 
     renderChainBurstEffects(ctx);
@@ -663,6 +693,47 @@ export function handleEnemyKey(e) {
         return;
     }
 
+    // ===============================
+    // ★1文字敵の即時処理（最優先）
+    // ===============================
+    const allTargets = [...enemies, ...enemyBullets];
+
+    for (const enemy of allTargets) {
+
+        if (!enemy || enemy.isDead) continue;
+
+        const romaji = enemy.baseRomaji;
+
+        // ★1文字だけ特別処理
+        if (!lockedEnemy && romaji?.length === 1 && e.key === romaji) {
+
+            lockedEnemy = enemy;
+
+            gameState.text = enemy.text;
+            gameState.pos = 1;
+            gameState.typed = e.key;
+            gameState.inputedRomaji = e.key;
+
+            enemy.pos = 1;
+            enemy.typed = e.key;
+            enemy.inputedRomaji = e.key;
+
+            const isKilled = enemy.onWordComplete(player, gameState, enemies);
+
+            if (isKilled) {
+                killEnemy(enemy, gameState);
+            }
+
+            // 完全リセット（超重要）
+            resetCandidates();
+            candidateEnemies = [];
+            typedBuffer = "";
+            lockedEnemy = null;
+
+            return; // ←ここで通常ロジック完全停止
+        }
+    }
+
     // =====================
     // TABターゲット切替 近くの敵をロック
     // =====================
@@ -682,7 +753,12 @@ export function handleEnemyKey(e) {
             enemy.inputedRomaji = "";
         }
 
-        const aliveEnemies = enemies.filter(e => e && !e.isDead);
+        const aliveEnemies = [
+            ...enemies,
+            ...enemyBullets
+        ].filter(
+            e => e && !e.isDead
+        );
 
         if (aliveEnemies.length === 0) return;
 
@@ -818,6 +894,12 @@ export function handleEnemyKey(e) {
             const isKilled = enemy.onWordComplete(player, gameState, enemies);
 
             if (isKilled) {
+
+                console.log("DEFECT CHECK", {
+                    type: enemy.type,
+                    isObjective: enemy.isObjective,
+                    id: enemy.id,
+                });
                 // ===== 完全撃破 =====
                 killEnemy(lockedEnemy, gameState);
 
@@ -859,7 +941,7 @@ export function handleEnemyKey(e) {
     let nextCandidates = [];
 
     if (candidateEnemies.length === 0) {
-        nextCandidates = enemies.filter(enemy => {
+        nextCandidates = allTargets.filter(enemy => {
             if (!enemy || enemy.isDead) return false;
             return enemy.baseRomaji.startsWith(typedBuffer);
         });
@@ -1119,7 +1201,10 @@ export async function startEnemyMode(config = {}) {
         maxCombo: 0,         // 最大コンボ
         currentCombo: 0,     // 現在のコンボ
         defeatedCount: 0,    // 倒した敵の数
-        processedCount: 0,   // 倒した or 消えた 敵の合計
+        processedCount: 0,   // 倒した or 消えた 敵の合計(object)
+        objectiveSpawned: 0,  
+        objectiveDefeated: 0,
+        
         gScore: 0,           // エネミーモード専用スコア
         gKpm: 0,             // KPM
         rank: "C",           // 初期ランク
@@ -1169,6 +1254,10 @@ export async function startEnemyMode(config = {}) {
 
     //スキルと描画を state.player に統一
     gameState.player = player;
+    
+    // gameStateに渡す
+    gameState.enemies = enemies;
+    gameState.enemyBullets = enemyBullets;
 
     // ===============================
     // Dev Override適用（追加ここ）
@@ -1249,7 +1338,8 @@ export async function startEnemyMode(config = {}) {
 
     resetCandidates();
 
-    enemies = [];
+    enemies.length = 0;
+    enemyBullets.length = 0;
     lockedEnemy = null;
     candidateEnemies = []; // ★追加
     typedBuffer = ""; 
@@ -1282,11 +1372,14 @@ export function markDamageTaken() {
 }
 
 //enemy.jsで使うため
-export function onEnemyRemovedByDamage() {
+export function onEnemyRemovedByDamage(isObjective = false) {
     const stats = gameState.enemyStats;
+    
     if (!stats) return;
 
-    stats.processedCount++;
+    if (isObjective) {
+        stats.processedCount++;
+    }
 }
 
 export function restartEnemyMode() {
@@ -1410,6 +1503,7 @@ export async function endEnemyMode() {
     lockedEnemy = null;
     //enemies = [];
     enemies.length = 0;
+    enemyBullets.length = 0;
     
     //gameState リセット
     gameState.text = "";
@@ -1726,6 +1820,7 @@ function tryUseActiveSkill() {
 
             console.log("HP FULL");
 
+            playErrorSound();
             showGameMessage(
                 gameState,
                 "HP FULL"
@@ -1736,7 +1831,14 @@ function tryUseActiveSkill() {
     }
 
     if ((gameState.activeSkillStock ?? 0) <= 0) {
+
         console.log("NO STOCK");
+
+        playErrorSound();
+        showGameMessage(
+            gameState,
+            "SKILL NOT READY"
+        );
         return;
     }
 

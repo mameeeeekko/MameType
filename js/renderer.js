@@ -7,6 +7,12 @@ import { getDisplayFullRoma } from "./typingLogic.js";
 import { getNow, getPaused } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
 /* =====================================================
+  ユーティリティ
+  ===================================================== */
+// テキストが英数字・記号のみ（英語問題）か判定
+const isEnglish = (str) => /^[a-zA-Z0-9\s.,!?-]+$/.test(str);
+
+/* =====================================================
   DOM キャッシュヘルパ
   ===================================================== */
 const dom = {
@@ -414,9 +420,16 @@ export function render(state) {
 let longWordSpans = [];
 let lastLongText = "";
 
-function renderWordDisplay({ displayWord, pos }) {
+function renderWordDisplay({ displayWord, pos, text }) {
   const wordDiv = isLongTextMode ? dom.wordLong() : dom.word();
   if (!wordDiv) return;
+
+  // 英語問題の場合はメインの単語表示を隠す
+  if (isEnglish(text)) {
+    wordDiv.style.display = "none";
+  } else {
+    wordDiv.style.display = "block";
+  }
 
   // 通常
   if (!isLongTextMode) {
@@ -475,6 +488,11 @@ function renderLongText({ text, pos, typed, inputedRomaji }) {
 // --- かな表示 ---
 const kanaScroll = dom.kanaScroll();
 if (kanaScroll) {
+  if (isEnglish(text)) {
+    kanaScroll.style.display = "none";
+  } else {
+    kanaScroll.style.display = "block";
+
   const DISPLAY_LEN = 40;
   const CENTER_POS = Math.floor(DISPLAY_LEN / 2);
 
@@ -495,6 +513,7 @@ if (kanaScroll) {
     if (charPos < pos) span.className = "done";
     kanaScroll.appendChild(span);
   }
+}
 }
 
 // --- ローマ字表示 ---
@@ -529,9 +548,15 @@ if (romaScroll) {
 function renderNormal({ text, pos, typed, inputedRomaji }) {
 const jpDiv = dom.jp();
 if (jpDiv) {
+  if (isEnglish(text)) {
+    jpDiv.style.display = "none";
+  } else {
+    jpDiv.style.display = "inline-block";
+
   const done = text.slice(0, pos);
   const remain = text.slice(pos);
   jpDiv.innerHTML = `<span class="done">${done}</span>${remain}`;
+}
 }
 
 const romaDiv = dom.roma();

@@ -9,38 +9,116 @@ import { devOverride } from "../dev/devOverride.js";
 import { addQuestItemPickup } from "./questPlayerStats.js";
 import { getUIAnchorPosition } from "./enemyRenderer.js";
 
+// 同じ敵をださない。
+function getUnusedLetter(state) {
+
+    const letters =
+        "abcdefghijklmnopqrstuvwxyz!?".split("");
+
+    const usedLetters = new Set();
+
+    // 敵
+    state.enemies?.forEach(enemy => {
+        if (
+            enemy &&
+            !enemy.isDead &&
+            enemy.text?.length === 1
+        ) {
+            usedLetters.add(
+                enemy.text.toLowerCase()
+            );
+        }
+    });
+
+    // 弾
+    state.enemyBullets?.forEach(bullet => {
+        if (
+            bullet &&
+            !bullet.isDead &&
+            bullet.text?.length === 1
+        ) {
+            usedLetters.add(
+                bullet.text.toLowerCase()
+            );
+        }
+    });
+
+    const available =
+        letters.filter(
+            l => !usedLetters.has(l)
+        );
+
+    if (available.length === 0) {
+        return letters[
+            Math.floor(
+                Math.random()
+                * letters.length
+            )
+        ];
+    }
+
+    return available[
+        Math.floor(
+            Math.random()
+            * available.length
+        )
+    ];
+}
 
 export class Enemy {
 
-  constructor(word, text, x, y, speed, type) {
+    constructor(word, text, x, y, speed, type) {
 
-    this.word = word; // 表示（漢字あり）
-    this.text = text; // タイピング用かな
+        this.word = word; // 表示（漢字あり）
+        this.text = text; // タイピング用かな
 
-    this.x = x;
-    this.y = y;
-    this.speed = speed;
-    this.type = type;
-    this.hitCount = type.hitCount || 1; // 残り問題数
-    this.rotation = Math.random() * Math.PI * 2; // 初期角度
-    this.rotationSpeed = type.rotationSpeed || 0; // 回転速度
+        this.x = x;
+        this.y = y;
+        this.speed = speed;
+        this.type = type;
+        this.hitCount = type.hitCount || 1; // 残り問題数
+        this.rotation = Math.random() * Math.PI * 2; // 初期角度
+        this.rotationSpeed = type.rotationSpeed || 0; // 回転速度
+        this.behaviorTimers = {};
+        this.behaviorEffect = null;
+        this.behaviorEffectTimer = 0;
+        this.behaviorEffectDuration = 0;
+        this.behaviorStates = {}; //特殊行動開始前にpreで警告をだすため状態をつくる
+        this.freezeTimer = 0; //出現した敵のみフリーズさせるため
 
-    this.pos = 0;
-    this.inputedRomaji = "";
-    // 表示基準ローマ字（描画ズレ防止）
-    this.baseRomaji = "";
-    // ★安全初期化
-    this.isDead = false;
-   
-  }
+        this.pos = 0;
+        this.inputedRomaji = "";
+        // 表示基準ローマ字（描画ズレ防止）
+        this.baseRomaji = "";
+        // ★安全初期化
+        this.isDead = false;
+        // ステージ目標敵
+        this.isObjective = true;
+
+    }
 
     update(player, difficulty, state, deltaTime){
 
-        // ★フリーズ判定（最優先）
-        const frozen = state?.enemyStats?.freezeTimer > 0;
+        // エフェクトのタイマー
+        if (this.behaviorEffectTimer > 0) {
+            this.behaviorEffectTimer -= deltaTime;
 
-        if (frozen) {
-            return true; // 完全停止
+            if (this.behaviorEffectTimer <= 0) {
+                this.behaviorEffect = null;
+                this.behaviorEffectTimer = 0;
+            }
+        }
+
+        // ★フリーズ判定（最優先）
+        if (this.freezeTimer > 0) {
+
+            this.freezeTimer -= deltaTime;
+
+            if (this.freezeTimer < 0) {
+                this.freezeTimer = 0;
+            }
+
+            return true;
         }
 
         const dx = player.x - this.x;
@@ -59,7 +137,7 @@ export class Enemy {
             player.hp = Math.max(0, player.hp);
 
             markDamageTaken(); //damage受けたフラグOn
-            onEnemyRemovedByDamage(); //damage受けた時敵が消えるため、processedCount ++
+            onEnemyRemovedByDamage(this.isObjective); //damage受けた時敵が消えるため、processedCount ++
             this.isDead = true;
             return false;
         }
@@ -70,6 +148,9 @@ export class Enemy {
         this.y += dy / dist * this.speed * scale;
         this.rotation += this.rotationSpeed * scale;
 
+        // behaviors処理 敵が出す弾や、召喚する敵の処理
+        this.updateBehaviors(state, deltaTime);
+
         // UI侵入防止
         const uiTop = getUISafeTop();
         if(this.y < uiTop){
@@ -78,6 +159,162 @@ export class Enemy {
 
         return !this.isDead;
     }
+
+    // ====================================
+    // 敵の行動処理
+    // =====================================
+    updateBehaviors(state, deltaTime){
+
+        const behaviors = this.type.behaviors;
+
+        if(!behaviors?.length) return;
+
+        for(const behavior of behaviors){
+
+            const key = behavior.type + "_" + behavior.interval;
+            const preDelay = behavior.preDelay || 0;
+
+            const behaviorState =
+                this.behaviorStates[key] ||
+                { timer: 0, charging: false };
+
+            behaviorState.timer += deltaTime;
+
+            if(!behaviorState.charging){
+
+                const triggerTime =
+                    behavior.interval - preDelay;
+
+                if(behaviorState.timer >= triggerTime){
+
+                    behaviorState.charging = true;
+
+                    this.startBehaviorEffect(
+                        behavior.type,
+                        preDelay
+                    );
+                }
+            }
+
+            if(
+                behaviorState.charging &&
+                behaviorState.timer >= behavior.interval
+            ){
+
+                switch(behavior.type){
+
+                    case "spawn":
+                        this.spawnChildren(
+                            behavior,
+                            state
+                        );
+                        break;
+
+                    case "shoot":
+                        this.fireBullet(
+                            behavior,
+                            state
+                        );
+                        break;
+                }
+
+                behaviorState.timer = 0;
+                behaviorState.charging = false;
+            }
+
+            this.behaviorStates[key] =
+                behaviorState;
+        }
+    }
+
+    startBehaviorEffect(type, duration = 1){
+
+        this.behaviorEffect = type;
+        this.behaviorEffectTimer = duration;
+        this.behaviorEffectDuration = duration;
+    }
+    
+    spawnChildren(behavior, state){
+
+        const enemyType =
+            Object.values(EnemyTypes)
+                .find(
+                    t =>
+                    t.id === behavior.spawnType
+                );
+
+        if(!enemyType) return;
+
+        for(
+            let i=0;
+            i<behavior.count;
+            i++
+        ){
+
+            const angle =
+                Math.random() * Math.PI * 2;
+
+            const radius = 30;
+
+            const x =
+                this.x +
+                Math.cos(angle)*radius;
+
+            const y =
+                this.y +
+                Math.sin(angle)*radius;
+
+            const enemy = createEnemyByType(
+                enemyType, x, y, state
+            );
+
+            if (enemy) {
+
+                // 召喚敵はステージ目標外
+                enemy.isObjective = false;
+                // 召喚敵フラグ（目印用）
+                enemy.isSummoned = true;
+                state.enemies.push(enemy);
+
+            }
+        }
+    }
+
+    fireBullet(behavior, state){
+
+        const speed = behavior.bullet.speed;
+        const count = behavior.bullet.count || 1;
+
+        const reserved = new Set();
+
+        for(let i = 0; i < count; i++){
+
+            let letter;
+
+            do{
+                letter = getUnusedLetter(state);
+            }
+            while(reserved.has(letter));
+
+            reserved.add(letter);
+
+            const angle = (Math.PI * 2 / count) * i;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+
+            const bullet = new BulletEnemy(
+                letter,
+                this.x,
+                this.y,
+                vx,
+                vy,
+                behavior.bullet
+            );
+
+            state.enemyBullets.push(bullet);
+        }
+    }
+
     // =================================
     // 1単語入力完了時の処理(複数問題敵)
     // =================================
@@ -116,6 +353,101 @@ export class Enemy {
         // 完全撃破
         this.isDead = true;
         return true;
+    }
+}
+
+
+export class BulletEnemy extends Enemy{
+
+    constructor(
+        letter,
+        x,
+        y,
+        vx,
+        vy,
+        bulletConfig
+    ){
+
+        super(
+            letter,
+            letter,
+            x,
+            y,
+            0,
+            {
+                ...bulletConfig,
+
+                score:0,
+                hitCount:1,
+                killSound:6,
+                killedEffect:"bullet"
+            }
+        );
+
+        this.isBullet = true;
+        this.isObjective = false;
+        this.vx = vx;
+        this.vy = vy;
+
+        // 追尾強度
+        this.homing = bulletConfig.homing ?? 0.03;
+
+        this.baseRomaji = letter;
+    }
+
+    update( player, difficulty, state, deltaTime ){
+        
+        if (this.freezeTimer > 0) {
+
+            this.freezeTimer -= deltaTime;
+
+            if (this.freezeTimer < 0) {
+                this.freezeTimer = 0;
+            }
+
+            return true;
+        }
+
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const dist = Math.hypot(dx,dy);
+
+        if( dist < player.radius + this.type.size){
+
+            const damage = this.type.damage;
+            player.hp -= damage;
+
+            spawnDamagePopup( player.x, player.y-20, damage );
+
+            this.isDead = true;
+
+            return false;
+        }
+
+        // =========================
+        // ホーミング
+        // =========================
+        const targetVx = dx / (dist || 1);
+        const targetVy = dy / (dist || 1);
+        // 徐々にプレイヤー方向へ向く
+        this.vx += (targetVx - this.vx) * this.homing;
+        this.vy += (targetVy - this.vy) * this.homing;
+        // 速度一定化
+        const speed = this.type.speed;
+        const len = Math.hypot( this.vx, this.vy ) || 1;
+
+        this.vx = (this.vx / len) * speed;
+        this.vy = (this.vy / len) * speed;
+
+        // =========================
+        // 移動
+        // =========================
+        const scale = deltaTime * 60;
+
+        this.x += this.vx * scale;
+        this.y += this.vy * scale;
+
+        return !this.isDead;
     }
 }
 
@@ -280,30 +612,32 @@ function applyItemEffect(type, player, state = {}, enemies = []){
             break;
     
         case "freeze":
+            
+            const freezeTargets = [
+                ...enemies.filter(e => e && !e.isDead && !e.isItem),
+                ...(state.enemyBullets || []).filter(b => b && !b.isDead)
+            ];
 
             spawnItemSkillEffect({
-
                 category: "freeze",
                 source: "item",
 
-                level:
-                    type.value >= 5
+                level: type.value >= 5
                         ? "large"
                         : "medium",
 
-                targets:
-                    enemies.filter(
-                        e => e && !e.isDead && !e.isItem
-                    )
+                targets: freezeTargets
             });
 
-            if (!state.enemyStats) {
-                state.enemyStats = {};
-            }
+            freezeTargets.forEach(enemy => {
 
-            state.enemyStats.freezeTimer =
-                (state.enemyStats.freezeTimer || 0)
-                + type.value;
+                enemy.freezeTimer =
+                    Math.max(
+                        enemy.freezeTimer || 0,
+                        type.value
+                    );
+
+            });
 
             break;
 
@@ -368,12 +702,117 @@ export function getItemDescription(type){
     }
 }
 
+function createEnemyByType(type, x, y, state){
+
+    let wordData = null;
+
+    for (let i = 0; i < 20; i++) {
+
+        const candidate =
+            getRandomWordForType(type);
+
+        if (!candidate) continue;
+
+        const duplicate =
+            state?.enemies?.some(
+                e =>
+                    !e.isDead &&
+                    e.text === candidate.text
+            ) ||
+            state?.enemyBullets?.some(
+                b =>
+                    !b.isDead &&
+                    b.text === candidate.text
+            );
+
+        if (!duplicate) {
+            wordData = candidate;
+            break;
+        }
+    }
+
+    if (!wordData) {
+        wordData =
+            getRandomWordForType(type);
+    }
+
+    if (!wordData) return null;
+
+    const enemy = new Enemy(
+        wordData.word,
+        wordData.text,
+        x,
+        y,
+        type.speed,
+        type
+    );
+
+    enemy.baseRomaji =
+        buildBaseRomaji(
+            enemy.text,
+            0
+        );
+
+    return enemy;
+}
+
 // =====================================================
-// 敵パラメータ
+// EnemyType設定
+// =====================================================
 /*
-shape: "circle" "square" "pinwheel"
-pattern: "stripe"  "ring"
-tags: ["句読点","促音","英語", "記号","ことわざ","擬音"]
+【基本ステータス】
+id              : 敵ID
+name            : 表示名
+size            : 当たり判定半径(px)
+damage          : 接触ダメージ
+hitCount        : 撃破までの問題数
+knockback       : 問題クリア時ノックバック量
+speed           : 移動速度
+score           : 撃破スコア
+killSound       : 撃破SE番号
+damageSound     : 接触SE番号
+killedEffect    : 撃破エフェクトID
+
+【問題生成】
+tags            : 使用タグ
+minLen          : 最小文字数
+maxLen          : 最大文字数
+
+対応タグ:
+[ "句読点", "促音", "英語","記号","ことわざ","擬音"]
+
+【見た目】
+color           : 本体色
+shape           : "circle" "square" "pinwheel"
+pattern         : null "stripe" "ring"
+rotationSpeed   : 回転速度
+
+【行動パターン】
+behaviors:[
+    {
+        type:"spawn",
+        interval:5,      // 発動間隔(sec)
+        preDelay:1.5,    // 演出後の発動までの時間（sec）
+        spawnType:"slime",
+        count:3          // 召喚数
+    },
+    {
+        type:"shoot",
+        interval:2,      // 発動間隔(sec)
+        preDelay:1.5,    // 演出後の発動までの時間（sec）
+        bullet:{
+            count:8,         // 発射数
+            speed:1,         // 弾速
+            homing:0.03      // ホーミング強度 0.01(ゆっくり) → 0.3(ほぼミサイル)
+            damage:5,        // ダメージ
+            size:10,         // サイズ
+            color:"#f00",
+            shape:"circle",
+            pattern:"ring",
+            rotationSpeed:0
+        }
+    }
+]
 */
 // =====================================================
 
@@ -465,10 +904,10 @@ export const EnemyTypes = {
         damage:30,
         hitCount:2,
         knockback:50, 
-        speed:0.3,
+        speed:0.05,
 
         score:200,
-        killSound:3,
+        killSound:5,
         killedEffect:"boss1",
         damageSound:1,
 
@@ -482,6 +921,33 @@ export const EnemyTypes = {
         pattern:"ring", // 回転＋強調でボス感
         rotationSpeed: 0,
         color:"#474747",
+
+        // 行動パターン
+        behaviors:[
+            {
+                type:"spawn",
+                interval:5,
+                preDelay:1.5,
+                spawnType:"slime",
+                count:2
+            },
+            {
+                type:"shoot",
+                interval:6,
+                preDelay:1.5,
+                bullet:{
+                    count:3,
+                    speed:0.5,
+                    homing:0.03,
+                    damage:5,
+                    size:10,
+                    color:"#ef4444",
+                    shape:"circle",
+                    pattern:"ring",
+                    rotationSpeed:1
+                }
+            }
+        ]
     }
 
 };
@@ -505,7 +971,7 @@ export const ItemTypes = {
         effect:"heal",
         value:20,
 
-        killSound:2,
+        killSound:7,
         killedEffect:"item1",
 
         tags:[], // ← 制限なし
@@ -529,7 +995,7 @@ export const ItemTypes = {
         effect:"heal",
         value:"full",
 
-        killSound:2,
+        killSound:7,
         killedEffect:"item1",
 
         tags:[], // ← 制限なし
@@ -553,7 +1019,7 @@ export const ItemTypes = {
         effect:"kill",
         value:3,
 
-        killSound:2,
+        killSound:4,
         killedEffect:"item1",
 
         tags:[], // ← 制限なし
@@ -576,7 +1042,7 @@ export const ItemTypes = {
         effect:"kill",
         value:"all",
 
-        killSound:2,
+        killSound:4,
         killedEffect:"item1",
 
         tags:[], // ← 制限なし
@@ -599,7 +1065,7 @@ export const ItemTypes = {
         effect:"freeze",
         value:5, //秒
 
-        killSound:2,
+        killSound:7,
         killedEffect:"item1",
 
         tags:[], // ← 制限なし
@@ -622,7 +1088,7 @@ export const ItemTypes = {
         effect:"cooldown",
         value:15, //sec
 
-        killSound:2,
+        killSound:7,
         killedEffect:"item1",
 
         tags:[], // ← 制限なし

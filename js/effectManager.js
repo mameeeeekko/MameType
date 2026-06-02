@@ -44,7 +44,7 @@ function getAudioContext() {
 // サウンドロード
 // ===========================================
 
-async function loadSound(name, url) {
+export async function loadSound(name, url) {
 
     const ctx = getAudioContext();
 
@@ -59,30 +59,13 @@ async function loadSound(name, url) {
 // ===========================================
 
 export async function initAudio() {
-    //console.log("initAudio called");
     if (initialized) return;
 
     const ctx = getAudioContext();
-    //console.log("Audio state (before resume):", ctx.state);
 
     if (ctx.state === "suspended") {
         await ctx.resume();
-       // console.log("Audio state (after resume):", ctx.state);
     }
-
-    await Promise.all([
-        loadSound("bgm1","./assets/sound/bgm1.mp3"),
-        loadSound("bgm2","./assets/sound/bgm2.mp3"),
-        loadSound("bgm3","./assets/sound/bgm3.mp3"),
-        loadSound("kill1","./assets/sound/kill1.mp3"),
-        loadSound("kill2","./assets/sound/kill2.mp3"),
-        loadSound("kill3","./assets/sound/kill3.mp3"),
-        loadSound("kill4","./assets/sound/kill4.mp3"),
-        loadSound("kill5","./assets/sound/kill5.mp3"),
-        loadSound("damage1","./assets/sound/damage1.mp3"),
-        loadSound("bgm_enemy1","./assets/sound/bgm_enemy1.mp3"),
-        loadSound("bgm_normal1","./assets/sound/bgm_normal1.mp3"),
-    ]);
 
     // 初回再生遅延防止（ウォームアップ）
     playTone(440,0.001);
@@ -165,21 +148,21 @@ function playNoise(duration = 0.1, volume = 0.3) {
     noise.stop(ctx.currentTime+ duration);
 }
 
-export function playSE(name, volume = 0.5, playbackRate = 1) {
-
+// SEを流す関数
+export function playSE(
+    name,
+    volume = 0.5,
+    playbackRate = 1, //再生速度
+    startOffset = 0,  //開始位置sec
+    duration = null   //再生時間sec
+) {
     const ctx = getAudioContext();
-
-    if (ctx.state !== "running") {
-        ctx.resume();
-    }
 
     const buffer = buffers[name];
     if (!buffer) return;
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-
-    // ピッチ変更（テクノ感・弾け感に効く）
     source.playbackRate.value = playbackRate;
 
     const gain = ctx.createGain();
@@ -187,13 +170,11 @@ export function playSE(name, volume = 0.5, playbackRate = 1) {
 
     source.connect(gain).connect(seGain);
 
-    source.start();
-
-    // メモリ解放（地味に重要）
-    source.onended = () => {
-        source.disconnect();
-        gain.disconnect();
-    };
+    if (duration != null) {
+        source.start(0, startOffset, duration);
+    } else {
+        source.start(0, startOffset);
+    }
 }
 
 export function playTypeSound() {
@@ -210,8 +191,10 @@ export function playEnemyKillSound(type=1){
     if(type===1) playSE("kill1",0.35);
     if(type===2) playSE("kill2",0.35);
     if(type===3) playSE("kill3",0.35);
-    if(type===4) playSE("kill4",0.35);
+    if(type===4) playSE("killLaser",0.35);
     if(type===5) playSE("kill5",0.35);
+    if(type===6) playSE("killBullet",0.35,1,0,1);
+    if(type===7) playSE("killItem",0.35,1,0,1);
 }
 
 
@@ -219,6 +202,9 @@ export function playDamageSound(){
     playSE("damage1",0.4);
 }
 
+export function playErrorSound(){
+    playSE("error1",0.6, 1, 0, 1);
+}
 // ===========================================
 // BGM
 // ===========================================
@@ -361,6 +347,50 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
     }
 
     // =====================================
+    // 弾破壊
+    // =====================================
+    else if (effect === "bullet") {
+
+        // 火花
+        for (let i = 0; i < 8; i++) {
+
+            const angle =
+                Math.random() * Math.PI * 2;
+
+            const speed =
+                1 + Math.random() * 2.5;
+
+            particles.push({
+                type: "bullet",
+
+                x,
+                y,
+
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+
+                radius: 2,
+                life: 14,
+                maxLife: 14
+            });
+        }
+
+        // 波紋
+        particles.push({
+            type: "bullet_wave",
+
+            x,
+            y,
+
+            radius: 4,
+            maxRadius: 24,
+
+            life: 12,
+            maxLife: 12
+        });
+    }
+
+    // =====================================
     // アイテム取得
     // =====================================
     else if (effect === "item1") {
@@ -452,6 +482,63 @@ export function renderEnemyEffects(ctx) {
             ctx.fill();
         }
 
+        // =====================================
+        // 弾破壊：火花
+        // =====================================
+        else if (p.type === "bullet") {
+
+            ctx.fillStyle = "#a4a4a4";
+
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#dbdbdb";
+
+            ctx.beginPath();
+            ctx.arc(
+                p.x,
+                p.y,
+                p.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        // =====================================
+        // 弾破壊：波紋
+        // =====================================
+        else if (p.type === "bullet_wave") {
+
+            const t =
+                1 - (p.life / p.maxLife);
+
+            const radius =
+                p.radius +
+                (p.maxRadius - p.radius) * t;
+
+            ctx.save();
+
+            ctx.globalAlpha = alpha;
+
+            ctx.strokeStyle = "#d8d8d8";
+
+            ctx.lineWidth =
+                3 * alpha;
+
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = "#8f8f8f";
+
+            ctx.beginPath();
+            ctx.arc(
+                p.x,
+                p.y,
+                radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.stroke();
+
+            ctx.restore();
+        }
         // =====================================
         // アイテム取得：灰色エネルギー
         // =====================================
@@ -638,7 +725,7 @@ export function renderKnockbackEffects(ctx){
         ctx.save();
 
         ctx.globalAlpha = alpha;
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = "#b2b2b2";
 
         ctx.beginPath();
         ctx.arc(e.x, e.y, 2.5, 0, Math.PI * 2);
@@ -823,6 +910,171 @@ export function renderHitParticles(ctx) {
             hitEffects.splice(i, 1);
         }
     }
+}
+
+// =====================
+// 敵特殊攻撃使用エフェクト
+// =====================
+export function renderEnemyBehaviorEffect(
+    ctx,
+    enemy
+){
+    if(
+        !enemy.behaviorEffect ||
+        enemy.behaviorEffectTimer <= 0
+    ){
+        return;
+    }
+
+    const t = enemy.behaviorEffectTimer;
+
+    const alpha =
+        Math.sin(
+            t * 20
+        ) * 0.5 + 0.5;
+
+    switch(enemy.behaviorEffect){
+
+        case "shoot":
+
+            renderShootEffect(
+                ctx,
+                enemy,
+                alpha
+            );
+            break;
+
+        case "spawn":
+
+            renderSpawnEffect(
+                ctx,
+                enemy,
+                alpha
+            );
+            break;
+    }
+}
+
+function renderShootEffect(
+    ctx,
+    enemy,
+    alpha
+){
+
+    ctx.save();
+
+    ctx.globalAlpha =
+        alpha * 0.7;
+
+    ctx.fillStyle =
+        "#de5959";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        enemy.x,
+        enemy.y,
+        enemy.type.size + 6,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function renderSpawnEffect(
+    ctx,
+    enemy,
+    alpha
+){
+
+    ctx.save();
+
+    ctx.globalAlpha =
+        alpha * 0.6;
+
+    ctx.strokeStyle =
+        "#d1d5db";
+
+    ctx.lineWidth = 4;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        enemy.x,
+        enemy.y,
+        enemy.type.size + 10,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+// freeze中ずっと表示
+export function renderFreezeAura(
+    ctx,
+    enemy
+){
+
+    if(
+        !enemy.freezeTimer ||
+        enemy.freezeTimer <= 0
+    ){
+        return;
+    }
+
+    const alpha =
+        0.4 +
+        Math.sin(
+            performance.now() * 0.01
+        ) * 0.2;
+
+    const radius =
+        enemy.type.size + 10;
+
+    ctx.save();
+
+    // 外周リング
+    ctx.globalAlpha = alpha;
+
+    ctx.strokeStyle = "#b8e6ff";
+    ctx.lineWidth = 3;
+
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#dff4ff";
+
+    ctx.beginPath();
+    ctx.arc(
+        enemy.x,
+        enemy.y,
+        radius,
+        0,
+        Math.PI * 2
+    );
+    ctx.stroke();
+
+    // 中央の薄い氷色
+    ctx.globalAlpha =
+        alpha * 0.12;
+
+    ctx.fillStyle = "#d8f4ff";
+
+    ctx.beginPath();
+    ctx.arc(
+        enemy.x,
+        enemy.y,
+        radius - 2,
+        0,
+        Math.PI * 2
+    );
+    ctx.fill();
+
+    ctx.restore();
 }
 
 // ===============================

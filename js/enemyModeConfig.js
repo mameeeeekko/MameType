@@ -37,7 +37,7 @@ export const ENEMY_MODE_CONFIG = {
     },
     //クリア条件
     clearConditions: {
-        explain: null,
+        survive: null,
         killCount: 5,
         timerMs: null
     },
@@ -187,13 +187,119 @@ export function getStageConfig(stageId) {
   return stage;
 }
 
-// ===============================
-// ステージ
-// star:{
-//  type:killCount(キル数), timeRemaining(0-1),hpRemaining(0-1), 
-//       accuracy(0-1), clearTime(ms), typingSpeed(100-400), composite(0-1),
-//
-//================================
+// =========================================================================
+// ステージ設定リファレンス
+// =========================================================================
+/*
+STAGES = {
+  ステージID: {
+    // ---------------------------
+    // 敵出現設定
+    // ---------------------------
+    spawn: {
+      interval: 2000,   // 出現間隔(ms)
+      limit: 10,        // 総出現数上限
+                           // null = 無限
+      maxAlive: 5       // 同時出現上限
+                           // null = 無制限
+    },
+    // ---------------------------
+    // アイテム出現設定（省略可）
+    // ---------------------------
+    itemSpawn: {
+      interval: 5000,   // 出現間隔(ms)
+      chance: 0.5,      // 出現確率 0.0 ～ 1.0
+      limit: 10,        // 総出現数上限 null = 無限
+      maxAlive: 1       // 同時存在数上限 null = 無制限
+    },
+    // ---------------------------
+    // 敵出現テーブル
+    // ---------------------------
+    enemyTable: [
+      { type: "SLIME",  weight: 70 },
+      { type: "GOBLIN", weight: 20 },
+      { type: "OGRE",   weight: 10 }
+    ],
+    // enemy type 一覧
+    // SLIME GOBLIN OGRE BOSS
+    // ※ enemyData.js に定義された敵を追加可能
+
+    // ---------------------------
+    // アイテム出現テーブル
+    // ---------------------------
+    itemTable: [
+      { type: "FREEZE", weight: 50 },
+      { type: "BOMB",   weight: 50 }
+    ],
+
+    // item type 一覧
+    //
+    // FREEZE      : 敵凍結
+    // BOMB        : 単体爆弾
+    // BOMB_ALL    : 全体爆弾
+    // HEAL_SMALL  : HP少量回復
+    // HEAL_FULL   : HP全回復
+    // SKILL_CD    : スキルCT短縮
+    //
+    // ※ itemData.js に定義されたアイテムを追加可能
+
+    // ---------------------------
+    // ゲーム終了条件
+    // ---------------------------
+    endConditions: {
+      hpZero: true,              // プレイヤーHP0で終了
+      timerMs: 30000,            // 制限時間終了で終了 null = 無効
+      killCount: 10,             // 指定撃破数到達で終了 null = 無効
+      allSpawnedDefeated: true   // 出現した敵を全滅で終了 spawn.limit と組み合わせて使う
+    },
+    // ---------------------------
+    // クリア条件
+    // ---------------------------
+    clearConditions: {
+      killCount: 10,             // 指定数撃破でクリア
+      timerMs: 30000,            // 制限時間以内クリア
+      survive: true              // 生存していればクリア
+    },
+    // ---------------------------
+    // 星評価条件
+    // ---------------------------
+    star: {
+      type: "typingSpeed",
+      thresholds: [
+        100,
+        150,
+        200,
+        250,
+        300
+      ]
+    }
+  }
+}
+
+===============================
+star.type 一覧
+===============================
+typingSpeed → KPM評価
+  thresholds: [100,150,200,250,300]
+
+clearTime → クリア時間評価(ms)
+  thresholds: [70000,60000,50000,40000,30000]
+
+accuracy → 正確率評価(0～1)
+  thresholds: [0.2,0.4,0.6,0.8,0.9]
+
+killCount → 撃破数評価
+  thresholds: [10,20,30,40,50]
+
+composite → 総合評価(0～1)
+  thresholds: [0.3,0.5,0.7,0.8,0.9]
+
+timeRemaining → 残り時間率(0～1)
+
+hpRemaining → 残りHP率(0～1)
+*/
+//===================================================================================
+
 export const STAGES = {
 
   DAILY: {
@@ -227,7 +333,7 @@ export const STAGES = {
     },
     itemSpawn: {
       interval: 5000,
-      chance: 0.8,
+      chance: 0.9,
       limit: null,
       maxAlive: 1,
     },
@@ -237,10 +343,10 @@ export const STAGES = {
     ],
     itemTable: [
       { type: "HEAL_SMALL", weight: 10 },
-      { type: "FREEZE", weight: 10 },
-      { type: "BOMB", weight: 20 },
-      { type: "BOMB_ALL", weight: 20 },
-      { type: "HEAL_FULL", weight: 20 },
+      { type: "FREEZE", weight: 40 },
+      { type: "BOMB", weight: 10 },
+      { type: "BOMB_ALL", weight: 10 },
+      { type: "HEAL_FULL", weight: 10 },
       { type: "SKILL_CD", weight: 20 },
     ],
     endConditions: {
@@ -327,6 +433,29 @@ export const STAGES = {
     },
     clearConditions: {
         killCount: 4
+    },
+    star: {
+      type: "accuracy",
+      thresholds: [0.2, 0.4, 0.6, 0.8, 0.9]
+    }
+  },
+
+  BOSS1: {
+    spawn: {
+      interval: 1000,
+      limit: 1,
+      maxAlive: null,
+    },
+    enemyTable: [
+      { type: "BOSS", weight: 100 }
+    ],
+    endConditions: {
+        hpZero: true,
+        killCount: null,
+        allSpawnedDefeated: true,
+    },
+    clearConditions: {
+        timerMs:15000
     },
     star: {
       type: "accuracy",

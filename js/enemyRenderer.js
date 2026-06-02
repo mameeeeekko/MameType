@@ -2,13 +2,15 @@
 
 import { getDisplayFullRoma, getDisplayRomaForEnemy } from "./typingLogic.js";
 import { getDifficulty } from "./difficulties.js";
-import { buildClearText } from "./enemyModeConfig.js";
 import { getNow } from "./gameCore.js";
 import { getChainMultiplier } from "./enemyCore.js"
 import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, } from "./questPlayerStats.js";
 import { ACTIVE_SKILLS } from "./questSkills.js";
 import { getItemDescription } from "./enemy.js";
+import { renderEnemyBehaviorEffect,renderFreezeAura } from "./effectManager.js";
 
+// テキストが英数字・記号のみ（英語問題）か判定
+const isEnglish = (str) => /^[a-zA-Z0-9\s.,!?-]+$/.test(str);
 
 // サイドを丸める関数
 function roundRect(ctx, x, y, w, h, r) {
@@ -63,6 +65,8 @@ export function renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies = []) 
 }
 
 function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
+
+    renderEnemyBehaviorEffect(ctx,enemy);
     
     ctx.save(); // ←これ絶対
     ctx.textAlign = "center";
@@ -75,7 +79,6 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
         (enemy.inputedRomaji || "").length +
         (enemy.typed || "").length;
 
-    const typedPart = displayFull.slice(0, typedLen);
     const remainPart = displayFull.slice(typedLen);
 
     let enemyColor = enemy.type.color;
@@ -91,9 +94,37 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
     // =====================
     drawEnemyBody(ctx, enemy, enemyColor);
 
-    ctx.font = "17px 'Inter', 'Noto Sans JP', sans-serif";
-    ctx.fillStyle = "black";
-    ctx.fillText(word, enemy.x, enemy.y - radius - 15);
+    renderFreezeAura(
+        ctx,
+        enemy
+    );
+
+    // ★召喚マーク
+    if (enemy.isSummoned) {
+        ctx.save();
+
+        ctx.strokeStyle = "rgba(166, 166, 166, 0.9)";
+        ctx.lineWidth = 1.5;
+
+        ctx.beginPath();
+        ctx.arc(
+            enemy.x,
+            enemy.y,
+            (enemy.type.size || 15) + 6,
+            0,
+            Math.PI * 2
+        );
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    // 英語問題の場合はメインの単語表示（日本語表記）を隠す
+    if (!isEnglish(enemy.text)) {
+        ctx.font = "17px 'Inter', 'Noto Sans JP', sans-serif";
+        ctx.fillStyle = "black";
+        ctx.fillText(word, enemy.x, enemy.y - radius - 15);
+    }
 
     ctx.font = "bold 17px monospace";
     //入力文字の色
@@ -1484,9 +1515,6 @@ export function renderChainUI(gameState){
 
 const tierCount = 3;
 
-// 前回tier記録用
-let prevTierIndex = -1;
-
 /* =====================
 初期生成
 ===================== */
@@ -1718,11 +1746,15 @@ export function renderScore(ctx, gameState) {
     ctx.restore();
 }
 
+let prevRemainingSpawn = null;
+let spawnAnimState = null;
+
 // ===============================
 // 終了条件UI（左上・複数対応）
 // ===============================
 export function renderEndCondition(ctx, gameState, stage, now, startTime) {
 
+    let spawnDots = null;
     let spawnText = "";
     
     const stats = gameState.enemyStats;
@@ -1734,17 +1766,39 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     
     if (!startTime) return;
 
-    // 出現敵数
+    // 出現敵数（ドット表示）
     if (stage.spawn?.limit != null) {
-        const remainEnemies = stats.remainingSpawn;
-        const totalEnemies = stats.totalSpawn;
-        const currentEnemies = totalEnemies - remainEnemies
+        const remaining = stats.remainingSpawn;
+        const total = stats.totalSpawn;
 
-        spawnText = `${currentEnemies}/${totalEnemies}`;
+        // 減少アニメ検知
+        if (prevRemainingSpawn !== null && remaining < prevRemainingSpawn) {
+            spawnAnimState = {
+                type: "decay",
+                time: now
+            };
+        }
+
+        const prevBig = Math.floor((prevRemainingSpawn ?? remaining) / 10);
+        const nowBig = Math.floor(remaining / 10);
+
+        if (prevBig > nowBig) {
+            spawnAnimState = {
+                type: "collapse10",
+                time: now
+            };
+        }
+
+        prevRemainingSpawn = remaining;
+
+        spawnDots = {
+            remaining,
+            total
+        };
 
     } else {
-        // 無限ステージ
-        spawnText = `♾️`;
+        spawnDots = null;
+        spawnText = "♾️";
     }
     
     // 残り敵数
@@ -1765,24 +1819,37 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
         lines.push({ label2: "Eliminate" });
     }
     
-    // クリア条件
-    const clearLines = buildClearText(clear);
-
-    // fallback（何もないステージ対策）
-    if (clearLines.length === 0) {
-        clearLines.push("生き残れ");
+    // クリア条件（進捗表示）
+    if (clear.killCount != null) {
+        const current = stats.objectiveDefeated ?? 0; 
+        lines2.push({label: "KILL", value: `${current}/${clear.killCount}`});
     }
 
-    // lines2に変換
-    clearLines.forEach(text => {
-        lines2.push({ label2: text });
-    });
+    if (clear.timerMs != null) {
+        const now = getNow();
+        const elapsedSec = ((now - stats.startTime) / 1000).toFixed(1);
 
-    // 表示なし
-    //if (lines.length === 0) return;
-    //if (lines2.length === 0) return;
+        const currentSec = Math.floor(elapsedSec);
+        const targetSec = Math.floor(clear.timerMs / 1000);
 
+        let remainSec = targetSec - currentSec;
 
+        // 0でストップ（マイナスは失敗扱い）
+        const isFailed = remainSec <= 0;
+        remainSec = Math.max(0, remainSec);
+
+        lines2.push({
+            label: "TIME",
+            value: `${remainSec}/${targetSec}s`,
+            color: isFailed ? "#ff6b6b" : undefined
+        });
+    }
+
+    if (clear.survive != null) {
+        lines2.push({
+            label2: `生存`
+        });
+    }
 
     // =========================
     // 描画
@@ -1810,9 +1877,13 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
 
     y += 16;
 
-    ctx.font = "bold 24px monospace";
-    ctx.fillStyle = "#9a9a9a";
-    ctx.fillText(spawnText, x, y);
+    if (spawnDots) {
+        drawSpawnDots(ctx, x, y, spawnDots.remaining, spawnAnimState);
+    } else {
+        ctx.font = "bold 24px monospace";
+        ctx.fillStyle = "#9a9a9a";
+        ctx.fillText(spawnText, x, y);
+    }
 
     y += 48;
     
@@ -1842,9 +1913,9 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
             }
             // 値（大）
             if (item.value) {
-            ctx.font = "bold 24px monospace";
-            ctx.fillStyle = "#9a9a9a";
-            ctx.fillText(item.value, x + 70, baseY);
+                ctx.font = "bold 24px monospace";
+                ctx.fillStyle = "#9a9a9a";
+                ctx.fillText(item.value, x + 70, baseY);
             }
 
         });
@@ -1877,9 +1948,9 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
             }
             // 値（大）
             if (item.value) {
-            ctx.font = "bold 24px monospace";
-            ctx.fillStyle = "#9a9a9a";
-            ctx.fillText(item.value, x + 70, baseY);
+                ctx.font = "bold 24px monospace";
+                ctx.fillStyle = item.color ?? "#9a9a9a";
+                ctx.fillText(item.value, x + 70, baseY);
             }
 
         });
@@ -1887,6 +1958,79 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     
      ctx.restore();
 }
+
+// 敵の数をドットで表現
+function drawSpawnDots(ctx, x, y, remaining, anim) {
+
+    if (remaining === 0) {
+        ctx.font = "bold 16px monospace";
+        ctx.fillStyle = "#9a9a9a";
+        ctx.fillText("0", x, y);
+        return;
+    }
+
+    const bigSize = 24;
+    const bigCount = Math.floor(remaining / 10);
+    const smallCount = remaining % 10;
+
+    let cursorX = x;
+
+    // ======================
+    // ⬤（10）
+    // ======================
+    if (bigCount > 0) {
+
+        ctx.save();
+        ctx.translate(cursorX, y);
+
+        ctx.font = `${bigSize}px monospace`;
+        ctx.fillStyle = "#9a9a9a";
+        ctx.textBaseline = "top";
+
+        ctx.fillText("⬤", 0, 0);
+
+        ctx.restore();
+
+        if (remaining >= 20) {
+            ctx.font = "bold 14px monospace";
+            ctx.fillStyle = "#2c2c2c";
+            ctx.fillText(`×${bigCount}`, cursorX + 18, y + 14);
+        }
+
+        cursorX += 30;
+    }
+
+    // ======================
+    // •（1）
+    // ======================
+    drawSmallDots(ctx, cursorX + 10, y, smallCount, anim);
+
+    ctx.globalAlpha = 1;
+}
+
+function drawSmallDots(ctx, x, y, count, anim) {
+    ctx.font = `17px monospace`;
+    ctx.fillStyle = "#9a9a9a";
+
+    for (let i = 0; i < count; i++) {
+        const col = i % 5;
+        const row = Math.floor(i / 5);
+
+        let dx = x + col * 14;
+        let dy = y + row * 16;
+
+        // 減少アニメ（最後の1個）
+        if (anim?.type === "decay" && i === count - 1) {
+            const t = Math.min(1, (performance.now() - anim.time) / 150);
+            dx += t * 12;
+            ctx.globalAlpha = 1 - t;
+        }
+
+        ctx.fillText("•", dx, dy);
+        ctx.globalAlpha = 1;
+    }
+}
+
 
 // ===============================
 // Active Skill UI
@@ -2287,7 +2431,7 @@ export function renderSystemMessage(
     const rect = chainUI.getBoundingClientRect();
     const canvasRect = canvas.getBoundingClientRect();
 
-    const size = 40;
+    const size = 34;
 
     const skillX =
         rect.right - canvasRect.left + 22;
@@ -2307,12 +2451,12 @@ export function renderSystemMessage(
     ctx.textBaseline = "middle";
 
     // 小さめ
-    ctx.font = "bold 11px sans-serif";
+    ctx.font = "bold 9px sans-serif";
 
     const metrics = ctx.measureText(text);
 
-    const w = metrics.width + 10;
-    const h = 18;
+    const w = metrics.width + 8;
+    const h = 16;
 
     // 背景
     ctx.fillStyle = "rgba(0,0,0,0.45)";

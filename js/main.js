@@ -35,6 +35,7 @@ import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
+import { loadAssets } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
 import "../dev/devTools.js";
 
@@ -43,6 +44,9 @@ import "../dev/devTools.js";
 // ================================
 // 🔹DOM参照（グローバル）
 // ================================
+let bootScreen = null;
+let loadingScreen = null;
+
 let menuDiv, startMenuDiv, questMenuDiv, freeStartMenuDiv;
 let settingsDiv, gameDiv, resultDiv, recordsDiv;
 let questMapScreen, questSaveMenuDiv, skillTreeDiv;
@@ -83,6 +87,9 @@ let unlock, autoLock, pause, activeSkill, saveKeybindBtn;
 
 
 function cacheDOM() {
+  bootScreen = document.getElementById("bootScreen");
+  loadingScreen = document.getElementById("loadingScreen");
+
   menuDiv = document.getElementById("menu");
   startMenuDiv = document.getElementById("startMenu");
   questMenuDiv = document.getElementById("questMenu");
@@ -166,18 +173,7 @@ function cacheDOM() {
 // =====================================================
 // 起動時にウォームアップ処理
 // =====================================================
-window.addEventListener("load", async () => {
-  await warmup();   // ← ここで全部やる
-  hideLoading();
-});
 
-// ★ ウォームアップ本体==========
-export async function warmup() {
-  // フォント・DOMウォームアップ
-  setLoadingText("描画準備中...");
-  document.body.offsetHeight; // 強制レイアウト
-  setLoadingText("準備完了！");
-}
 
 // ローディング表示テキスト変更========
 function setLoadingText(text) {
@@ -186,33 +182,28 @@ function setLoadingText(text) {
 }
 
 // ローディング非表示================
+
+function showLoadingScreen() {
+  hideAllScreens();
+  if (bootScreen) bootScreen.style.display = "none";
+  if (loadingScreen) loadingScreen.style.display = "flex";
+}
+
 function hideLoading() {
-  const el = document.getElementById("loadingScreen");
-  if (el) el.style.display = "none";
+  if (loadingScreen) loadingScreen.style.display = "none";
 }
 
-// =====================================================
-// ★ Audioを最初のユーザー操作で解放する
-// =====================================================
-let audioUnlocked = false;
-
-// ★あらゆる入力で発火
-["click", "keydown", "touchstart", "mousemove", "scroll"].forEach(e => {
-  document.addEventListener(e, unlockAudio, { once: true });
-});
-
-function unlockAudio() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
-
-  console.log("🔊 Audio unlocked");
-
-  initAudio().then(() => {
-    // デコードも済ませる
-    playBGM("bgm_normal1", 0);
-    stopBGM();
-  });
+function showBootScreen() {
+  hideAllScreens();
+  if (bootScreen) {
+    bootScreen.style.display = "flex"; // 画面を表示するために必要
+    bootScreen.style.cursor = "pointer";
+    // インラインスタイルを削除し、CSSでスタイリングするためのクラスを付与
+    bootScreen.innerHTML = '<div class="boot-message">Click to Start</div>';
+  }
+  if (loadingScreen) loadingScreen.style.display = "none";
 }
+
 // ページ読み込み時に HUD を更新
 updateHud();
 
@@ -220,10 +211,30 @@ updateHud();
 // DOM 取得・初期化
 // =====================================================
 document.addEventListener("DOMContentLoaded", () => {
-  
+  cacheDOM();
+  showBootScreen();
+
+  if (bootScreen) {
+    bootScreen.addEventListener("click", async () => {
+
+      showLoadingScreen();
+
+      await loadAssets((loaded, total) => {
+        const percent = Math.floor((loaded / total) * 100);
+        setLoadingText(`Loading... ${percent}%`);
+      });
+
+      // 100%の状態を少し見せてから遷移
+      setLoadingText("Loading... 100%");
+      await new Promise(r => setTimeout(r, 500));
+
+      hideLoading();
+      showMainMenu();
+    });
+  }
+
   document.getElementById("versionLabel").textContent = `v${APP_VERSION}`;
 
-  cacheDOM();
   initDifficultyButtons()
   initKeybinds();
   // ゲーム画面描画準備
@@ -242,8 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initHudControls(); 
 
   loadSettings();
-  // 初期表示はメインメニュー
-  showMainMenu();
 
   // =====================================================
   // プレイヤーネーム処理

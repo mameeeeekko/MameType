@@ -77,6 +77,32 @@ button {
   align-items: center;
 }
 
+/* Boot Screen 全体を覆う設定 */
+#bootScreen {
+    position: fixed; /* 画面に固定 */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #333; /* 例: 暗めの背景色 */
+    z-index: 1000; /* 他の要素より前面に表示 */
+
+    /* Flexbox を使って子要素を中央に配置 */
+    display: flex;
+    justify-content: center; /* 水平方向の中央揃え */
+    align-items: center;   /* 垂直方向の中央揃え */
+    /* cursor: pointer; は main.js で設定済みですが、ここでも設定可能です */
+}
+
+/* 「Click to Start」メッセージのスタイル */
+.boot-message {
+    font-size: 2rem;       /* フォントサイズ */
+    font-weight: bold;     /* 太字 */
+    color: white;          /* 文字色 */
+    text-align: center;    /* 念のため中央揃え */
+}
+
+
 /* =====================================================
    カウントダウン表示（中央固定・枠なし）
    ===================================================== */
