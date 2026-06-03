@@ -7,11 +7,48 @@ let audioCtx = null;
 let masterGain = null;
 let bgmGain = null;
 let seGain = null;
+let typeGain = null;
+let missGain = null;
 
 let buffers = {};
 let bgmSource = null;
 
 let initialized = false;
+
+const volumes = {
+    bgm: 0.5,
+    se: 0.5,
+    type: 0.5,
+    miss: 0.5
+};
+
+export function setBgmVolume(v) {
+    volumes.bgm = v;
+    if (bgmGain && audioCtx) {
+        bgmGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    }
+}
+
+export function setSeVolume(v) {
+    volumes.se = v;
+    if (seGain && audioCtx) {
+        seGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    }
+}
+
+export function setTypeVolume(v) {
+    volumes.type = v;
+    if (typeGain && audioCtx) {
+        typeGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    }
+}
+
+export function setMissVolume(v) {
+    volumes.miss = v;
+    if (missGain && audioCtx) {
+        missGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    }
+}
 
 let masterVolume = 1;
 
@@ -36,15 +73,21 @@ function getAudioContext() {
         masterGain = audioCtx.createGain();
         bgmGain = audioCtx.createGain();
         seGain = audioCtx.createGain();
+        typeGain = audioCtx.createGain();
+        missGain = audioCtx.createGain();
 
         masterGain.connect(audioCtx.destination);
 
         bgmGain.connect(masterGain);
         seGain.connect(masterGain);
+        typeGain.connect(masterGain);
+        missGain.connect(masterGain);
 
         masterGain.gain.value = masterVolume;
-        bgmGain.gain.value = 0.8;
-        seGain.gain.value = 0.7;
+        bgmGain.gain.value = volumes.bgm;
+        seGain.gain.value = volumes.se;
+        typeGain.gain.value = volumes.type;
+        missGain.gain.value = volumes.miss;
     }
 
     return audioCtx;
@@ -86,7 +129,7 @@ export async function initAudio() {
 // ===========================================
 // 効果音
 // ===========================================
-function playTone(freq, duration, type="sine", volume=0.4){
+function playTone(freq, duration, type="sine", volume=0.4, target=null){
     // ガード
     if(!isFinite(freq)) return;
     if(!isFinite(duration)) return;
@@ -113,7 +156,7 @@ function playTone(freq, duration, type="sine", volume=0.4){
     gain.gain.setValueAtTime(volume, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
-    osc.connect(gain).connect(seGain);
+    osc.connect(gain).connect(target || seGain);
 
     osc.start();
     osc.stop(ctx.currentTime + duration);
@@ -124,7 +167,7 @@ function playTone(freq, duration, type="sine", volume=0.4){
     };
 }
 
-function playNoise(duration = 0.1, volume = 0.3) {
+function playNoise(duration = 0.1, volume = 0.3, target = null) {
     const ctx = getAudioContext();
 
     if (ctx.state !== "running") {
@@ -152,7 +195,7 @@ function playNoise(duration = 0.1, volume = 0.3) {
     filter.type = "highpass";
     filter.frequency.setValueAtTime(5000, now);
 
-    noise.connect(filter).connect(gain).connect(seGain);
+    noise.connect(filter).connect(gain).connect(target || seGain);
 
     noise.start();
     noise.stop(ctx.currentTime+ duration);
@@ -190,11 +233,13 @@ export function playSE(
 export function playTypeSound() {
     const freq = 680 + Math.random() * 40; // 微揺れ
 
-    playTone(freq, 0.06, "triangle", 0.4);
+    getAudioContext();
+    playTone(freq, 0.06, "triangle", 0.4, typeGain);
 }
 
 export function playMissSound() {
-    playNoise(0.08, 0.25);
+    getAudioContext();
+    playNoise(0.08, 0.25, missGain);
 }
 
 export function playEnemyKillSound(type=1){

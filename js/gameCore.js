@@ -15,7 +15,7 @@ import {
   setLongTextMode, setUIMode,
   initTimeBar, setTimeLeft, setSolvedCount
 } from './renderer.js';
-import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume } from "./effectManager.js";
+import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume } from "./effectManager.js";
 import { GameModes} from "./gameModes.js";
 import { updatePlayerStats, getPlayerStats} from "./playerStats.js";
 import { updateHud , initAchievementsUI} from "./hud.js";
@@ -39,6 +39,12 @@ export let soundSettings = {
         flash: true,
         soundeffect: true
       };
+export let soundVolumes = {
+  bgm: 0.5,
+  type: 0.5,
+  miss: 0.5,
+  se: 0.5
+};
 
 requestAnimationFrame(speedTick);
 
@@ -240,6 +246,17 @@ export function setSoundEnabled(val) {
 
 export function getSoundSettings() { return { ...soundSettings }; }
 export function setSoundSetting(key, val) { if (key in soundSettings) soundSettings[key] = !!val; }
+export function getSoundVolumes() { return { ...soundVolumes }; }
+export function setSoundVolume(key, val) {
+  const v = Number(val);
+  if (key in soundVolumes) {
+    soundVolumes[key] = v;
+    if (key === 'bgm') setBgmVolume(v);
+    if (key === 'se') setSeVolume(v);
+    if (key === 'type') setTypeVolume(v);
+    if (key === 'miss') setMissVolume(v);
+  }
+}
 export function toggleSoundGlobal() {
   soundEnabled = !soundEnabled;
   setMasterVolume(soundEnabled ? 1 : 0);

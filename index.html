@@ -149,25 +149,37 @@
   <fieldset>
     <legend>サウンド設定</legend>
 
-    <label>
-      <input type="checkbox" id="bgmToggle">
-      BGM
-    </label>
+    <div class="sound-setting-row">
+      <label>
+        <input type="checkbox" id="bgmToggle">
+        <span class="setting-name">BGM</span>
+      </label>
+      <input type="range" id="bgmVolSlider" min="0" max="1" step="0.01" value="0.5">
+    </div>
 
-    <label>
-      <input type="checkbox" id="typeSoundToggle">
-      タイプ音
-    </label>
+    <div class="sound-setting-row">
+      <label>
+        <input type="checkbox" id="typeSoundToggle">
+        <span class="setting-name">タイプ音</span>
+      </label>
+      <input type="range" id="typeVolSlider" min="0" max="1" step="0.01" value="0.5">
+    </div>
 
-    <label>
-      <input type="checkbox" id="missSoundToggle">
-      ミス音
-    </label>
+    <div class="sound-setting-row">
+      <label>
+        <input type="checkbox" id="missSoundToggle">
+        <span class="setting-name">ミス音</span>
+      </label>
+      <input type="range" id="missVolSlider" min="0" max="1" step="0.01" value="0.5">
+    </div>
 
-    <label>
-      <input type="checkbox" id="SEToggle">
-      SE
-    </label>
+    <div class="sound-setting-row">
+      <label>
+        <input type="checkbox" id="SEToggle">
+        <span class="setting-name">SE</span>
+      </label>
+      <input type="range" id="seVolSlider" min="0" max="1" step="0.01" value="0.5">
+    </div>
   </fieldset>
 
   <!-- フラッシュ設定 -->

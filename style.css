@@ -1416,6 +1416,24 @@ button {
   cursor: pointer;
 }
 
+/* サウンド設定行のレイアウト */
+.sound-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.sound-setting-row label {
+  flex: 0 0 110px; /* トグルと名前の幅を固定して揃える */
+  margin: 0 !important;
+}
+
+.sound-setting-row input[type="range"] {
+  flex: 1; /* 残りの幅をスライダーが占有 */
+  cursor: pointer;
+}
+
 /* 任天堂風チェック */
 #settings input[type="checkbox"] {
   width: 18px;

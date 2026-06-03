@@ -71,6 +71,7 @@ let settingsBtn, settingsBackBtn;
 
 let bgmToggle, typeSoundToggle, missSoundToggle;
 let flashToggle, SEToggle, soundToggle, soundIcon;
+let bgmVolSlider, typeVolSlider, missVolSlider, seVolSlider;
 
 let mapBackBtn;
 
@@ -148,6 +149,10 @@ function cacheDOM() {
   SEToggle = document.getElementById("SEToggle");
   soundToggle = document.getElementById("soundToggle");
   soundIcon = document.getElementById("soundIcon");
+  bgmVolSlider = document.getElementById("bgmVolSlider");
+  typeVolSlider = document.getElementById("typeVolSlider");
+  missVolSlider = document.getElementById("missVolSlider");
+  seVolSlider = document.getElementById("seVolSlider");
 
   mapBackBtn = document.getElementById("mapBackBtn");
 
@@ -605,6 +610,18 @@ function initSettingsUI() {
   ].forEach(([el, key]) => {
     el?.addEventListener("change", e => {
       Game.setSoundSetting(key, e.target.checked);
+      saveSettings();
+    });
+  });
+
+  [
+    [bgmVolSlider, 'bgm'],
+    [typeVolSlider, 'type'],
+    [missVolSlider, 'miss'],
+    [seVolSlider, 'se']
+  ].forEach(([el, key]) => {
+    el?.addEventListener("input", e => {
+      Game.setSoundVolume(key, e.target.value);
       saveSettings();
     });
   });
@@ -1255,6 +1272,13 @@ function applySoundSettingsToUI() {
   if (missSoundToggle) missSoundToggle.checked = current.miss;
   if (flashToggle) flashToggle.checked = current.flash;
   if (SEToggle) SEToggle.checked = current.soundeffect;
+
+  const vols = Game.getSoundVolumes();
+  if (bgmVolSlider) bgmVolSlider.value = vols.bgm;
+  if (typeVolSlider) typeVolSlider.value = vols.type;
+  if (missVolSlider) missVolSlider.value = vols.miss;
+  if (seVolSlider) seVolSlider.value = vols.se;
+
   if (soundToggle && soundIcon) {
     soundToggle.checked = Game.getSoundEnabled();
     soundIcon.src = Game.getSoundEnabled() ? "../assets/pic/sound1.png" : "../assets/pic/soundmute.png";
@@ -1264,7 +1288,8 @@ function applySoundSettingsToUI() {
 function saveSettings() {
   localStorage.setItem("typing_game_settings", JSON.stringify({
     soundEnabled: Game.getSoundEnabled(),
-    soundSettings: Game.getSoundSettings()
+    soundSettings: Game.getSoundSettings(),
+    soundVolumes: Game.getSoundVolumes()
   }));
 }
 
@@ -1277,6 +1302,11 @@ function loadSettings() {
     if (settings.soundSettings) {
       Object.entries(settings.soundSettings).forEach(([key, value]) => {
         Game.setSoundSetting(key, value);
+      });
+    }
+    if (settings.soundVolumes) {
+      Object.entries(settings.soundVolumes).forEach(([key, value]) => {
+        Game.setSoundVolume(key, value);
       });
     }
     applySoundSettingsToUI();
