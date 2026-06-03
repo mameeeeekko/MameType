@@ -215,6 +215,14 @@ export function playDamageSound(){
 export function playErrorSound(){
     playSE("error1",0.6, 1, 0, 1);
 }
+
+export function playPhaseWarningSound() {
+    // 警告音：不穏な矩形波の2連音
+    playTone(400, 0.15, "square", 0.3);
+    setTimeout(() => {
+        playTone(400, 0.15, "square", 0.3);
+    }, 200);
+}
 // ===========================================
 // BGM
 // ===========================================

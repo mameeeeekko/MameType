@@ -76,6 +76,7 @@ export class Enemy {
         this.y = y;
         this.speed = speed;
         this.type = type;
+        this.radius = type.size || 15;
         this.hitCount = type.hitCount || 1; // 残り問題数
         this.rotation = Math.random() * Math.PI * 2; // 初期角度
         this.rotationSpeed = type.rotationSpeed || 0; // 回転速度
@@ -447,6 +448,9 @@ export class BulletEnemy extends Enemy{
         this.x += this.vx * scale;
         this.y += this.vy * scale;
 
+        // 進行方向（プレイヤー側）を向くように回転を更新
+        this.rotation = Math.atan2(this.vy, this.vx);
+
         return !this.isDead;
     }
 }
@@ -783,7 +787,7 @@ maxLen          : 最大文字数
 
 【見た目】
 color           : 本体色
-shape           : "circle" "square" "pinwheel"
+shape           : "circle" "square" "pinwheel" "arrow"
 pattern         : null "stripe" "ring"
 rotationSpeed   : 回転速度
 
@@ -941,9 +945,9 @@ export const EnemyTypes = {
                     homing:0.03,
                     damage:5,
                     size:10,
-                    color:"#ef4444",
-                    shape:"circle",
-                    pattern:"ring",
+                    color:"#ed6f6f",
+                    shape:"arrow",
+                    pattern: null,
                     rotationSpeed:1
                 }
             }

@@ -8,6 +8,7 @@ import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, } from "./questP
 import { ACTIVE_SKILLS } from "./questSkills.js";
 import { getItemDescription } from "./enemy.js";
 import { renderEnemyBehaviorEffect,renderFreezeAura } from "./effectManager.js";
+import { images } from "./assetsLoader.js";
 
 // テキストが英数字・記号のみ（英語問題）か判定
 const isEnglish = (str) => /^[a-zA-Z0-9\s.,!?-]+$/.test(str);
@@ -47,6 +48,43 @@ function adjustColor(hex, amount) {
     b = Math.max(0, Math.min(255, b));
 
     return `rgb(${r}, ${g}, ${b})`;
+}
+
+const bgCache = new Map();
+
+/**
+ * クエストモードの背景画像を描画する
+ */
+export function renderQuestBackground(ctx, node) {
+    if (!node?.bgImage) return;
+
+    // 1. まず assetsLoader でロード済みの画像から探す
+    let img = images[node.bgImage];
+
+    // 2. なければ動的にロード（フォールバック）
+    if (!img) {
+        if (!bgCache.has(node.bgImage)) {
+            img = new Image();
+            img.src = node.bgImage;
+            bgCache.set(node.bgImage, img);
+        } else {
+            img = bgCache.get(node.bgImage);
+        }
+    }
+
+    if (img.complete && img.naturalWidth !== 0) {
+        const cw = ctx.canvas.clientWidth;
+        const ch = ctx.canvas.clientHeight;
+        ctx.save();
+        // タイピングの邪魔にならないよう、背景を薄く（透過）描画
+        ctx.globalAlpha = 0.25; 
+        
+        const scale = Math.max(cw / img.width, ch / img.height);
+        const sw = img.width * scale;
+        const sh = img.height * scale;
+        ctx.drawImage(img, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+        ctx.restore();
+    }
 }
 
 export function renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies = []) {
@@ -138,9 +176,6 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
 
     const remainX = enemy.x;
     const remainY = enemy.y - radius + 5;
-
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.fillRect(remainX - remainWidth / 2 - 4, remainY - 14, remainWidth + 8, 18);
 
     ctx.fillStyle = remainColor;
     ctx.fillText(remainPart, remainX, remainY);
@@ -494,6 +529,23 @@ function drawShape(ctx, x, y, type, color) {
                 size * 2,
                 size * 2
             );
+            break;
+
+        case "arrow":
+            ctx.beginPath();
+            // 頂点（右）
+            ctx.moveTo(x + size, y);
+            // 後端（左上と左下）を狭くして細長くする
+            ctx.lineTo(x - size, y - size * 0.35);
+            ctx.lineTo(x - size, y + size * 0.35);
+            ctx.closePath();
+            
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.strokeStyle = "rgba(255,255,255,0.2)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
             break;
 
         case "pinwheel":
@@ -1468,6 +1520,10 @@ export function renderChainUI(gameState){
 
     if(!bar || !label || !value) return;
 
+    label.style.color = "#333";
+    value.style.color = "#333";
+    if(mul) mul.style.color = "#333";
+
     const ratio = stats.chainBar / stats.chainBarMax;
 
     bar.style.width = (ratio * 100) + "%";
@@ -1702,7 +1758,7 @@ export function renderScore(ctx, gameState) {
     // =========================
     ctx.font = "bold 12px monospace";
     // 本体
-    ctx.fillStyle = "#9a9a9a";
+    ctx.fillStyle = "#333";
     ctx.fillText("SCORE", x, y);
 
     // =========================
@@ -1713,7 +1769,7 @@ export function renderScore(ctx, gameState) {
     ctx.font = "bold 30px monospace";
 
     // 本体
-    ctx.fillStyle = "#9a9a9a";
+    ctx.fillStyle = "#333";
     ctx.fillText(stats.gScore, x, valueY);
 
 
@@ -1723,10 +1779,10 @@ export function renderScore(ctx, gameState) {
     const infoY = valueY + 40;
 
     ctx.font = "bold 12px monospace";
-    ctx.fillStyle = "#9a9a9a";
+    ctx.fillStyle = "#333";
     ctx.fillText("KILL", x, infoY);
     ctx.font = "bold 20px monospace";
-    ctx.fillStyle = "#9a9a9a";
+    ctx.fillStyle = "#333";
     ctx.fillText(`${stats.defeatedCount}`, x, infoY + 16);
 
     // 経過時間
@@ -1736,10 +1792,10 @@ export function renderScore(ctx, gameState) {
     const infoY2 = infoY + 42;
 
     ctx.font = "bold 12px monospace";
-    ctx.fillStyle = "#9a9a9a";
+    ctx.fillStyle = "#333";
     ctx.fillText("TIME", x, infoY2);
     ctx.font = "bold 20px monospace";
-    ctx.fillStyle = "#9a9a9a";
+    ctx.fillStyle = "#333";
     ctx.fillText(`${elapsedSec}s`, x, infoY2 + 16);
 
 
@@ -1758,8 +1814,8 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     let spawnText = "";
     
     const stats = gameState.enemyStats;
-    const end = stage.endConditions;
-    const clear = stage.clearConditions;
+    const end = stage.phaseConditions || stage.endConditions || {};
+    const clear = stage.clearConditions || gameState.stage?.clearConditions || {};
     
     const lines = [];
     const lines2 = [];
@@ -1803,13 +1859,13 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     
     // 残り敵数
     if (end.killCount != null) {
-        const remain = Math.max(0, end.killCount - stats.defeatedCount);
+        const remain = Math.max(0, end.killCount - stats.phaseObjectiveDefeated);
         lines.push({ label: "ENEMY", value: remain });
     }
 
     // 残り時間
     if (end.timerMs != null) {
-        const remainMs = Math.max(0, end.timerMs - (now - startTime));
+        const remainMs = Math.max(0, end.timerMs - (now - stats.phaseStartTime));
         const sec = (remainMs / 1000).toFixed(1);
         lines.push({ label: "TIME", value: `${sec}s` });
     }
@@ -1822,7 +1878,12 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     // クリア条件（進捗表示）
     if (clear.killCount != null) {
         const current = stats.objectiveDefeated ?? 0; 
-        lines2.push({label: "KILL", value: `${current}/${clear.killCount}`});
+        const isMet = current >= clear.killCount;
+        lines2.push({
+            label: "KILL", 
+            value: `${current}/${clear.killCount}`,
+            color: isMet ? "#4caf50" : undefined
+        });
     }
 
     if (clear.timerMs != null) {
@@ -1862,17 +1923,23 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     const x = 12;
     let y = 12;
     
-    // 🔥 難易度（追加）
+    // 🔥 難易度 & フェーズ表示
     ctx.font = "bold 10px monospace";
-    ctx.fillStyle = "#9a9a9a";
+    ctx.fillStyle = "#333";
     const diff = getDifficulty(stats.difficulty);
-    ctx.fillText(`DIFFICULTY: ${diff.name}`, x, y);
+    
+    let headerText = `DIFFICULTY: ${diff.name}`;
+    if (Array.isArray(gameState.stage.phases)) {
+        const phaseName = stage.name || `PHASE ${stats.currentPhaseIndex + 1}`;
+        headerText += ` | ${phaseName}`;
+    }
+    ctx.fillText(headerText, x, y);
 
     y += 25
 
     // SPAWN（単独描画）
     ctx.font = "bold 12px monospace";
-    ctx.fillStyle = "#9a9a9a";
+    ctx.fillStyle = "#333";
     ctx.fillText("SPAWN", x, y);
 
     y += 16;
@@ -1881,7 +1948,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
         drawSpawnDots(ctx, x, y, spawnDots.remaining, spawnAnimState);
     } else {
         ctx.font = "bold 24px monospace";
-        ctx.fillStyle = "#9a9a9a";
+        ctx.fillStyle = "#333";
         ctx.fillText(spawnText, x, y);
     }
 
@@ -1890,7 +1957,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     // タイトル
     if (lines.length > 0) {
         ctx.font = "bold 12px monospace";
-        ctx.fillStyle = "#9a9a9a";
+        ctx.fillStyle = "#333";
         ctx.fillText("OBJECTIVE", x, y);
 
         y += 16;
@@ -1902,19 +1969,19 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
             // ラベル（小）
             if (item.label) {
                 ctx.font = "bold 16px monospace";
-                ctx.fillStyle = "#9a9a9a";
+                ctx.fillStyle = "#333";
                 ctx.fillText(item.label + ":", x, baseY+5);
             }
             // ラベル（中）
             if (item.label2) {
                 ctx.font = "16px monospace";
-                ctx.fillStyle = "#9a9a9a";
+                ctx.fillStyle = "#333";
                 ctx.fillText(item.label2, x, baseY);
             }
             // 値（大）
             if (item.value) {
                 ctx.font = "bold 24px monospace";
-                ctx.fillStyle = "#9a9a9a";
+                ctx.fillStyle = "#333";
                 ctx.fillText(item.value, x + 70, baseY);
             }
 
@@ -1926,7 +1993,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     // タイトル
     if (lines2.length > 0) {
         ctx.font = "bold 12px monospace";
-        ctx.fillStyle = "#9a9a9a";
+        ctx.fillStyle = "#333";
         ctx.fillText("CLEAR", x, y);
 
         y += 16;
@@ -1934,22 +2001,27 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
         lines2.forEach((item, i) => {
 
             const baseY = y + i * 26;
+            const itemColor = item.color ?? "#333";
+
             // ラベル（小）
             if (item.label) {
                 ctx.font = "bold 16px monospace";
-                ctx.fillStyle = "#9a9a9a";
+                ctx.fillStyle = "#333";
+                ctx.fillStyle = itemColor;
                 ctx.fillText(item.label + ":", x, baseY+5);
             }
             // ラベル（中）
             if (item.label2) {
                 ctx.font = "16px monospace";
-                ctx.fillStyle = "#9a9a9a";
+                ctx.fillStyle = "#333";
+                ctx.fillStyle = itemColor;
                 ctx.fillText(item.label2, x, baseY);
             }
             // 値（大）
             if (item.value) {
                 ctx.font = "bold 24px monospace";
-                ctx.fillStyle = item.color ?? "#9a9a9a";
+                ctx.fillStyle = item.color ?? "#333";
+                ctx.fillStyle = itemColor;
                 ctx.fillText(item.value, x + 70, baseY);
             }
 
@@ -1964,12 +2036,12 @@ function drawSpawnDots(ctx, x, y, remaining, anim) {
 
     if (remaining === 0) {
         ctx.font = "bold 16px monospace";
-        ctx.fillStyle = "#9a9a9a";
+        ctx.fillStyle = "#333";
         ctx.fillText("0", x, y);
         return;
     }
 
-    const bigSize = 24;
+    const bigSize = 22;
     const bigCount = Math.floor(remaining / 10);
     const smallCount = remaining % 10;
 
@@ -1984,7 +2056,7 @@ function drawSpawnDots(ctx, x, y, remaining, anim) {
         ctx.translate(cursorX, y);
 
         ctx.font = `${bigSize}px monospace`;
-        ctx.fillStyle = "#9a9a9a";
+        ctx.fillStyle = "#333";
         ctx.textBaseline = "top";
 
         ctx.fillText("⬤", 0, 0);
@@ -2009,15 +2081,15 @@ function drawSpawnDots(ctx, x, y, remaining, anim) {
 }
 
 function drawSmallDots(ctx, x, y, count, anim) {
-    ctx.font = `17px monospace`;
-    ctx.fillStyle = "#9a9a9a";
+    ctx.font = `14px monospace`;
+    ctx.fillStyle = "#333";
 
     for (let i = 0; i < count; i++) {
         const col = i % 5;
         const row = Math.floor(i / 5);
 
         let dx = x + col * 14;
-        let dy = y + row * 16;
+        let dy = y + row * 12;
 
         // 減少アニメ（最後の1個）
         if (anim?.type === "decay" && i === count - 1) {
@@ -2026,7 +2098,7 @@ function drawSmallDots(ctx, x, y, count, anim) {
             ctx.globalAlpha = 1 - t;
         }
 
-        ctx.fillText("•", dx, dy);
+        ctx.fillText("●", dx, dy);
         ctx.globalAlpha = 1;
     }
 }
@@ -2210,7 +2282,7 @@ function drawCooldownCircle(
     // 背景リング
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(172, 172, 172, 0.3)";
+    ctx.strokeStyle = "rgba(100, 100, 100, 0.45)";
     ctx.lineWidth = 3.5;
     ctx.stroke();
 
@@ -2232,9 +2304,9 @@ function drawCooldownCircle(
     if (fullyCharged) {
         ctx.strokeStyle = "rgba(86, 107, 143, 0.95)";
     } else if (ready) {
-        ctx.strokeStyle = "rgba(152, 174, 213, 0.69)";
+        ctx.strokeStyle = "rgba(60, 90, 140, 0.9)";
     } else {
-        ctx.strokeStyle = "rgba(152, 174, 213, 0.69)";
+        ctx.strokeStyle = "rgba(60, 90, 140, 0.9)";
     }
 
     // 外周リングの線の太さ
@@ -2365,7 +2437,7 @@ function drawStockSegments(
             ctx.shadowBlur = 10; // 少し強め
             ctx.shadowColor = "rgba(0,0,0,0.3)";
         } else {
-            ctx.strokeStyle = "rgba(120, 140, 160, 0.25)";
+            ctx.strokeStyle = "rgba(80, 100, 120, 0.5)";
             ctx.shadowBlur = 0;
         }
 
@@ -2481,6 +2553,54 @@ export function renderSystemMessage(
         x + 5,
         y
     );
+
+    ctx.restore();
+}
+
+/**
+ * フェーズ移行の警告を画面中央に大きく描画する
+ */
+export function renderPhaseWarning(ctx, stats, canvas) {
+    if (!stats.isTransitioning || !stats.transitionMsg) return;
+
+    const cw = canvas.clientWidth;
+    const ch = canvas.clientHeight;
+
+    ctx.save();
+    
+    // 背景の暗転（少しだけ）
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.fillRect(0, 0, cw, ch);
+
+    // 警告バーの背景
+    ctx.fillStyle = "rgba(40, 44, 52, 0.85)"; // シンプルなダークグレー
+    ctx.fillRect(0, ch / 2 - 60, cw, 120);
+
+    // 上下の装飾ライン
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, ch / 2 - 60); ctx.lineTo(cw, ch / 2 - 60);
+    ctx.moveTo(0, ch / 2 + 60); ctx.lineTo(cw, ch / 2 + 60);
+    ctx.stroke();
+
+    // テキスト描画
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    
+    // 点滅（パルスエフェクト）
+    const alpha = 0.7 + Math.sin(performance.now() * 0.01) * 0.3;
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    
+    ctx.font = "bold 32px sans-serif";
+    ctx.fillText(stats.transitionMsg, cw / 2, ch / 2 - 10);
+
+    // 次の目標を表示
+    if (stats.nextPhaseGoal) {
+        ctx.font = "16px monospace";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.fillText(stats.nextPhaseGoal, cw / 2, ch / 2 + 30);
+    }
 
     ctx.restore();
 }

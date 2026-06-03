@@ -6,7 +6,7 @@ import { gameState } from "../js/gameCore.js";
 import { forceSetLevel } from "../js/questPlayerStats.js";
 import { updateHud } from "../js/hud.js";
 import { STAGES, ENEMY_MODE_CONFIG } from "../js/enemyModeConfig.js";
-import { renderQuestMapUI } from "../js/questMapUI.js";
+import { renderQuestMapUI, openQuestMenuModal } from "../js/questMapUI.js";
 
 
 // =====================================================
@@ -205,9 +205,24 @@ export const dev = {
     toggleUnlockAllSkills(btn) {
         devOverride.unlockAllSkills = !devOverride.unlockAllSkills;
 
-        btn.textContent = devOverride.unlockAllSkills
-            ? "SKILL ALL: ON"
-            : "SKILL ALL: OFF";
+        if (btn && btn instanceof HTMLElement) {
+            btn.textContent = devOverride.unlockAllSkills
+                ? "SKILL ALL: ON"
+                : "SKILL ALL: OFF";
+        }
+
+        // モーダル（スキル・スキルツリー）が開いていれば再描画して即時反映
+        const modal = document.getElementById("questModal");
+        if (modal) {
+            const box = modal.querySelector(".quest-modal-box");
+            if (box.classList.contains("quest-modal-skill")) {
+                openQuestMenuModal("skill");
+            } else if (box.classList.contains("quest-modal-skillTree")) {
+                openQuestMenuModal("skillTree");
+            }
+        }
+
+        log("Skill All toggle:", devOverride.unlockAllSkills);
     },
 
     logState() {

@@ -98,6 +98,7 @@ export const ENEMY_MODE_CONFIG = {
 
 export function buildEndText(end) {
   const lines = [];
+  if (!end) return lines;
 
   if (end.timerMs != null) {
     lines.push(`${end.timerMs / 1000}秒で終了`);
@@ -116,6 +117,7 @@ export function buildEndText(end) {
 
 export function buildClearText(clear) {
   const lines = [];
+  if (!clear) return lines;
 
   if (clear.killCount != null) {
     lines.push(`敵を${clear.killCount}体倒せ`);
@@ -178,6 +180,10 @@ export function buildStarText(star = {}) {
 // DEVツールのためのステージ取得用関数
 export function getStageConfig(stageId) {
   let stage = STAGES[stageId];
+  if (!stage) return null;
+
+  // フェーズがある場合は現在のフェーズ（または初期フェーズ）をベースにする仕組みが必要ならここで調整
+  // 今回はCore側でフェーズを切り替えるため、オブジェクト全体を返す
 
   // 全体override
   if (devOverride.stage.global) {
@@ -326,6 +332,65 @@ export const STAGES = {
     }
   },
 
+  // フェーズテスト用
+  PHASE_TEST: {
+    phases: [
+      {
+        name: "",
+        spawn: {
+          interval: 1500,
+          limit: 5,
+        },
+        enemyTable: [{ type: "SLIME", weight: 100 }],
+        phaseConditions: { allSpawnedDefeated: true }
+      },
+      {
+        name: "phase2",
+        bgm: "bgm_enemy2", 
+        spawn: {
+          interval: 800,
+          limit: 8,
+        },
+        enemyTable: [{ type: "GOBLIN", weight: 100 }],
+        itemSpawn: {
+          interval: 5000,
+          chance: 0.9,
+          limit: null,
+          maxAlive: 1,
+        },
+        itemTable: [
+          { type: "HEAL_SMALL", weight: 10 },
+          { type: "FREEZE", weight: 40 },
+          { type: "BOMB", weight: 10 },
+          { type: "BOMB_ALL", weight: 10 },
+          { type: "HEAL_FULL", weight: 10 },
+          { type: "SKILL_CD", weight: 20 },
+        ],
+        phaseConditions: { timerMs: 30000 }
+      },
+      {
+        name: "phase3",
+        bgm: "bgm_enemy3", 
+        spawn: {
+          interval: 2000,
+          limit: 1,
+        },
+        enemyTable: [{ type: "BOSS", weight: 100 }],
+        phaseConditions: { allSpawnedDefeated: true }
+      }
+    ],
+    endConditions: {
+      hpZero: true,
+    },
+    clearConditions: {
+      killCount: 9, 
+    },
+    star: {
+      type: "typingSpeed",
+      thresholds: [100, 200, 300, 400, 500]
+    }
+  },
+
   STAGE1: {
     spawn: {
       interval: 2000,
@@ -367,7 +432,7 @@ export const STAGES = {
   STAGE2: {
     spawn: {
       interval: 1500,
-      limit: 15,
+      limit: 27,
       maxAlive: null,
     },
     enemyTable: [
@@ -465,4 +530,3 @@ export const STAGES = {
   },
   
 };
-

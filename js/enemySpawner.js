@@ -134,13 +134,13 @@ export function spawnEnemy(
     player,
     enemies = [],
     canvas,
-    stage,
+    config, // stage または phase
     diff
 ){
 
     const type =
         pickWeightedType(
-            stage?.enemyTable,
+            config?.enemyTable,
             EnemyTypes
         );
 
@@ -178,11 +178,8 @@ export function spawnEnemy(
             diff.damageMultiplier;
 
     } else {
-
         enemy.damage = type.damage;
     }
-
-    enemy.radius = type.size;
 
     enemy.baseRomaji =
         buildBaseRomaji(enemy.text);
@@ -194,12 +191,9 @@ export function spawnEnemy(
 // アイテム出現関連関数
 // =====================================================
 
-export function spawnItemEnemy(state,stage){
+export function spawnItemEnemy(state, config, itemTableOverride){
 
     const {player, canvas} = state;
-
-    const config = stage?.itemSpawn;
-
     if (!config) return;
 
     // chance
@@ -219,11 +213,10 @@ export function spawnItemEnemy(state,stage){
     ) {
         return;
     }
-
     // type抽選
     const type =
         pickWeightedType(
-            stage.itemTable,
+            itemTableOverride || ItemTypes,
             ItemTypes
         );
 

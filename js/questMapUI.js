@@ -343,8 +343,11 @@ export function renderQuestMapUI(){
                 const stage = STAGES[node.stage];
                 if (!stage) return;
 
+                // フェーズがある場合は最初のフェーズの条件、なければトップレベルの条件を参照
+                const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
+                
                 const clearText = buildClearText(stage.clearConditions);
-                const endText   = buildEndText(stage.endConditions);
+                const endText   = buildEndText(endConditions);
                 const starText  = buildStarText(stage.star);
 
                 const rewardText = [];
@@ -623,7 +626,10 @@ export function openQuestMenuModal(type = "difficulty") {
                 stats.skillTreeProgress = { unlockedNodes: ["START"] };
             }
 
-            const unlockedNodes = stats.skillTreeProgress.unlockedNodes;
+            // DEV対応：全スキル表示モード
+            const unlockedNodes = devOverride.unlockAllSkills
+                ? Object.keys(SKILL_TREE)
+                : (stats.skillTreeProgress?.unlockedNodes || ["START"]);
             
             function getEquipped() {
                 const s = getPlayerStats();
@@ -1207,11 +1213,17 @@ function showSkillTooltip(skill, event) {
 // =========================
 function showStageIntro(stage, node, onStart, onCancel) {
 
+  if (!stage) {
+      console.error("Stage config not found for node:", node.id);
+      return;
+  }
+
   const overlay = document.createElement("div");
   overlay.className = "stage-intro";
 
+  const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
   const clearText = buildClearText(stage.clearConditions);
-  const endText   = buildEndText(stage.endConditions);
+  const endText   = buildEndText(endConditions);
   const starText  = buildStarText(stage.star);
   
     // =========================
