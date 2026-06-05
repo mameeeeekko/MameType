@@ -18,7 +18,7 @@ import {
 import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume } from "./effectManager.js";
 import { GameModes} from "./gameModes.js";
 import { updatePlayerStats, getPlayerStats} from "./playerStats.js";
-import { updateHud , initAchievementsUI} from "./hud.js";
+import { updateHud} from "./hud.js";
 import { resetCandidates, candidates, fullResetInput } from './inputCore.js';
 import { showResult } from "./resultView.js";
 import { getCurrentDifficulty, getDifficultyById } from "./difficulties.js";
@@ -457,16 +457,12 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
 export async function doCountdown(config) {
 
   setPaused(false); // ★ポーズ解除
-  
-   const modal = document.getElementById("gameModal");
-  if(modal) modal.style.display="flex";
 
-  const countdownDiv = document.getElementById("countdown");
-  const gameDiv = document.getElementById("game");
+  const countdownDiv = document.getElementById("countdown"); // 数字表示用
+  const gameDiv = document.getElementById("game");           // ゲームコンテナ
+  const modal = document.getElementById("gameModal");        // 枠
+
   if (!countdownDiv || !gameDiv) return startGame(config);
-
-  gameDiv.style.display = "block";
-  setTimeout(() => document.body.focus(), 0);
 
   const ids = [
     "word","jp-wrap","roma-wrap","jp-long-wrap","scroll-wrap",
@@ -474,14 +470,25 @@ export async function doCountdown(config) {
     "speed-label","timeLeft","solvedCount","backBtn","gameBackBtn"
   ];
 
+  // 1. まずゲーム画面全体を表示する
+  gameDiv.style.display = "block";
+  
+  // 2. モーダル枠は表示するが、背景や枠線を消すために「表示のみ」行い、
+  //    中身のコンテンツ（ids）を非表示にする。
+  if (modal) {
+    modal.style.display = "flex";
+    modal.classList.add("is-counting"); // 枠を消すためのクラスを付与
+  }
+
   const originalDisplay = {};
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) { originalDisplay[id] = el.style.display || ""; el.style.display = "none"; }
   });
 
+  // 3. カウントダウンの開始
   countdownDiv.style.display = "block";
-  let count = 3;
+  let count = 2; // 2から開始
   countdownDiv.textContent = count;
 
   return new Promise(resolve => {
@@ -491,6 +498,8 @@ export async function doCountdown(config) {
       else {
         clearInterval(timer);
         countdownDiv.style.display = "none";
+        if (modal) modal.classList.remove("is-counting"); // クラスを削除
+
         // 元の要素を復帰
         ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = originalDisplay[id]; });
         
@@ -553,13 +562,17 @@ export function checkGameEnd(){
       setSolvedCount(gameState.solvedCount, gameState.currentMode.id);
   }
 
+  // 合計に加算したので、重複防止のため現在の単語統計をクリア
+  // これにより、finishGame での二重加算を防ぎつつ、タイムアップ時に打ちかけの文字を finishGame が拾えるようにします。
+  gameState.correctCount = 0;
+  gameState.mistakeCount = 0;
+  gameState.inputedRomaji = "";
+  gameState.typed = "";
+
   markProgressDoneFromRight(gameState.currentIndex);
   gameState.currentIndex++;
 
   if(gameState.currentMode.shouldContinue(buildState())){
-
-    gameState.correctCount=0; gameState.mistakeCount=0;
-    
     if(gameState.currentIndex>=shuffledTargets.length){ 
         finishGame(); return; 
     }
@@ -582,11 +595,20 @@ async function finishGame(config = {}) {
     isFinishing = true;
     gameState.isEnding = true; //pauseを終了後イントロでださないため。
 
+    // タイムアタック等で、時間切れの瞬間に打ちかけていた文字を合計値に反映させる
+    // checkGameEnd で加算済みの場合は 0 になっているので二重加算されません
+    gameState.totalCorrect += gameState.correctCount;
+    gameState.totalMistake += gameState.mistakeCount;
+    gameState.totalChars += (gameState.inputedRomaji ? gameState.inputedRomaji.length : 0);
+
     stopTimeAttackTimer();
     stopTimeCircle(); 
     stopBGM();
 
     if (typeof gameState.solvedCount !== "number" || gameState.solvedCount < 0) gameState.solvedCount = 0;
+
+    // ゲーム終了時点の時間を固定（KPM計算の基準を確定させる）
+    gameState.totalTime = (getNow() - gameStartTime) / 1000;
 
     const totalElapsed = Number(gameState.totalTime) || 0;
     const totalInputs = gameState.totalCorrect + gameState.totalMistake;
@@ -861,17 +883,20 @@ export function backToMenu(){
 // 18. スピード(KPM)更新ループ
 // =====================================================
 function speedTick(now){
-  if(!isGameActive){ requestAnimationFrame(speedTick); return; }
+  // ゲーム中かつ終了演出（isEnding）開始前のみロジックを動かす
+  if(!isGameActive || gameState.isEnding){ 
+    requestAnimationFrame(speedTick); 
+    return; 
+  }
+
   // ポーズ中はKPM更新停止
   if (isPaused) {
     requestAnimationFrame(speedTick);
     return;
   }
+
   if (gameState.currentMode.id === GameModes.TIME_ATTACK.id) {
     updateTimeAttack();
-  }
-  if (gameState.currentMode.id !== GameModes.TIME_ATTACK.id) {
-    updateCircle();
   }
   if(now-lastSpeedUpdate>200){ 
     lastSpeedUpdate=now; 

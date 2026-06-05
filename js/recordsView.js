@@ -522,13 +522,13 @@ function renderTimelineGraph(container, timeline, mode) {
   const w = canvas.width - padding.left - padding.right;
   const h = canvas.height - padding.top - padding.bottom;
 
-  // ───── 任天堂風カード背景 ─────
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowColor = "rgba(0,0,0,0.08)";
-  ctx.shadowBlur = 20;
-  ctx.shadowOffsetY = 6;
+  // ───── サイバーダーク背景 ─────
+  ctx.fillStyle = "#010409";
+  ctx.strokeStyle = "rgba(164, 164, 164, 0.2)";
+  ctx.lineWidth = 1;
   roundRect(ctx, 10, 10, canvas.width - 20, canvas.height - 20, 16);
   ctx.fill();
+  ctx.stroke();
   ctx.shadowBlur = 0;
 
   // ───── Y範囲 ─────
@@ -554,7 +554,7 @@ function renderTimelineGraph(container, timeline, mode) {
   };
 
   // ───── グリッド線─────
-  ctx.strokeStyle = "#eef2f7";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
   ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const y = padding.top + (h / 4) * i;
@@ -565,7 +565,7 @@ function renderTimelineGraph(container, timeline, mode) {
   }
 
   // ───── 折れ線（丸い線） ─────
-  ctx.strokeStyle = "#444";
+  ctx.strokeStyle = "#a4a4a4";
   ctx.lineWidth = 4;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
@@ -587,7 +587,7 @@ function renderTimelineGraph(container, timeline, mode) {
     const x = xAtIndex(i);
     const y = yAt(p.value);
 
-    ctx.fillStyle = "#444";
+    ctx.fillStyle = "#a4a4a4";
     ctx.beginPath();
     ctx.arc(x, y, 6, 0, Math.PI * 2);
     ctx.fill();
@@ -623,14 +623,12 @@ points.forEach((p, i) => {
   const x = xAtIndex(i);
   const y = yAt(p.value);
 
-  // かなり弱い影
-  ctx.shadowColor = "rgba(0,0,0,0.15)";
+  ctx.shadowColor = "rgba(0,0,0,0.8)";
   ctx.shadowBlur = 2;
   ctx.shadowOffsetY = 1;
 
-  ctx.fillStyle = "#111827";
+  ctx.fillStyle = "#c9d1d9";
   ctx.fillText(p.value.toFixed(0), x, y - 10);
-
   // 影リセット
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
@@ -638,7 +636,7 @@ points.forEach((p, i) => {
 
   // ───── X軸ラベル ─────
   ctx.font = "11px sans-serif";
-  ctx.fillStyle = "#374151";
+  ctx.fillStyle = "#8b949e";
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
 
@@ -665,11 +663,11 @@ points.forEach((p, i) => {
   ctx.translate(26, padding.top + h / 2);
   ctx.rotate(-Math.PI / 2);
 
-  ctx.fillStyle = "#444";
+  ctx.fillStyle = "#161b22";
   roundRect(ctx, -30, -12, 60, 24, 12);
   ctx.fill();
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = "#a4a4a4";
   ctx.font = "bold 11px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";

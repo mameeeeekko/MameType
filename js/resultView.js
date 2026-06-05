@@ -118,15 +118,19 @@ export function showResult({
 
   // ★ここを遅延させる
   requestAnimationFrame(() => {
+    const onlineRankingEl = document.getElementById("onlineRanking");
+
+    if (!navigator.onLine) {
+      if (onlineRankingEl) {
+        onlineRankingEl.innerHTML = `<div class="ranking-disabled">ネットワークに接続されていません</div>`;
+      }
+      return;
+    }
+
     if (!isFreeMode) {
-      renderOnlineRanking(
-        eScore,
-        solvedCount,
-        mode,
-      );
+      renderOnlineRanking(eScore, solvedCount, mode);
     } else {
-      const el = document.getElementById("onlineRanking");
-      if (el) el.innerHTML = "";
+      if (onlineRankingEl) onlineRankingEl.innerHTML = "";
     }
   });
 }

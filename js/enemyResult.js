@@ -143,12 +143,17 @@ export function showEnemyResult({
     if(resultDiv) resultDiv.style.display = "flex";
 
     if (!stats.isInvalidRun && !gameState.isFreeMode) {
-        renderOnlineRanking(
-            stats.gScore ?? 0,
-            stats.defeatedCount ?? 0,
-            `enemy_mode`
-        );
-    }    
+        if (!navigator.onLine) {
+            const el = document.getElementById("onlineRanking");
+            if (el) el.innerHTML = `<div class="ranking-disabled">ネットワークに接続されていません</div>`;
+        } else {
+            renderOnlineRanking(
+                stats.gScore ?? 0,
+                stats.defeatedCount ?? 0,
+                `enemy_mode`
+            );
+        }
+    }
 }
 
 function playCalcAnimation() {
