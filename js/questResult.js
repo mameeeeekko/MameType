@@ -304,13 +304,15 @@ export function showQuestResult(stats) {
     // 組み立て
     // =========================
     content.innerHTML = `
-        ${title}
-        ${starHTML}
-        ${slotHTML} 
-        ${scoreBlock}
-        ${calcHTML}
-        ${expBlock}
-        ${statsBlock}
+        <div class="quest-result-inner">
+            ${title}
+            ${starHTML}
+            ${slotHTML} 
+            ${scoreBlock}
+            ${calcHTML}
+            ${expBlock}
+            ${statsBlock}
+        </div>
     `;
 
     // =========================

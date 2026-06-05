@@ -9,9 +9,6 @@ import { getPlayerStats } from "./questPlayerStats.js";
 
 export function handleSkillModeResult(nodeId) {
 
-    console.log("nodeId:", nodeId);
-console.log("node:", SKILL_TREE[nodeId]);
-
     if (!nodeId) {
         console.error("nodeId missing in skill result");
         return;
@@ -185,10 +182,16 @@ console.log("node:", SKILL_TREE[nodeId]);
         // =========================
         result.innerHTML = "";
 
-        result.appendChild(titleDiv);
-        result.appendChild(goalDiv);
-        result.appendChild(skillDiv);
-        result.appendChild(statsDiv);
+        const innerWrap = document.createElement("div");
+        innerWrap.className = "skill-result-container";
+
+        innerWrap.appendChild(titleDiv);
+        innerWrap.appendChild(goalDiv);
+        innerWrap.appendChild(skillDiv);
+        innerWrap.appendChild(statsDiv);
+
+        result.appendChild(innerWrap);
+
         const btnWrap = document.createElement("div");
         btnWrap.className = "result-buttons";
 
@@ -249,7 +252,8 @@ console.log("node:", SKILL_TREE[nodeId]);
             if (isClear) return;
             document.removeEventListener("keydown", result._keyHandler);
             result.style.display = "none";
-            startSkillMode(challenge, gameState.currentSkillNodeId);
+            // グローバル状態がリセットされる前にキャプチャした nodeId を使用する
+            startSkillMode(challenge, nodeId);
         };
 
         backBtn.onclick = () => {
@@ -307,4 +311,3 @@ function formatTimeMMSS(seconds) {
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
 }
-

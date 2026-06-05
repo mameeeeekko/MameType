@@ -22,15 +22,20 @@ export async function loadAssets(onProgress) {
   await initAudio();
 
   const assets = [
-    // 画像
+    // スキル画像
     { type: "img", name: "chain_up", src: "./assets/pic/chain_up.jpeg" },
     { type: "img", name: "chain_bonus", src: "./assets/pic/chain_bonus.jpeg" },
     { type: "img", name: "skill_1", src: "./assets/pic/skill_1.jpeg" },
 
-    // クエスト背景
-    { type: "img", name: "./assets/pic/battle_field_blue.png", src: "./assets/pic/battle_field_blue.png" },
-    { type: "img", name: "./assets/pic/battle_field_green.png", src: "./assets/pic/battle_field_green.png" },
-    { type: "img", name: "./assets/pic/battle_field_gray.png", src: "./assets/pic/battle_field_gray.png" },
+    // クエストバトル背景
+    { type: "img", name: "battle_blue", src: "./assets/pic/battle_field_blue.png" },
+    { type: "img", name: "battle_green", src: "./assets/pic/battle_field_green.png" },
+    { type: "img", name: "battle_gray", src: "./assets/pic/battle_field_gray.png" },
+
+    // クエストマップ背景
+    { type: "img", name: "map_blue", src: "./assets/pic/map_field_blue.png" },
+    { type: "img", name: "map_purple", src: "./assets/pic/map_field_purple.png" },
+    { type: "img", name: "map_red", src: "./assets/pic/map_field_red.png" },
 
     // 音源
     { type: "sound", name: "bgm1", src: "./assets/sound/bgm1.mp3" },

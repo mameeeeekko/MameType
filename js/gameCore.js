@@ -681,15 +681,20 @@ async function finishGame(config = {}) {
       // =========================
       // オンラインランキング送信
       // =========================
-      const submitResult = await submitScore({
-          player_name: localStorage.getItem("playerName") || "NO NAME",
-          score: eScore,
-          kpm: totalKpm,
-          solvedCount: gameState.solvedCount,
-          accuracy,
-          mode: gameState.currentMode.id,
-          ranking_version: RANKING_VERSION
-      });
+      let submitResult = null;
+      try {
+          submitResult = await submitScore({
+              player_name: localStorage.getItem("playerName") || "NO NAME",
+              score: eScore,
+              kpm: totalKpm,
+              solvedCount: gameState.solvedCount,
+              accuracy,
+              mode: gameState.currentMode.id,
+              ranking_version: RANKING_VERSION
+          });
+      } catch (err) {
+          console.error("Online ranking submit failed:", err);
+      }
 
       console.log("submit result:", submitResult);
   }

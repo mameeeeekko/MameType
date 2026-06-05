@@ -3,8 +3,10 @@ import { autoSaveQuest } from "./storage.js";
 import { QUEST_MAP } from "./questMap.js";
 
 const DEFAULT_PROGRESS = {
-    unlocked: ["Q1"],
-    cleared: []
+    unlocked: ["W1_Q1"],
+    cleared: [],
+    unlockedWorlds: ["WORLD1"],
+    selectedWorldId: "WORLD1"
 };
 
 let progress = load();
@@ -23,8 +25,10 @@ export function reloadQuestProgress() {
   progress = {
     ...DEFAULT_PROGRESS,
     ...data,
-    unlocked: data.unlocked ?? ["Q1"],
-    cleared: data.cleared ?? []
+    unlocked: data.unlocked ?? ["W1_Q1"],
+    cleared: data.cleared ?? [],
+    unlockedWorlds: data.unlockedWorlds ?? ["WORLD1"],
+    selectedWorldId: data.selectedWorldId ?? "WORLD1"
   };// ←これが重要
   return progress;
 }
@@ -39,9 +43,13 @@ export function isUnlocked(id){
     return progress.unlocked.includes(id);
 }
 
-export function markCleared(id, nextList){
+export function markCleared(id, nextList, nextWorldId = null){
     if(!progress.cleared.includes(id)){
         progress.cleared.push(id);
+    }
+
+    if (nextWorldId && !progress.unlockedWorlds.includes(nextWorldId)) {
+        progress.unlockedWorlds.push(nextWorldId);
     }
 
     nextList.forEach(n=>{
@@ -106,12 +114,14 @@ export function resetQuestAll() {
     localStorage.setItem("questPlayerStats", JSON.stringify(freshStats));
 
     localStorage.setItem("questProgress", JSON.stringify({
-        unlocked: ["Q1"],
-        cleared: []
+        unlocked: ["W1_Q1"],
+        cleared: [],
+        unlockedWorlds: ["WORLD1"],
+        selectedWorldId: "WORLD1"
     }));
 
     localStorage.setItem("quest_auto_save", JSON.stringify({
-        progress: { unlocked: ["Q1"], cleared: [] },
+        progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1" },
         playerStats: freshStats
     }));
 
@@ -120,9 +130,24 @@ export function resetQuestAll() {
 
 export function resetQuestProgressMemory() {
     progress = {
-        unlocked: ["Q1"],
-        cleared: []
+        unlocked: ["W1_Q1"],
+        cleared: [],
+        unlockedWorlds: ["WORLD1"],
+        selectedWorldId: "WORLD1"
     };
+}
+
+export function getUnlockedWorlds() {
+    return progress.unlockedWorlds;
+}
+
+export function getSelectedWorldId() {
+    return progress.selectedWorldId || "WORLD1";
+}
+
+export function setSelectedWorldId(id) {
+    progress.selectedWorldId = id;
+    save();
 }
 
 // =====================================================
@@ -164,26 +189,28 @@ export function getTotalStars() {
 
 // ノードに入れるか判定（UIと同じロジック）
 function canEnterNode(node, world) {
+    // どのノードからも指されていないノードは、そのワールドの開始点とみなす
+    const allNexts = new Set(world.nodes.flatMap(n => n.next || []));
+    if (!allNexts.has(node.id)) return true;
 
-    if (node.id === "Q1") return true;
-
-    const prevNodes = world.nodes.filter(n =>
-        n.next.includes(node.id)
-    );
+    // 自分に繋がっている前ノードを探す
+    const prevNodes = world.nodes.filter(n => (n.next || []).includes(node.id));
 
     return prevNodes.some(n => isCleared(n.id));
 }
 
 // ★チャレンジ可能な最大スター数
 export function getAvailableMaxStars() {
-
-    const world = QUEST_MAP.WORLD1;
-
     let count = 0;
 
-    world.nodes.forEach(node => {
-        if (canEnterNode(node, world)) {
-            count++;
+    // 全ワールドをチェックし、アンロック済みのワールドのみノードを集計する
+    Object.entries(QUEST_MAP).forEach(([worldId, world]) => {
+        if (progress.unlockedWorlds.includes(worldId)) {
+            world.nodes.forEach(node => {
+                if (canEnterNode(node, world)) {
+                    count++;
+                }
+            });
         }
     });
 

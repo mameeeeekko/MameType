@@ -5,17 +5,19 @@ style.css
    ===================================================== */
 body {
   text-align: center;
-  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
-  background: #f4f6f8;   /* ややグレー寄りの淡色背景 */
-  color: #2b2f33;        /* 柔らかい濃グレー文字 */
+  font-family: 'Inter', 'JetBrains Mono', 'Menlo', monospace;
+  background: #0d1117;   /* ダークな電脳空間 */
+  color: #c9d1d9;        /* 読みやすい薄いグレー */
+  margin: 0;
 }
 
 h1 {
   font-size: 3rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  letter-spacing: 0.02em;
-  color: #2b2f33;
+  letter-spacing: 0.1em;
+  color: #58a6ff;        /* サイバーブルー */
+  text-transform: uppercase;
 }
 
 /* 汎用ボタン（デフォルト）
@@ -180,21 +182,21 @@ button {
 /* =====================================================
    メニュー画面（既存構造のまま任天堂風カード化）
    ===================================================== */
-#menu {
-  width: 320px;
-  max-width: 90vw;
+#menu, #startMenu, #freeStartMenu, #questMenu {
+  width: 90%;
+  max-width: 400px;
   margin: 40px auto;
-  padding: 26px 22px;
+  padding: 30px;
 
-  background: linear-gradient(180deg, #ffffff, #f3f4f6);
-  border-radius: 26px;
-  border: 2px solid #e5e7eb;
-
+  background: rgba(22, 27, 34, 0.95);
+  border: 1px solid #30363d;
+  border-radius: 12px;
   box-shadow:
-    0 14px 0 #d1d5db,
-    0 22px 34px rgba(0,0,0,0.18);
+    0 0 20px rgba(0, 0, 0, 0.5),
+    0 0 1px rgba(88, 166, 255, 0.3);
 
   text-align: center;
+  backdrop-filter: blur(10px);
 }
 
 #menuHeader {
@@ -203,11 +205,11 @@ button {
 
 /* タイトル */
 #menu h1 {
-  font-size: 2.2rem;
-  margin-bottom: 18px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  color: #1f2937;
+  font-size: 2rem;
+  margin-bottom: 30px;
+  font-weight: 600;
+  color: #58a6ff;
+  text-shadow: 0 0 15px rgba(88, 166, 255, 0.4);
 }
 
 #menu h1 {
@@ -237,107 +239,57 @@ button {
   margin-top: 50px;
 }
 /* メニュー内ボタン共通 */
-#menu button {
+#menu button, #startMenu button, #freeStartMenu button, #questMenu button {
   display: block;
   width: 100%;
-  margin: 8px 0;
-  padding: 12px 0;
+  margin: 10px 0;
+  padding: 12px 16px;
 
-  border-radius: 999px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #374151;
-  font-weight: 700;
-  font-size: 16px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #21262d;
+  color: #c9d1d9;
+  font-weight: 500;
+  font-size: 15px;
   cursor: pointer;
-  transition: 0.15s;
-
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+  position: relative;
 }
 
-#menu button:hover {
-  background: #f3f4f6;
-  transform: translateY(-1px);
+#menu button:hover, #startMenu button:hover, #freeStartMenu button:hover, #questMenu button:hover {
+  background: #30363d;
+  border-color: #8b949e;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+#menu button:active, #startMenu button:active, #freeStartMenu button:active, #questMenu button:active {
+  transform: scale(0.98);
+  background: #161b22;
 }
 
 /* スタートだけ強調 */
-#menu button#startBtn {
-  background: #6366f1;
-  color: #fff;
-  border: none;
-  box-shadow: 0 6px 14px rgba(99,102,241,0.35);
+#menu button#startBtn, #startMenuBackBtn, #freeStartMenuBackBtn, #questStartMenuBackBtn {
+  background: #238636;  /* ChatGPT/GitHub風のポジティブグリーン */
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(35, 134, 54, 0.2);
 }
 
-#menu button#startBtn:hover {
-  box-shadow: 0 8px 18px rgba(99,102,241,0.45);
-}
-
-/* =====================================================
-   サブメニュー（start / freeStart 共通カード）
-   ===================================================== */
-#startMenu,
-#freeStartMenu,
-#questMenu {
-  width: 320px;
-  max-width: 90vw;
-  margin: 40px auto;
-  padding: 26px 22px;
-
-  background: linear-gradient(180deg, #ffffff, #f3f4f6);
-  border-radius: 26px;
-  border: 2px solid #e5e7eb;
-
-  box-shadow:
-    0 14px 0 #d1d5db,
-    0 22px 34px rgba(0,0,0,0.18);
-
-  text-align: center;
+#menu button#startBtn:hover, #startMenuBackBtn:hover, #freeStartMenuBackBtn:hover, #questStartMenuBackBtn:hover {
+  background: #2ea043;
+  box-shadow: 0 0 15px rgba(46, 160, 67, 0.4);
 }
 
 /* タイトル */
 #startMenu h2,
 #freeStartMenu h2,
 #questMenu h2 {
-  font-size: 1.8rem;
-  margin-bottom: 18px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  color: #1f2937;
-}
-
-/* タイトル→最初ボタンの間隔（例の確実版） */
-#startMenu h2 + button,
-#freeStartMenu h2 + button,
-#questMenu h2 + button {
-  margin-top: 50px;
-}
-
-/* ボタン共通 */
-#startMenu button,
-#freeStartMenu button,
-#questMenu button {
-  display: block;
-  width: 100%;
-  margin: 8px 0;
-  padding: 12px 0;
-
-  border-radius: 999px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #374151;
-  font-weight: 700;
-  font-size: 16px;
-  cursor: pointer;
-  transition: 0.15s;
-
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-}
-
-#startMenu button:hover,
-#freeStartMenu button:hover,
-#questMenu button:hover {
-  background: #f3f4f6;
-  transform: translateY(-1px);
+  font-size: 1.5rem;
+  margin-bottom: 24px;
+  font-weight: 600;
+  color: #8b949e;
+  letter-spacing: 0.05em;
 }
 
 /* モード切替ボタン（サブ色） */
@@ -493,6 +445,19 @@ button {
 }
 
 /* =====================================================
+   結果画面：全体の中央寄せと横幅制限
+   ===================================================== */
+.quest-result-inner,
+.enemy-result-container,
+.skill-result-container,
+.result-container-centered {
+  width: 100%;
+  max-width: 760px; /* 広がりすぎない適度な幅 */
+  margin: 0 auto;   /* 左右中央寄せ */
+  text-align: center;
+}
+
+/* =====================================================
    結果モーダルカード　デイリーモード結果
    ===================================================== */
 .result-card {
@@ -541,6 +506,8 @@ button {
   flex-direction: column;
   gap: 6px;
   font-size: 14px;
+  max-width: 400px; /* 統計行が離れすぎないようさらに制限 */
+  margin: 0 auto;
 }
 
 .result-stats .r-row {
@@ -805,14 +772,15 @@ button {
 #progress-container,
 #speed-container,
 #time-bar-container {
-  width: 80%;
+  width: 90%;
+  max-width: 600px;
   margin: 10px auto;
   overflow: hidden;
   border-radius: 6px;
   border: 1px solid #ccc;
   background: #eee;
 }
-#progress-container { height: 10px; }
+#progress-container { height: 12px; }
 #progress-container {
   position: relative;
   overflow: visible;  /* ←これ重要 */
@@ -988,17 +956,6 @@ button {
   font-size: 14px;
   font-weight: bold;
   line-height: 1.2;
-}
-/* =====================================================
-   ミスした時のフラッシュ
-   ===================================================== */
-
-/* ミスフラッシュ */
-.flash-miss { animation: flash-miss 0.15s; }
-
-@keyframes flash-miss {
-  from { background: rgba(255,100,100,0.1); }
-  to   { background: transparent; }
 }
 
 /* =====================================================
@@ -2331,7 +2288,8 @@ button {
 }
 
 .stats-window {
-  width: 420px;
+  width: 95%;
+  max-width: 420px;
   max-height: 80vh;
   overflow-y: auto;
   background: linear-gradient(#1f2937, #020617);
@@ -2526,8 +2484,8 @@ button {
 .quest-stats-hud {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1.2fr 1fr;
-  grid-template-rows: 1fr auto;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-rows: auto;
   width: min(1000px, 95vw);
   height: 90vh;
   /* スクロール */
@@ -3219,6 +3177,7 @@ button {
 
 .result-calc {
     margin-top: 12px;
+    margin-bottom: 20px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -3368,7 +3327,7 @@ button {
 
 #questSkillResult .quest-skill-card {
     color: #fff;
-    width: 45%;
+    width: 90%;
     max-width: none;
     background: transparent;
     border-radius: 0;
@@ -3388,6 +3347,8 @@ button {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     padding: 16px;
+    max-width: 600px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -3495,6 +3456,8 @@ button {
     grid-template-columns: repeat(5, 1fr);
     column-gap: 8px;
     row-gap: 30px;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 #questSkillResult .quest-skill-stat {
@@ -3694,7 +3657,7 @@ button {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #8e8e8e;
+  background: #9d9d9d;
   transition: 0.2s;
 }
 
@@ -3703,7 +3666,7 @@ button {
   position: absolute;
   transform: translate(-50%, -50%);
   font-size: 11px;
-  color: #484848;
+  color: #9a9a9a;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -3728,17 +3691,17 @@ button {
 
 /* ラベル */
 .map-label.cleared {
-    color: #888888;
+    color: #bababa;
     font-weight: bold;
 }
 
 /* ロック状態 */
 .map-node.locked{
-  background: #242424;
+  background: #454545;
 }
 
 .map-label.locked{
-  color: #2a2a2a;
+  color: #585858;
 }
 
 .hard-fog-node { opacity: 0.0; }
@@ -3748,8 +3711,9 @@ button {
 .map-node:hover{
   transform: scale(1.4);
 }
-
+/* マップ上の戻るボタン（非表示） */
 #mapBackBtn {
+  display: none;
   left: 50%;
   bottom: 30px;          /* 下からの距離（調整OK） */
   transform: translateX(-50%);
@@ -3872,7 +3836,7 @@ button {
     margin-left: 6px;
 
     font-size: 12px;
-    color: #5f5f5f;
+    color: #e0e0e0;
 
     opacity: 0.9;
 
@@ -3992,6 +3956,90 @@ button {
 
 .quest-modal-btn:active{
     transform:scale(0.95);
+}
+
+/* =====================================================
+   開始・終了ノードの装飾（細い外円）
+   ===================================================== */
+.map-node.start-node::before,
+.map-node.end-node::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px; /* ノード(14px)より一回り大きく */
+    height: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.538);
+    border-radius: 50%;
+    pointer-events: none;
+    box-sizing: border-box;
+    animation: nodePulse 3s infinite ease-in-out;
+}
+
+@keyframes nodePulse {
+    0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1.0); }
+    50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* =====================================================
+   ワールドセレクター（中央上部）
+   ===================================================== */
+.world-selector {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(15, 15, 25, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 4px 16px;
+    border-radius: 40px;
+    border: 1px solid rgba(88, 166, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(88, 166, 255, 0.1);
+    z-index: 100;
+    pointer-events: auto;
+}
+
+.world-nav-btn {
+    background: transparent;
+    border: none;
+    color: #aaafb5;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.world-nav-btn:hover:not(.disabled) {
+    color: #fff;
+    text-shadow: 0 0 12px #9bb1ca;
+    transform: scale(1.2);
+}
+
+.world-nav-btn.disabled {
+    color: #444;
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+.world-name-area {
+    font-size: 13px;
+    font-weight: 800;
+    color: #e6edf3;
+    letter-spacing: 0.15em;
+    text-align: center;
+    min-width: 120px;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
 }
 
 /* =====================================================
@@ -4722,9 +4770,50 @@ button {
    モバイル調整
    ===================================================== */
 @media (max-width: 600px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  #word, #word-long {
+    font-size: 1.6rem;
+  }
+
+  #jp {
+    font-size: 1.2rem;
+  }
+
+  #roma {
+    font-size: 1.2rem;
+  }
+
+  #scoreValue {
+    font-size: 2.2rem;
+  }
+
   #records table {
     min-width: 100%;
-    font-size: 14px;
+    font-size: 12px;
+  }
+
+  /* クエストHUDをスマホでは縦並びに */
+  .quest-stats-hud {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .hud-center, .quest-center {
+    min-height: 200px;
+  }
+
+  .quest-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* モバイルでのスキルグリッド調整 */
+  .skill-grid {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 10px;
+    justify-content: center;
   }
 }
 

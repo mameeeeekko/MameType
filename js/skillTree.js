@@ -268,7 +268,7 @@ export const SKILL_TREE = {
         requirements: [
             {
                 type: "questClear",
-                value: "Q3"
+                value: "W1_Q3"
             },
             {
                 type: "playerLevel",
@@ -334,7 +334,7 @@ export const SKILL_TREE = {
         requirements: [
             {
                 type: "questClear",
-                value: "Q1"
+                value: "W1_Q1"
             }
         ]
     },

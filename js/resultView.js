@@ -63,9 +63,10 @@ export function showResult({
   const kpmText = totalInputs === 0 ? "―" : totalKpm;
   const solvedText = solvedCount ?? 0;
 
-  let html = `
-  ${isFreeMode ? `<div class="result-free-badge">FREE</div>` : ""}
-  <div class="result-title">${modeTitle}</div>
+  let html = `<div class="result-container-centered">`;
+  html += `
+    ${isFreeMode ? `<div class="result-free-badge">FREE</div>` : ""}
+    <div class="result-title">${modeTitle}</div>
   `;
 
   if (mode === "time_attack") {
@@ -99,6 +100,7 @@ export function showResult({
   ${isNewRecord ? `<div class="r-badge new">NEW RECORD</div>` : ""}
   ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
   `;
+  html += `</div>`; // .result-container-centered の閉じ
 
   resultStats.innerHTML = html;
 

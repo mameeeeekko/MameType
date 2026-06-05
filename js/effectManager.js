@@ -318,9 +318,32 @@ export function flashMiss(){
     const body = document.body;
     if(!body) return;
 
-    body.classList.remove("flash-miss");
-    void body.offsetWidth;
-    body.classList.add("flash-miss");
+    // 従来の flash-miss クラスは画面全体が急激に変化するため刺激が強い場合があります。
+    // 代わりに、画面の縁を薄く赤く光らせる「ビネット効果」を JS で制御してマイルドにします。
+    let overlay = document.getElementById("miss-flash-overlay");
+    if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "miss-flash-overlay";
+        // 中心は透明、外側に向かって非常に薄い赤 (15%不透明度) になるグラデーション
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10000;
+            background: radial-gradient(circle, rgba(255, 0, 0, 0) 60%, rgba(255, 0, 0, 0.3) 100%);
+            opacity: 0;
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    // アニメーションのリセット
+    overlay.style.transition = "none";
+    overlay.style.opacity = "1";
+    overlay.offsetHeight; // リフローを強制してアニメーションを最初から実行
+
+    // 0.5秒かけてゆっくり消えるように設定
+    overlay.style.transition = "opacity 0.5s ease-out";
+    overlay.style.opacity = "0";
 
 }
 
@@ -1220,7 +1243,11 @@ export function renderScorePopups(ctx) {
         ctx.font = "bold 20px monospace";
         ctx.textAlign = "center";
 
-        ctx.fillStyle = "#323232";
+        // 白系に変更し、視認性向上のために軽い影を追加
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+
+        ctx.fillStyle = "#f0f6fc";
         ctx.fillText("+" + p.score, p.x, p.y);
 
         // =====================
@@ -1228,7 +1255,7 @@ export function renderScorePopups(ctx) {
         // =====================
         if (p.multiplier > 1) {
             ctx.font = "bold 14px monospace";
-            ctx.fillStyle = "#959595";
+            ctx.fillStyle = "#c9d1d9";
             ctx.fillText(
                 `x${p.multiplier.toFixed(1)}`,
                 p.x,

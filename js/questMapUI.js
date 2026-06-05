@@ -1,12 +1,12 @@
 //questMapUI.js
 
 import { QUEST_MAP } from "./questMap.js";
-import { isCleared, getStar } from "./questProgress.js";
+import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId } from "./questProgress.js";
 import { startEnemyMode, endEnemyMode } from "./enemyCore.js";
 import { gameState } from "./gameCore.js";
 import * as Game from "./gameCore.js";
 import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
-import { backToQuestMenu, backToQuestMap, handleGlobalSoundToggle } from "./main.js";
+import { backToQuestMenu, backToQuestMap } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
 import { getSkillById, ACTIVE_SKILLS } from "./questSkills.js";
@@ -22,6 +22,7 @@ import {
 } from "./questPlayerStats.js";
 import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } from "./enemyModeConfig.js";
 import { devOverride } from "../dev/devOverride.js";
+import { images } from "./assetsLoader.js";
 
 
 export function renderQuestMapUI(){
@@ -31,7 +32,8 @@ export function renderQuestMapUI(){
 
     const container = document.getElementById("mapContainer");
     const nodeLayer = document.getElementById("mapNodes");
-    const world = QUEST_MAP.WORLD1;
+    const worldId = getSelectedWorldId();
+    const world = QUEST_MAP[worldId] || QUEST_MAP.WORLD1;
 
     const rect = container.getBoundingClientRect();
     // canvasサイズ同期（DPR対応）
@@ -45,8 +47,15 @@ export function renderQuestMapUI(){
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, rect.width, rect.height);
 
-    nodeLayer.innerHTML = "";
+    // 背景描画
+    if (world.bgImage && images[world.bgImage]) {
+        ctx.save();
+        ctx.globalAlpha = 0.3; // マップを見やすくするため薄く
+        ctx.drawImage(images[world.bgImage], 0, 0, rect.width, rect.height);
+        ctx.restore();
+    }
 
+    nodeLayer.innerHTML = "";
 
     // =========================
     // 距離を計算する関数
@@ -66,10 +75,19 @@ export function renderQuestMapUI(){
 
         // クリア0件でも落ちないように
         if (queue.length === 0) {
-            const start = world.nodes.find(n => n.id === "Q1");
-            if (start) {
+            // どのノードからも指されていないノード（開始点）を探す
+            const allNexts = new Set(world.nodes.flatMap(n => n.next));
+            const starts = world.nodes.filter(n => !allNexts.has(n.id));
+            
+            starts.forEach(start => {
                 depthMap.set(start.id, 0);
                 queue.push({ id: start.id, depth: 0 });
+            });
+
+            // それでもなければ最初の要素
+            if (queue.length === 0 && world.nodes.length > 0) {
+                 depthMap.set(world.nodes[0].id, 0);
+                 queue.push({ id: world.nodes[0].id, depth: 0 });
             }
         }
 
@@ -126,14 +144,12 @@ export function renderQuestMapUI(){
     // =========================
     function canEnterNode(node, world) {
 
-        // 最初のノードは常にOK
-        if (node.id === "Q1") return true;
+        // どのノードからも指されていないノードは、そのワールドの開始点とみなす
+        const allNexts = new Set(world.nodes.flatMap(n => n.next || []));
+        if (!allNexts.has(node.id)) return true;
 
-        // 自分に繋がっている前ノードを探す
-        const prevNodes = world.nodes.filter(n =>
-            n.next.includes(node.id)
-        );
-
+        // 自分に繋がっている前ノードがクリアされているか
+        const prevNodes = world.nodes.filter(n => (n.next || []).includes(node.id));
         // どれか1つでもクリアしていればOK
         return prevNodes.some(n => isCleared(n.id));
     }
@@ -187,18 +203,18 @@ export function renderQuestMapUI(){
             // 線見た目
             // =========================
             if (lineType === "cleared") {
-                ctx.strokeStyle = "#bfbfbf";
-                ctx.lineWidth = 4;
+                ctx.strokeStyle = "#e1e1e1";
+                ctx.lineWidth = 2;
 
             } else if (lineType === "unlocked") {
-                ctx.strokeStyle = "#8e8e8e";
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = "#a3a3a3";
+                ctx.lineWidth = 2;
 
             } else {
                 // locked線は管理者表示時のみ描画
                 if (!window.QUEST_MAP_ADMIN_SHOW_ALL) return;
 
-                ctx.strokeStyle = "#3a3a3a";
+                ctx.strokeStyle = "#696969";
                 ctx.lineWidth = 2;
             }
 
@@ -209,6 +225,23 @@ export function renderQuestMapUI(){
     // =========================
     // ノード（DOM）
     // =========================
+
+    // 開始ノード（どこからも指されていない）を判定するためのセット
+    const allNextsInWorld = new Set(world.nodes.flatMap(n => n.next || []));
+
+    // 1. outgoing connectionsがないノードをすべて特定
+    const deadEnds = world.nodes.filter(n => !n.next || n.next.length === 0);
+
+    // 2. nextWorldプロパティを持つノードをすべて特定
+    const worldTransitionEnds = world.nodes.filter(n => n.nextWorld);
+
+    // 3. 「真の」終了ノードを決定
+    let trueEndNodes = new Set();
+    if (worldTransitionEnds.length > 0) {
+        worldTransitionEnds.forEach(n => trueEndNodes.add(n.id));
+    } else {
+        deadEnds.forEach(n => trueEndNodes.add(n.id));
+    }
 
     world.nodes.forEach(node => {
 
@@ -231,7 +264,7 @@ export function renderQuestMapUI(){
         wrapper.appendChild(starEl);
 
         // ノード表示
-        const NODE_SIZE = 14;
+        const NODE_SIZE = 13;
 
         wrapper.style.left = (node.pos.x - NODE_SIZE / 2 + OFFSET_X) + "px";
         wrapper.style.top  = (node.pos.y - NODE_SIZE / 2) + "px";
@@ -258,13 +291,13 @@ export function renderQuestMapUI(){
             if (node.reward.type === "slot") {
                 rewardEl.textContent = "+";
             } else {
-                rewardEl.textContent = "◆";
+                rewardEl.textContent = "●";
             }
 
             // ★クリア済みで薄く
-            if (isCleared(node.id)) {
-                rewardEl.style.opacity = "0.4";
-            }
+            // if (isCleared(node.id)) {
+            //     rewardEl.style.opacity = "0.4";
+            // }
 
             label.appendChild(rewardEl);
         }
@@ -314,6 +347,13 @@ export function renderQuestMapUI(){
 
         const canEnter = canEnterNode(node, world);
         const cleared = isCleared(node.id);
+
+        // 開始・終了ノードのクラス付与
+        const isStartNode = !allNextsInWorld.has(node.id);
+        const isEndNode = trueEndNodes.has(node.id);
+
+        if (isStartNode) el.classList.add("start-node");
+        if (isEndNode) el.classList.add("end-node");
         
         //星表示
         if (cleared) {
@@ -414,6 +454,61 @@ export function renderQuestMapUI(){
         nodeLayer.appendChild(wrapper);
     });
     renderQuestSideMenu(container);
+    renderWorldSelector(container);
+}
+
+// ====================================
+// ワールド切り替え（中央上部）
+// ====================================
+function renderWorldSelector(container) {
+    const unlocked = getUnlockedWorlds();
+    const currentId = getSelectedWorldId();
+    const currentIndex = unlocked.indexOf(currentId);
+
+    let selector = document.getElementById("worldSelector");
+    if (selector) selector.remove();
+
+    selector = document.createElement("div");
+    selector.id = "worldSelector";
+    selector.className = "world-selector";
+
+    // 前へボタン
+    const prevBtn = document.createElement("button");
+    prevBtn.className = "world-nav-btn";
+    prevBtn.innerHTML = "◀";
+    if (currentIndex <= 0) {
+        prevBtn.classList.add("disabled");
+    } else {
+        prevBtn.onclick = () => {
+            setSelectedWorldId(unlocked[currentIndex - 1]);
+            renderQuestMapUI();
+        };
+    }
+
+    // ワールド名
+    const nameArea = document.createElement("div");
+    nameArea.className = "world-name-area";
+    const wData = QUEST_MAP[currentId];
+    nameArea.textContent = wData?.name || currentId;
+
+    // 次へボタン
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "world-nav-btn";
+    nextBtn.innerHTML = "▶";
+    if (currentIndex >= unlocked.length - 1) {
+        nextBtn.classList.add("disabled");
+    } else {
+        nextBtn.onclick = () => {
+            setSelectedWorldId(unlocked[currentIndex + 1]);
+            renderQuestMapUI();
+        };
+    }
+
+    selector.appendChild(prevBtn);
+    selector.appendChild(nameArea);
+    selector.appendChild(nextBtn);
+
+    container.appendChild(selector);
 }
 
 // ====================================
@@ -436,21 +531,6 @@ function renderQuestSideMenu(container){
         btn.textContent = label;
         btn.className = "quest-side-btn";
         btn.onclick = onClick;
-        return btn;
-    }
-
-    function createSoundBtn() {
-        const btn = document.createElement("button");
-        btn.className = "quest-side-btn sound-toggle-btn";
-        const enabled = Game.getSoundEnabled();
-        btn.innerHTML = `
-            <img src="${enabled ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png"}" class="global-sound-toggle-img">
-            <span class="global-sound-toggle-txt">${enabled ? "sound on" : "sound off"}</span>
-        `;
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            handleGlobalSoundToggle();
-        };
         return btn;
     }
 

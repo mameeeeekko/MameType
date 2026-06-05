@@ -1745,7 +1745,7 @@ export async function endEnemyMode() {
 
         //マップのノード解放
         if (!stats.failed && node) {
-            markCleared(node.id, node.next);
+            markCleared(node.id, node.next, node.nextWorld);
 
             // ★ステージ報酬（slot + stock）
             if (
