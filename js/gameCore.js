@@ -161,6 +161,7 @@ export function resetGameState() {
 
 export function resetAllModes() {
   gameState.enemyMode = false;
+  gameState.currentMode = null;
   gameState.currentQuestNode = null;
   gameState.currentChallenge = null;
 }
@@ -466,7 +467,7 @@ export async function doCountdown(config) {
 
   const ids = [
     "word","jp-wrap","roma-wrap","jp-long-wrap","scroll-wrap",
-    "modeLabel","freeModeBadge","progress-container","time-bar-container","speed-container",
+    "modeLabel","freeModeBadge","missModeBadge","progress-container","time-bar-container","speed-container",
     "speed-label","timeLeft","solvedCount","backBtn","gameBackBtn"
   ];
 
@@ -597,6 +598,13 @@ async function finishGame(config = {}) {
 
     // タイムアタック等で、時間切れの瞬間に打ちかけていた文字を合計値に反映させる
     // checkGameEnd で加算済みの場合は 0 になっているので二重加算されません
+    if (gameState.mistakeCount > 0) {
+        const currentTarget = shuffledTargets[gameState.currentIndex];
+        if (currentTarget) {
+            gameState.missedTargets.push({ ...currentTarget });
+        }
+    }
+
     gameState.totalCorrect += gameState.correctCount;
     gameState.totalMistake += gameState.mistakeCount;
     gameState.totalChars += (gameState.inputedRomaji ? gameState.inputedRomaji.length : 0);
@@ -796,14 +804,6 @@ async function finishGame(config = {}) {
     
     // 結果表示後にオフ。イントロ中にポーズを起動させないために使っている。
     gameState.isEnding = false;
-
-    const retryBtn = document.getElementById("retryMissedBtn");
-    if (retryBtn) {
-        retryBtn.style.display =
-            (gameState.currentMode.id === GameModes.LONG_TEXT.id || gameState.missedTargets.length === 0)
-                ? "none"
-                : "inline-block";
-    }
 
     isGameActive = false;
 

@@ -265,6 +265,13 @@ function gameLoop(timestamp) {
 
     // ★ポーズ中でもループは維持
     if (getPaused()) {
+        // ポーズ中、経過した時間分だけ開始時間を後ろにずらすことで、タイマーを停止させる
+        const deltaMs = timestamp - (gameState._lastFrameTime || timestamp);
+        if (enemyStartTime != null) enemyStartTime += deltaMs;
+        if (stats.startTime != null) stats.startTime += deltaMs;
+        if (stats.phaseStartTime != null) stats.phaseStartTime += deltaMs;
+        if (lastSpawnTime != null) lastSpawnTime += deltaMs;
+
         // ポーズ中も現在時刻を同期
         gameState._lastFrameTime = timestamp;
         loopId = requestAnimationFrame(gameLoop);
@@ -377,9 +384,10 @@ function gameLoop(timestamp) {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // クエスト進行中の場合、ノードに設定された背景画像を描画
-    if (gameState.currentQuestNode) {
-        renderQuestBackground(ctx, gameState.currentQuestNode);
+    // 背景描画（クエストノードの設定を優先し、なければステージの設定を使用）
+    const bgSource = gameState.currentQuestNode || gameState.stage;
+    if (bgSource) {
+        renderQuestBackground(ctx, bgSource);
     }
 
     // ロック敵が死んでいたら解除
@@ -447,7 +455,7 @@ function gameLoop(timestamp) {
     renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies);
     renderEnemies(ctx, enemyBullets, lockedEnemy, []);
     renderPlayer(ctx, player, gameState.enemyStats);
-    renderScore(ctx, gameState); // ゲーム画面スコア描画
+    renderScore(ctx, gameState, now); // ゲーム画面スコア描画
     renderEndCondition(          // ゲーム終了条件描画
         ctx,
         gameState,
@@ -565,7 +573,7 @@ function gameLoop(timestamp) {
     // ===============================
     // 終了条件チェック
     // ===============================
-    let forceFail = false;
+    let forceFail = false; //強制的にリザルトへ行く合図
     let phaseComplete = false;
     let isClear = false;
 
@@ -582,7 +590,6 @@ function gameLoop(timestamp) {
         forceFail = true;
     }
     if (timerStarted && globalEnd.timerMs != null && now - enemyStartTime >= globalEnd.timerMs) {
-        gameState.enemyStats.failed = true;
         forceFail = true;
     }
 
@@ -1861,7 +1868,7 @@ export async function endEnemyMode() {
             typed: stats.correctCount,
             miss: stats.mistakeCount,
             kpm: stats.gKpm,
-            maxCombo: stats.maxCombo || stats.maxComboCount || 0,
+            maxCombo: stats.maxCombo || 0,
             maxChain: stats.maxChainCount || 0,
         });
 
@@ -1890,7 +1897,7 @@ export async function endEnemyMode() {
         gRank: stats.rank,
 
         // タイピング系
-        gKpm: Math.round(stats.gKpm),
+        kpm: Math.round(stats.gKpm),
         accuracy: Math.round(
             (stats.correctCount /
             Math.max(1, stats.totalTyped)) * 100
@@ -1901,6 +1908,7 @@ export async function endEnemyMode() {
         // エネミー専用
         defeatedCount: stats.defeatedCount,
         maxChain: stats.maxChainCount,
+        maxCombo: stats.maxCombo,
 
         isFreeMode: gameState.isFreeMode
         
@@ -1928,7 +1936,7 @@ export async function endEnemyMode() {
                     eScore: stats.gScore,
                     defeatedCount: stats.defeatedCount,
                     maxChain: stats.maxChainCount,
-                    maxCombo: stats.maxComboCount
+                    maxCombo: stats.maxCombo
                 },
                 "enemy_mode",
                 null,

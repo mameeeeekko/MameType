@@ -34,7 +34,7 @@ import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
-import { loadAssets } from "./assetsLoader.js";
+import { loadAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
 import "../dev/devTools.js";
 
@@ -46,7 +46,7 @@ import "../dev/devTools.js";
 let bootScreen = null;
 let loadingScreen = null;
 
-let menuDiv, startMenuDiv, questMenuDiv, freeStartMenuDiv;
+let menuBackground, menuDiv, startMenuDiv, questMenuDiv, freeStartMenuDiv;
 let settingsDiv, gameDiv, resultDiv, recordsDiv;
 let questMapScreen, questSaveMenuDiv, skillTreeDiv;
 let hintDiv;
@@ -90,6 +90,7 @@ function cacheDOM() {
   bootScreen = document.getElementById("bootScreen");
   loadingScreen = document.getElementById("loadingScreen");
 
+  menuBackground = document.getElementById("menuBackground");
   menuDiv = document.getElementById("menu");
   startMenuDiv = document.getElementById("startMenu");
   questMenuDiv = document.getElementById("questMenu");
@@ -238,6 +239,39 @@ function updateAllSoundToggleUI(enabled) {
   document.querySelectorAll(".global-sound-toggle-txt").forEach(span => span.textContent = text);
 }
 
+function showMenuBackground(imageKeyOrVisible) {
+  if (!menuBackground) return;
+  if (imageKeyOrVisible === false) {
+    menuBackground.style.display = "none";
+    return;
+  }
+
+  const key = typeof imageKeyOrVisible === "string" ? imageKeyOrVisible : "title_menu";
+  if (images[key]) {
+    menuBackground.style.backgroundImage = `url("${images[key].src}")`;
+  }
+
+  // クエストメニューの時だけ、少しだけ黒っぽく（明度をわずかに下げる）調整
+  if (key === "quest_menu") {
+    menuBackground.style.filter = "brightness(0.8)";
+  } else {
+    menuBackground.style.filter = "none";
+  }
+
+  menuBackground.style.display = "block";
+}
+
+// =====================================================
+// タイトル画面表示関数
+// =====================================================
+export function applyTitleMenuBackground() {
+  console.log(images.title_menu);
+  if (!menuBackground || !images.title_menu) return;
+
+  menuBackground.style.backgroundImage =
+    `url("${images.title_menu.src}")`;
+}
+
 // =====================================================
 // DOM 取得・初期化
 // =====================================================
@@ -260,6 +294,8 @@ document.addEventListener("DOMContentLoaded", () => {
         setLoadingText(`Loading... ${percent}%`);
       });
 
+      applyTitleMenuBackground();
+      
       // 100%の状態を少し見せてから遷移
       setLoadingText("Loading... 100%");
       await new Promise(r => setTimeout(r, 500));
@@ -690,12 +726,14 @@ function validateKeybinds(bind) {
 export function hideAllScreens() {
   [menuDiv, questMenuDiv, startMenuDiv, freeStartMenuDiv, settingsDiv, gameDiv, resultDiv, recordsDiv, questMapScreen, skillTreeDiv, onlineRankingDiv]
     .forEach(div => { if (div) div.style.display = "none"; });
+  // showMenuBackground(false); // メニュー遷移時に背景画像が途切れないように維持
 }
 
 function showMainMenu() {
   hideAllScreens();
   if (menuDiv) menuDiv.style.display = "block";
 
+  showMenuBackground("title_menu");
   // メインメニューが表示されたタイミングでHUDを表示する
   const hud = document.getElementById("playerHud");
   if (hud) hud.style.display = "block";
@@ -705,12 +743,22 @@ function showQuestMenu() {
   if (questMenuDiv) questMenuDiv.style.display = "block";
 
   renderQuestSlots(); // ★これ追加
+  showMenuBackground("quest_menu"); //クエストメニュー画面
 }
-function showStartMenu() { hideAllScreens(); if (startMenuDiv) startMenuDiv.style.display = "block"; }
-function showFreeStartMenu() { hideAllScreens(); if (freeStartMenuDiv) freeStartMenuDiv.style.display = "block"; }
+function showStartMenu() { 
+  hideAllScreens(); 
+  if (startMenuDiv) startMenuDiv.style.display = "block"; 
+  showMenuBackground("title_menu");
+}
+function showFreeStartMenu() { 
+  hideAllScreens(); 
+  if (freeStartMenuDiv) freeStartMenuDiv.style.display = "block"; 
+  showMenuBackground("title_menu");
+}
 
 export function showQuestMap() {
   hideAllScreens();
+  showMenuBackground(false); // クエストマップは専用の描画があるため隠す
   reloadQuestProgress();
   
   questMapScreen.style.display = "block";
@@ -719,6 +767,7 @@ export function showQuestMap() {
 
 export function showGameScreen() {
   hideAllScreens();
+  showMenuBackground(false); // ゲーム中はタイピングに集中するため隠す
   gameDiv.style.display = "block";
 }
 
@@ -838,6 +887,7 @@ function bindModeStartEvents() {
 
   enemyModeBtn?.addEventListener("click", () => {
     hideAllScreens();
+    showMenuBackground(false); // ゲーム画面に遷移する際にメニュー背景を非表示にする
     startEnemyMode({
       mode: GameModes.ENEMY_MODE,
       isFreeMode: false,
@@ -848,6 +898,7 @@ function bindModeStartEvents() {
 
   freeEnemyModeBtn?.addEventListener("click", () => {
     hideAllScreens();
+    showMenuBackground(false); // ゲーム画面に遷移する際にメニュー背景を非表示にする
     startEnemyMode({
       mode: GameModes.ENEMY_MODE,
       isFreeMode: true,
@@ -1019,7 +1070,11 @@ function handleResultKey(e) {
       playAgainBtn?.click();
       break;
     case "m":
-      if (gameState.currentQuestNode || gameState.currentChallenge?.isSkillMode) {
+      // クエスト、スキルモード、長文モード、エネミーモードではミス練習リトライを無効化
+      if (gameState.currentQuestNode || 
+          gameState.currentChallenge?.isSkillMode || 
+          gameState.currentMode?.id === GameModes.LONG_TEXT.id ||
+          gameState.currentMode?.id === GameModes.ENEMY_MODE.id) {
         break;
       } else {
       retryBtn?.click();

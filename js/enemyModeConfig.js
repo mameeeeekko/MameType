@@ -309,6 +309,7 @@ hpRemaining → 残りHP率(0～1)
 export const STAGES = {
 
   DAILY: {
+    bgImage: "battle_gray",
     spawn: {
       interval: 2000,
       limit: null,
@@ -324,7 +325,7 @@ export const STAGES = {
       timerMs: 30000,
     },
     clearConditions: {
-      killCount: 10,
+      killCount: 5,
     },
     star: {
       type: "typingSpeed",

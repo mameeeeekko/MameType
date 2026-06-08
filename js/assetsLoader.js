@@ -27,6 +27,11 @@ export async function loadAssets(onProgress) {
     { type: "img", name: "chain_bonus", src: "./assets/pic/chain_bonus.jpeg" },
     { type: "img", name: "skill_1", src: "./assets/pic/skill_1.jpeg" },
 
+    // タイトル画面背景
+    { type: "img", name: "title_menu", src: "./assets/pic/title_menu.png" },
+    // クエストメニュー画面背景
+    { type: "img", name: "quest_menu", src: "./assets/pic/quest_menu.png" },
+
     // クエストバトル背景
     { type: "img", name: "battle_blue", src: "./assets/pic/battle_field_blue.png" },
     { type: "img", name: "battle_green", src: "./assets/pic/battle_field_green.png" },
@@ -71,4 +76,7 @@ export async function loadAssets(onProgress) {
     loaded++;
     onProgress?.(loaded, total);
   }
+
+  console.log("asset loaded", images);
+console.log("title_menu", images.title_menu);
 }

@@ -642,6 +642,31 @@ button {
     margin-top: 15px;
 }
 
+/* カード内埋め込みランキングのスタイル */
+.result-online-ranking {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(88, 166, 255, 0.2);
+    width: 100%;
+}
+
+/* ランキング行の微調整（カード内表示用） */
+.result-online-ranking .rank-row {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 5px;
+    color: #c9d1d9;
+}
+
+.result-online-ranking .rank-row span {
+    color: #c9d1d9;
+}
+
+.result-online-ranking .ranking-disabled {
+    background: transparent;
+    border: none;
+    padding: 10px;
+}
 
 
 /* =====================================================
@@ -1948,63 +1973,59 @@ button {
   position: fixed;
   top: 10px;
   right: 10px;
-  /* メニューカードと同じデザイン */
-  background: rgba(13, 17, 23, 0.92);
-  border: 1px solid rgba(88, 166, 255, 0.3);
-  color: #f0f6fc;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
+  line-height: 1.5;
+  pointer-events: auto;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+#playerHud.hud-window {
+  position: fixed;   /* ★追加 */
+  top: 12px;
+  right: 12px;
   width: 220px;
-  transition: all 0.25s ease;
+  background: linear-gradient(#2a2a2a, #151515);
+  border: 2px solid #555;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 12px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.6);
+  transition: all 0.25s ease;  /* ★追加（アニメ用） */
 }
 
 .hud-header {
   text-align: center;
   font-weight: bold;
-  margin-bottom: 10px;
-  letter-spacing: 1.5px;
-  color: #82a4cb; /* メニュータイトルと同じサイバーブルー */
-  text-transform: uppercase;
-  font-size: 12px;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+  color: #e2e2e2;
+  text-shadow: 0 0 4px #000;
 }
 
 .hud-row {
   display: flex;
-  justify-content: flex-start; /* ラベルのすぐ横にランクを表示 */
-  align-items: center;
+  justify-content: space-between;
   margin-top: 6px;
   margin-bottom: 4px;
-  gap: 8px;
-}
-
-/* ラベル（KPM等）の色を薄く */
-.hud-row > span:first-child {
-  color: #ffffff;
 }
 
 .hud-rank {
-  font-size: 12px;
-  color: #b0bdc8; /* ランクもアクセントブルーにしてタイトルと合わせる */
-  margin-left: 4px; /* ラベルとの隙間 */
-}
-
-/* バーと数値を横に並べるコンテナ */
-.hud-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 15px; /* バーの ] と数値の間の距離 */
+  font-size: 11px;
+  color: #ccc;
+  margin-bottom: 6px;
 }
 
 .hud-bar {
-  flex: 1;
   position: relative;
+  width: 100%;
   height: 10px;
   background: transparent;
   border: none;
-  margin: 4px 8px 2px 8px; /* ブラケットのための左右余白 */
+  margin: 4px 0 2px 0;
   overflow: visible;
 }
 
@@ -2025,18 +2046,9 @@ button {
   position: absolute;
   right: -8px;
   top: -3px;
-  color: #8b949e;
+  color: #cececece;
   font-size: 12px;
   line-height: 10px;
-}
-
-/* 数値表示 */
-.hud-value {
-  color: #f0f6fc;
-  font-weight: bold;
-  font-size: 13px;
-  min-width: 45px;
-  text-align: left;
 }
 
 .hud-bar-fill {
@@ -2133,110 +2145,6 @@ button {
 
 
 /* ===============================
-   デイリーステータス詳細
-================================ */
-
-/* playerStatsModal のコンテンツ全体 */
-#playerStatsModal .modal-content {
-    padding: 20px;
-    max-width: 900px; /* 必要に応じて調整 */
-    width: 90%;
-}
-
-/* デイリー詳細ステータスタイトル */
-.stats-header {
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: 10px;
-  color: #8ab6ec;
-  text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
-  position: relative;
-}
-
-/* 各統計カードを配置するグリッドコンテナ */
-.daily-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 280pxを最小幅として自動調整 */
-    gap: 20px; /* カード間のスペース */
-    margin-top: 20px;
-}
-
-/* 各統計カテゴリのカードスタイル */
-.daily-stats-card {
-    background: rgba(13, 17, 23, 0.92); /* メニューカードと統一 */
-    border: 1px solid rgba(88, 166, 255, 0.3);
-    border-radius: 12px; /* 角丸 */
-    padding: 15px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(88, 166, 255, 0.05);
-    backdrop-filter: blur(5px); /* 背景のぼかし効果 */
-    transition: transform 0.2s ease-in-out;
-}
-
-.daily-stats-card:hover {
-    border-color: rgba(123, 153, 187, 0.6);
-}
-
-/* 各セクションのタイトル */
-.daily-stats-section {
-    font-size: 0.9em;
-    font-weight: 900;
-    color: #83abd9; /* サイバーブルーに統一 */
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid rgba(88, 166, 255, 0.2);
-    text-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* 各統計行 */
-.daily-stats-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 5px;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.08); /* 点線の区切り */
-    font-size: 0.8em;
-    color: #c0c0c0; /* やや暗めの色 */
-}
-
-.daily-stats-row:last-child {
-    border-bottom: none; /* 最後の行は区切り線なし */
-}
-
-.daily-stats-row span:first-child {
-    font-weight: normal;
-    color: #b7c0c9; /* リザルトのラベル色と統一 */
-}
-
-.daily-stats-row span:last-child {
-    font-weight: bold;
-    color: #f0f6fc; /* HUDの数値色と統一 */
-}
-
-/* サブカテゴリの行 */
-.daily-stats-row.sub {
-    padding-left: 1.5rem; /* インデントを少し深くして視認性を確保 */
-    font-size: 0.7em;
-}
-
-.daily-stats-row.sub span:first-child {
-    color: #7b8892;
-}
-
-.daily-stats-row.sub span:last-child {
-    color: #c9d1d9;
-}
-
-/* 日付表示のスタイル */
-.daily-stats-row span:last-child span {
-    font-size: 0.8em;
-    color: #808080;
-    margin-left: 5px;
-}
-
-
-/* ===============================
    グローバル音量トグルボタン
 ================================ */
 .sound-toggle-btn {
@@ -2322,12 +2230,8 @@ button {
   padding: 6px 8px;
 }
 
-/* 縮小時に中身を非表示にし、タイトルと開閉ボタン（ミニボタン）だけを残す */
-.hud-window.compact > .hud-buttons,
-.hud-window.compact .hud-sound-ctrl,
-.hud-window.compact #normalHud > *:not(.hud-header),
-.hud-window.compact #questHud > *:not(.hud-header) 
-{
+/* ヘッダーとボタン以外を非表示 */
+.hud-window.compact > *:not(.hud-header):not(.hud-mini-btn) {
   display: none;
 }
 
@@ -2379,15 +2283,23 @@ button {
 
 .stats-window {
   width: 95%;
-  max-width: 900px;
+  max-width: 420px;
   max-height: 80vh;
   overflow-y: auto;
-  background: rgba(13, 17, 23, 0.95);
-  border: 1px solid rgba(88, 166, 255, 0.4);
+  background: linear-gradient(#1f2937, #020617);
+  border: 2px solid #4f46e5;
   border-radius: 14px;
-  color: #f0f6fc;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(0,0,0,0.7);
   padding: 12px 14px;
+}
+
+.stats-header {
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 10px;
+  color: #ffd700;
+  position: relative;
 }
 
 #statsClose {
@@ -2414,13 +2326,13 @@ button {
   cursor: pointer;
 }
 
-.quest-stats-section {
+.stats-section {
   position: relative;
   margin-top: 14px;
   margin-bottom: 10px;
   font-weight: 700;
   font-size: 13px;
-  color: #718dad;
+  color: #ffd166;
   letter-spacing: 0.05em;
   padding-bottom: 6px;
 
@@ -2517,7 +2429,7 @@ button {
   background: rgba(10,10,15,1);
 }
 
-.quest-stats-row {
+.stats-row {
   display: flex;
   justify-content: space-between;
   padding: 3px 2px;
@@ -2525,18 +2437,25 @@ button {
   color: #e6edf3;
 }
 
-.quest-stats-row.sub {
+.stats-row.sub {
   padding-left: 18px;
   font-size: 12.5px;
   color: #b8c2cc;
 }
 
-.quest-stats-row span:last-child {
+.stats-row.sub span:first-child::before {
+  content: "└";
+  position: absolute;
+  left: -12px;
+  color: #6c7a89;
+}
+
+.stats-row span:last-child {
   color: #9fe870;
   font-weight: 600;
 }
 
-.quest-stats-row:hover {
+.stats-row:hover {
   background: rgba(255,255,255,0.03);
   border-radius: 4px;
 }

@@ -273,7 +273,8 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   // ========================
   if (isFree) {
     stats.freeMode.totalPlays++;                 // フリー回数++
-    stats.freeMode.totalTime += totalTime;       // フリー時間加算
+    // 通常モードの totalTime または エネミーモードの totalPlayTime を加算
+    stats.freeMode.totalTime += (totalTime + totalPlayTime); 
     stats.freeMode.modes[mode] = (stats.freeMode.modes[mode] || 0) + 1; // モード回数++
   }
 
@@ -460,4 +461,3 @@ export const ACHIEVEMENTS = [
   { id: "streak_30", name: "継続の鬼", desc: "30日連続プレイ" }, // ★追加
   { id: "speed_300", name: "高速域", desc: "300KPM到達" }
 ];
-

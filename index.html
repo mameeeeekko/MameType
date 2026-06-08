@@ -28,19 +28,22 @@
 <!-- =====================================================
   メインメニュー
 ===================================================== -->
+<div id="menuBackground"></div>
 <div id="menu">
-    <div id="menuHeader">
-      <h1 id="gameTitle">Mame Type</h1>
-      <div id="versionLabel"></div>
-    </div>
+    <div class="menu-inner">
+      <div id="menuHeader">
+        <h1 id="gameTitle">Mame Type</h1>
+        <div id="versionLabel"></div>
+      </div>
 
-    <div id="menuButtons">
-      <button id="questMenuBtn">QUEST</button>
-      <button id="startMenuBtn">DAILY MODE</button>
-      <button id="freeModeBtn">FREE MODE</button>
-      <button id="recordsMenuBtn">RECORDS</button>
-      <button id="onlineRankingBtn">ONLINE RANKING</button>
-      <button id="settingsBtn">SETTING</button>
+      <div id="menuButtons">
+        <button id="questMenuBtn">QUEST</button>
+        <button id="startMenuBtn">DAILY MODE</button>
+        <button id="freeModeBtn">FREE MODE</button>
+        <button id="recordsMenuBtn">RECORDS</button>
+        <button id="onlineRankingBtn">ONLINE RANKING</button>
+        <button id="settingsBtn">SETTING</button>
+      </div>
     </div>
 
   <!-- サウンドON/OFF トグル -->
@@ -370,29 +373,27 @@
   <!-- 通常HUD -->
   <!-- ===================== -->
   <div id="normalHud">
-    <div class="hud-header">DAILY STATUS</div>
-    <div class="hud-row">
-      <span>Avg.KPM</span>
-      <span id="hudAvgSpeed">0</span>
-    </div>
-    <div class="hud-bar">
-      <div id="hudSpeedBar" class="hud-bar-fill speed"></div>
-    </div>
-    <div class="hud-rank">Rank: <span id="hudSpeedRank">-</span></div>
+  <h2 class="hud-header">DAILY STATUS</h2>
+  
+  <!-- スピード項目 -->
+  <div class="hud-row">
+    <span>SPEED</span>
+    <span id="hudSpeedRank" class="hud-rank"></span>
+  </div>
+  <div class="hud-bar-wrap">
+    <div class="hud-bar"><div id="hudSpeedBar" class="hud-bar-fill speed"></div></div>
+    <span id="hudAvgSpeed" class="hud-value">0.0</span>
+  </div>
 
-    <div class="hud-row">
-      <span>Acc</span>
-      <span id="hudAvgAcc">0%</span>
-    </div>
-    <div class="hud-bar">
-      <div id="hudAccBar" class="hud-bar-fill acc"></div>
-    </div>
-    <div class="hud-rank">Rank: <span id="hudAccRank">-</span></div>
-
-    <div class="hud-row">
-      <span>Max KPM</span>
-      <span id="hudMaxSpeed">0</span>
-    </div>
+  <!-- 正確率項目 -->
+  <div class="hud-row">
+    <span>ACC</span>
+    <span id="hudAccRank" class="hud-rank"></span>
+  </div>
+  <div class="hud-bar-wrap">
+    <div class="hud-bar"><div id="hudAccBar" class="hud-bar-fill acc"></div></div>
+    <span id="hudAvgAcc" class="hud-value">0%</span>
+  </div>
 
     <br>
 
@@ -406,16 +407,34 @@
   <!-- クエストHUD -->
   <!-- ===================== -->
   <div id="questHud" style="display:none;">
-    <div class="hud-header">QUEST STATUS</div>
-    <div class="hud-row"><span id="hudLevel">Lv 1</span></div>
-    <div class="hud-row"><span id="hudHp">HP 0</span></div>
-    <div class="hud-row"><span id="hudDef">DEF 0</span></div>
-   
-    <div class="hud-bar">
-      <div id="hudExpBar" class="hud-bar-fill exp"></div>
+    <h2 class="hud-header">QUEST STATUS</h2>
+    
+    <div class="hud-row">
+      <span>LEVEL</span>
+      <span id="hudLevel" class="hud-rank"></span>
     </div>
-    <div class="hud-row"><span id="hudExp">EXP 0 / 0</span></div>
-    <div class="hud-row"><span id="hudClear">CLEAR 0</span></div>
+
+    <div class="hud-row">
+      <span>HP</span>
+      <span id="hudHp" class="hud-rank"></span>
+    </div>
+
+    <div class="hud-row">
+      <span>DEF</span>
+      <span id="hudDef" class="hud-rank"></span>
+    </div>
+
+    <div class="hud-row">
+      <span>EXP</span>
+    </div>
+    <div class="hud-bar-wrap">
+      <div class="hud-bar"><div id="hudExpBar" class="hud-bar-fill exp"></div></div>
+      <span id="hudExp" class="hud-value"></span>
+    </div>
+
+    <div class="hud-row" style="margin-top:10px;">
+      <span id="hudClear" style="font-size: 10px; color: #8b949e; line-height: 1.2;"></span>
+    </div>
 
   </div>
 

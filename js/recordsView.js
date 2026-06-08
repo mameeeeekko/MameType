@@ -208,13 +208,14 @@ function renderRanking(records) {
       r.accuracy + "%"
     ]);
   } else if (mode === "enemy_mode") {
-    columns = ["順位", "日時", "gScore", "gRank", "撃破数", "最大チェイン", "KPM", "正確率"];
+    columns = ["順位", "日時", "gScore", "gRank", "撃破数", "最大コンボ", "最大チェイン", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
       i + 1,
       new Date(r.date).toLocaleString(),
       r.gScore,
       r.gRank ?? "_",
       r.defeatedCount ?? 0,
+      r.maxCombo ?? 0,
       r.maxChain ?? 0,
       r.kpm,
       r.accuracy + "%"
@@ -297,7 +298,7 @@ function renderHistory(records) {
 });
 
   } else if (mode === "enemy_mode") {
-  columns = ["日時", "gScore", "gRank", "撃破数", "最大チェイン", "KPM", "正確率", "ミス", "保護"];
+  columns = ["日時", "gScore", "gRank", "撃破数", "最大コンボ", "最大チェイン", "KPM", "正確率", "ミス", "保護"];
 
   rows = visible.map(r => {
     const mode = r.mode;
@@ -310,6 +311,7 @@ function renderHistory(records) {
       r.gScore,
       r.gRank ?? "-",
       r.defeatedCount ?? 0,
+      r.maxCombo ?? 0,
       r.maxChain ?? 0,
       r.kpm,
       r.accuracy + "%",

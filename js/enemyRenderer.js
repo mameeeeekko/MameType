@@ -1740,10 +1740,10 @@ export function updateComboTierBar(stats) {
 // ===============================
 // ゲーム中のスコア表示（右上）
 // ===============================
-export function renderScore(ctx, gameState) {
+export function renderScore(ctx, gameState, now) {
 
     const stats = gameState.enemyStats;
-    if (!stats?.startTime) return;
+    if (!stats?.startTime || !now) return;
 
     // ★これ追加（重要）
     ctx.save();
@@ -1791,7 +1791,6 @@ export function renderScore(ctx, gameState) {
     ctx.fillText(`${stats.defeatedCount}`, x, infoY + 16);
 
     // 経過時間
-    const now = getNow();
     const elapsedSec = ((now - stats.startTime) / 1000).toFixed(1);
 
     const infoY2 = infoY + 42;
@@ -1892,7 +1891,6 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     }
 
     if (clear.timerMs != null) {
-        const now = getNow();
         const elapsedSec = ((now - stats.startTime) / 1000).toFixed(1);
 
         const currentSec = Math.floor(elapsedSec);

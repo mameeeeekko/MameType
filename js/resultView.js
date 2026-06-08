@@ -5,7 +5,7 @@ import { renderOnlineRanking } from "../online/getRanking.js";
 // ======================================
 // 結果画面表示専用
 // ======================================
-export function resetResultButtons() {
+export function resetResultButtons(mode, options = {}) {
   const ids = [
     "playAgainBtn",
     "retryMissedBtn",
@@ -13,13 +13,37 @@ export function resetResultButtons() {
     "questBackBtn",
     "resultOpenRecordsBtn",
     "resultToStartMenuBtn",
-    "resultBackBtn" // ←これ重要
+    "resultBackBtn"
   ];
 
   ids.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = "";
+    if (el) el.style.display = "inline-block";
   });
+
+  const isEnemy = mode === "enemy_mode";
+  const isLongText = mode === "long_text";
+  const hasMissed = (options.missedCount ?? 0) > 0;
+
+  // デイリー/フリーモードのリザルトではクエスト関連ボタンは常に非表示
+  const toQuest = document.getElementById("resultToQuestMenuBtn");
+  const toQuestMap = document.getElementById("questBackBtn");
+  if (toQuest) toQuest.style.display = "none";
+  if (toQuestMap) toQuestMap.style.display = "none";
+
+  // ミス練習ボタンの表示制御
+  const retryBtn = document.getElementById("retryMissedBtn");
+  if (retryBtn) {
+    if (isEnemy || isLongText || !hasMissed) {
+      retryBtn.style.display = "none";
+    }
+  }
+
+  // ボタンコンテナを取得して横並びクラスを適用
+  const btnContainer = document.querySelector(".result-buttons");
+  if (btnContainer) {
+    btnContainer.classList.add("horizontal");
+  }
 }
 
 const dom = {
@@ -47,7 +71,7 @@ export function showResult({
   isFreeMode = false
 }) {
 
-  resetResultButtons();
+  resetResultButtons(mode, { missedCount: totalMistake });
 
   const resultStats = dom.resultStats();
   if (!resultStats) return;
@@ -63,42 +87,55 @@ export function showResult({
   const kpmText = totalInputs === 0 ? "―" : totalKpm;
   const solvedText = solvedCount ?? 0;
 
-  let html = `<div class="result-container-centered">`;
+  let html = `<div class="result-container-centered wider menu-style-card">`;
   html += `
     ${isFreeMode ? `<div class="result-free-badge">FREE</div>` : ""}
-    <div class="result-title">${modeTitle}</div>
+    <div class="result-title-main">${modeTitle.toUpperCase()}</div>
   `;
 
   if (mode === "time_attack") {
     html += `
-      <div class="result-score">
-        <div class="result-rank">解答数</div>
-        ${solvedText}
-      </div>
-      <div class="result-rank2">
-        <span>eScore</span><span>${eScore} ／ ${eRank}</span>
+      <div class="result-header-row">
+        <div class="result-header-item">
+          <div class="r-label">SOLVED</div>
+          <div class="r-value big">${solvedText}</div>
+        </div>
+        <div class="result-header-item">
+          <div class="r-label">eScore / RANK</div>
+          <div class="r-value">${eScore} <span class="rank-unit">/ ${eRank}</span></div>
+        </div>
       </div>
     `;
   } else {
     html += `
-      <div class="result-score">
-        ${eScore}
-        <div class="result-rank">${eRank}</div>
+      <div class="result-header-row">
+        <div class="result-header-item">
+          <div class="r-label">eScore</div>
+          <div class="r-value big">${eScore}</div>
+        </div>
+        <div class="result-header-item">
+          <div class="r-label">RANK</div>
+          <div class="r-value big accent">${eRank}</div>
+        </div>
       </div>
     `;
   }
 
   html += `
-  <div class="result-stats">
+  <div class="result-stats-grid">
     <div class="r-row"><span class="result-label">正確率</span><span class="result-value">${accuracyText}</span></div>
     <div class="r-row"><span class="result-label">KPM</span><span class="result-value">${kpmText}</span></div>
     <div class="r-row"><span class="result-label">ミス</span><span class="result-value">${totalMistake}</span></div>
-    <div class="r-row"><span class="result-label">時間</span><span class="result-value">${Math.round(totalTime)}s</span></div>
+    <div class="r-row"><span class="result-label">経過時間</span><span class="result-value">${Math.round(totalTime)}s</span></div>
   </div>
 
-  ${isTimeUp ? `<div class="r-badge timeup">時間切れ</div>` : ""}
-  ${isNewRecord ? `<div class="r-badge new">NEW RECORD</div>` : ""}
-  ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
+  <div class="result-badges">
+    ${isTimeUp ? `<div class="r-badge timeup">時間切れ</div>` : ""}
+    ${isNewRecord ? `<div class="r-badge new">NEW RECORD</div>` : ""}
+    ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
+  </div>
+
+  <div id="onlineRanking" class="result-online-ranking"></div>
   `;
   html += `</div>`; // .result-container-centered の閉じ
 
@@ -106,12 +143,6 @@ export function showResult({
 
   const gameDiv = dom.game();
   const resultDiv = dom.result();
-  const showQuest = dom.showQuest();
-  const showMap = dom.showMap();
-
-  // 通常モードなら非表示
-    showQuest.style.display = "none";
-    showMap.style.display = "none";
 
   if (gameDiv) gameDiv.style.display = "none";
   if (resultDiv) resultDiv.style.display = "flex";
