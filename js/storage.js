@@ -253,10 +253,19 @@ export function addRankingEntry(entry) {
   syncRankingProtection();
 
   const rankIndex = ranking.findIndex(r => r.id === rec.id);
+  const isRankIn = rankIndex !== -1;
 
-  // 新記録判定
+  // ランキング圏内に入った場合、ランキング画面用のバッジタイムスタンプを保存
+  if (isRankIn) {
+    rec.newInRankingAt = Date.now();
+  } else {
+    // ランキング圏外になった場合はバッジを消す
+    delete rec.newInRankingAt;
+  }
+  
+  // 結果画面用の「NEW RECORD」判定 (1位を更新した時のみ)
   let isNewRecord = false;
-  if (rankIndex === 0) {
+  if (rankIndex === 0) { // 1位にランクインした場合
     if (mode === "time_attack") {
       isNewRecord = (rec.solvedCount ?? 0) > beforeTopScore;
     } else if (mode === "enemy_mode") {
@@ -266,10 +275,16 @@ export function addRankingEntry(entry) {
     }
   }
 
+    // 結果画面用のNEW RECORDフラグを設定
+  rec.isNewRecord = isNewRecord;
+
+  // recオブジェクトへの変更を保存
+  localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+
   return {
-    isRankIn: rankIndex !== -1,
+    isRankIn, // ランキング圏内に入ったかどうか
     isNewRecord,
-    rankPos: rankIndex !== -1 ? rankIndex + 1 : null
+    rankPos: isRankIn ? rankIndex + 1 : null // ランキング順位
   };
 }
 

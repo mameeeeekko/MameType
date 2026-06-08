@@ -28,6 +28,15 @@ function resetHistoryVisible() {
   historyVisibleCount = HISTORY_INITIAL_COUNT;
 }
 
+// NEWバッジの表示期間 (24時間)
+const NEW_BADGE_DURATION_MS = 24 * 60 * 60 * 1000;
+const getNewBadgeHtml = (record) => {
+  if (record.newInRankingAt && (Date.now() - record.newInRankingAt) < NEW_BADGE_DURATION_MS) {
+    return '<span class="ranking-new-badge">NEW</span>';
+  }
+  return '';
+};
+
 // サマリー表示＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 function renderSummary(records) {
   const container = document.getElementById("recordsSummary");
@@ -200,7 +209,7 @@ function renderRanking(records) {
   if (mode === "time_attack") {
     columns = ["順位", "日時", "解答数", "eScore", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
-      i + 1,
+      `<div class="rank-cell">${getNewBadgeHtml(r)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
       r.solvedCount ?? 0,
       r.eScore ?? r.score,
@@ -210,7 +219,7 @@ function renderRanking(records) {
   } else if (mode === "enemy_mode") {
     columns = ["順位", "日時", "gScore", "gRank", "撃破数", "最大コンボ", "最大チェイン", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
-      i + 1,
+      `<div class="rank-cell">${getNewBadgeHtml(r)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
       r.gScore,
       r.gRank ?? "_",
@@ -223,7 +232,7 @@ function renderRanking(records) {
   } else {
     columns = ["順位", "日時", "eScore", "ランク", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
-      i + 1,
+      `<div class="rank-cell">${getNewBadgeHtml(r)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
       r.eScore ?? r.score,
       r.eRank ?? "-",
@@ -305,7 +314,7 @@ function renderHistory(records) {
     const mark =
       (r.userProtectedModes?.[mode] ? "🔒" : "") +
       (r.rankingProtectedModes?.[mode] ? "👑" : "");
-
+    
     return [
       new Date(r.date).toLocaleString(),
       r.gScore,
@@ -326,7 +335,7 @@ function renderHistory(records) {
   const mark =
     (r.userProtectedModes?.[mode] ? "🔒" : "") +
     (r.rankingProtectedModes?.[mode] ? "👑" : "");
-
+    
   return [
     new Date(r.date).toLocaleString(),
     r.eScore ?? r.score,
@@ -418,7 +427,7 @@ function renderTable(container, columns, rows) {
     const tr = document.createElement("tr");
     row.forEach(cell => {
       const td = document.createElement("td");
-      td.textContent = cell;
+      td.innerHTML = cell; // タグをレンダリングするためにinnerHTMLを使用
       td.style.padding = "4px 8px";
       tr.appendChild(td);
     });

@@ -4608,6 +4608,35 @@ button {
     animation: pop 0.4s ease;
 }
 
+/* ランキングの順位セル調整 */
+.rank-cell {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 80px; /* バッジがはみ出さないための幅 */
+}
+
+/* ランキングテーブルのNEWバッジ */
+.ranking-new-badge {
+    position: absolute;
+    left: 0;
+    background-color: #ff4d4d; /* 明るい赤色 */
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65em;
+    font-weight: bold;
+    display: inline-block; /* インライン要素として表示 */
+    vertical-align: middle; /* 中央揃え */
+    animation: pulse-new 1.5s infinite; /* 点滅アニメーション */
+}
+@keyframes pulse-new {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 /* ===== new、取得済みバッジ ===== */
 .new-badge{
     display:inline-block;

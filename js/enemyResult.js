@@ -133,6 +133,8 @@ export function showEnemyResult({
                     ${isNewRecord ? `<div class="r-badge new">NEW RECORD</div>` : ""}
                     ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
                 </div>
+
+                <div id="onlineRanking" class="result-online-ranking"></div>
             </div>
         `;
         playCalcAnimation();
@@ -140,18 +142,22 @@ export function showEnemyResult({
 
     if(resultDiv) resultDiv.style.display = "flex";
 
-    if (!stats.isInvalidRun && !gameState.isFreeMode) {
+    // 標準リザルトと同様に、DOMの更新を待ってからランキングを描画
+    requestAnimationFrame(() => {
+        const onlineRankingEl = document.getElementById("onlineRanking");
+        if (!onlineRankingEl) return;
+
         if (!navigator.onLine) {
-            const el = document.getElementById("onlineRanking");
-            if (el) el.innerHTML = `<div class="ranking-disabled">ネットワークに接続されていません</div>`;
-        } else {
-            renderOnlineRanking(
-                stats.gScore ?? 0,
-                stats.defeatedCount ?? 0,
-                `enemy_mode`
-            );
+            onlineRankingEl.innerHTML = `<div class="ranking-disabled">ネットワークに接続されていません</div>`;
+            return;
         }
-    }
+
+        if (!stats.isInvalidRun && !gameState.isFreeMode) {
+            renderOnlineRanking(stats.gScore ?? 0, stats.defeatedCount ?? 0, `enemy_mode`);
+        } else {
+            onlineRankingEl.innerHTML = "";
+        }
+    });
 }
 
 function playCalcAnimation() {

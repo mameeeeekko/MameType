@@ -1831,7 +1831,50 @@ button {
 }
 
 /* =====================================================
-　　オンラインランキング表示
+    記録画面 NEWバッジ
+   ===================================================== */
+
+/* ランキングの順位番号を囲む */
+.rank-number {
+    display: inline-block;
+    min-width: 30px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* ランキングの順位セル調整 */
+.rank-cell {
+    position: relative;
+    display: flex;
+    justify-content: center; /* 数字を中央に配置 */
+    align-items: center;
+    min-width: 100px; /* バッジを左端に置いても数字が中央に留まる幅を確保 */
+}
+
+/* ランキングテーブルのNEWバッジ */
+.ranking-new-badge {
+    position: absolute;
+    left: 4px; /* セルの左端に固定 */
+    background-color: #ffaf4d; /* 鮮やかな赤色 */
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.6em;
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none; /* クリックを阻害しない */
+    animation: pulse-new 1.5s infinite; /* 点滅アニメーション */
+}
+
+@keyframes pulse-new {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+
+/* =====================================================
+  オンラインランキング表示
    ===================================================== */
 
 #onlineRankingScreen {
