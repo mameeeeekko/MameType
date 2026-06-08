@@ -992,10 +992,12 @@ function bindResultEvents() {
   });
 
   resultOpenRecordsBtn?.addEventListener("click", () => {
+    // 現在のゲームモードを一時的に保存
+    const lastPlayedMode = Game.getLastGameMode();
     Game.fullResetGame();
     Game.backToMenu();
     hideAllScreens();
-    showRecordsView(Game.getLastGameMode?.() ?? GameModes.NORMAL);
+    showRecordsView(lastPlayedMode ?? GameModes.NORMAL);
   });
 }
 
