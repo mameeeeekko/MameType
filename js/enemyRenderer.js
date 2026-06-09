@@ -175,8 +175,8 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
 
     const remainWidth = ctx.measureText(remainPart).width;
 
-    const remainX = enemy.x;
-    const remainY = enemy.y - radius + 5;
+    const remainX = enemy.x; // X座標は変更なし
+    const remainY = enemy.y - radius; // Y座標を5px上に移動
 
     // 発光の代わりに黒い縁取り（アウトライン）を追加して視認性を確保
     ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
@@ -441,7 +441,12 @@ function drawEnemyBody(ctx, enemy, color){
     // 少し回転（動きが出る）
     // =========================
     ctx.translate(x, y);
-    ctx.rotate(enemy.rotation);
+    // 六角形は常に上を向くように回転を無効化
+    if (type.shape === "hexagon") {
+        ctx.rotate(0);
+    } else {
+        ctx.rotate(enemy.rotation);
+    }
     ctx.translate(-x, -y);
 
     // =========================
@@ -517,6 +522,10 @@ function drawShape(ctx, x, y, type, color) {
             ctx.stroke();
             break;
 
+        case "hexagon":
+            drawHexagon(ctx, x, y, size, grad, color);
+            break;
+
         case "square":
             ctx.fillStyle = grad;
             ctx.fillRect(
@@ -563,6 +572,52 @@ function drawShape(ctx, x, y, type, color) {
             ctx.fillStyle = grad;
             ctx.fill();
     }
+}
+
+// ===============================
+// 六角形を描く
+// ===============================
+function drawHexagon(ctx, x, y, size, grad, color) {
+    const sw = size * 0.7;  // 横幅（スリムに）
+    const sh = size * 1.3;  // 縦幅（長く）
+
+    ctx.beginPath();
+    // 頂点を上にした細長い六角形
+    ctx.moveTo(x, y - sh);
+    ctx.lineTo(x + sw, y - sh * 0.4);
+    ctx.lineTo(x + sw, y + sh * 0.4);
+    ctx.lineTo(x, y + sh);
+    ctx.lineTo(x - sw, y + sh * 0.4);
+    ctx.lineTo(x - sw, y - sh * 0.4);
+    ctx.closePath();
+
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // 内部のカットライン（クリスタル感の演出）
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    // 縦のセンターライン
+    ctx.moveTo(x, y - sh); ctx.lineTo(x, y + sh);
+    // 左右の角から中心へ向かうライン
+    ctx.moveTo(x - sw, y - sh * 0.4); ctx.lineTo(x + sw, y + sh * 0.4);
+    ctx.moveTo(x + sw, y - sh * 0.4); ctx.lineTo(x - sw, y + sh * 0.4);
+    ctx.stroke();
+
+    // 上部の反射（ハイライト）
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.beginPath();
+    ctx.moveTo(x, y - sh);
+    ctx.lineTo(x + sw, y - sh * 0.4);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x - sw, y - sh * 0.4);
+    ctx.fill();
+
+    // 外枠の輝き
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 }
 
 // ===============================

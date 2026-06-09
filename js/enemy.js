@@ -984,12 +984,12 @@ export const ItemTypes = {
 
         lifetime:6, //消えるまでの時間 sec
 
-        size:14,
+        size:10,
         speed:0,
 
         color:"#4ade80",
-        shape:"circle",
-        pattern:"ring",
+        shape:"hexagon",
+        pattern: null,
     },
 
     HEAL_FULL:{
@@ -1008,12 +1008,12 @@ export const ItemTypes = {
 
         lifetime:5,
 
-        size:18,
+        size:15,
         speed:0,
 
         color:"#22c55e",
-        shape:"circle",
-        pattern:"ring",
+        shape:"hexagon",
+        pattern: null,
     },
 
     BOMB:{
@@ -1032,11 +1032,11 @@ export const ItemTypes = {
 
         lifetime:6,
 
-        size:16,
+        size:10,
 
         color:"#f87171",
-        shape:"square",
-        pattern:"stripe",
+        shape:"hexagon",
+        pattern: null,
     },
 
     BOMB_ALL:{
@@ -1055,11 +1055,11 @@ export const ItemTypes = {
 
         lifetime:6,
 
-        size:22,
+        size:10,
 
         color:"#dc2626",
-        shape:"pinwheel",
-        rotationSpeed:0.08,
+        shape:"hexagon",
+        pattern: null,
     },
 
     FREEZE:{
@@ -1078,11 +1078,11 @@ export const ItemTypes = {
 
         lifetime:5,
 
-        size:18,
+        size:10,
 
         color:"#60a5fa",
-        shape:"circle",
-        pattern:"stripe",
+        shape:"hexagon",
+        pattern: null,
     },
 
     SKILL_CD:{
@@ -1101,10 +1101,10 @@ export const ItemTypes = {
 
         lifetime:5,
 
-        size:16,
+        size:10,
 
         color:"#c084fc",
-        shape:"square",
-        pattern:"ring",
+        shape:"hexagon",
+        pattern: null,
     }
 };

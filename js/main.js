@@ -285,9 +285,11 @@ document.addEventListener("DOMContentLoaded", () => {
   updateHud(); // DOM取得後にHUDを初期化
 
   if (bootScreen) {
-    bootScreen.addEventListener("click", async () => {
+    const startInitialLoad = async () => {
+      if (bootScreen.style.display === "none") return;
 
       showLoadingScreen();
+      document.removeEventListener("keydown", handleBootKey);
 
       await loadAssets((loaded, total) => {
         const percent = Math.floor((loaded / total) * 100);
@@ -302,7 +304,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       hideLoading();
       showMainMenu();
-    });
+    };
+
+    const handleBootKey = (e) => {
+      if (e.code === "Enter" || e.code === "Space") {
+        startInitialLoad();
+      }
+    };
+
+    bootScreen.addEventListener("click", startInitialLoad);
+    document.addEventListener("keydown", handleBootKey);
   }
 
   document.getElementById("versionLabel").textContent = `v${APP_VERSION}`;
