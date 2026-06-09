@@ -2,13 +2,12 @@
 // ===========================================
 // 低遅延オーディオ管理
 // ===========================================
-
 let audioCtx = null;
 let masterGain = null;
-let bgmGain = null;
-let seGain = null;
-let typeGain = null;
-let missGain = null;
+export let bgmGain = null; // Exported
+export let seGain = null;  // Exported
+export let typeGain = null; // Exported
+export let missGain = null; // Exported
 
 let buffers = {};
 let bgmSource = null;
@@ -129,7 +128,7 @@ export async function initAudio() {
 // ===========================================
 // 効果音
 // ===========================================
-function playTone(freq, duration, type="sine", volume=0.4, target=null){
+export function playTone(freq, duration, type="sine", volume=0.4, targetGainNode=null){ // targetGainNode is now the actual node
     // ガード
     if(!isFinite(freq)) return;
     if(!isFinite(duration)) return;
@@ -156,7 +155,7 @@ function playTone(freq, duration, type="sine", volume=0.4, target=null){
     gain.gain.setValueAtTime(volume, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
-    osc.connect(gain).connect(target || seGain);
+    osc.connect(gain).connect(targetGainNode || seGain); // Connect to the determined destinationNode
 
     osc.start();
     osc.stop(ctx.currentTime + duration);

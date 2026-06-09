@@ -15,7 +15,7 @@ import {
   setLongTextMode, setUIMode,
   initTimeBar, setTimeLeft, setSolvedCount
 } from './renderer.js';
-import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume } from "./effectManager.js";
+import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, bgmGain, seGain, typeGain, missGain, playTone } from "./effectManager.js";
 import { GameModes} from "./gameModes.js";
 import { updatePlayerStats, getPlayerStats} from "./playerStats.js";
 import { updateHud} from "./hud.js";
@@ -25,7 +25,7 @@ import { getCurrentDifficulty, getDifficultyById } from "./difficulties.js";
 import { handleSkillModeResult } from "./skillTreeResult.js"
 import { initTimeCircle, stopTimeCircle, updateCircle } from "./renderer.js";
 import { submitScore } from "../online/submitScore.js";
-import { RANKING_VERSION } from "../js/version.js";
+import { RANKING_VERSION } from "./version.js";
 import { addQuestSkillNodeAttempt } from "./questPlayerStats.js";
 
 // =====================================================
@@ -262,6 +262,39 @@ export function toggleSoundGlobal() {
   soundEnabled = !soundEnabled;
   setMasterVolume(soundEnabled ? 1 : 0);
   return soundEnabled;
+}
+
+// New function to play a test sound for volume adjustment
+export function playTestSound(key) {
+  if (!soundEnabled) return;
+
+  let targetGainNode;
+  let isSoundSettingEnabled = true; // Assume enabled unless specific check fails
+
+  switch (key) {
+    case 'bgm':
+      targetGainNode = bgmGain; // Pass the actual node
+      isSoundSettingEnabled = soundSettings.bgm;
+      break;
+    case 'type':
+      targetGainNode = typeGain; // Pass the actual node
+      isSoundSettingEnabled = soundSettings.type;
+      break;
+    case 'miss':
+      targetGainNode = missGain; // Pass the actual node
+      isSoundSettingEnabled = soundSettings.miss;
+      break;
+    case 'se':
+      targetGainNode = seGain; // Pass the actual node
+      isSoundSettingEnabled = soundSettings.soundeffect; // 'se' volume is controlled by 'soundeffect' setting
+      break;
+    default:
+      return;
+  }
+
+  if (!isSoundSettingEnabled) return; // If the specific sound type is toggled off, don't play test sound
+
+  playTone(440, 0.05, 'sine', soundVolumes[key], targetGainNode); // 440Hz, 0.05s duration
 }
 
 // 安全ラッパー（音・フラッシュ）

@@ -670,6 +670,12 @@ function initSettingsUI() {
     el?.addEventListener("input", e => {
       Game.setSoundVolume(key, e.target.value);
       saveSettings();
+      // 数値表示(50%など)を更新する処理を追加
+      const valDisplay = document.getElementById(`${key}VolumeValue`);
+      if (valDisplay) {
+        valDisplay.textContent = `${Math.round(e.target.value * 100)}%`;
+      }
+      Game.playTestSound(key); // ★ ここにテストサウンド再生を追加
     });
   });
 
@@ -1342,10 +1348,22 @@ function applySoundSettingsToUI() {
   if (SEToggle) SEToggle.checked = current.soundeffect;
 
   const vols = Game.getSoundVolumes();
-  if (bgmVolSlider) bgmVolSlider.value = vols.bgm;
-  if (typeVolSlider) typeVolSlider.value = vols.type;
-  if (missVolSlider) missVolSlider.value = vols.miss;
-  if (seVolSlider) seVolSlider.value = vols.se;
+  if (bgmVolSlider) {
+    bgmVolSlider.value = vols.bgm;
+    document.getElementById("bgmVolumeValue").textContent = `${Math.round(vols.bgm * 100)}%`;
+  }
+  if (typeVolSlider) {
+    typeVolSlider.value = vols.type;
+    document.getElementById("typeVolumeValue").textContent = `${Math.round(vols.type * 100)}%`;
+  }
+  if (missVolSlider) {
+    missVolSlider.value = vols.miss;
+    document.getElementById("missVolumeValue").textContent = `${Math.round(vols.miss * 100)}%`;
+  }
+  if (seVolSlider) {
+    seVolSlider.value = vols.se;
+    document.getElementById("seVolumeValue").textContent = `${Math.round(vols.se * 100)}%`;
+  }
 
   if (soundToggle && soundIcon) {
     soundToggle.checked = Game.getSoundEnabled();

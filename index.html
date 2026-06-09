@@ -132,151 +132,102 @@
 ===================================================== -->
 <div id="settings" style="display:none; margin-top:20px;">
   <h2>SETTING</h2>
-  
-  <!-- online ranking設定 -->
-  <fieldset>
-    <legend>オンラインランキング</legend>
 
-    <label>
-      <input type="checkbox" id="onlineRankingToggle">
-      オンラインランキングに参加する
-    </label>
+  <div class="settings-grid">
+    <div class="settings-column">
+      <!-- online ranking設定 -->
+      <fieldset>
+        <legend>ONLINE</legend>
+        <label>
+          <input type="checkbox" id="onlineRankingToggle">
+          オンラインランキングに参加する
+        </label>
+        <div class="player-name-box">
+          <input type="text" id="playerNameInput" maxlength="12" placeholder="プレイヤー名">
+          <button id="savePlayerNameBtn">保存</button>
+        </div>
+      </fieldset>
 
-    <div class="player-name-box">
-      <input type="text" id="playerNameInput" maxlength="12" placeholder="プレイヤー名">
-      <button id="savePlayerNameBtn">保存</button>
-    </div>
-  </fieldset>
+      <!-- サウンド個別設定 -->
+      <fieldset>
+        <legend>SOUND</legend>
+        <div class="sound-setting-row">
+          <label><input type="checkbox" id="bgmToggle"><span>BGM</span></label>
+          <input type="range" id="bgmVolSlider" min="0" max="1" step="0.01" value="0.5">
+          <span id="bgmVolumeValue" class="sound-value">50%</span> 
+        </div>
+        <div class="sound-setting-row">
+          <label><input type="checkbox" id="typeSoundToggle"><span>タイプ</span></label>
+          <input type="range" id="typeVolSlider" min="0" max="1" step="0.01" value="0.5">
+          <span id="typeVolumeValue" class="sound-value">50%</span> 
+        </div>
+        <div class="sound-setting-row">
+          <label><input type="checkbox" id="missSoundToggle"><span>ミス</span></label>
+          <input type="range" id="missVolSlider" min="0" max="1" step="0.01" value="0.5">
+          <span id="missVolumeValue" class="sound-value">50%</span> 
+        </div>
+        <div class="sound-setting-row">
+          <label><input type="checkbox" id="SEToggle"><span>SE</span></label>
+          <input type="range" id="seVolSlider" min="0" max="1" step="0.01" value="0.5">
+          <span id="seVolumeValue" class="sound-value">50%</span> 
+        </div>
+      </fieldset>
 
-  <!-- サウンド個別設定 -->
-  <fieldset>
-    <legend>サウンド設定</legend>
-
-    <div class="sound-setting-row">
-      <label>
-        <input type="checkbox" id="bgmToggle">
-        <span class="setting-name">BGM</span>
-      </label>
-      <input type="range" id="bgmVolSlider" min="0" max="1" step="0.01" value="0.5">
-    </div>
-
-    <div class="sound-setting-row">
-      <label>
-        <input type="checkbox" id="typeSoundToggle">
-        <span class="setting-name">タイプ音</span>
-      </label>
-      <input type="range" id="typeVolSlider" min="0" max="1" step="0.01" value="0.5">
-    </div>
-
-    <div class="sound-setting-row">
-      <label>
-        <input type="checkbox" id="missSoundToggle">
-        <span class="setting-name">ミス音</span>
-      </label>
-      <input type="range" id="missVolSlider" min="0" max="1" step="0.01" value="0.5">
-    </div>
-
-    <div class="sound-setting-row">
-      <label>
-        <input type="checkbox" id="SEToggle">
-        <span class="setting-name">SE</span>
-      </label>
-      <input type="range" id="seVolSlider" min="0" max="1" step="0.01" value="0.5">
-    </div>
-  </fieldset>
-
-  <!-- フラッシュ設定 -->
-  <fieldset>
-    <legend>画面フラッシュ</legend>
-    <label>
-      <input type="checkbox" id="flashToggle">
-      ミスタイプ時に画面フラッシュ
-    </label>
-  </fieldset>
-  
-  <!-- キー設定 -->
-  <fieldset class="keybind-fieldset">
-    <legend>KEY SETTING</legend>
-
-    <div class="keybind-row">
-
-      <div class="keybind-labels">
-        <label>ロック解除</label>
-        <label>自動ロック</label>
-        <label>ポーズ</label>
-        <label>アクティブスキル</label>
-      </div>
-
-      <div class="keybind-controls">
-        <select id="key-unlock">
-              <option value="Space">SPACE</option>
-              <option value="Tab">TAB</option>
-              <option value="Enter">ENTER</option>
-              <option value="Backspace">BS</option>
-              <option value="Delete">DEL</option>
-        </select>
-        <select id="key-autolock">
-              <option value="Space">SPACE</option>
-              <option value="Tab">TAB</option>
-              <option value="Enter">ENTER</option>
-              <option value="Backspace">BS</option>
-              <option value="Delete">DEL</option>
-        </select>
-        <select id="key-pause">
-              <option value="Space">SPACE</option>
-              <option value="Tab">TAB</option>
-              <option value="Enter">ENTER</option>
-              <option value="Backspace">BS</option>
-              <option value="Delete">DEL</option>
-        </select>
-        <select id="key-skill">
-              <option value="Space">SPACE</option>
-              <option value="Tab">TAB</option>
-              <option value="Enter">ENTER</option>
-              <option value="Backspace">BS</option>
-              <option value="Delete">DEL</option>
-        </select>
-      </div>
-
+      <!-- フラッシュ設定 -->
+      <fieldset>
+        <legend>画面フラッシュ</legend>
+        <label>
+          <input type="checkbox" id="flashToggle">
+          ミスタイプ時に画面フラッシュ
+        </label>
+      </fieldset>
     </div>
 
-    <button id="saveKeybindBtn">保存</button>
-  
-  </fieldset>
+    <div class="settings-column">
+      <!-- キー設定 -->
+      <fieldset class="keybind-fieldset">
+        <legend>KEY</legend>
+        <div class="keybind-row">
+          <div class="keybind-labels">
+            <label>Unlock</label>
+            <label>Auto Lock</label>
+            <label>Pause</label>
+            <label>Active Skill</label>
+          </div>
+          <div class="keybind-controls">
+            <select id="key-unlock"><option value="Space">SPACE</option><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+            <select id="key-autolock"><option value="Space">SPACE</option><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+            <select id="key-pause"><option value="Space">SPACE</option><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+            <select id="key-skill"><option value="Space">SPACE</option><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+          </div>
+        </div>
+        <button id="saveKeybindBtn">Save Keybinds</button>
+      </fieldset>
 
-  <!-- デイリーのバックアップ！ -->
-  <fieldset>
-    <legend>デイリーデータ</legend>
+      <!-- デイリーのバックアップ！ -->
+      <fieldset>
+        <legend>DAILY DATA</legend>
+        <div class="data-btn-row">
+          <button id="exportPlayerStatsBtn">Export</button>
+          <button id="importPlayerStatsBtn">Import</button>
+          <button id="resetPlayerStatsBtn">Reset</button>
+        </div>
+        <input type="file" id="importPlayerStatsFile" accept=".json" style="display:none">
+      </fieldset>
 
-    <button id="exportPlayerStatsBtn">📤 BACKUP</button>
-    <button id="importPlayerStatsBtn">📥 復元</button>
-    <button id="resetPlayerStatsBtn">🗑 RESET</button>
+      <fieldset>
+        <legend>QUEST DATA</legend>
+        <div class="data-btn-row">
+          <button id="exportQuestBtn">Export</button>
+          <button id="importQuestBtn">Import</button>
+          <button id="resetQuestBtn">Reset</button>
+        </div>
+        <input type="file" id="importQuestFile" accept=".json" style="display:none">
+      </fieldset>
+    </div>
+  </div>
 
-    <!-- 復元用 -->
-    <input
-      type="file"
-      id="importPlayerStatsFile"
-      accept=".json"
-      style="display:none"
-    >
-  </fieldset>
-
-  <fieldset>
-    <legend>クエストデータ</legend>
-
-    <button id="exportQuestBtn">📤 BACKUP</button>
-    <button id="importQuestBtn">📥 復元</button>
-    <button id="resetQuestBtn">🗑 RESET</button>
-
-    <input
-      type="file"
-      id="importQuestFile"
-      accept=".json"
-      style="display:none"
-    >
-  </fieldset>
-
-  <button id="settingsBackBtn">MENU</button>
+  <button id="settingsBackBtn">Back to Menu</button>
 
 </div>
 <!-- =====================================================
