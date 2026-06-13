@@ -112,7 +112,123 @@
   <button id="freeEnemyModeBtn">ENEMY</button>
   <button id="freeStartMenuBackBtn">MENU</button>
 
+  <!-- フリーモード詳細設定コンテナ -->
+  <div id="freeModeConfig" class="free-config-container" style="display: none;">
+    
+    <div id="configStandard" class="mode-config-group">
+      <div class="config-section-title">Standard Config</div>
+      <div class="config-row">
+        <label>問題数</label>
+        <input type="range" id="stdCountSlider" min="5" max="50" step="1" value="20" 
+               oninput="document.getElementById('stdCountValue').innerText = this.value">
+        <span class="config-value" id="stdCountValue">20</span>
+      </div>
+      <button id="startStandardFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
+    </div>
+
+    <div id="configTimeAttack" class="mode-config-group" style="display: none;">
+      <div class="config-section-title">Time Attack Config</div>
+      <div class="config-row">
+        <label>制限時間</label>
+        <input type="range" id="taTimeSlider" min="10" max="600" step="5" value="60"
+               oninput="document.getElementById('taTimeValue').innerText = this.value">
+        <span class="config-value" id="taTimeValue">60</span>
+      </div>
+      <button id="startTimeAttackFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
+    </div>
+
+    <div id="configEnemy" class="mode-config-group" style="display: none;">
+      <div class="config-section-title">Enemy Mode Pattern</div>
+      
+      <!-- 出現設定 (Tier & 種類) -->
+      <div class="config-subset-section" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+        <div class="config-row">
+          <label>出現 Tier (1-10)</label>
+          <select id="freeEnemyTier">
+            <option value="1">Tier 1</option><option value="2">Tier 2</option>
+            <option value="3">Tier 3</option><option value="4">Tier 4</option>
+            <option value="5">Tier 5</option><option value="6">Tier 6</option>
+            <option value="7">Tier 7</option><option value="8">Tier 8</option>
+            <option value="9">Tier 9</option><option value="10">Tier 10</option>
+          </select>
+        </div>
+        <div class="config-row">
+          <label>属性セット</label>
+          <select id="freeEnemyTypeSet">
+            <option value="ENEMY_TIER_BALANCED">標準構成</option>
+            <option value="ENEMY_TIER_ENGLISH_HEAVY">英語多め</option>
+            <option value="ENEMY_TIER_SYMBOL_HEAVY">記号多め</option>
+            <option value="ENEMY_TIER_ONOMATOPOEIA_HEAVY">擬音多め</option>
+            <option value="ENEMY_TIER_PUNCTUATION_HEAVY">句読点多め</option>
+            <option value="ENEMY_TIER_SOKUON_HEAVY">促音多め</option>
+            <option value="ENEMY_TIER_PROVERB_HEAVY">ことわざ多め</option>
+            <option value="ENEMY_TIER_GRAY_ONLY">標準（Gray）のみ</option>
+            <option value="ENEMY_TIER_PURPLE_ONLY">英語（Purple）のみ</option>
+            <option value="ENEMY_TIER_YELLOW_ONLY">ことわざ（Yellow）のみ</option>
+            <option value="ENEMY_TIER_BLUE_ONLY">促音（Blue）のみ</option>
+            <option value="ENEMY_TIER_PINK_ONLY">擬音（Pink）のみ</option>
+            <option value="ENEMY_TIER_GREEN_ONLY">句読点（Green）のみ</option>
+            <option value="ENEMY_TIER_RED_ONLY">記号（Red）のみ</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="config-section-title" style="font-size: 0.8em; opacity: 0.7;">Rule Settings</div>
+      <div class="pattern-selector">
+        <button class="pattern-btn active" data-pattern="time">時間制限</button>
+        <button class="pattern-btn" data-pattern="count">討伐数指定</button>
+        <button class="pattern-btn" data-pattern="endless">エンドレス</button>
+      </div>
+
+      <div id="enemyParamTime" class="pattern-detail">
+        <div class="config-row">
+          <label>制限時間</label>
+          <input type="range" id="enemyTimeSlider" min="30" max="600" step="5" value="60"
+                 oninput="document.getElementById('enemyTimeValue').innerText = this.value">
+          <span class="config-value" id="enemyTimeValue">60</span>
+        </div>
+      </div>
+
+      <div id="enemyParamCount" class="pattern-detail" style="display: none;">
+        <div class="config-row">
+          <label>目標討伐数</label>
+          <input type="range" id="enemyCountSlider" min="1" max="200" step="1" value="30"
+                 oninput="document.getElementById('enemyCountValue').innerText = this.value">
+          <span class="config-value" id="enemyCountValue">30</span>
+        </div>
+      </div>
+
+      <div id="enemyParamEndless" class="pattern-detail" style="display: none;">
+        <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">力尽きるまで戦い続けます</p>
+      </div>
+      <button id="startEnemyFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
+
+      <!-- 新しい設定項目: スポーン間隔 -->
+      <div class="config-section-title" style="font-size: 0.8em; opacity: 0.7; margin-top: 20px;">Spawn Settings</div>
+      <div class="config-row">
+        <label>スポーン間隔: <span id="enemyIntervalValue">2.0</span>s</label>
+        <input type="range" id="enemyIntervalSlider" min="500" max="5000" step="100" value="2000"
+               oninput="document.getElementById('enemyIntervalValue').innerText = (this.value / 1000).toFixed(1)">
+      </div>
+
+      <!-- 新しい設定項目: 全滅時即時出現 -->
+      <div class="config-row" style="margin-top: 10px;">
+        <label>
+          <input type="checkbox" id="enemyImmediateToggle"> 全滅時に即座に出現
+        </label>
+      </div>
+
+    </div>
+
+    <div id="configLong" class="mode-config-group" style="display: none;">
+      <div class="config-section-title">Long Phrase Config</div>
+      <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">固定の文章セットを開始します</p>
+      <button id="startLongFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
+    </div>
+  </div>
+
 </div>
+
 
 <!-- =====================================================
   ポーズメニュー
@@ -240,7 +356,7 @@
 
         <!-- ヘッダー -->
         <div id="records-header">
-          <h2>🏆 RECORDS</h2>
+          <h2>RECORDS</h2>
 
           <div id="records-controls">
             <div id="recordsModeButtons" class="mode-buttons">
@@ -259,14 +375,14 @@
         <div id="records-main">
 
           <section class="records-section">
-            <h3>📈 BEST SCORES GRAPH</h3>
+            <h3>BEST SCORES GRAPH</h3>
             <div id="records-left">
               <div id="bestScoreGraph"></div>
             </div>
           </section>
 
           <section class="records-section">
-            <h3>🏅 RANKING</h3>
+            <h3>RANKING</h3>
             <div id="records-ranking">
               <div id="ranking"></div>
             </div>
@@ -278,7 +394,7 @@
 
       <!-- 下段 -->
       <div id="records-bottom">
-        <h3>📜 HISTORY</h3>
+        <h3>HISTORY</h3>
           <div id="history"></div>
 
         <div id="records-buttons">

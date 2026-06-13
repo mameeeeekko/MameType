@@ -241,6 +241,28 @@ export function playMissSound() {
     playNoise(0.08, 0.25, missGain);
 }
 
+/**
+ * ボリューム調整用のテスト音を再生する
+ * @param {string} key 'bgm', 'type', 'miss', 'se'
+ * @param {object} settings 現在のサウンド設定 (soundSettings)
+ */
+export function playTestSound(key, settings) {
+    switch (key) {
+        case 'bgm':
+            if (settings.bgm) playTone(330, 0.2, 'sine', 0.5, bgmGain);
+            break;
+        case 'type':
+            if (settings.type) playTypeSound();
+            break;
+        case 'miss':
+            if (settings.miss) playMissSound();
+            break;
+        case 'se':
+            if (settings.soundeffect) playTone(440, 0.1, 'sine', 0.5, seGain);
+            break;
+    }
+}
+
 export function playEnemyKillSound(type=1){
     if(type===1) playSE("kill1",0.35);
     if(type===2) playSE("kill2",0.35);

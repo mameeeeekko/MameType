@@ -30,9 +30,10 @@ function resetHistoryVisible() {
 
 // NEWバッジの表示期間 (24時間)
 const NEW_BADGE_DURATION_MS = 24 * 60 * 60 * 1000;
-const getNewBadgeHtml = (record) => {
+const getNewBadgeHtml = (record, isLatest = false) => {
   if (record.newInRankingAt && (Date.now() - record.newInRankingAt) < NEW_BADGE_DURATION_MS) {
-    return '<span class="ranking-new-badge">NEW</span>';
+    const className = isLatest ? "ranking-new-badge latest-record" : "ranking-new-badge";
+    return `<span class="${className}">NEW</span>`;
   }
   return '';
 };
@@ -183,6 +184,11 @@ function renderRanking(records) {
   // モードで絞り込み
   const filtered = filterByMode(records, mode);
 
+  // 絞り込んだジャンル（モード）内での最新タイムスタンプを取得（一番新しい記録を強調するため）
+  const latestTimestamp = filtered.length > 0
+    ? Math.max(...filtered.map(r => new Date(r.date).getTime()))
+    : 0;
+
   if (!filtered.length) {
     container.textContent = "まだ記録がありません";
     return;
@@ -209,7 +215,7 @@ function renderRanking(records) {
   if (mode === "time_attack") {
     columns = ["順位", "日時", "解答数", "eScore", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
-      `<div class="rank-cell">${getNewBadgeHtml(r)}<span class="rank-number">${i + 1}</span></div>`,
+      `<div class="rank-cell">${getNewBadgeHtml(r, new Date(r.date).getTime() === latestTimestamp)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
       r.solvedCount ?? 0,
       r.eScore ?? r.score,
@@ -219,7 +225,7 @@ function renderRanking(records) {
   } else if (mode === "enemy_mode") {
     columns = ["順位", "日時", "gScore", "gRank", "撃破数", "最大コンボ", "最大チェイン", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
-      `<div class="rank-cell">${getNewBadgeHtml(r)}<span class="rank-number">${i + 1}</span></div>`,
+      `<div class="rank-cell">${getNewBadgeHtml(r, new Date(r.date).getTime() === latestTimestamp)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
       r.gScore,
       r.gRank ?? "_",
@@ -232,7 +238,7 @@ function renderRanking(records) {
   } else {
     columns = ["順位", "日時", "eScore", "ランク", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
-      `<div class="rank-cell">${getNewBadgeHtml(r)}<span class="rank-number">${i + 1}</span></div>`,
+      `<div class="rank-cell">${getNewBadgeHtml(r, new Date(r.date).getTime() === latestTimestamp)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
       r.eScore ?? r.score,
       r.eRank ?? "-",
@@ -252,7 +258,7 @@ function renderRanking(records) {
   if (rows.length > 20) {
     wrapper.style.maxHeight = "420px";
     wrapper.style.overflowY = "auto";
-    wrapper.style.border = "1px solid #ddd";
+    wrapper.style.border = "1px solid rgba(88, 166, 255, 0.2)";
     wrapper.style.borderRadius = "12px";
   }
 
@@ -377,6 +383,7 @@ rows.forEach((rowData, rowIndex) => {
   if (historyVisibleCount < sorted.length) {
     const moreBtn = document.createElement("button");
     moreBtn.textContent = "過去の分を見る";
+    moreBtn.className = "records-more-btn"; // スタイルをCSSで制御しやすくするため
     moreBtn.style.display = "block";
     moreBtn.style.margin = "10px auto";
     moreBtn.addEventListener("click", () => {
@@ -393,9 +400,8 @@ rows.forEach((rowData, rowIndex) => {
  */
 function renderTable(container, columns, rows) {
   const table = document.createElement("table");
-  table.border = "1";
   table.style.margin = "0 auto";
-  table.style.borderCollapse = "collapse";
+  table.style.width = "100%";
 
   // ヘッダー行
   const headerTr = document.createElement("tr");
@@ -409,13 +415,6 @@ function renderTable(container, columns, rows) {
     th.style.position = "sticky";
     th.style.top = "0";
     th.style.zIndex = "10";
-
-    // 背景ないと下の文字が透ける
-    th.style.background = "#ffffff";
-
-    // 見やすさ
-    th.style.borderBottom = "2px solid #ddd";
-    th.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
 
     headerTr.appendChild(th);
   });

@@ -181,8 +181,12 @@ function resetCombo() {
     if (key === "！") key = "!";
     if (key === "？") key = "?";
     if (key === "ー") key = "-";
-    // a-z , . , ! , ? のみ処理、その他は無視
-    if (!/^[a-z.,!?-]$/.test(key)) return;
+    if (key === "「") key = "[";
+    if (key === "」") key = "]";
+    if (key === "　") key = " "; // 全角スペースを半角スペースとして扱う
+
+    // a-z , . , ! , ? , [ , ] , space のみ処理、その他は無視
+    if (!/^[a-z.,!?\-\[\] ]$/.test(key)) return;
 
     const kana = getKana(gameState.text, gameState.pos);       // 現在の文字
     const cacheKey = kana + gameState.pos;           // キャッシュ用のキー

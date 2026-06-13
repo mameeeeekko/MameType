@@ -81,6 +81,7 @@ const DEFAULT_STATS = {
         
         maxCombo: 0,
         maxChain: 0,
+        maxGScore: 0,
 
         activeSkillUseCount: {},   // { skillId: count }
 
@@ -678,6 +679,14 @@ export function updateQuestStats(result = {}) {
     stats.maxChain = Math.max(
     stats.maxChain || 0,
     result.maxChain || 0
+    );
+
+    // =========================
+    // 最高gScore更新
+    // =========================
+    stats.maxGScore = Math.max(
+        stats.maxGScore || 0,
+        result.gScore || 0
     );
 
     // =========================

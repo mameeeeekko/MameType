@@ -15,7 +15,7 @@ import {
   setLongTextMode, setUIMode,
   initTimeBar, setTimeLeft, setSolvedCount
 } from './renderer.js';
-import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, bgmGain, seGain, typeGain, missGain, playTone } from "./effectManager.js";
+import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, playTestSound as playTestSoundEffect } from "./effectManager.js";
 import { GameModes} from "./gameModes.js";
 import { updatePlayerStats, getPlayerStats} from "./playerStats.js";
 import { updateHud} from "./hud.js";
@@ -267,34 +267,9 @@ export function toggleSoundGlobal() {
 // New function to play a test sound for volume adjustment
 export function playTestSound(key) {
   if (!soundEnabled) return;
-
-  let targetGainNode;
-  let isSoundSettingEnabled = true; // Assume enabled unless specific check fails
-
-  switch (key) {
-    case 'bgm':
-      targetGainNode = bgmGain; // Pass the actual node
-      isSoundSettingEnabled = soundSettings.bgm;
-      break;
-    case 'type':
-      targetGainNode = typeGain; // Pass the actual node
-      isSoundSettingEnabled = soundSettings.type;
-      break;
-    case 'miss':
-      targetGainNode = missGain; // Pass the actual node
-      isSoundSettingEnabled = soundSettings.miss;
-      break;
-    case 'se':
-      targetGainNode = seGain; // Pass the actual node
-      isSoundSettingEnabled = soundSettings.soundeffect; // 'se' volume is controlled by 'soundeffect' setting
-      break;
-    default:
-      return;
-  }
-
-  if (!isSoundSettingEnabled) return; // If the specific sound type is toggled off, don't play test sound
-
-  playTone(440, 0.05, 'sine', soundVolumes[key], targetGainNode); // 440Hz, 0.05s duration
+  
+  // 具体的な再生処理は effectManager に委譲
+  playTestSoundEffect(key, soundSettings);
 }
 
 // 安全ラッパー（音・フラッシュ）
@@ -839,19 +814,19 @@ async function finishGame(config = {}) {
     gameState.isEnding = false;
 
     isGameActive = false;
+}
 
-  function getERank(eScore) {
-      if (eScore <= 21) return "E-"; if (eScore <= 38) return "E"; if (eScore <= 55) return "E+";
-      if (eScore <= 72) return "D-"; if (eScore <= 89) return "D"; if (eScore <= 106) return "D+";
-      if (eScore <= 123) return "C-"; if (eScore <= 140) return "C"; if (eScore <= 157) return "C+";
-      if (eScore <= 174) return "B-"; if (eScore <= 191) return "B"; if (eScore <= 208) return "B+";
-      if (eScore <= 225) return "A-"; if (eScore <= 242) return "A"; if (eScore <= 259) return "A+";
-      if (eScore <= 276) return "S"; if (eScore <= 299) return "Great!"; if (eScore <= 324) return "Rapid";
-      if (eScore <= 349) return "Falcon"; if (eScore <= 374) return "ShootingStar"; if (eScore <= 399) return "Lightning";
-      if (eScore <= 449) return "Bullet"; if (eScore <= 499) return "Flash"; if (eScore <= 549) return "Blitz";
-      if (eScore <= 599) return "LaserBeam"; if (eScore <= 649) return "Martian"; if (eScore <= 699) return "Cosmo";
-      if (eScore <= 749) return "SuperNova"; return "God";
-  }
+export function getERank(eScore) {
+    if (eScore <= 21) return "E-"; if (eScore <= 38) return "E"; if (eScore <= 55) return "E+";
+    if (eScore <= 72) return "D-"; if (eScore <= 89) return "D"; if (eScore <= 106) return "D+";
+    if (eScore <= 123) return "C-"; if (eScore <= 140) return "C"; if (eScore <= 157) return "C+";
+    if (eScore <= 174) return "B-"; if (eScore <= 191) return "B"; if (eScore <= 208) return "B+";
+    if (eScore <= 225) return "A-"; if (eScore <= 242) return "A"; if (eScore <= 259) return "A+";
+    if (eScore <= 276) return "S"; if (eScore <= 299) return "Great!"; if (eScore <= 324) return "Rapid";
+    if (eScore <= 349) return "Falcon"; if (eScore <= 374) return "ShootingStar"; if (eScore <= 399) return "Lightning";
+    if (eScore <= 449) return "Bullet"; if (eScore <= 499) return "Flash"; if (eScore <= 549) return "Blitz";
+    if (eScore <= 599) return "LaserBeam"; if (eScore <= 649) return "Martian"; if (eScore <= 699) return "Cosmo";
+    if (eScore <= 749) return "SuperNova"; return "God";
 }
 
 

@@ -291,7 +291,7 @@ button {
   display: block;
   width: 100%;
   margin: 5px 0;
-  clip-path: polygon(0 0, 95% 0, 100% 50%, 95% 100%, 0 100%);
+  border-radius: 6px;
   text-align: left;
   padding-left: 20px;
   background: rgba(88, 166, 255, 0.05);
@@ -312,6 +312,16 @@ button {
   color: #ffffff;
   text-shadow: 0 0 10px #fff;
   border-left-width: 8px;
+}
+
+/* フリーモード等で選択中のボタンを維持するスタイル */
+#freeStartMenu button.active {
+  background: rgba(88, 166, 255, 0.35); /* ホバーより少し濃い青 */
+  padding-left: 35px;                  /* ホバー時と同じ位置を維持 */
+  color: #ffffff;                      /* 文字を白く */
+  text-shadow: 0 0 15px #fff;          /* 発光を強めに */
+  border-left-width: 8px;              /* 太い左線を維持 */
+  box-shadow: inset 0 0 15px rgba(88, 166, 255, 0.3); /* 内側に青いグロー */
 }
 
 #menu button:active, #startMenu button:active, #freeStartMenu button:active, #questMenu button:active {
@@ -371,9 +381,9 @@ button {
    ゲームモーダル本体カード
    ===================================================== */
 .game-modal-content {
-  background: linear-gradient(180deg, #ffffff, #f3f4f6);
-  color: #1f2937;
-  border-radius: 22px;
+  background: rgba(13, 17, 23, 0.95);
+  color: #f0f6fc;
+  border-radius: 14px;
   padding: 28px 32px;
 
   width: 95vw;
@@ -381,18 +391,16 @@ button {
   max-height: 95vh;
   overflow: auto;
 
-  border: 2px solid #e5e7eb;
-
-  /* 任天堂風の浮き */
-  box-shadow:
-    0 14px 0 #d1d5db,
-    0 20px 30px rgba(0,0,0,0.15);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(88, 166, 255, 0.05);
 }
 
 /* モーダル内テキスト色調整 */
-.game-modal-content #word { color: #0f172a; }
-.game-modal-content #roma { color: #4f46e5; }
-.game-modal-content .time-left { color: #334155; }
+.game-modal-content #word { color: #f0f6fc; }
+.game-modal-content #jp { color: #b7c0c9; }
+.game-modal-content #roma { color: #8ebff7; }
+.game-modal-content .time-left { color: #f0f6fc; }
 
 
 
@@ -696,7 +704,7 @@ button {
   font-size: 2.1rem;
   font-weight: 600;
   margin-bottom: 0.4rem;
-  color: #2b2f33;
+  color: #f0f6fc;
   letter-spacing: 0.02em;
 }
 
@@ -705,7 +713,7 @@ button {
 #roma {
   font-size: 1.6rem;
   letter-spacing: 0.06em;
-  color:#4f46e5;
+  color:#5e57d0;
   margin-bottom: 1rem;
   font-weight: 600;
 }
@@ -731,7 +739,7 @@ button {
   font-size: 1.1rem;
   font-weight: 600;
   margin: 8px 0;
-  color: #5f6368;
+  color: #f0f6fc;
 }
 
 /* =====================================================
@@ -741,7 +749,7 @@ button {
   display: none;
   height: 400px;
   overflow-y: auto;
-  border: 1px solid #ccc;
+  border: 1px solid rgba(88, 166, 255, 0.2);
   margin-bottom: 10px;
   padding: 8px 12px;
   line-height: 1.2;
@@ -768,7 +776,8 @@ button {
   display: none;
   max-height: 120px;
   overflow-y: auto;
-  border: 1px solid #ccc;
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 #kana-scroll, #roma-scroll {
@@ -783,13 +792,13 @@ button {
 
 #kana-scroll {
   font-size: 23px;
-  color: #2b2f33;
+  color: #b7c0c9;
   margin-bottom: 2px;
 }
 
 #roma-scroll {
   font-size: 23px;
-  color: #4f46e5;
+  color: #679bd6;
   margin-top: 0;
   padding: 0 10px;
 }
@@ -814,8 +823,8 @@ button {
   margin: 10px auto;
   overflow: hidden;
   border-radius: 6px;
-  border: 1px solid #ccc;
-  background: #eee;
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
 }
 #progress-container { height: 12px; }
 #progress-container {
@@ -827,11 +836,11 @@ button {
 #progress-blocks {
   overflow: hidden;   /* ←バーだけ閉じ込める */
 }
-.progress-block.done { background: #ddd; }
+.progress-block.done { background: rgba(88, 166, 255, 0.15); }
 .progress-block {
   flex: 1;
-  background: #9fd6a5;
-  border-right: 1px solid #b7e1bc;
+  background: rgba(88, 166, 255, 0.6);
+  border-right: 1px solid rgba(88, 166, 255, 0.1);
 }
 .progress-block:last-child { border-right: none; }
 
@@ -840,7 +849,7 @@ button {
   top: -20px;        /* ←バーの上に出す */
   right: 0;
   font-size: 20px;
-  color: #333;
+  color: #f0f6fc;
   pointer-events: none;
   font-weight: bold;
 }
@@ -856,9 +865,10 @@ button {
   position: relative;
   width: 100%;
   height: 100%;
-  background: #f87171;
+  background: #ff9d00; /* 紺色の補色であるサイバーオレンジ */
   transform-origin: left center;
   transform: scaleX(1);
+  border-radius: 6px;
   z-index: 9000;
 }
 
@@ -867,7 +877,7 @@ button {
   top: -28px;        /* ←バーの上に出す */
   right: 0;
   font-size: 20px;
-  color: #333;
+  color: #f0f6fc;
   pointer-events: none;
   font-weight: bold;
   z-index: 9100;
@@ -890,13 +900,13 @@ button {
 #speed-bar {
   height: 100%;
   width: 0%;
-  background: #4caf50;
+  background: #60a162;
   transition: width 0.15s linear;
 }
 
 #speed-label {
   font-size: 0.9rem;
-  color: #555;
+  color: #8b949e;
   margin-bottom: 10px;
 }
 
@@ -909,7 +919,7 @@ button {
 
   margin: 10px auto 6px auto; /* ← 中央寄せ＋日本語の上 */
 
-  border: 2px solid #2b2b2b;
+  border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 50%;
 
   display: flex;
@@ -925,12 +935,14 @@ button {
 /* 上の CLEAR */
 .clear-circle .label {
   font-size: 13px;
+  color: #8b949e;
   letter-spacing: 2px;
   opacity: 0.7;
 }
 
 /* 下の数字 */
 .clear-circle .count {
+  color: #f0f6fc;
   font-size: 28px;
   font-weight: bold;
 }
@@ -955,8 +967,8 @@ button {
   justify-content: center;
 
   background: conic-gradient(
-    #454545 0deg,
-    #e5e7eb 0deg
+    rgba(88, 166, 255, 0.6) 0deg,
+    rgba(88, 166, 255, 0.1) 0deg
   );
 
   z-index: 0;
@@ -967,7 +979,7 @@ button {
   content: "";
   position: absolute;
   inset: 6px;
-  background: white;
+  background: #0d1117;
   border-radius: 50%;
   z-index: 0;
 }
@@ -977,7 +989,7 @@ button {
 #time-circle .count {
   position: relative;
   z-index: 2;
-  color: #2b2f33;
+  color: #f0f6fc;
 }
 
 /* 上：TIME */
@@ -993,6 +1005,26 @@ button {
   font-size: 14px;
   font-weight: bold;
   line-height: 1.2;
+}
+
+/* =====================================================
+   ゲーム画面内 戻るボタン
+   ===================================================== */
+.game-back-btn {
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  border-radius: 8px;
+  color: #f0f6fc;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.15s;
+  margin-top: 15px;
+}
+.game-back-btn:hover {
+  background: rgba(88, 166, 255, 0.2);
+  color: #fff;
+  border-color: #58a6ff;
 }
 
 /* =====================================================
@@ -1023,6 +1055,143 @@ button {
   background: #1fae39;
   border-color: #1fae39;
   color: #ffffff;
+}
+
+/* ===============================
+   フリーモード詳細設定
+   =============================== */
+.free-config-container {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10650;
+  width: 500px;
+  margin-top: 0;
+  padding: 24px;
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  text-align: left;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(88, 166, 255, 0.05);
+}
+
+.config-section-title {
+  font-size: 11px;
+  color: #58a6ff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(88, 166, 255, 0.2);
+  padding-bottom: 6px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-section-title::before {
+  content: "▶";
+  font-size: 10px;
+}
+
+/* パターン選択ボタン（エネミーモード等） */
+.pattern-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.pattern-btn {
+  padding: 8px 16px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+  margin: 0 !important;
+  width: auto !important;
+  background: rgba(88, 166, 255, 0.05) !important;
+  border: 1px solid rgba(88, 166, 255, 0.3) !important;
+  color: #8b949e !important;
+  cursor: pointer;
+  transition: 0.2s;
+  text-align: center !important;
+  font-weight: bold !important;
+}
+
+.pattern-btn:hover {
+  background: rgba(88, 166, 255, 0.15) !important;
+  color: #f0f6fc !important;
+}
+
+.pattern-btn.active {
+  background: rgba(88, 166, 255, 0.3) !important;
+  border-color: #58a6ff !important;
+  color: #ffffff !important;
+  text-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
+  box-shadow: 0 0 12px rgba(88, 166, 255, 0.3);
+}
+
+/* 設定項目行（スライダー） */
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 4px 0;
+}
+
+.config-row:hover {
+  background: rgba(88, 166, 255, 0.03);
+}
+
+.config-row label {
+  flex: 0 0 140px; /* 文字が折り返されないように幅を拡張 */
+  font-size: 12px;
+  color: #c9d1d9;
+  white-space: nowrap; /* 確実に1行に収める */
+}
+
+.config-row input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 2px;
+  background: rgba(88, 166, 255, 0.2);
+  border-radius: 1px;
+  outline: none;
+  cursor: pointer;
+}
+
+.config-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 18px;
+  background: #58a6ff;
+  border-radius: 1px;
+  box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+  transition: 0.2s;
+}
+
+.config-value {
+  flex: 0 0 55px;
+  text-align: right;
+  font-family: 'Inter', monospace;
+  font-size: 14px;
+  color: #58a6ff;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
+}
+
+/* パターンの詳細エリアのアニメーション */
+.pattern-detail {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* ===============================
@@ -1672,7 +1841,7 @@ button {
   z-index: 10550;
   font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
   color: #d1d5db;
-  background: #0d1117;
+  background: #05080a; /* bodyの背景色に合わせる */
   background-image: 
     linear-gradient(rgba(18, 25, 33, 0.6), rgba(5, 8, 10, 0.7)),
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 2px);
@@ -1703,35 +1872,42 @@ button {
   font-size: 2.8rem;
   font-weight: 900;
   font-style: italic;
-  color: #fff;
-  text-shadow: 0 0 10px rgba(164, 164, 164, 0.5);
+  color: #58a6ff; /* サイバーブルー */
+  text-shadow: 0 0 10px rgba(88, 166, 255, 0.8); /* サイバーブルーのシャドウ */
   margin-bottom: 15px;
 }
 
 /* モードボタン中央 */
 #records-controls {
   display: flex;
-  justify-content: center;
+  justify-content: center; /* 中央寄せ */
+  gap: 8px; /* ボタン間の隙間 */
+  margin-bottom: 18px; /* 下に余白 */
 }
 
 /* モードボタン */
 #records .mode-buttons button {
-  background: rgba(164, 164, 164, 0.05);
-  border: 1px solid rgba(164, 164, 164, 0.3);
-  color: #d1d5db;
+  background: rgba(88, 166, 255, 0.1); /* 青系の背景 */
+  border: 1px solid rgba(88, 166, 255, 0.4); /* 青系のボーダー */
+  color: #f0f6fc; /* 明るいテキスト */
   font-weight: 600;
   padding: 6px 14px;
   transition: 0.15s;
   cursor: pointer;
+  border-radius: 8px; /* 角丸 */
 }
 
 #records .mode-buttons button:hover {
-  background: rgba(164, 164, 164, 0.2);
+  background: rgba(88, 166, 255, 0.2); /* ホバーで少し明るく */
+  color: #fff;
+  border-color: #72acee;
 }
 
 #records .mode-buttons button.active {
-  background: #a4a4a4;
-  color: #fff;
+  background: #579eef; /* アクティブは強調 */
+  color: #0d1117; /* 暗いテキスト */
+  border-color: #6ca8ed;
+  box-shadow: 0 0 10px rgba(88, 166, 255, 0.6); /* アクティブなシャドウ */
 }
 
 /* =====================================================
@@ -1747,23 +1923,23 @@ button {
 }
 
 .summary-card {
-  background: rgba(13, 17, 23, 0.8);
-  border-left: 4px solid #a4a4a4;
+  background: rgba(13, 17, 23, 0.92); /* メニューカードと統一 */
+  border-left: 4px solid #58a6ff; /* サイバーブルーのボーダー */
   padding: 16px;
   text-align: center;
-  border-radius: 0;
+  border-radius: 12px; /* 角丸 */
 }
 
 .summary-label {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #8b949e; /* リザルトラベルと統一 */
   margin-bottom: 6px;
 }
 
 .summary-value {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #fff;
+  color: #f0f6fc; /* HUDの数値と統一 */
 }
 
 /* =====================================================
@@ -1782,16 +1958,17 @@ button {
   width: 100%;
   box-sizing: border-box;
 
-  background: rgba(13, 17, 23, 0.6);
-  border: 1px solid rgba(164, 164, 164, 0.2);
-  border-radius: 4px;
+  background: rgba(13, 17, 23, 0.92); /* メニューカードと統一 */
+  border: 1px solid rgba(88, 166, 255, 0.3); /* サイバーブルーのボーダー */
+  border-radius: 12px; /* 角丸 */
   padding: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(88, 166, 255, 0.05); /* シャドウ */
 }
 
 .records-section h3 {
   margin-top: 0;
   margin-bottom: 12px;
-  color: #a4a4a4;
+  color: #83abd9; /* デイリー統計セクションと統一 */
   text-transform: uppercase;
 }
 
@@ -1806,9 +1983,9 @@ button {
 #bestScoreGraph {
   min-height: 420px;
   width: 100%;
-  background: #010409;
-  border-radius: 4px;
-  border: 1px solid rgba(164, 164, 164, 0.2);
+  background: rgba(0, 0, 0, 0.3); /* 少し透明な黒 */
+  border-radius: 12px; /* 角丸 */
+  border: 1px solid rgba(88, 166, 255, 0.2); /* 青系のボーダー */
   box-shadow: none;
 }
 
@@ -1819,11 +1996,11 @@ button {
 #records-ranking {
   width: 100%;
 }
-
 #ranking {
-  background: rgba(13, 17, 23, 0.8);
+  background: rgba(13, 17, 23, 0.92); /* メニューカードと統一 */
   padding: 14px;
-  border: 1px solid rgba(164, 164, 164, 0.2);
+  border: 1px solid rgba(88, 166, 255, 0.3); /* サイバーブルーのボーダー */
+  border-radius: 12px; /* 角丸 */
 }
 
 /* =====================================================
@@ -1839,8 +2016,9 @@ button {
   max-height: 240px;
   overflow-y: auto;
 
-  background: rgba(13, 17, 23, 0.8);
-  border: 1px solid rgba(164, 164, 164, 0.2);
+  background: rgba(13, 17, 23, 0.92); /* メニューカードと統一 */
+  border: 1px solid rgba(88, 166, 255, 0.3); /* サイバーブルーのボーダー */
+  border-radius: 12px; /* 角丸 */
   overflow-x: auto;
 }
 
@@ -1870,12 +2048,11 @@ button {
 }
 
 #history th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: #161b22;
-}
-
+  position: sticky; /* スクロールしてもヘッダーを固定 */
+  top: 0; /* 上部に固定 */
+  z-index: 5; /* 他の要素より手前に */
+  background: #0d1117; /* 背景を不透明にして透過を防止 */
+} 
 
 /* =====================================================
     記録画面 テーブル共通
@@ -1883,22 +2060,26 @@ button {
 
 #records table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate; /* stickyな境界線を正しく表示するために変更 */
+  border-spacing: 0;        /* セル間の隙間をなくしてcollapse風に見せる */
   background: transparent;
   color: #c9d1d9;
 }
 
 #records th {
-  background: #161b22;
-  color: #d1d5db;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #11151c; /* 完全に不透明な色を指定して内容が透けないようにする */
+  color: #f0f6fc; /* 明るいテキスト */
   padding: 8px;
   font-weight: 700;
-  border-bottom: 2px solid #30363d;
+  border-bottom: 2px solid rgba(88, 166, 255, 0.4); /* 青系のボーダー */
 }
 
 #records td {
   padding: 8px;
-  border-bottom: 1px solid #30363d;
+  border-bottom: 1px solid rgba(88, 166, 255, 0.1); /* 青系のボーダー */
 }
 
 #ranking th,
@@ -1910,12 +2091,12 @@ button {
 
 /* 偶数行 */
 #records tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(88, 166, 255, 0.01); /* より薄い青系の背景 */
 }
 
 /* hover */
 #records tr:hover td {
-  background: rgba(164, 164, 164, 0.1) !important;
+  background: rgba(88, 166, 255, 0.05) !important; /* ホバーで青系の背景 */
 }
 
 /* =====================================================
@@ -1936,19 +2117,21 @@ button {
   padding: 10px 0;
   border: none;
   border-radius: 14px;
-
-  background: #222;
-  color: #fff;
+  
+  background: rgba(88, 166, 255, 0.1); /* 青系の背景 */
+  border: 1px solid rgba(88, 166, 255, 0.4); /* 青系のボーダー */
+  color: #f0f6fc; /* 明るいテキスト */
   font-weight: 700;
-
   cursor: pointer;
   transition: 0.15s;
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3); /* Subtle shadow */
 }
 
 #records-buttons button:hover {
-  transform: none;
-  background: #333;
+  background: rgba(88, 166, 255, 0.2); /* Lighter blue on hover */
+  color: #fff; /* White text on hover */
+  border-color: #58a6ff; /* Brighter border on hover */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Stronger shadow on hover */
 }
 
 /* =====================================================
@@ -1975,8 +2158,8 @@ button {
 /* ランキングテーブルのNEWバッジ */
 .ranking-new-badge {
     position: absolute;
-    left: 4px; /* セルの左端に固定 */
-    background-color: #ffaf4d; /* 鮮やかな赤色 */
+    left: 4px; /* セルの左端に固定 */ 
+    background-color: #f59e0b; /* result-badge.new と統一 */
     color: white;
     padding: 2px 6px;
     border-radius: 4px;
@@ -1987,11 +2170,24 @@ button {
     animation: pulse-new 1.5s infinite; /* 点滅アニメーション */
 }
 
-@keyframes pulse-new {
+ /* 一番最新の記録のNEWバッジ */
+.ranking-new-badge.latest-record {
+  background-color: #f85149; /* 赤系やゴールドなど、目立つ色 */
+  animation: pulse-latest 1.5s infinite; /* より強調した点滅 */
+  box-shadow: 0 0 10px rgba(248, 81, 73, 0.6); /* 赤い発光効果 */
+}
+
+@keyframes pulse-latest {
+    0% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.1); filter: brightness(1.4); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* @keyframes pulse-new {
     0% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.05); opacity: 0.8; }
     100% { transform: scale(1); opacity: 1; }
-}
+} */
 
 
 /* =====================================================
@@ -2122,6 +2318,7 @@ button {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
   width: 220px;
+  display: none; /* 初期状態は非表示（メインメニュー表示時にJSで解除） */
   transition: all 0.25s ease;
 }
 
@@ -2344,10 +2541,10 @@ button {
 .daily-stats-section {
     font-size: 0.9em;
     font-weight: 900;
-    color: #83abd9; /* サイバーブルーに統一 */
+    color: #64788f; /* サイバーブルーに統一 */
     margin-bottom: 10px;
     padding-bottom: 5px;
-    border-bottom: 1px solid rgba(88, 166, 255, 0.2);
+    border-bottom:jjj 1px solid rgba(88, 166, 255, 0.2);
     text-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -4764,7 +4961,7 @@ button {
 
 /* タイトル */
 .skill-result-title {
-    font-size: 28px;
+    font-size: 34px;
     font-weight: bold;
     text-align: center;
 }
@@ -4803,7 +5000,7 @@ button {
     font-size: 13px;
     opacity: 0.8;
     margin-bottom: 4px;
-    color: #f6f6f6;
+    color: #c3d4ea;
 }
 
 /* 内容 */
@@ -4888,34 +5085,38 @@ button {
    ===================================================== */
 
 .quest-slot-card {
-  background: linear-gradient(145deg, #1e1e2f, #2a2a3d);
+  background: linear-gradient(145deg, #333333, #222222);
   border: 2px solid #444;
   border-radius: 12px;
   padding: 12px;
   margin: 10px 0;
   color: #fff;
+  text-align: center;
   box-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
 
 .slot-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-weight: bold;
   margin-bottom: 8px;
 }
 
 .slot-date {
-  font-size: 0.8em;
+  font-size: 0.75em;
   color: #aaa;
 }
 
 .slot-body {
+  display: block;
   margin-bottom: 10px;
 }
 
-.slot-row {
+.save-slot-row {
+  display: block;
   font-size: 0.9em;
-  margin: 2px 0;
+  margin: 4px 0;
 }
 
 .slot-actions {
@@ -4929,18 +5130,22 @@ button {
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  background: #3a3a5a;
+  background: #444444;
   color: #fff;
 }
 
 .slot-actions button:hover {
-  background: #5a5a8a;
+  background: #666666;
 }
 
 .slot-empty {
   text-align: center;
-  padding: 20px 0;
-  color: #888;
+  padding: 30px 0;
+  color: #444;
+  font-size: 1.5em;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  opacity: 0.6;
 }
 
 .save-modal {
@@ -4964,7 +5169,7 @@ button {
   max-height: 80vh;
   overflow-y: auto;
 
-  background: linear-gradient(145deg, #1e1e2f, #2a2a3d);
+  background: linear-gradient(145deg, #2a2a2a, #121212);
   border: 2px solid #555;
   border-radius: 12px;
   padding: 15px;
@@ -5139,6 +5344,40 @@ button {
 
 #devPanel legend {
   font-size: 9px;
+}
+
+#devPanel hr {
+  margin: 3px 0;
+  opacity: 0.3;
+}
+
+/* =====================================================
+   モバイル警告画面
+   ===================================================== */
+#mobileWarning {
+  position: fixed;
+  inset: 0;
+  background: #111;
+  color: white;
+  display: none; /* 初期は非表示 */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 30px;
+  z-index: 999999; /* 何よりも前面に */
+  text-align: center;
+}
+
+#mobileWarning h2 {
+  color: #ff4d4d;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+#mobileWarning p {
+  line-height: 1.6;
+  font-size: 14px;
+}
 }
 
 #devPanel hr {

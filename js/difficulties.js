@@ -20,9 +20,9 @@ export const DIFFICULTIES = {
       scoreMultiplier: 0.8,
 
       scoreBonus: {
-        clearBonus: 100,
-        noMissBonus: 100,
-        noDamageBonus: 50
+        clearBonus: 0.1,   // +0.10倍
+        noMissBonus: 0.2,  // +0.20倍
+        noDamageBonus: 0.1  // +0.10倍
       }
     }
   },
@@ -44,9 +44,9 @@ export const DIFFICULTIES = {
       scoreMultiplier: 1.0,
 
       scoreBonus: {
-        clearBonus: 150,
-        noMissBonus: 150,
-        noDamageBonus: 100
+        clearBonus: 0.2,   // +0.20倍 (基準値)
+        noMissBonus: 0.4,  // +0.40倍 (基準値)
+        noDamageBonus: 0.2  // +0.20倍 (基準値)
       }
     }
   },
@@ -68,9 +68,9 @@ export const DIFFICULTIES = {
       scoreMultiplier: 1.2,
 
       scoreBonus: {
-        clearBonus: 200,
-        noMissBonus: 200,
-        noDamageBonus: 150
+        clearBonus: 0.3,   // +0.30倍
+        noMissBonus: 0.6,  // +0.60倍
+        noDamageBonus: 0.3  // +0.30倍
       }
     }
   }

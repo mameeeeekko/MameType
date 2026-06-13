@@ -71,12 +71,17 @@ export function handleSkillModeResult(nodeId) {
     showSkillResultIntro(node, isClear, () => {
 
         result.style.display = "flex";
+        // 中央寄せのためにflexboxプロパティを追加
+        result.style.flexDirection = "column";
+        result.style.justifyContent = "center";
+        result.style.alignItems = "center";
 
         // =========================
         // クリア表示タイトル
         // =========================
         const titleDiv = document.createElement("div");
         titleDiv.className = "skill-result-title";
+        titleDiv.style.textAlign = "center"; // タイトルも中央寄せ
         titleDiv.textContent = isClear ? "CLEAR!" : "FAILED";
 
         // =========================
@@ -84,6 +89,7 @@ export function handleSkillModeResult(nodeId) {
         // =========================
         const goalDiv = document.createElement("div");
         goalDiv.className = "result-block";
+        goalDiv.style.textAlign = "center"; // 目標も中央寄せ
 
         const unlockText = node?.unlock
             ? getUnlockText(node.unlock)
@@ -109,6 +115,7 @@ export function handleSkillModeResult(nodeId) {
 
         const skillDiv = document.createElement("div");
         skillDiv.className = "result-block";
+        skillDiv.style.textAlign = "center"; // スキルブロックも中央寄せ
 
         skillDiv.innerHTML = `
             <div class="block-title">獲得スキル</div>
@@ -116,7 +123,7 @@ export function handleSkillModeResult(nodeId) {
                 ${
                     skill
                         ? `
-                        <div class="skill-result-header">
+                        <div class="skill-result-header" style="display: flex; justify-content: center; align-items: center; margin-bottom: 5px;">
                             <div class="skill-result-icon">
                                 <img src="${skill.icon}" alt="${skill.name}">
                             </div>
@@ -147,11 +154,12 @@ export function handleSkillModeResult(nodeId) {
         // =========================
         const statsDiv = document.createElement("div");
         statsDiv.className = "result-stats";
+        statsDiv.style.textAlign = "center"; // ステータスブロックも中央寄せ
 
         statsDiv.innerHTML = `
             <div class="block-title">ステータス</div>
 
-            <div class="stats-row">
+            <div class="stats-row" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;">
                 
                 <div class="stat">
                     <div class="label">クリア数</div>
@@ -183,7 +191,12 @@ export function handleSkillModeResult(nodeId) {
         result.innerHTML = "";
 
         const innerWrap = document.createElement("div");
-        innerWrap.className = "skill-result-container";
+        innerWrap.className = "skill-result-container result-container-centered";
+        // innerWrap内のコンテンツも中央寄せにする
+        innerWrap.style.display = "flex";
+        innerWrap.style.gap = "30px"; // 各セクション間に20pxの余白を追加
+        innerWrap.style.flexDirection = "column";
+        innerWrap.style.alignItems = "center";
 
         innerWrap.appendChild(titleDiv);
         innerWrap.appendChild(goalDiv);

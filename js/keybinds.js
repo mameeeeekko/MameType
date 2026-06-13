@@ -2,7 +2,7 @@
 
 
 export const defaultKeybinds = {
-  unlock: "Space",
+  unlock: "Delete",
   autoLock: "Tab",
   pause: "Enter",
   activeSkill: "Backspace"

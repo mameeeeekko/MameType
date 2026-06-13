@@ -39,9 +39,17 @@ export const ROMA_TABLE = {
   'ぁ': ['la', 'xa'], 'ぃ': ['li', 'xi'], 'ぅ': ['lu', 'xu'], 'ぇ': ['le', 'xe'], 'ぉ': ['lo', 'xo'],
   'ゃ': ['lya', 'xya'], 'ゅ': ['lyu', 'xyu'], 'ょ': ['lyo', 'xyo'], 'っ': ['ltu', 'xtu'],
   'ー': ['-'], ',': [','], '.': ['.'], '、': [','], '。': ['.'], '・': ['/'], '!': ['!'], '?': ['?'],
+  '「': ['['], '」': [']'],
+  '(': ['('], ')': [')'], '（': ['('], '）': [')'],
+  '-': ['-'], '－': ['-'],
 };
 
-export const SYMBOL_TABLE = { "。": ".", "、": ",", "！": "!", "？": "?" , "ー": "-"};
+export const SYMBOL_TABLE = { 
+  "。": ".", "、": ",", "！": "!", "？": "?" , "ー": "-", "「": "[", "」": "]", " ": " ",
+  "（": "(", "）": ")", "(": "(", ")": ")", "-": "-", "－": "-",
+  "０": "0", "１": "1", "２": "2", "３": "3", "４": "4", "５": "5", "６": "6", "７": "7", "８": "8", "９": "9",
+  "0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9"
+};
 
 export const isSmallTsu = kana => kana === "っ";
 export const isSymbol = kana => kana in SYMBOL_TABLE;
@@ -54,7 +62,7 @@ export const isNaRow = kana => ["な","に","ぬ","ね","の"].includes(kana);
 function toHalfWidthAlpha(str){
   if(!str) return str;   // ← 追加（undefined/null防止）
 
-  return str.replace(/[Ａ-Ｚａ-ｚ]/g, ch =>
+  return str.replace(/[－（）０-９Ａ-Ｚａ-ｚ]/g, ch =>
     String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
   );
 }
@@ -78,7 +86,7 @@ export function getRomajiCandidates(kana){
 
   if(ROMA_TABLE[kana]) return ROMA_TABLE[kana];
 
-  if(/^[A-Za-z]$/.test(kana)) return [kana.toLowerCase()];
+  if(/^[A-Za-z0-9-]$/.test(kana)) return [kana.toLowerCase()];
 
   return [];
 }
@@ -94,4 +102,3 @@ export function getSokuonCandidates(nextKana){
   set.add("xtu");
   return [...set];
 }
-

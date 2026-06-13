@@ -76,6 +76,10 @@ export function showQuestResult(stats) {
     // =========================
     // スコア・ランク
     // =========================
+   const multiplierText = (stats.scoreBreakdown && !stats.isInvalidRun)
+        ? `<div style="font-size: 0.75em; color: #8b949e; margin-top: 15px; letter-spacing: 1px;">TOTAL MULTIPLIER: ×${stats.scoreBreakdown.totalMultiplier.toFixed(2)}</div>`
+        : "";
+
    const scoreBlock = `
         <div class="quest-skill-block">
             <div class="quest-skill-label2">SCORE</div>
@@ -93,11 +97,12 @@ export function showQuestResult(stats) {
                 <span class="score-value">
                     ${stats.isInvalidRun ? "ー" : (stats.gScore ?? 0).toLocaleString()}
                 </span>
+                ${multiplierText}
             </div>
 
             <div class="score-side score-right">
                 <span class="score-rank">
-                    ${stats.isInvalidRun ? "" : `(${stats.rank ?? "-"})`}
+                    ${stats.isInvalidRun ? "" : ` / ${stats.rank ?? "-"} <span style="font-size: 0.9em;">(${stats.skillScore ?? 0})</span>`}
                 </span>
             </div>
 
@@ -114,37 +119,37 @@ export function showQuestResult(stats) {
             <div class="quest-skill-stats">
 
                 <div class="quest-skill-stat">
-                    <div class="label">撃破</div>
+                    <div class="label">Kills</div>
                     <div class="value">${stats.defeatedCount}</div>
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">タイプ数</div>
+                    <div class="label">TotalKeystrokes</div>
                     <div class="value">${stats.totalTyped}</div>
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">正確数</div>
+                    <div class="label">CorrectKeys</div>
                     <div class="value">${stats.correctCount}</div>
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">ミス</div>
+                    <div class="label">Misses</div>
                     <div class="value">${stats.mistakeCount}</div>
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">正確率</div>
+                    <div class="label">Accuracy</div>
                     <div class="value">${stats.accuracy.toFixed(1)}%</div>
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">時間</div>
+                    <div class="label">PlayTIme</div>
                     <div class="value">${((stats.endTime - stats.startTime)/1000).toFixed(2)}s</div>
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">Typing</div>
+                    <div class="label">TypingTime</div>
                     <div class="value">${((stats.typingActiveTime)/1000).toFixed(2)}s</div>
                 </div>
 
@@ -154,7 +159,7 @@ export function showQuestResult(stats) {
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">最大コンボ</div>
+                    <div class="label">MaxCombo</div>
                     <div class="value">${stats.maxCombo}</div>
                 </div>
 
@@ -236,21 +241,21 @@ export function showQuestResult(stats) {
         const clearHTML = breakdown.clearBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">CLEAR</div>
-                <div class="value">+${breakdown.clearBonus}</div>
+                <div class="value">+${breakdown.clearBonus.toFixed(2)}</div>
             </div>
         ` : "";
 
         const noDamageHTML = breakdown.noDamageBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">NO DMG</div>
-                <div class="value">+${breakdown.noDamageBonus}</div>
+                <div class="value">+${breakdown.noDamageBonus.toFixed(2)}</div>
             </div>
         ` : "";
 
         const noMissHTML = breakdown.noMissBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">NO MISS</div>
-                <div class="value">+${breakdown.noMissBonus}</div>
+                <div class="value">+${breakdown.noMissBonus.toFixed(2)}</div>
             </div>
         ` : "";
 
@@ -273,22 +278,22 @@ export function showQuestResult(stats) {
 
                     <div class="calc-item">
                         <div class="label">ACC</div>
-                        <div class="value">×${breakdown.accuracy.toFixed(2)}</div>
+                        <div class="value">+${breakdown.accuracy.toFixed(2)}</div>
                     </div>
 
                     <div class="calc-item">
                         <div class="label">CHAIN</div>
-                        <div class="value">×${breakdown.chain.toFixed(2)}</div>
+                        <div class="value">+${breakdown.chain.toFixed(2)}</div>
                     </div>
 
                     <div class="calc-item">
                         <div class="label">SPEED</div>
-                        <div class="value">×${breakdown.speed.toFixed(2)}</div>
+                        <div class="value">+${breakdown.speed.toFixed(2)}</div>
                     </div>
 
                     <div class="calc-item">
                         <div class="label">DIFF</div>
-                        <div class="value">×${breakdown.difficulty.toFixed(2)}</div>
+                        <div class="value">+${breakdown.difficulty.toFixed(2)}</div>
                     </div>
 
                 </div>

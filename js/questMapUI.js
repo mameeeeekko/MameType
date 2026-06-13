@@ -387,11 +387,10 @@ export function renderQuestMapUI(){
                 const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
                 
                 const clearText = buildClearText(stage.clearConditions);
-                const endText   = buildEndText(endConditions);
+                const endText   = buildEndText(endConditions, stage.player);
                 const starText  = buildStarText(stage.star);
 
                 const rewardText = [];
-
                 if (node.reward) {
                     if (node.reward.type === "slot") {
                         rewardText.push(`スロット +${node.reward.value ?? 1}`);
@@ -402,17 +401,26 @@ export function renderQuestMapUI(){
                     }
                 }
 
-                showQuestTooltip([
-                    "■終了条件",
-                    ...endText,
-                    "",
-                    "■クリア条件",
-                    ...clearText,
-                    "",
-                    "■★条件",
-                    ...starText,
-                    ...(rewardText.length ? ["", "■報酬", ...rewardText] : [])
-                ], el);
+                const tooltipLines = [];
+                
+                // ミッションと敵バリエーションの追加
+                if (stage.missionName) {
+                    tooltipLines.push(`<b>【 ${stage.missionName} 】</b>`);
+                    tooltipLines.push(`<span style="font-size:0.9em; color:#ddd;">${stage.missionDescription || ""}</span>`);
+                    tooltipLines.push("");
+                }
+                if (stage.enemyVariationDescription) {
+                    tooltipLines.push(`<span style="color:#69c0ff;">■ エネミー構成</span>`);
+                    tooltipLines.push(stage.enemyVariationDescription);
+                    tooltipLines.push("");
+                }
+
+                tooltipLines.push("■ 終了条件", ...endText, "", "■ クリア条件", ...clearText, "", "■ ★条件", ...starText);
+                if (rewardText.length) {
+                    tooltipLines.push("", "■ 報酬", ...rewardText);
+                }
+
+                showQuestTooltip(tooltipLines, el);
             };
 
             el.onmouseleave = hideQuestTooltip;
@@ -534,12 +542,12 @@ function renderQuestSideMenu(container){
         return btn;
     }
 
-    menu.appendChild(createBtn("難易度", () => openQuestMenuModal("difficulty")));
-    menu.appendChild(createBtn("スキルツリー", () => openQuestMenuModal("skillTree")));
-    menu.appendChild(createBtn("スキル", () => openQuestMenuModal("skill")));
-    menu.appendChild(createBtn("ステータス", () => document.getElementById("hudDetailBtn").click()));
-    menu.appendChild(createBtn("セーブ / ロード", () => document.getElementById("questSaveBtn").click()));
-    menu.appendChild(createBtn("戻る", () => backToQuestMenu()));
+    menu.appendChild(createBtn("DIFFICULTY", () => openQuestMenuModal("difficulty")));
+    menu.appendChild(createBtn("SKILL TREE", () => openQuestMenuModal("skillTree")));
+    menu.appendChild(createBtn("SKILL", () => openQuestMenuModal("skill")));
+    menu.appendChild(createBtn("STATUS", () => document.getElementById("hudDetailBtn").click()));
+    menu.appendChild(createBtn("SAVE / LOAD", () => document.getElementById("questSaveBtn").click()));
+    menu.appendChild(createBtn("EXIT", () => backToQuestMenu()));
 
     container.appendChild(menu);
 }
@@ -1303,9 +1311,13 @@ function showStageIntro(stage, node, onStart, onCancel) {
 
   const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
   const clearText = buildClearText(stage.clearConditions);
-  const endText   = buildEndText(endConditions);
+  const endText   = buildEndText(endConditions, stage.player);
   const starText  = buildStarText(stage.star);
   
+  const missionTitle = stage.missionName || "標準ミッション";
+  const missionDesc  = stage.missionDescription || "敵を排除し、システムを正常化せよ。";
+  const enemyVar     = stage.enemyVariationDescription || "標準データ";
+
     // =========================
     // 報酬テキスト生成
     // =========================
@@ -1339,7 +1351,16 @@ function showStageIntro(stage, node, onStart, onCancel) {
 
   overlay.innerHTML = `
     <div class="stage-intro-box">
-      <h2>MISSION</h2>
+      <div class="intro-header">
+        <div class="mission-label">MISSION</div>
+        <h2 class="mission-name-main">${missionTitle}</h2>
+        <div class="mission-desc-main">${missionDesc}</div>
+      </div>
+
+      <div class="intro-section">
+        <h3>[ エネミー・バリエーション ]</h3>
+        <div class="enemy-var-highlight">${enemyVar}</div>
+      </div>
 
       <div class="intro-section">
         <h3>[ 終了条件 ]</h3>

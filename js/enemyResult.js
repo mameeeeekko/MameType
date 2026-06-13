@@ -26,25 +26,29 @@ export function showEnemyResult({
     const failedText = stats.failed ? `<div class="result-failed">MISSION FAILED</div>` : "";
 
     const breakdown = stats.scoreBreakdown;
+    const multiplierText = (breakdown && !stats.isInvalidRun)
+        ? `<div style="font-size: 0.75em; color: #8b949e; margin-bottom: 15px; letter-spacing: 1px;">TOTAL MULTIPLIER: ×${breakdown.totalMultiplier.toFixed(2)}</div>`
+        : "";
+
     let calcHTML = "";
 
     if (breakdown && !stats.isInvalidRun) {
         const clearHTML = breakdown.clearBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">CLEAR</div>
-                <div class="value">+${breakdown.clearBonus}</div>
+                <div class="value">+${breakdown.clearBonus.toFixed(2)}</div>
             </div>
         ` : "";
         const noDamageHTML = breakdown.noDamageBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">NO DMG</div>
-                <div class="value">+${breakdown.noDamageBonus}</div>
+                <div class="value">+${breakdown.noDamageBonus.toFixed(2)}</div>
             </div>
         ` : "";
         const noMissHTML = breakdown.noMissBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">NO MISS</div>
-                <div class="value">+${breakdown.noMissBonus}</div>
+                <div class="value">+${breakdown.noMissBonus.toFixed(2)}</div>
             </div>
         ` : "";
         
@@ -69,22 +73,22 @@ export function showEnemyResult({
             <div class="calc-grid">
                 <div class="calc-item">
                     <div class="label">ACC</div>
-                    <div class="value">×${breakdown.accuracy.toFixed(2)}</div>
+                    <div class="value">+${breakdown.accuracy.toFixed(2)}</div>
                 </div>
 
                 <div class="calc-item">
                     <div class="label">CHAIN</div>
-                    <div class="value">×${breakdown.chain.toFixed(2)}</div>
+                    <div class="value">+${breakdown.chain.toFixed(2)}</div>
                 </div>
 
                 <div class="calc-item">
                     <div class="label">SPEED</div>
-                    <div class="value">×${breakdown.speed.toFixed(2)}</div>
+                    <div class="value">+${breakdown.speed.toFixed(2)}</div>
                 </div>
 
                 <div class="calc-item">
                     <div class="label">DIFF</div>
-                    <div class="value">×${breakdown.difficulty.toFixed(2)}</div>
+                    <div class="value">+${breakdown.difficulty.toFixed(2)}</div>
                 </div>
             </div>
 
@@ -101,6 +105,7 @@ export function showEnemyResult({
                 ${gameState.isFreeMode ? `<div class="result-free-badge">FREE</div>` : ""}
                 <div class="result-title-main">ENEMY MODE RESULT</div>
                 ${calcHTML}
+                ${multiplierText}
 
                 <div class="result-header-row">
                     <div class="result-header-item ${stats.isInvalidRun ? "invalid" : ""}">
@@ -108,8 +113,8 @@ export function showEnemyResult({
                         <div class="result-score r-value big">${stats.isInvalidRun ? "評価不能" : (stats.gScore ?? 0).toLocaleString()}</div>
                     </div>
                     <div class="result-header-item">
-                        <div class="r-label">RANK</div>
-                        <div class="r-value big accent">${stats.isInvalidRun ? "-" : (stats.rank ?? "-")}</div>
+                        <div class="r-label">RANK(eScore)</div>
+                        <div class="r-value big accent">${stats.isInvalidRun ? "-" : `${stats.rank ?? "-"} <span style="font-size: 0.6em;">(${stats.skillScore ?? 0})</span>`}</div>
                     </div>
                 </div>
 

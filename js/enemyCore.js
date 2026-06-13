@@ -14,10 +14,10 @@ import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
 import { handleKey, resetCandidates, fullResetInput } from "./inputCore.js";
 import { handleGlobalSoundToggle } from "./main.js";
-import { gameState, setGameActive, renderState, setLastWasEnemyMode, getSoundSettings, getSoundEnabled, resetGameState, setPaused, getPaused, getNow } from "./gameCore.js";
+import { gameState, setGameActive, renderState, setLastWasEnemyMode, getSoundSettings, getSoundEnabled, resetGameState, setPaused, getPaused, getNow, getERank } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
 import { addRankingEntry } from "./storage.js";
-import { ENEMY_MODE_CONFIG, STAGES } from "./enemyModeConfig.js";
+import { ENEMY_MODE_CONFIG, STAGES, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
 import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats, 
     applySkillNodeEffect, hasReceivedStageReward, markStageRewardReceived,
     getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed, addQuestActiveSkillUse, addQuestStageAttempt, getActiveSkillStockMax  } from "./questPlayerStats.js";
@@ -47,6 +47,7 @@ const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     radius: p.radius,
+    _hpDrainAccumulator: 0, // HP減少の蓄積用
 };
 
 let candidateEnemies = []; // ロック前の候補敵
@@ -189,6 +190,11 @@ export function killEnemy(enemy, state, options = {}) {
             stats.processedCount = (stats.processedCount ?? 0) + 1;
             stats.phaseObjectiveDefeated = (stats.phaseObjectiveDefeated ?? 0) + 1;
             stats.phaseProcessedCount = (stats.phaseProcessedCount ?? 0) + 1;
+
+            // Free Modeかつ討伐目標がある場合、UI表示（残り数）を更新
+            if (gameState.isFreeMode && gameState.stage.clearConditions?.killCount) {
+                stats.remainingSpawn = Math.max(0, stats.totalSpawn - stats.objectiveDefeated);
+            }
         }
     }
     // =========================
@@ -390,6 +396,21 @@ function gameLoop(timestamp) {
         renderQuestBackground(ctx, bgSource);
     }
 
+    // ===============================
+    // サボタージュモードのHP減少処理
+    // ===============================
+    if (gameState.player && gameState.player.hpDrainPerSec > 0) {
+        // ダメージを蓄積
+        gameState.player._hpDrainAccumulator += gameState.player.hpDrainPerSec * deltaTime;
+
+        // 蓄積が1以上になったら、整数分だけHPを減らす
+        if (gameState.player._hpDrainAccumulator >= 1) {
+            const drain = Math.floor(gameState.player._hpDrainAccumulator);
+            gameState.player.hp = Math.max(0, gameState.player.hp - drain);
+            gameState.player._hpDrainAccumulator -= drain;
+        }
+    }
+
     // ロック敵が死んでいたら解除
     if (lockedEnemy && lockedEnemy.isDead) {
         resetCandidates();
@@ -491,8 +512,13 @@ function gameLoop(timestamp) {
         // =============================================================
         if (!endingSequence && !stats.isTransitioning) {
 
-        // ★一定時間ごとに敵出現
-        if (now - lastSpawnTime > spawnInterval) {
+        // 全滅時即座に出現フラグの確認
+        const immediate = currentPhase.spawn?.immediateOnClear;
+        // 画面上に敵（ターゲット）が一体もいないか判定
+        const isScreenEmpty = (enemies.length === 0 && enemyBullets.length === 0);
+
+        // ★一定時間ごとに敵出現、または「即座に出現」がONで敵がいない場合
+        if ((now - lastSpawnTime > spawnInterval) || (immediate && isScreenEmpty)) {
 
             const spawnLimitOk =
                 currentPhase.spawn.limit == null ||
@@ -526,6 +552,11 @@ function gameLoop(timestamp) {
                     enemy.baseRomaji = buildBaseRomaji(enemy.text,0);
 
                     if (enemy) {
+
+                        // フリーモード時はすべての敵をノルマ対象(isObjective)として扱う
+                        if (gameState.isFreeMode) {
+                            enemy.isObjective = true;
+                        }
 
                         enemies.push(enemy);
 
@@ -589,12 +620,30 @@ function gameLoop(timestamp) {
         gameState.enemyStats.failed = true;
         forceFail = true;
     }
-    if (timerStarted && globalEnd.timerMs != null && now - enemyStartTime >= globalEnd.timerMs) {
+
+    // ★ 精密射撃（ミス即終了）の判定
+    if (globalEnd.failOnMiss && stats.mistakeCount > 0) {
+        gameState.enemyStats.failed = true;
         forceFail = true;
     }
 
+    // タイマーによる強制失敗は、クリア条件が生存タイマーの場合、そのタイマーがまだ満たされていない場合にのみ適用
+    if (timerStarted && globalEnd.timerMs != null && now - enemyStartTime >= globalEnd.timerMs) {
+        // 生存系クリア条件がある場合
+        if (clear.killCount == null && clear.timerMs != null) {
+            // クリア条件のタイマーがまだ満たされていない場合のみ失敗
+            if (now - enemyStartTime < clear.timerMs) {
+                forceFail = true;
+            }
+            // else: clear.timerMs が満たされているなら、クリアになるはずなので forceFail はしない
+        } else {
+            // 生存系クリア条件がない場合は、globalEnd.timerMs で失敗
+            forceFail = true;
+        }
+    }
+
     // 現在のフェーズが完了したかチェック
-    if (phaseCond.killCount != null && stats.phaseObjectiveDefeated >= phaseCond.killCount) {
+    if (phaseCond.killCount != null && stats.phaseProcessedCount >= phaseCond.killCount) {
         phaseComplete = true;
     }
     if (timerStarted && phaseCond.timerMs != null && now - stats.phaseStartTime >= phaseCond.timerMs) {
@@ -628,13 +677,10 @@ function gameLoop(timestamp) {
         isClear = true;
     }
 
-    // ■ 生存系（★追加）
-    if (
-        !gameState.enemyStats.failed &&
-        clear.killCount == null // 条件がない＝生存系
-    ) {
+    // ■ 生存系（エンドレス以外）
+    if (!gameState.enemyStats.failed && clear.killCount == null && !clear.endless) {
         // タイマー終了でクリア
-        if (timerStarted && clear.timerMs != null && now - enemyStartTime <= clear.timerMs) {
+        if (timerStarted && clear.timerMs != null && now - enemyStartTime >= clear.timerMs) {
             isClear = true;
         }
 
@@ -659,8 +705,17 @@ function gameLoop(timestamp) {
             // ゲーム終了
         endingSequence = true;
 
-        // すでに失敗確定してない場合のみ判定
-        if (!gameState.enemyStats.failed) {
+        const isEndless = stage.clearConditions?.endless;
+
+        // ★ エンドレスモード時はHP0での終了を「失敗」ではなく「完走（FINISH）」として扱う
+        if (isEndless) {
+            gameState.enemyStats.failed = false;
+        } else if (!gameState.enemyStats.failed) {
+            // 通常モード：すでに失敗確定してない場合のみクリア判定を行う
+            // 生存系ミッション（killCount指定なし）で、最後のフェーズを完遂した場合はクリアとみなす
+            if (!isClear && clear.killCount == null && phaseComplete && isLastPhase) {
+                isClear = true;
+            }
             if (!isClear) {
                 gameState.enemyStats.failed = true;
             }
@@ -672,9 +727,12 @@ function gameLoop(timestamp) {
             const rankingResult = await endEnemyMode();
 
             const isFailed = gameState.enemyStats.failed;
-            const introText = isFailed
+            let introText = isFailed
                 ? "FAILED"
                 : "MISSION COMPLETE";
+            
+            // ★ エンドレス用の演出テキスト
+            if (isEndless) introText = "ENDLESS FINISH";
 
             showEnemyEndIntro(introText, () => {
 
@@ -790,6 +848,9 @@ export function handleEnemyKey(e) {
     if (key === "！") key = "!";
     if (key === "？") key = "?";
     if (key === "ー") key = "-";
+    if (key === "「") key = "[";
+    if (key === "」") key = "]";
+    if (key === "　") key = " "; // 全角スペース対応
 
 
     //実際のタイピング入力時間測定
@@ -824,6 +885,12 @@ export function handleEnemyKey(e) {
     // Active Skill 使用
     // =====================
     if (e.code === keybinds.activeSkill) {
+        // アクティブスキルが禁止されている場合は使用不可
+        if (gameState.player.disableActiveSkill) {
+            playErrorSound();
+            showGameMessage(gameState, "SKILL DISABLED");
+            return;
+        }
  
         tryUseActiveSkill();
         return;
@@ -844,7 +911,7 @@ export function handleEnemyKey(e) {
         for (const enemy of visibleTargets) {
             // ★修正：ターゲット側の文字も比較用に正規化。全ての記号を変換対象にする
             const targetRoma = (enemy.baseRomaji || "").toLowerCase()
-                .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-");
+                .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-").replaceAll("「", "[").replaceAll("」", "]").replaceAll("　", " ");
 
             if (targetRoma.length === 1 && targetRoma === key) {
                 const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
@@ -939,7 +1006,7 @@ export function handleEnemyKey(e) {
     }
 
     // =====================
-    // SPACE処理(ロック解除)
+    // ロック解除処理 (デフォルト: Delete)
     // =====================
     if (e.code === keybinds.unlock) {
         // 候補（オレンジ色）を解除
@@ -1081,13 +1148,13 @@ export function handleEnemyKey(e) {
             if (!enemy || enemy.isDead || !isEnemyVisible(enemy)) return false;
             // ★修正：マッチング精度向上のため replaceAll を使用
             const targetRoma = (enemy.baseRomaji || "").toLowerCase()
-                .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-");
+                .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-").replaceAll("「", "[").replaceAll("」", "]").replaceAll("　", " ");
             return targetRoma.startsWith(typedBuffer);
         });
     } else {
         nextCandidates = candidateEnemies.filter(enemy => {
             const targetRoma = (enemy.baseRomaji || "").toLowerCase()
-                .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-");
+                .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-").replaceAll("「", "[").replaceAll("」", "]").replaceAll("　", " ");
             return targetRoma.startsWith(typedBuffer);
         });
     }
@@ -1103,6 +1170,10 @@ export function handleEnemyKey(e) {
         
         if (gameState.enemyStats) {
             const stats = gameState.enemyStats;
+
+            // ★ すでにミス終了が確定している場合は処理しない
+            if (stats.failed && gameState.stage?.endConditions?.failOnMiss) return;
+
             stats.mistakeCount++;
               if (gameState.enemyStats) {
                     gameState.enemyStats.currentCombo = 0;
@@ -1114,6 +1185,11 @@ export function handleEnemyKey(e) {
             if (stats.chainBar < 0) {
                 stats.chainBar = 0;
                 stats.chainCount = 0;
+            }
+
+            // ★ミス即終了の設定がある場合、即座に失敗フラグを立てる
+            if (gameState.stage?.endConditions?.failOnMiss) {
+                stats.failed = true;
             }
         }
 
@@ -1185,7 +1261,7 @@ export function showHud(show){
 }
 
 // プレイヤーステータス初期化関数
-function initPlayerByMode(isQuestMode, canvasSize) {
+function initPlayerByMode(isQuestMode, canvasSize, stage) {
 
     const p = ENEMY_MODE_CONFIG.player;
 
@@ -1200,6 +1276,11 @@ function initPlayerByMode(isQuestMode, canvasSize) {
         player.radius = stats.radius;
 
         // 任意：レベル依存で強化
+        // サボタージュのHP減少設定を反映 (stage.player が存在する場合のみ)
+        player.hpDrainPerSec = stage?.player?.hpDrainPerSec ?? 0;
+        player._hpDrainAccumulator = 0;
+        // 純粋なる試練のアクティブスキル禁止設定を反映 (stage.player が存在する場合のみ)
+        player.disableActiveSkill = stage?.player?.disableActiveSkill ?? false;
         player.level = stats.level;
 
     } else {
@@ -1208,6 +1289,9 @@ function initPlayerByMode(isQuestMode, canvasSize) {
         player.hp = p.maxHp;
         player.defense = p.defense;
         player.radius = p.radius;
+        player.hpDrainPerSec = 0; // 通常モードでは減少なし
+        player._hpDrainAccumulator = 0;
+        player.disableActiveSkill = false; // 通常モードではスキル禁止なし
         player.level = 1;
     }
 
@@ -1244,20 +1328,80 @@ export async function startEnemyMode(config = {}) {
         stage: config.stage ?? "STAGE1",
         isFreeMode: config.isFreeMode ?? false,
         isQuestMode: config.isQuestMode ?? false,
+        customConditions: config.customConditions ?? null,
     };
 
-    // === Devなしはこっち =================
-    // currentStage = lastEnemyConfig.stage;
-    // const stage = STAGES[currentStage];
-    // gameState.stage = stage;
-    // ====================================
-
     // === Dev 用 ===================
-    currentStage =
-        devOverride.stage.current ||
-        lastEnemyConfig.stage;
+    // フリーモード時はDevのステージ固定を無視して、選択されたステージ(DAILY)を優先する
+    currentStage = (lastEnemyConfig.isFreeMode) 
+        ? lastEnemyConfig.stage 
+        : (devOverride.stage.current || lastEnemyConfig.stage);
 
-    const stage = getStageSafe(currentStage);
+    let baseStage = getStageSafe(currentStage);
+    let stage = { ...baseStage };
+    
+    // カスタム条件（フリーモードの設定など）の適用
+    const custom = config.customConditions || {};
+
+    if (config.isFreeMode) {
+        const firstPhase = (baseStage.phases && baseStage.phases[0]) ? baseStage.phases[0] : {};
+
+        // 1. DAILYの設定を継承しつつ、フェーズ構造をフラット化
+        stage = { ...baseStage, ...firstPhase };
+
+        // 2. ルール設定に関わるプロパティを一旦すべて物理的に削除する
+        // これにより「TimeAttack」設定などが残存するのを完全に防ぐ
+        delete stage.phases;
+        delete stage.phaseConditions;
+        delete stage.endConditions;
+        delete stage.clearConditions;
+
+        // 3. ゼロから終了条件を構築する（マージではなく完全新規作成）
+        stage.endConditions = {
+            hpZero: true,
+            timerMs: custom.endConditions?.timerMs !== undefined ? custom.endConditions.timerMs : null,
+            killCount: custom.endConditions?.killCount !== undefined ? custom.endConditions.killCount : null,
+            failOnMiss: custom.endConditions?.failOnMiss === true
+        };
+
+        stage.clearConditions = {
+            timerMs: custom.clearConditions?.timerMs !== undefined ? custom.clearConditions.timerMs : null,
+            killCount: custom.clearConditions?.killCount !== undefined ? custom.clearConditions.killCount : null,
+            endless: !!custom.clearConditions?.endless
+        };
+
+        // 4. スポーン設定のマージ
+        stage.spawn = {
+            ...(baseStage.spawn || {}),
+            ...(firstPhase.spawn || {}),
+            ...(custom.spawn || {}),
+        };
+
+        // 属性セットとTierに基づいて出現テーブル(enemyTable)を再構築
+        if (custom.spawn?.typeSetKey && custom.spawn?.tier) {
+            const table = TIER_TABLES[custom.spawn.typeSetKey];
+            if (table) {
+                const tierKey = `T${custom.spawn.tier}`;
+                stage.enemyTable = getTierEnemies(tierKey, table);
+                stage.spawn.tier = custom.spawn.tier; // 難易度倍率用
+            }
+        }
+
+        // 5. フリーモードでは、討伐目標の有無に関わらず出現数自体は制限せず無限に出現させる
+        stage.spawn.limit = null; 
+
+        console.log("FREE MODE: MODE APPLIED", {
+            mode: stage.clearConditions.endless ? "endless" : (stage.clearConditions.killCount ? "count" : "time"),
+            timer: stage.endConditions.timerMs,
+            kill: stage.clearConditions.killCount,
+            tier: stage.spawn.tier,
+            enemyTypes: custom.spawn?.enemyList
+        });
+    } else if (config.customConditions) {
+        // クエスト等の通常カスタム
+        stage = { ...stage, ...custom };
+    }
+    
     gameState.stage = stage;
 
     function getStageSafe(id) {
@@ -1317,7 +1461,7 @@ export async function startEnemyMode(config = {}) {
     }
     
     const isMultiPhase = Array.isArray(stage.phases) && stage.phases.length > 0;
-    const firstPhase = isMultiPhase ? stage.phases[0] : stage;
+    const currentPhase = isMultiPhase ? stage.phases[0] : stage;
 
     const playerStats = getPlayerStatsForEnemy(
         config.isQuestMode ? "quest" : "enemy"
@@ -1412,8 +1556,13 @@ export async function startEnemyMode(config = {}) {
 
     gameState.activeSkillCooldown = gameState.activeSkillCooldownMax;
 
+    // 純粋なる試練モードでアクティブスキルが禁止されている場合
+    if (player.disableActiveSkill) {
+        gameState.activeSkillStock = 0; // ストックを0にして使用不可にする
+    }
+
     const nodeBgm = gameState.currentQuestNode?.bgm;
-    const initialBgm = firstPhase.bgm || nodeBgm || stage.bgm || "bgm_enemy1";
+    const initialBgm = currentPhase.bgm || nodeBgm || stage.bgm || "bgm_enemy1";
     gameState.enemyStats.activeBgm = initialBgm;
 
     //スキルと描画を state.player に統一
@@ -1491,14 +1640,49 @@ export async function startEnemyMode(config = {}) {
     }
 
     //player初期化
-    initPlayerByMode(config.isQuestMode, canvasSize);
+    initPlayerByMode(config.isQuestMode, canvasSize, stage);
 
     setGameActive(true);
     gameState.enemyMode = true;   // ←追加
 
-    const total = firstPhase.spawn?.limit ?? 0;
+    // 表示用の最大出現数を設定 (討伐数モードならその数、それ以外は0またはnull)
+    const total = stage.clearConditions?.killCount || stage.spawn?.limit || 0;
     gameState.enemyStats.totalSpawn = total;
     gameState.enemyStats.remainingSpawn = total;
+
+    // ===============================
+    // 初期ミッション表示設定 (Free Mode / Daily Mode / Quest Mode)
+    // ===============================
+    gameState.enemyStats.isTransitioning = true;
+
+    if (config.isFreeMode) {
+        gameState.enemyStats.transitionMsg = "FREE MODE START";
+    } else if (config.isQuestMode) {
+        gameState.enemyStats.transitionMsg = "QUEST START";
+    } else {
+        gameState.enemyStats.transitionMsg = "DAILY MODE START";
+    }
+
+    const globalClear = stage.clearConditions || {};
+    const firstPhaseCond = currentPhase?.phaseConditions || currentPhase?.endConditions || {};
+
+    if (globalClear.endless) {
+        gameState.enemyStats.nextPhaseGoal = "MISSION: ENDLESS SURVIVAL";
+    } else if (globalClear.killCount || firstPhaseCond.killCount) {
+        const target = globalClear.killCount || firstPhaseCond.killCount;
+        gameState.enemyStats.nextPhaseGoal = `MISSION: KILL ${target} ENEMIES`;
+    } else if (globalClear.timerMs || firstPhaseCond.timerMs) {
+        const ms = globalClear.timerMs || firstPhaseCond.timerMs;
+        gameState.enemyStats.nextPhaseGoal = `MISSION: SURVIVE FOR ${ms / 1000}s`;
+    } else {
+        gameState.enemyStats.nextPhaseGoal = "MISSION: ELIMINATE ENEMIES";
+    }
+
+    setTimeout(() => {
+        gameState.enemyStats.isTransitioning = false;
+        gameState.enemyStats.transitionMsg = null;
+        gameState.enemyStats.nextPhaseGoal = null;
+    }, 2500);
 
     resetCandidates();
 
@@ -1633,47 +1817,46 @@ export async function endEnemyMode() {
     const accuracy =
     stats.correctCount / Math.max(1, stats.totalTyped);
     stats.accuracy = accuracy * 100;
-    const accuracyBonus = sc.accuracyBase + accuracy; // base〜1+base倍
-    // 補正②：最大チェイン
-    const chainBonus = 1 + (stats.maxChainCount / sc.chainDivisor); // divisorの値で +1.0倍   
-    // 補正③：速度（KPM）
-    const speedBonus = 1 + (stats.gKpm / sc.speedDivisor); //divisorの値で +1.0倍
-    // 合成
-    finalScore = Math.floor(
-        finalScore *
-        accuracyBonus *
-        chainBonus *
-        speedBonus *
-        enemyDiff.scoreMultiplier
-    );
+    const accuracyBonus = accuracy * sc.accuracyMaxBonus; // 0〜0.5倍のボーナス
+
+    // 各要素の「加算倍率（ボーナス分）」を算出
+    const chainBonusInc = stats.maxChainCount / sc.chainDivisor;
+    const speedBonusInc = stats.gKpm / sc.speedDivisor;
+    const diffBonusInc  = enemyDiff.scoreMultiplier - 1.0;
+
     //クリア、ノーミス、ノーダメのボーナス
     const isClear = !stats.failed;
     const isNoMiss = stats.mistakeCount === 0;
     const isNoDamage = !stats.tookDamage;
-    // ★加算値
+
+    // 互換性維持: 1.0より大きい整数（例: 200）が難易度データ等にある場合、倍率（0.2）に変換する
+    const normalize = (val) => (val > 2) ? val / 1000 : val;
+
     const clearBonus = isClear
-    ? (enemyDiff.scoreBonus?.clearBonus ?? sc.clearBonus)
+    ? normalize(enemyDiff.scoreBonus?.clearBonus ?? sc.clearBonus)
     : 0;
-
     const noMissBonus = isNoMiss
-    ? (enemyDiff.scoreBonus?.noMissBonus ?? sc.noMissBonus)
+    ? normalize(enemyDiff.scoreBonus?.noMissBonus ?? sc.noMissBonus)
     : 0;
-
     const noDamageBonus = isNoDamage
-    ? (enemyDiff.scoreBonus?.noDamageBonus ?? sc.noDamageBonus)
+    ? normalize(enemyDiff.scoreBonus?.noDamageBonus ?? sc.noDamageBonus)
     : 0;
 
-    // 合成
-    finalScore += clearBonus + noMissBonus + noDamageBonus;
+    // 【重要】全ての倍率を合算する (インフレ防止)
+    const totalMultiplier = 1.0 + accuracyBonus + chainBonusInc + speedBonusInc + diffBonusInc + clearBonus + noMissBonus + noDamageBonus;
+
+    // ベーススコアに合計倍率をかける
+    finalScore = Math.floor(finalScore * totalMultiplier);
 
     // 結果計算表示用
     const baseScore = stats.gScore;
     stats.scoreBreakdown = {
         base: baseScore,
         accuracy: accuracyBonus,
-        chain: chainBonus,
-        speed: speedBonus,
-        difficulty: enemyDiff.scoreMultiplier,
+        chain: chainBonusInc,
+        speed: speedBonusInc,
+        difficulty: diffBonusInc,
+        totalMultiplier: totalMultiplier,
         clearBonus: clearBonus,
         noMissBonus: noMissBonus,
         noDamageBonus: noDamageBonus
@@ -1682,9 +1865,9 @@ export async function endEnemyMode() {
     stats.gScore = Math.max(0, finalScore);
     // =======================================================
 
-    // ランク判定
-    const rankTable = ENEMY_MODE_CONFIG.score.rankThresholds;
-    stats.rank = rankTable.find(t => stats.gScore >= t.score)?.rank ?? "C";
+    // タイピング技能ベースのランク判定 (eScore方式)
+    stats.skillScore = Math.round(stats.gKpm * Math.pow(accuracy, 3));
+    stats.rank = getERank(stats.skillScore);
 
     // ループ停止
     enemyLoopActive = false;
@@ -1835,6 +2018,7 @@ export async function endEnemyMode() {
         // result用
         gameState.questStats = {
             ...stats,
+                skillScore: stats.skillScore,
 
             gainedExp,
 
@@ -1870,6 +2054,7 @@ export async function endEnemyMode() {
             kpm: stats.gKpm,
             maxCombo: stats.maxCombo || 0,
             maxChain: stats.maxChainCount || 0,
+            gScore: stats.gScore, // gScoreを追加
         });
 
         // ===============================
@@ -1895,6 +2080,7 @@ export async function endEnemyMode() {
         // スコア系
         gScore: stats.gScore,
         gRank: stats.rank,
+        skillScore: stats.skillScore,
 
         // タイピング系
         kpm: Math.round(stats.gKpm),

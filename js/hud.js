@@ -428,6 +428,11 @@ function renderQuestStatsModal() {
                 </div>
 
                 <div class="quest-bottom-row">
+                  <span class="quest-bottom-label">BEST SCORE</span>
+                  <span class="quest-bottom-value gold">${(r.maxGScore || 0).toLocaleString()}</span>
+                </div>
+
+                <div class="quest-bottom-row">
                   <span class="quest-bottom-label">★</span>
                   <span class="quest-bottom-value gold">
                     ${totalStars} / ${maxStars} (${starsPercent}%)

@@ -4,6 +4,13 @@ import { buildBaseRomaji } from "./typingLogic.js";
 
 
 // =====================================================
+// スポーン設定定数
+// =====================================================
+const SPAWN_RADIUS_BASE = 400;     // スポーンを試みる基本半径
+const SPAWN_DISTANCE_MIN = 300;    // プレイヤーからの最低保証距離
+const SECONDS_PER_CHAR_BASE = 0.45; // 1文字あたりの許容入力時間（秒）: 0.35 -> 0.45
+
+// =====================================================
 // 共通：weight抽選
 // =====================================================
 
@@ -100,7 +107,7 @@ function getSpawnPosition(
 
     // 円周上
     const angle = Math.random() * Math.PI * 2;
-    const dist = 350;
+    const dist = SPAWN_RADIUS_BASE;
 
     let x =
         player.x + Math.cos(angle) * dist;
@@ -110,6 +117,20 @@ function getSpawnPosition(
 
     x = Math.min(Math.max(x, minX), maxX);
     y = Math.min(Math.max(y, minY), maxY);
+
+    // プレイヤーから一定距離（300px）を強制的に保つように調整
+    const dx = x - player.x;
+    const dy = y - player.y;
+    const currentDist = Math.hypot(dx, dy) || 0.0001;
+
+    if (currentDist < SPAWN_DISTANCE_MIN) {
+        x = player.x + (dx / currentDist) * SPAWN_DISTANCE_MIN;
+        y = player.y + (dy / currentDist) * SPAWN_DISTANCE_MIN;
+
+        // 再度画面内に収める（距離を保てる限界の端に配置される）
+        x = Math.min(Math.max(x, minX), maxX);
+        y = Math.min(Math.max(y, minY), maxY);
+    }
 
     return { x, y };
 }
@@ -181,6 +202,16 @@ export function spawnEnemy(
         enemy.damage = type.damage;
     }
 
+    // 文字数に応じた最低入力時間を確保するための速度調整
+    // 0.25 に設定すると、10文字の単語に対して 2.5秒 の到達時間が保証
+    const SECONDS_PER_CHAR = SECONDS_PER_CHAR_BASE;
+    const FPS = 60;
+    const distToPlayer = Math.hypot(pos.x - player.x, pos.y - player.y);
+    const minFramesToReach = Math.max(1, target.text.length * SECONDS_PER_CHAR * FPS);
+    
+    const maxAllowedSpeed = distToPlayer / minFramesToReach;
+    enemy.speed = Math.min(enemy.speed, maxAllowedSpeed);
+
     enemy.baseRomaji =
         buildBaseRomaji(enemy.text);
 
@@ -250,10 +281,7 @@ export function spawnItemEnemy(state, config, itemTableOverride){
 
 // typeに応じたランダム単語を返す
 export function getRandomWordForType(type) {
-    // type.tags, minLen, maxLen を getWord に渡す
-    const word = getWord(type.tags, type.minLen, type.maxLen);
-
-    if (!word) return null;
-
-    return word;
+    // type.tags, minLen, maxLen を getWord にそのまま渡す
+    // 大元の EnemyTypes 定義側で長さを調整することを推奨
+    return getWord(type.tags, type.minLen, type.maxLen);
 }

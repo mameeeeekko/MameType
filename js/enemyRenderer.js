@@ -1918,7 +1918,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     
     // 残り敵数
     if (end.killCount != null) {
-        const remain = Math.max(0, end.killCount - stats.phaseObjectiveDefeated);
+        const remain = Math.max(0, end.killCount - stats.phaseProcessedCount);
         lines.push({ label: "ENEMY", value: remain });
     }
 
@@ -2364,7 +2364,7 @@ function drawCooldownCircle(
     } else if (ready) {
         ctx.strokeStyle = "rgba(193, 216, 255, 0.9)";
     } else {
-        ctx.strokeStyle = "rgba(97, 117, 152, 0.9)";
+        ctx.strokeStyle = "rgba(193, 216, 255, 0.9)";
     }
 
     // 外周リングの線の太さ
@@ -2491,7 +2491,7 @@ function drawStockSegments(
         ctx.arc(x, y, r, a0, a1);
 
         if (filled) {
-            ctx.strokeStyle = "rgb(84, 130, 215)";
+            ctx.strokeStyle = "rgb(179, 205, 255)";
             ctx.shadowBlur = 10; // 少し強め
             ctx.shadowColor = "rgba(0,0,0,0.3)";
         } else {
