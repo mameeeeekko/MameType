@@ -1377,14 +1377,14 @@ export async function startEnemyMode(config = {}) {
             ...(custom.spawn || {}),
         };
 
-        // 属性セットとTierに基づいて出現テーブル(enemyTable)を再構築
-        if (custom.spawn?.typeSetKey && custom.spawn?.tier) {
-            const table = TIER_TABLES[custom.spawn.typeSetKey];
-            if (table) {
-                const tierKey = `T${custom.spawn.tier}`;
-                stage.enemyTable = getTierEnemies(tierKey, table);
-                stage.spawn.tier = custom.spawn.tier; // 難易度倍率用
-            }
+        // main.jsから直接渡されたenemyTableを優先的に適用
+        if (config.enemyTable) {
+            stage.enemyTable = config.enemyTable;
+        }
+
+        // 難易度計算やログ表示のためにTier情報を保存
+        if (custom.spawn?.tier) {
+            stage.spawn.tier = custom.spawn.tier;
         }
 
         // 5. フリーモードでは、討伐目標の有無に関わらず出現数自体は制限せず無限に出現させる

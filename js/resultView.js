@@ -77,10 +77,10 @@ export function showResult({
   if (!resultStats) return;
 
   let modeTitle = "RESULT";
-  if (mode === "normal") modeTitle = "スタンダード";
-  else if (mode === "time_attack") modeTitle = "タイムアタック";
-  else if (mode === "long_text") modeTitle = "長文モード";
-  else if (mode === "miss_practice") modeTitle = "ミス練習";
+  if (mode === "normal") modeTitle = "STANDARD";
+  else if (mode === "time_attack") modeTitle = "TIME ATTACK";
+  else if (mode === "long_text") modeTitle = "LONG TEXT";
+  else if (mode === "miss_practice") modeTitle = "MISS PRACTICE";
 
   const totalInputs = totalCorrect + totalMistake;
   const accuracyText = totalInputs === 0 ? "―" : `${accuracy}%`;
@@ -123,10 +123,10 @@ export function showResult({
 
   html += `
   <div class="result-stats-grid">
-    <div class="r-row"><span class="result-label">正確率</span><span class="result-value">${accuracyText}</span></div>
+    <div class="r-row"><span class="result-label">Accuracy</span><span class="result-value">${accuracyText}</span></div>
     <div class="r-row"><span class="result-label">KPM</span><span class="result-value">${kpmText}</span></div>
-    <div class="r-row"><span class="result-label">ミス</span><span class="result-value">${totalMistake}</span></div>
-    <div class="r-row"><span class="result-label">経過時間</span><span class="result-value">${Math.round(totalTime)}s</span></div>
+    <div class="r-row"><span class="result-label">Misses</span><span class="result-value">${totalMistake}</span></div>
+    <div class="r-row"><span class="result-label">Time</span><span class="result-value">${Math.round(totalTime)}s</span></div>
   </div>
 
   <div class="result-badges">

@@ -747,7 +747,9 @@ function saveFreeModeConfig() {
       time: parseInt(document.getElementById("enemyTimeSlider")?.value) || 60,
       count: parseInt(document.getElementById("enemyCountSlider")?.value) || 30,
       interval: parseInt(document.getElementById("enemyIntervalSlider")?.value) || 2000,
-      immediateOnClear: document.getElementById("enemyImmediateToggle")?.checked || false
+      immediateOnClear: document.getElementById("enemyImmediateToggle")?.checked || false,
+      tier: document.getElementById("freeEnemyTier")?.value || "1",
+      typeSet: document.getElementById("freeEnemyTypeSet")?.value || "ENEMY_TIER_BALANCED"
     }
   };
   localStorage.setItem("free_mode_config_v1", JSON.stringify(config));
@@ -788,6 +790,14 @@ function loadFreeModeConfig() {
         const el = document.getElementById("enemyImmediateToggle");
         if (el) el.checked = config.enemy.immediateOnClear;
       }
+      if (config.enemy.tier) {
+        const el = document.getElementById("freeEnemyTier");
+        if (el) el.value = config.enemy.tier;
+      }
+      if (config.enemy.typeSet) {
+        const el = document.getElementById("freeEnemyTypeSet");
+        if (el) el.value = config.enemy.typeSet;
+      }
       // パターンの復元
       switchEnemyPattern(currentEnemyPattern);
     }
@@ -824,6 +834,10 @@ function initFreeModeConfigUI() {
       saveFreeModeConfig();
     });
   });
+
+  // Tierと属性セットの変更時にも保存を実行する
+  document.getElementById("freeEnemyTier")?.addEventListener("change", saveFreeModeConfig);
+  document.getElementById("freeEnemyTypeSet")?.addEventListener("change", saveFreeModeConfig);
 
   // チェックボックス変更時に保存
   if (enemyImmediateToggle) {
@@ -871,14 +885,24 @@ function initFreeModeConfigUI() {
     const selectedTable = TIER_TABLES[selectedTypeSetKey] || TIER_TABLES.ENEMY_TIER_BALANCED;
     const enemyTable = getTierEnemies(`T${selectedTier}`, selectedTable);
 
+    // デバッグ用ログ: 選択した条件でテーブルが正しく取得できているか確認
+    console.log("Enemy Table Selection Check:", {
+      selectedTier: `T${selectedTier}`,
+      selectedTypeSetKey: selectedTypeSetKey,
+      hasTable: !!selectedTable,
+      enemyCount: enemyTable ? enemyTable.length : 0,
+      enemyTable: enemyTable
+    });
+
     const interval = parseInt(document.getElementById("enemyIntervalSlider")?.value || "2000");
     const immediateOnClear = document.getElementById("enemyImmediateToggle")?.checked || false;
 
     const spawnConfig = {
       interval: interval,
       immediateOnClear: immediateOnClear,
-      maxAlive: 10, // フリーモードでの標準的な同時出現数
-      limit: null
+      maxAlive: 10,
+      limit: null,
+      tier: selectedTier // Tier情報を追加してenemyCore側に伝える
     };
 
     const activePattern = currentEnemyPattern.toLowerCase();
@@ -891,8 +915,7 @@ function initFreeModeConfigUI() {
       customConditions = {
         endConditions: { timerMs: time * 1000, killCount: null, hpZero: true }, 
         clearConditions: { timerMs: time * 1000 },
-        spawn: spawnConfig,
-        enemyTable: enemyTable
+        spawn: spawnConfig
       };
     } else if (activePattern === "count") {
       const countVal = document.getElementById("enemyCountSlider")?.value;
@@ -900,16 +923,14 @@ function initFreeModeConfigUI() {
       customConditions = {
         endConditions: { killCount: count, timerMs: null, hpZero: true }, 
         clearConditions: { killCount: count, timerMs: null },
-        spawn: spawnConfig,
-        enemyTable: enemyTable
+        spawn: spawnConfig
       };
     } else {
       // エンドレス
       customConditions = {
         endConditions: { timerMs: null, killCount: null, hpZero: true }, 
         clearConditions: { endless: true },
-        spawn: spawnConfig,
-        enemyTable: enemyTable
+        spawn: spawnConfig
       };
     }
 
@@ -922,7 +943,8 @@ function initFreeModeConfigUI() {
       isFreeMode: true,
       difficulty: getCurrentDifficulty().id,
       stage: "DAILY", // フリーモードのベースステージ
-      customConditions: customConditions
+      customConditions: customConditions,
+      enemyTable: enemyTable // Tierと属性セットから生成したテーブルをトップレベルで渡す
     });
   });
 

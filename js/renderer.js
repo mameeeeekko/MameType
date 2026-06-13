@@ -455,7 +455,10 @@ function renderWordDisplay({ displayWord, pos, text }) {
 
   // done更新
   for (let i = 0; i < longWordSpans.length; i++) {
-    if (i < pos) longWordSpans[i].classList.add("done");
+    // 注意: word と text の文字数が異なるため、pos をそのまま使うとズレます。
+    // ここでは簡易的に、入力が完了するまで全文字を未完了、または末尾まで行ったら完了とするなどの調整が必要です。
+    // 現状は pos が word.length を超えない範囲でのみ適用。
+    if (i < pos && displayWord.length === text.length) longWordSpans[i].classList.add("done");
     else longWordSpans[i].classList.remove("done");
   }
 
