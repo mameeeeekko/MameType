@@ -144,7 +144,7 @@ export function showQuestResult(stats) {
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">PlayTIme</div>
+                    <div class="label">PlayTime</div>
                     <div class="value">${((stats.endTime - stats.startTime)/1000).toFixed(2)}s</div>
                 </div>
 
@@ -154,7 +154,7 @@ export function showQuestResult(stats) {
                 </div>
 
                 <div class="quest-skill-stat">
-                    <div class="label">KPM</div>
+                    <div class="label">gKPM</div>
                     <div class="value">${stats.gKpm.toFixed(2)}</div>
                 </div>
 
@@ -186,6 +186,13 @@ export function showQuestResult(stats) {
                     <div class="r-badge levelup" id="levelUpBadge"></div>
                 ` : ""}
             </div>
+
+            ${stats.leveledUp ? `
+                <div class="level-up-stats-row" style="display: flex; gap: 8px; justify-content: center; margin-top: 5px;">
+                    ${stats.hpIncrease > 0 ? `<div class="r-badge hpup" style="background: #2ea44f; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold;">HP +${stats.hpIncrease}</div>` : ""}
+                    ${stats.defIncrease > 0 ? `<div class="r-badge defup" style="background: #0969da; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold;">DEF +${stats.defIncrease}</div>` : ""}
+                </div>
+            ` : ""}
         
             <div class="exp-row">
                 <div class="exp-bar">

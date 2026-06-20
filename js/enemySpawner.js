@@ -1,4 +1,5 @@
-import { Enemy, EnemyTypes, ItemEnemy, ItemTypes} from "./enemy.js";
+import { Enemy, EnemyTypes, ItemEnemy, ItemTypes } from "./enemy.js";
+import { getUISafeTop } from "./enemyCore.js";
 import { getWord } from "./target.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 
@@ -14,25 +15,21 @@ const SECONDS_PER_CHAR_BASE = 0.45; // 1文字あたりの許容入力時間（�
 // 共通：weight抽選
 // =====================================================
 
-function pickWeightedType(table, typeMap){
-
-    if (!table?.length) return null;
-
-    const total =
-        table.reduce((sum, e) => sum + e.weight, 0);
-
+function pickWeightedEntry(table) {
+    if (!table || !Array.isArray(table) || table.length === 0) return null;
+    const total = table.reduce((sum, e) => sum + (e.weight || 0), 0);
+    if (total <= 0) return table[0];
     let r = Math.random() * total;
-
     for (const e of table) {
-
-        r -= e.weight;
-
-        if (r <= 0) {
-            return typeMap[e.type];
-        }
+        r -= (e.weight || 0);
+        if (r <= 0) return e;
     }
+    return table[table.length - 1];
+}
 
-    return typeMap[table[0].type];
+function pickWeightedType(table, typeMap){
+    const entry = pickWeightedEntry(table);
+    return (entry && typeMap) ? typeMap[entry.type] : null;
 }
 
 // =====================================================
@@ -67,7 +64,8 @@ function getUniqueWord(type, enemies = [], retry = 5){
 function getSpawnPosition(
     player,
     canvas,
-    size
+    size,
+    existingEnemies = []
 ){
 
     const padding = 10;
@@ -78,45 +76,65 @@ function getSpawnPosition(
     const canvasWidth = rect.width;
     const canvasHeight = rect.height;
 
-    // UIセーフエリア
-    const chainUI =
-        document.getElementById("chainUI");
-
-    let uiBottom = 0;
-
-    if (chainUI) {
-
-        const rect =
-            chainUI.getBoundingClientRect();
-
-        const canvasRect =
-            canvas.getBoundingClientRect();
-
-        uiBottom =
-            rect.bottom - canvasRect.top;
-    }
+    // UIセーフエリアを取得 (enemyCoreの共通関数を使用)
+    const uiTopLimit = getUISafeTop();
 
     const minX = size + padding;
     const maxX = canvasWidth - size - padding;
 
-    const minY =
-        Math.max(size + padding, uiBottom + padding);
+    // minY を UIの下端に合わせる
+    const minY = Math.max(size + padding, uiTopLimit);
 
     const maxY =
         canvasHeight - size - padding;
 
-    // 円周上
-    const angle = Math.random() * Math.PI * 2;
-    const dist = SPAWN_RADIUS_BASE;
+    // 複数回トライして既存敵と重ならない位置を探す
+    const attempts = 18;
+    const margin = 8; // 最低余白
 
-    let x =
-        player.x + Math.cos(angle) * dist;
+    for (let i = 0; i < attempts; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        // 少しランダム幅を持たせた距離
+        const dist = SPAWN_RADIUS_BASE + (Math.random() - 0.5) * 120;
 
-    let y =
-        player.y + Math.sin(angle) * dist;
+        let x = player.x + Math.cos(angle) * dist;
+        let y = player.y + Math.sin(angle) * dist;
 
-    x = Math.min(Math.max(x, minX), maxX);
-    y = Math.min(Math.max(y, minY), maxY);
+        x = Math.min(Math.max(x, minX), maxX);
+        y = Math.min(Math.max(y, minY), maxY);
+
+        // プレイヤーから一定距離を保つ
+        const dx = x - player.x;
+        const dy = y - player.y;
+        const currentDist = Math.hypot(dx, dy) || 0.0001;
+
+        if (currentDist < SPAWN_DISTANCE_MIN) {
+            x = player.x + (dx / currentDist) * SPAWN_DISTANCE_MIN;
+            y = player.y + (dy / currentDist) * SPAWN_DISTANCE_MIN;
+            x = Math.min(Math.max(x, minX), maxX);
+            y = Math.min(Math.max(y, minY), maxY);
+        }
+
+        // 重なりチェック
+        let ok = true;
+        for (const e of existingEnemies) {
+            if (!e || e.isDead) continue;
+            const otherR = e.type?.size || e.radius || 15;
+            const dd = Math.hypot(x - (e.x || 0), y - (e.y || 0));
+            if (dd < (size + otherR + margin)) {
+                ok = false;
+                break;
+            }
+        }
+
+        if (ok) return { x, y };
+    }
+
+    // どれもダメなら最後に一つ作る（既存の位置を最小化して返す）
+    const fallbackAngle = Math.random() * Math.PI * 2;
+    const fx = Math.min(Math.max(player.x + Math.cos(fallbackAngle) * SPAWN_RADIUS_BASE, minX), maxX);
+    const fy = Math.min(Math.max(player.y + Math.sin(fallbackAngle) * SPAWN_RADIUS_BASE, minY), maxY);
+    return { x: fx, y: fy };
 
     // プレイヤーから一定距離（300px）を強制的に保つように調整
     const dx = x - player.x;
@@ -158,26 +176,19 @@ export function spawnEnemy(
     config, // stage または phase
     diff
 ){
+    const entry = pickWeightedEntry(config?.enemyTable);
+    if (!entry) return null;
 
-    const type =
-        pickWeightedType(
-            config?.enemyTable,
-            EnemyTypes
-        );
-
+    const type = EnemyTypes[entry.type];
     if (!type) return null;
 
-    const target =
-        getUniqueWord(type, enemies);
-
+    const target = getUniqueWord(type, enemies);
     if (!target) return null;
 
-    const pos =
-        getSpawnPosition(
-            player,
-            canvas,
-            type.size
-        );
+    // 固定座標指定があれば使用、なければランダム
+    const pos = entry.pos 
+        ? { x: entry.pos.x, y: entry.pos.y } 
+        : getSpawnPosition(player, canvas, type.size, enemies);
 
     const enemy = new Enemy(
         target.word,
@@ -264,7 +275,8 @@ export function spawnItemEnemy(state, config, itemTableOverride){
         getSpawnPosition(
             player,
             canvas,
-            type.size
+            type.size,
+            state.enemies
         );
 
     // item生成
@@ -284,4 +296,8 @@ export function getRandomWordForType(type) {
     // type.tags, minLen, maxLen を getWord にそのまま渡す
     // 大元の EnemyTypes 定義側で長さを調整することを推奨
     return getWord(type.tags, type.minLen, type.maxLen);
+}
+
+export function getWordForBehavior(behavior) {
+    return getWord(behavior.tags, behavior.minLen, behavior.maxLen);
 }

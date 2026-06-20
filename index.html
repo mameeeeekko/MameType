@@ -171,6 +171,12 @@
             <option value="ENEMY_TIER_RED_ONLY">記号（Red）のみ</option>
           </select>
         </div>
+        <div class="config-row">
+          <label>PLAYER LV (ステータス反映)</label>
+          <input type="range" id="playerLvRange" min="1" max="100" step="1" value="1"
+                 oninput="document.getElementById('enemyLvValue').innerText = this.value">
+          <span class="config-value level-color" id="enemyLvValue">1</span>
+        </div>
       </div>
 
       <div class="config-section-title" style="font-size: 0.8em; opacity: 0.7;">Rule Settings</div>
@@ -223,6 +229,17 @@
     <div id="configLong" class="mode-config-group" style="display: none;">
       <div class="config-section-title">Long Phrase Config</div>
       <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">固定の文章セットを開始します</p>
+      <div class="config-row">
+        <label>ジャンル</label>
+        <select id="longGenreSelect">
+          <option value="all">すべて</option>
+          <option value="文学">文学</option>
+          <option value="セキュリティ">セキュリティ</option>
+          <option value="自作キーボード">自作キーボード</option>
+          <option value="おもしろ">おもしろ</option>
+          <option value="プログラミング">プログラミング</option>
+        </select>
+      </div>
       <button id="startLongFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
     </div>
   </div>
@@ -237,7 +254,7 @@
   <div class="pause-menu">
     <p>PAUSED</p>
     <p>再開（P）</p>
-    <p>リトライ（R）</p>
+    <p>リスタート（R）</p>
     <p>戻る（B）</p>
   </div>
 </div>
@@ -311,10 +328,10 @@
             <label>Active Skill</label>
           </div>
           <div class="keybind-controls">
-            <select id="key-unlock"><option value="Space">SPACE</option><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
-            <select id="key-autolock"><option value="Space">SPACE</option><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
-            <select id="key-pause"><option value="Space">SPACE</option><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
-            <select id="key-skill"><option value="Space">SPACE</option><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+            <select id="key-unlock"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+            <select id="key-autolock"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+            <select id="key-pause"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+            <select id="key-skill"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
           </div>
         </div>
         <button id="saveKeybindBtn">Save Keybinds</button>
@@ -360,10 +377,10 @@
 
           <div id="records-controls">
             <div id="recordsModeButtons" class="mode-buttons">
-              <button data-mode="normal" class="active">スタンダード</button>
-              <button data-mode="time_attack">タイムアタック</button>
-              <button data-mode="long_text">長文</button>
-              <button data-mode="enemy_mode">エネミー</button>
+              <button data-mode="normal" class="active">STANDARD</button>
+              <button data-mode="time_attack">TIME ATTACK</button>
+              <button data-mode="long_text">LONG TEXT</button>
+              <button data-mode="enemy_mode">ENEMY</button>
             </div>
           </div>
         </div>
@@ -417,7 +434,7 @@
   <div class="ranking-tabs">
     <button class="ranking-tab active" data-mode="normal">STANDARD</button>
     <button class="ranking-tab" data-mode="time_attack">TIME ATTACK</button>
-    <button class="ranking-tab" data-mode="long_text">LONG</button>
+    <button class="ranking-tab" data-mode="long_text">LONG TEXT</button>
     <button class="ranking-tab" data-mode="enemy_mode">ENEMY</button>
   </div>
 
@@ -641,7 +658,7 @@
 
       <!-- モード表示 -->
       <div id="modeBadges">
-        <div id="missModeBadge">MISS PRACTICE</div>
+        <div id="missModeBadge">MISTAKE PRACTICE</div>
         <div id="freeModeBadge">FREE</div>
       </div>
 
@@ -680,7 +697,7 @@
 
         <!-- 長文モード：全文固定表示 -->
       <div id="word-long-wrap" class="hidden">
-        <div id="word-long"></div>
+        <div id="word-long" style="white-space: pre-wrap; text-align: left;"></div>
       </div>
 
         <!-- 長文モード：スクロール表示 -->
@@ -712,7 +729,7 @@
       <!-- 統計表示（ミス数・正答数・正確性など） -->
       <div id="stats"></div>
       
-      <button id="gameBackBtn" class="game-back-btn">戻る</button>
+      <button id="gameBackBtn" class="game-back-btn">BACK</button>
       
     </div>
 
@@ -742,13 +759,13 @@
     <div id="resultStats"></div>
     <div id="onlineRanking"></div>
     <div class="result-actions">
-      <button id="playAgainBtn" class="result-btn">リトライ</button>
-      <button id="retryMissedBtn" class="result-btn secondary">間違えた問題だけ</button>
-      <button id="resultToStartMenuBtn" class="result-btn secondary">ゲーム選択に戻る</button>
-      <button id="resultToQuestMenuBtn" class="result-btn secondary">クエストメニューに戻る</button>
-      <button id="questBackBtn" class="result-btn secondary">マップに戻る</button> 
-      <button id="resultOpenRecordsBtn" class="result-btn secondary">レコードを見る</button>
-      <button id="resultBackBtn" class="result-btn secondary">メニューに戻る</button>
+      <button id="playAgainBtn" class="result-btn">RETRY</button>
+      <button id="retryMissedBtn" class="result-btn secondary">RETRY MISTAKES</button>
+      <button id="resultToStartMenuBtn" class="result-btn secondary">SELECT GAMES</button>
+      <button id="resultToQuestMenuBtn" class="result-btn secondary">QUEST MENU</button>
+      <button id="questBackBtn" class="result-btn secondary">QUEST MAP</button> 
+      <button id="resultOpenRecordsBtn" class="result-btn secondary">RECORDS</button>
+      <button id="resultBackBtn" class="result-btn secondary">MENU</button>
     </div>
   </div>
 </div>
@@ -763,7 +780,7 @@
     <div id="mapNodes"></div>
   </div>
 
-  <button id="mapBackBtn">戻る</button>
+  <button id="mapBackBtn">BACK</button>
 </div>
 
 <!-- =====================================================
@@ -775,8 +792,8 @@
     <div id="questSkillResultContent"></div>
 
     <div class="quest-skill-buttons">
-      <button id="questSkillRetryBtn">リトライ</button>
-      <button id="questSkillBackBtn">戻る</button>
+      <button id="questSkillRetryBtn">RETRY</button>
+      <button id="questSkillBackBtn">BACK</button>
     </div>
 
   </div>
@@ -790,8 +807,8 @@
       <div id="skillResultText"></div>
       <div id="skillSlotReward" style="display:none;"></div>
       
-      <button id="skillRetryBtn">リトライ</button>
-      <button id="skillBackBtn">戻る</button>
+      <button id="skillRetryBtn">RETRY</button>
+      <button id="skillBackBtn">BACK</button>
   </div>
 
 <!-- =====================================================

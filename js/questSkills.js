@@ -73,7 +73,7 @@ export function activateSkill(skillId, gameState, enemies = []) {
 
             targets:
                 enemies.filter(
-                    e => e && !e.isDead && !e.isItem
+                    e => e && !e.isDead && !e.isItem && !e.type?.id?.includes("boss")
                 )
         });
     }
@@ -127,7 +127,7 @@ const SKILL_HANDLERS = {
   kill: (value, state, enemiesList = []) => {
 
     const aliveEnemies =
-      enemiesList.filter(e => e && !e.isDead && !e.isItem);
+      enemiesList.filter(e => e && !e.isDead && !e.isItem && !e.type?.id?.includes("boss"));
 
     if (aliveEnemies.length === 0) return;
 
@@ -332,4 +332,3 @@ export const ACTIVE_SKILLS = {
     }
   }
 };
-

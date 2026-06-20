@@ -85,6 +85,7 @@ let playerNameInput, savePlayerNameBtn;
 let onlineRankingToggle;
 
 let unlock, autoLock, pause, activeSkill, saveKeybindBtn;
+let playerLvRange;
 let enemyIntervalSlider, enemyImmediateToggle;
 let currentFreeModeId = 'Standard'; // フリーモードの選択状態を保持する変数
 let currentEnemyPattern = 'time'; // エネミーモード内のパターン選択状態
@@ -177,6 +178,7 @@ function cacheDOM() {
   activeSkill = document.getElementById("key-skill");
   saveKeybindBtn = document.getElementById("saveKeybindBtn");
 
+  playerLvRange = document.getElementById("playerLvRange");
   enemyIntervalSlider = document.getElementById("enemyIntervalSlider");
   enemyImmediateToggle = document.getElementById("enemyImmediateToggle");
 
@@ -284,7 +286,20 @@ export function applyTitleMenuBackground() {
 // =====================================================
 document.addEventListener("DOMContentLoaded", () => {
   cacheDOM();
-  
+
+  // ゲーム中の意図しないテキスト選択（青いハイライト）を防止
+  document.addEventListener("selectstart", (e) => {
+    if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+      e.preventDefault();
+    }
+  });
+  // ダブルクリック等による画面全体の選択を防止
+  document.addEventListener("mousedown", (e) => {
+    if (e.detail > 1 && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+      e.preventDefault();
+    }
+  });
+
   if (checkMobile()) return; // モバイルなら初期化を中断
 
   showBootScreen();
@@ -742,6 +757,9 @@ function saveFreeModeConfig() {
     timeAttack: {
       time: parseInt(document.getElementById("taTimeSlider")?.value) || 60
     },
+    long: {
+      genre: document.getElementById("longGenreSelect")?.value || "all"
+    },
     enemy: {
       pattern: document.querySelector("#configEnemy .pattern-btn.active")?.dataset.pattern || "time",
       time: parseInt(document.getElementById("enemyTimeSlider")?.value) || 60,
@@ -749,7 +767,8 @@ function saveFreeModeConfig() {
       interval: parseInt(document.getElementById("enemyIntervalSlider")?.value) || 2000,
       immediateOnClear: document.getElementById("enemyImmediateToggle")?.checked || false,
       tier: document.getElementById("freeEnemyTier")?.value || "1",
-      typeSet: document.getElementById("freeEnemyTypeSet")?.value || "ENEMY_TIER_BALANCED"
+      typeSet: document.getElementById("freeEnemyTypeSet")?.value || "ENEMY_TIER_BALANCED",
+      lv: parseInt(document.getElementById("playerLvRange")?.value) || 1
     }
   };
   localStorage.setItem("free_mode_config_v1", JSON.stringify(config));
@@ -772,6 +791,10 @@ function loadFreeModeConfig() {
     if (config.timeAttack?.time) {
       const el = document.getElementById("taTimeSlider");
       if (el) { el.value = config.timeAttack.time; updateConfigSliderLabel("taTimeSlider", el.value); }
+    }
+    if (config.long?.genre) {
+      const el = document.getElementById("longGenreSelect");
+      if (el) el.value = config.long.genre;
     }
     if (config.enemy) {
       if (config.enemy.time) {
@@ -798,6 +821,13 @@ function loadFreeModeConfig() {
         const el = document.getElementById("freeEnemyTypeSet");
         if (el) el.value = config.enemy.typeSet;
       }
+      if (config.enemy.lv !== undefined) {
+        const el = document.getElementById("playerLvRange");
+        if (el) { 
+          el.value = config.enemy.lv; 
+          updateConfigSliderLabel("playerLvRange", el.value); 
+        }
+      }
       // パターンの復元
       switchEnemyPattern(currentEnemyPattern);
     }
@@ -806,6 +836,85 @@ function loadFreeModeConfig() {
   }
 }
 
+/**
+ * フリーモードのエネミーモードを開始する (UI設定を反映)
+ */
+function startFreeEnemyMode() {
+  // Tierと属性セットの取得
+  const selectedTier = parseInt(document.getElementById("freeEnemyTier").value);
+  const selectedTypeSetKey = document.getElementById("freeEnemyTypeSet").value;
+  const selectedTable = TIER_TABLES[selectedTypeSetKey] || TIER_TABLES.ENEMY_TIER_BALANCED;
+  const enemyTable = getTierEnemies(`T${selectedTier}`, selectedTable);
+
+  // デバッグ用ログ: 選択した条件でテーブルが正しく取得できているか確認
+  console.log("Enemy Table Selection Check:", {
+    selectedTier: `T${selectedTier}`,
+    selectedTypeSetKey: selectedTypeSetKey,
+    hasTable: !!selectedTable,
+    enemyCount: enemyTable ? enemyTable.length : 0,
+    enemyTable: enemyTable
+  });
+
+  const interval = parseInt(enemyIntervalSlider?.value || "2000");
+  const immediateOnClear = enemyImmediateToggle?.checked || false;
+  const selectedLv = parseInt(playerLvRange?.value || "1");
+
+  const spawnConfig = {
+    interval: interval,
+    immediateOnClear: immediateOnClear,
+    maxAlive: 10,
+    limit: null,
+    tier: selectedTier // Tier情報を追加してenemyCore側に伝える
+  };
+
+  const activePattern = currentEnemyPattern.toLowerCase();
+  
+  let customConditions = {};
+
+  if (activePattern === "time") {
+    const timeVal = document.getElementById("enemyTimeSlider")?.value;
+    const time = parseInt(timeVal && timeVal !== "" ? timeVal : "60");
+    customConditions = {
+      endConditions: { timerMs: time * 1000, killCount: null, hpZero: true }, 
+      clearConditions: { timerMs: time * 1000 },
+      spawn: spawnConfig
+    };
+  } else if (activePattern === "count") {
+    const countVal = document.getElementById("enemyCountSlider")?.value;
+    const count = parseInt(countVal && countVal !== "" ? countVal : "30");
+    customConditions = {
+      endConditions: { killCount: count, timerMs: null, hpZero: true }, 
+      clearConditions: { killCount: count, timerMs: null },
+      spawn: spawnConfig
+    };
+  } else {
+    // エンドレス
+    customConditions = {
+      endConditions: { timerMs: null, killCount: null, hpZero: true }, 
+      clearConditions: { endless: true },
+      spawn: spawnConfig
+    };
+  }
+
+  console.log("START ENEMY FREE MODE:", { activePattern, customConditions });
+
+  hideAllScreens();
+  showMenuBackground(false);
+  
+  // ★ gameStateの状態を明示的に更新（遷移先判定のため）
+  gameState.isFreeMode = true;
+  gameState.isQuestMode = false;
+
+  startEnemyMode({
+    mode: GameModes.ENEMY_MODE,
+    isFreeMode: true,
+    difficulty: getCurrentDifficulty().id,
+    stage: "DAILY", // フリーモードのベースステージ
+    level: selectedLv,
+    customConditions: customConditions,
+    enemyTable: enemyTable // Tierと属性セットから生成したテーブルをトップレベルで渡す
+  });
+}
 // =====================================================
 // フリーモード詳細設定のUI制御
 // =====================================================
@@ -826,7 +935,7 @@ function initFreeModeConfigUI() {
   });
 
   // スライダー変更時に保存
-  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider"];
+  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "playerLvRange"];
   sliders.forEach(id => {
     const el = document.getElementById(id);
     el?.addEventListener("input", () => {
@@ -850,6 +959,10 @@ function initFreeModeConfigUI() {
   document.getElementById("startStandardFree")?.addEventListener("click", () => {
     const count = parseInt(document.getElementById("stdCountSlider").value);
     hideAllScreens();
+
+    gameState.isFreeMode = true;
+    gameState.isQuestMode = false;
+
     Game.doCountdown({
       mode: GameModes.NORMAL,
       isFreeMode: true,
@@ -861,6 +974,10 @@ function initFreeModeConfigUI() {
   document.getElementById("startTimeAttackFree")?.addEventListener("click", () => {
     const time = parseInt(document.getElementById("taTimeSlider").value);
     hideAllScreens();
+
+    gameState.isFreeMode = true;
+    gameState.isQuestMode = false;
+
     Game.doCountdown({
       mode: GameModes.TIME_ATTACK,
       isFreeMode: true,
@@ -869,84 +986,38 @@ function initFreeModeConfigUI() {
     });
   });
 
+  // ジャンル選択変更時に保存
+  document.getElementById("longGenreSelect")?.addEventListener("change", () => {
+    saveFreeModeConfig();
+  });
+
   document.getElementById("startLongFree")?.addEventListener("click", () => {
+    const genre = document.getElementById("longGenreSelect")?.value || "all";
+    const tags = ["長文"];
+    if (genre !== "all") {
+      tags.push(genre);
+    }
+
     hideAllScreens();
+
+    gameState.isFreeMode = true;
+    gameState.isQuestMode = false;
+
     Game.doCountdown({
       mode: GameModes.LONG_TEXT,
       isFreeMode: true,
-      difficulty: null
+      difficulty: null,
+      custom: { tags: tags }
     });
   });
 
-  document.getElementById("startEnemyFree")?.addEventListener("click", () => {
-    // Tierと属性セットの取得
-    const selectedTier = parseInt(document.getElementById("freeEnemyTier").value);
-    const selectedTypeSetKey = document.getElementById("freeEnemyTypeSet").value;
-    const selectedTable = TIER_TABLES[selectedTypeSetKey] || TIER_TABLES.ENEMY_TIER_BALANCED;
-    const enemyTable = getTierEnemies(`T${selectedTier}`, selectedTable);
+  document.getElementById("startEnemyFree")?.addEventListener("click", startFreeEnemyMode);
 
-    // デバッグ用ログ: 選択した条件でテーブルが正しく取得できているか確認
-    console.log("Enemy Table Selection Check:", {
-      selectedTier: `T${selectedTier}`,
-      selectedTypeSetKey: selectedTypeSetKey,
-      hasTable: !!selectedTable,
-      enemyCount: enemyTable ? enemyTable.length : 0,
-      enemyTable: enemyTable
-    });
-
-    const interval = parseInt(document.getElementById("enemyIntervalSlider")?.value || "2000");
-    const immediateOnClear = document.getElementById("enemyImmediateToggle")?.checked || false;
-
-    const spawnConfig = {
-      interval: interval,
-      immediateOnClear: immediateOnClear,
-      maxAlive: 10,
-      limit: null,
-      tier: selectedTier // Tier情報を追加してenemyCore側に伝える
-    };
-
-    const activePattern = currentEnemyPattern.toLowerCase();
-    
-    let customConditions = {};
-
-    if (activePattern === "time") {
-      const timeVal = document.getElementById("enemyTimeSlider")?.value;
-      const time = parseInt(timeVal && timeVal !== "" ? timeVal : "60");
-      customConditions = {
-        endConditions: { timerMs: time * 1000, killCount: null, hpZero: true }, 
-        clearConditions: { timerMs: time * 1000 },
-        spawn: spawnConfig
-      };
-    } else if (activePattern === "count") {
-      const countVal = document.getElementById("enemyCountSlider")?.value;
-      const count = parseInt(countVal && countVal !== "" ? countVal : "30");
-      customConditions = {
-        endConditions: { killCount: count, timerMs: null, hpZero: true }, 
-        clearConditions: { killCount: count, timerMs: null },
-        spawn: spawnConfig
-      };
-    } else {
-      // エンドレス
-      customConditions = {
-        endConditions: { timerMs: null, killCount: null, hpZero: true }, 
-        clearConditions: { endless: true },
-        spawn: spawnConfig
-      };
-    }
-
-    console.log("START ENEMY FREE MODE:", { activePattern, customConditions });
-
-    hideAllScreens();
-    showMenuBackground(false);
-    startEnemyMode({
-      mode: GameModes.ENEMY_MODE,
-      isFreeMode: true,
-      difficulty: getCurrentDifficulty().id,
-      stage: "DAILY", // フリーモードのベースステージ
-      customConditions: customConditions,
-      enemyTable: enemyTable // Tierと属性セットから生成したテーブルをトップレベルで渡す
-    });
-  });
+  // エネミーモードの開始ボタンを設定パネルの最下部に移動する
+  const enemyStartBtn = document.getElementById("startEnemyFree");
+  if (enemyStartBtn && configEnemy) {
+    configEnemy.appendChild(enemyStartBtn);
+  }
 
   // 保存された設定を読み込む
   loadFreeModeConfig();
@@ -956,7 +1027,7 @@ function initFreeModeConfigUI() {
  * スライダーの値をUIに反映する共通処理
  */
 function updateConfigSliderLabel(id, value) {
-  const valDisplay = document.getElementById(id.replace("Slider", "Value"));
+  const valDisplay = document.getElementById(id.replace("Slider", "Value").replace("Range", "Value").replace("playerLv", "enemyLv"));
   if (!valDisplay) return;
   
   if (id === "enemyIntervalSlider") {
@@ -974,7 +1045,7 @@ function switchEnemyPattern(pattern) {
   const configEnemy = document.getElementById("configEnemy");
   if (!configEnemy) return;
 
-  const patternBtns = configEnemy.querySelectorAll(".pattern-btn");
+  const patternBtns = configEnemy.querySelectorAll(".pattern-selector .pattern-btn");
   const patternDetails = configEnemy.querySelectorAll(".pattern-detail");
 
   patternBtns.forEach(btn => {
@@ -1144,7 +1215,8 @@ function bindGameMenuEvents() {
     if (!confirm("ゲームを中断してメニューに戻りますか？")) return;
 
     Game.backToMenu();
-    if (gameState.isFreeMode) showFreeStartMenu();
+    if (gameState.isQuestMode || gameState.currentQuestNode) showQuestMap();
+    else if (gameState.isFreeMode) showFreeStartMenu();
     else showStartMenu();
   });
 
@@ -1211,6 +1283,11 @@ function bindModeStartEvents() {
   enemyModeBtn?.addEventListener("click", () => {
     hideAllScreens();
     showMenuBackground(false); // ゲーム画面に遷移する際にメニュー背景を非表示にする
+
+    // ★ 通常（デイリー）のエネミーモード開始時のフラグ設定
+    gameState.isFreeMode = false;
+    gameState.isQuestMode = false;
+
     startEnemyMode({
       mode: GameModes.ENEMY_MODE,
       isFreeMode: false,
@@ -1259,7 +1336,12 @@ function bindResultEvents() {
     if (resultDiv) resultDiv.style.display = "none";
 
     if (wasLastGameEnemyMode()) {
-      restartEnemyMode();
+      // フリーモードのエネミーモードの場合、UIの設定（Tier等）を反映し直して開始する
+      if (gameState.isFreeMode) {
+        startFreeEnemyMode();
+      } else {
+        restartEnemyMode();
+      }
     } else {
       Game.restartLastGame();
     }
@@ -1274,7 +1356,8 @@ function bindResultEvents() {
   resultToStartMenuBtn?.addEventListener("click", () => {
     Game.fullResetGame(); 
     Game.backToMenu();
-    if (gameState.isFreeMode) showFreeStartMenu();
+    if (gameState.isQuestMode) showQuestMenu();
+    else if (gameState.isFreeMode) showFreeStartMenu();
     else showStartMenu();
   });
 
@@ -1430,7 +1513,10 @@ function handlePauseKey(e) {
       setPaused(false);
       document.querySelector(".pause-overlay").style.display = "none";
   
-      if (gameState.enemyMode) restartEnemyMode();
+      if (gameState.enemyMode) {
+        if (gameState.isFreeMode) startFreeEnemyMode();
+        else restartEnemyMode();
+      }
       else Game.restartLastGame();
       break;
 
@@ -1467,8 +1553,10 @@ function handlePauseKey(e) {
       }  
 
       // ★ 通常モード
+      const isQuest = gameState.isQuestMode || !!gameState.currentQuestNode;
       Game.backToMenu();
-      if (gameState.isFreeMode) showFreeStartMenu();
+      if (isQuest) showQuestMap();
+      else if (gameState.isFreeMode) showFreeStartMenu();
       else showStartMenu();
 
       break;
@@ -1486,6 +1574,9 @@ function handleGameKey(e) {
 
   // ★終了演出中は入力停止
   if (gameState.isEnding) return true;
+
+  // ★エネミーモードの開始・フェーズ移行演出中は入力停止
+  if (gameState.enemyMode && gameState.enemyStats?.isTransitioning) return true;
 
   if (getPaused()) return true;
 
@@ -1514,29 +1605,35 @@ function handleGameKey(e) {
 
     // ★② クエスト中
     if (gameState.currentQuestNode) {
+      const isQuest = gameState.isQuestMode || true;
       gameState.enemyStats.failed = true;
       endEnemyMode();
       Game.fullResetGame();
       gameState.typed = "";
       if (skillTreeDiv) skillTreeDiv.style.display = "none";
-      showQuestMap();
+      if (isQuest) showQuestMap();
+      else showMainMenu();
       return true;
     }
 
     // ★③ エネミーモード
     if (gameState.enemyMode) {
+      const isQuest = gameState.isQuestMode;
       gameState.enemyStats.failed = true;
       endEnemyMode();
       Game.fullResetGame();
       gameState.typed = "";
-      if (gameState.isFreeMode) showFreeStartMenu();
+      if (isQuest) showQuestMap();
+      else if (gameState.isFreeMode) showFreeStartMenu();
       else showStartMenu();
       return true;
     }
 
     // ★④ 通常
+    const isQuestNormal = gameState.isQuestMode;
     Game.backToMenu();
-    if (gameState.isFreeMode) showFreeStartMenu();
+    if (isQuestNormal) showQuestMap();
+    else if (gameState.isFreeMode) showFreeStartMenu();
     else showStartMenu();
     return true;
   }
@@ -1545,7 +1642,7 @@ function handleGameKey(e) {
   if (gameState.enemyMode) {
     if (e.code === "Tab") e.preventDefault();
     handleEnemyKey(e);
-  } else {
+  } else { // 通常モード
     handleKey(e);
   }
 

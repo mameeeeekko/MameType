@@ -310,17 +310,27 @@ function saveStats() {
 // ===============================
 // 取得
 // ===============================
-export function getPlayerStatsForEnemy(mode = "enemy") {
+export function getPlayerStatsForEnemy(mode = "enemy", levelOverride = null) {
 
   const data = JSON.parse(localStorage.getItem("questPlayerStats"));
 
-  const base = {
+  let base = {
     ...DEFAULT_STATS,
     ...(data || {}),
 
     // ★重要：モードタグ
     _mode: mode
   };
+
+  // フリーモード等でレベルが指定された場合、そのレベルに応じたステータスを再計算
+  if (levelOverride !== null) {
+    base.level = levelOverride;
+    // クエストモードの成長式を流用
+    base.maxHp = Math.min(999, 45 + (base.level - 1) * 8);
+    base.defense = Math.min(50, (DEFAULT_STATS.defense || 0) + (base.level - 1));
+    // 次の経験値もレベルに合わせて更新
+    base.nextExp = Math.floor(650 * Math.pow(1.16, base.level - 1));
+  }
 
   return buildFinalStats(base);
 }
@@ -329,6 +339,9 @@ export function getPlayerStatsForEnemy(mode = "enemy") {
 // 経験値追加
 // ===============================
 export function addExp(amount) {
+    const beforeHp = playerStats.maxHp;
+    const beforeDef = playerStats.defense;
+
     playerStats.exp += amount;
 
     let totalSlotIncrease = 0; // skillslot増加
@@ -339,11 +352,16 @@ export function addExp(amount) {
         playerStats.level < 99 &&
         playerStats.exp >= playerStats.nextExp
     ) {
-        const { slotIncrease, stockIncrease } = levelUp();
-        totalSlotIncrease += slotIncrease;
-        totalStockIncrease += stockIncrease;
+        const res = levelUp();
+        if (res) {
+            totalSlotIncrease += (res.slotIncrease || 0);
+            totalStockIncrease += (res.stockIncrease || 0);
+        }
         levelUpCount++;
     }
+
+    const hpIncrease = playerStats.maxHp - beforeHp;
+    const defIncrease = playerStats.defense - beforeDef;
 
     saveStats();
 
@@ -353,7 +371,9 @@ export function addExp(amount) {
     return {
         levelUpCount,
         slotIncrease: totalSlotIncrease,
-        stockIncrease: totalStockIncrease
+        stockIncrease: totalStockIncrease,
+        hpIncrease,
+        defIncrease
     };
 }
 

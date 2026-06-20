@@ -1,14 +1,15 @@
 // enemyCore.js
 
 import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI,
-    showGameMessage,renderSystemMessage,  updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning } from "./enemyRenderer.js";
+    showGameMessage,renderSystemMessage,  updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI} from "./enemyRenderer.js";
 import { setupCanvasDPR } from "./canvasUtil.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, 
     renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBurstEffect, 
     renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
     renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, 
-    renderItemSkillEffects, clearAllEffects, playErrorSound, playPhaseWarningSound} from "./effectManager.js";
+    renderItemSkillEffects, clearAllEffects, playErrorSound, playPhaseWarningSound,
+    renderLaserEffects, renderPlayerDamageEffects, spawnLaserEffect, spawnHitWave} from "./effectManager.js";
 import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
@@ -67,17 +68,31 @@ let timerStarted = false;  // 敵が出てからタイマースタートさせ�
 let endingSequence = false; //終了待機用フラグ
 
 // ===============================
-// 敵が来ないUI表示場所設定
+// 敵が来ないUI表示場所設定 (パフォーマンス改善)
 // ===============================
-export function getUISafeTop(){
+let uiSafeTop = 0;
 
+/**
+ * UIと重ならないY座標の上限を計算し、キャッシュする。
+ * この関数はゲーム開始時やウィンドウリサイズ時に呼び出す。
+ */
+function updateUISafeTop() {
     const chainUI = document.getElementById("chainUI");
-    if(!chainUI) return 0;
-
+    if (!chainUI || chainUI.offsetParent === null) {
+        uiSafeTop = 0;
+        return;
+    }
     const rect = chainUI.getBoundingClientRect();
     const canvasRect = canvas.getBoundingClientRect();
+    uiSafeTop = rect.bottom - canvasRect.top + 20; // 少し余白
+}
 
-    return rect.bottom - canvasRect.top + 20; // 少し余白
+/**
+ * キャッシュされたUIセーフエリアの上限Y座標を返す。
+ * @returns {number}
+ */
+export function getUISafeTop() {
+    return uiSafeTop;
 }
 
 // ===============================
@@ -487,6 +502,7 @@ function gameLoop(timestamp) {
 
     if (!isPureEnemyMode) {
         renderActiveSkillUI(ctx, gameState, canvas);
+        renderActiveAttackUI(ctx, player, enemies, lockedEnemy, candidateEnemies);
         renderSystemMessage(ctx, gameState, canvas);
     }
 
@@ -499,6 +515,8 @@ function gameLoop(timestamp) {
     renderHitWaveEffects(ctx);
 
     renderLockOnEffects(ctx);
+    renderLaserEffects(ctx); // ★追加
+    renderPlayerDamageEffects(ctx); // ★追加
 
     renderShotEffects(ctx);
     renderHitParticles(ctx);
@@ -621,8 +639,8 @@ function gameLoop(timestamp) {
         forceFail = true;
     }
 
-    // ★ 精密射撃（ミス即終了）の判定
-    if (globalEnd.failOnMiss && stats.mistakeCount > 0) {
+    // ★ 精密射撃（ミス即終了）または他所での失敗確定の判定
+    if ((globalEnd.failOnMiss && stats.mistakeCount > 0) || stats.failed) {
         gameState.enemyStats.failed = true;
         forceFail = true;
     }
@@ -841,16 +859,7 @@ function transitionToNextPhase(now) {
 
 export function handleEnemyKey(e) {
 
-    // ===============================
-    // 入力文字の正規化（記号・大文字対応）
-    // ===============================
-    let key = e.key.toLowerCase();
-    if (key === "！") key = "!";
-    if (key === "？") key = "?";
-    if (key === "ー") key = "-";
-    if (key === "「") key = "[";
-    if (key === "」") key = "]";
-    if (key === "　") key = " "; // 全角スペース対応
+    let key = e.key; // inputCore.jsのhandleKeyで正規化されるため、ここではe.keyをそのまま渡す
 
 
     //実際のタイピング入力時間測定
@@ -900,7 +909,19 @@ export function handleEnemyKey(e) {
     // ★1文字敵の即時処理（最優先）
     // ===============================
     const allTargets = [...enemies, ...enemyBullets];
-    const visibleTargets = allTargets.filter(t => t && !t.isDead && isEnemyVisible(t));
+    // 敵の特殊攻撃（activeAttack）をターゲットに含める
+    enemies.forEach(en => {
+        if (en.activeAttack) {
+            en.activeAttack.isAttack = true;
+            en.activeAttack.ref = en;
+            allTargets.push(en.activeAttack);
+        }
+    });
+
+    const visibleTargets = allTargets.filter(t => {
+        const checkObj = t.isAttack ? t.ref : t;
+        return checkObj && !checkObj.isDead && isEnemyVisible(checkObj);
+    });
 
     // ロックしていない状態、または候補絞り込み中に1文字の敵（弾など）が入力と一致した場合
     // ★修正：ロック中、または既に文字を入力している（候補を絞り込んでいる）最中は、1文字即時処理をスキップ
@@ -958,9 +979,10 @@ export function handleEnemyKey(e) {
 
         const aliveEnemies = [
             ...enemies,
-            ...enemyBullets
+            ...enemyBullets,
+            ...enemies.filter(e => e.activeAttack).map(e => e.activeAttack)
         ].filter(
-            e => e && !e.isDead
+            e => e && (e.isAttack || !e.isDead)
         );
 
         if (aliveEnemies.length === 0) return;
@@ -970,9 +992,11 @@ export function handleEnemyKey(e) {
 
         aliveEnemies.forEach(enemy => {
 
-            const dx = enemy.x - player.x;
-            const dy = enemy.y - player.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
+            // ★防御ワードはプレイヤー位置を基準にすることで、最優先でロックオン
+            const targetPos = enemy.isAttack ? player : enemy;
+            const dx = targetPos.x - player.x; // 防御ワードの場合、dx, dyは0になる
+            const dy = targetPos.y - player.y;
+            const dist = Math.hypot(dx, dy);
 
             if (dist < nearestDist) {
                 nearestDist = dist;
@@ -997,9 +1021,10 @@ export function handleEnemyKey(e) {
 
         resetCandidates(); // inputCore側の候補を同期
 
-        enemies.forEach(enemy=>{
-            if(enemy !== lockedEnemy){
-                resetEnemyInput(enemy);
+        // ★新しいロックオン対象以外のすべての敵と弾の入力をリセットする
+        [...enemies, ...enemyBullets].forEach(e => {
+            if (e !== lockedEnemy) {
+                resetEnemyInput(e);
             }
         });
         return;
@@ -1040,6 +1065,21 @@ export function handleEnemyKey(e) {
     // =====================
     // ロック済み敵
     // =====================
+    // ★ロックオン対象が無効になっていないかチェック（防御ワードが中断された場合など）
+    if (lockedEnemy) {
+        const isAttackInvalid = lockedEnemy.isAttack && (!lockedEnemy.ref || !lockedEnemy.ref.activeAttack);
+        const isTargetDead = lockedEnemy.isDead;
+
+        if (isAttackInvalid || isTargetDead) {
+            lockedEnemy = null;
+            candidateEnemies = [];
+            typedBuffer = "";
+            resetCandidates();
+            // このフレームでの以降のキー入力をキャンセル
+            return;
+        }
+    }
+
     if (lockedEnemy) {
 
         gameState.text = lockedEnemy.text;
@@ -1047,23 +1087,43 @@ export function handleEnemyKey(e) {
         gameState.inputedRomaji = lockedEnemy.inputedRomaji ?? "";
         gameState.typed = lockedEnemy.typed ?? "";
         // 正解判定用に事前保存
-        const beforeCorrect = gameState.correctCount;
+        // const beforeCorrect = gameState.correctCount; // inputCore.jsで直接更新しないように変更したため不要
     
         // ★修正：正規化したkeyを使用して判定に渡す
         // 全角記号の入力で正解判定が失敗し、ロックが固まったり次の敵が選べなくなる問題を解消
-        handleKey({ key: key, code: e.code, preventDefault: () => e.preventDefault() });
+        const inputResult = handleKey(e); // eをそのまま渡す
+
+        if (!inputResult || inputResult.isMiss) {
+            // ミス処理
+            const stats = gameState.enemyStats;
+            if (lockedEnemy.isAttack) {
+                stats.mistakeCount++; // 防御ワードのミス
+            } else {
+                stats.mistakeCount++; // 通常敵のミス
+                gameState.mistakeCount++; // グローバルミスカウント
+            }
+            // ★ミス即終了の設定がある場合、即座に失敗フラグを立てる
+            if (gameState.stage?.endConditions?.failOnMiss) {
+                stats.failed = true;
+            }
+            return;
+        }
 
         // 正解入力ならチェイン増加
-        if (gameState.correctCount > beforeCorrect) {
+        if (inputResult.charCount > 0) { // 1文字以上確定した場合
 
             const stats = gameState.enemyStats;
+
+            // ★ 防御ワードの場合はプレイヤー座標をターゲットにする
+            const targetX = lockedEnemy.isAttack ? player.x : lockedEnemy.x;
+            const targetY = lockedEnemy.isAttack ? player.y : lockedEnemy.y;
 
             //攻撃演出
             spawnShotEffect(
                 player.x,
                 player.y,
-                lockedEnemy.x,
-                lockedEnemy.y
+                targetX,
+                targetY
             );
 
             // ヒット演出
@@ -1082,16 +1142,49 @@ export function handleEnemyKey(e) {
                 stats.chainBar = stats.chainBarMax;
             }
         }
-
         // 総タイプ数
-        gameState.enemyStats.totalTyped++;
+        if (inputResult.success) {
+            gameState.enemyStats.totalTyped++; // 敵モードの総タイプ数
+            if (inputResult.charCount > 0) {
+                gameState.enemyStats.correctCount += inputResult.charCount; // 敵モードの正解タイプ数
+            }
+        }
 
         lockedEnemy.pos = gameState.pos;
         lockedEnemy.typed = gameState.typed;
         lockedEnemy.inputedRomaji = gameState.inputedRomaji;
 
         // 敵撃破 =========================================
-            if (lockedEnemy.pos >= lockedEnemy.text.length) {
+        if (lockedEnemy.pos >= lockedEnemy.text.length) {
+            if (lockedEnemy.isAttack) {
+                // 防御成功時：全ての攻撃ワードを削除し、完全アンロック状態にする
+                // 1) エフェクト表示（最後の攻撃のみ派手に表示）
+                if (lockedEnemy.ref) {
+                    spawnLaserEffect(lockedEnemy.ref.x, lockedEnemy.ref.y, player.x, player.y, {
+                        diffused: true,
+                        attenuated: true,
+                        completionRatio: 1
+                    });
+                    spawnHitWave(player.x, player.y);
+                }
+
+                // 2) 全敵の activeAttack をクリア
+                enemies.forEach(en => {
+                    if (en && en.activeAttack) en.activeAttack = null;
+                });
+
+                // 3) 敵・弾の入力状態を完全リセット
+                [...enemies, ...enemyBullets].forEach(e => resetEnemyInput(e));
+
+                // 4) ロック関連の状態をクリア
+                lockedEnemy = null;
+                candidateEnemies = [];
+                typedBuffer = "";
+                resetCandidates();
+
+                return;
+            }
+
             const enemy = lockedEnemy;
             // ★ここが今回のコア
             const isKilled = enemy.onWordComplete(player, gameState, enemies);
@@ -1121,10 +1214,10 @@ export function handleEnemyKey(e) {
             enemy.typed = "";
             enemy.inputedRomaji = "";
             // ロック維持したいならそのまま
-            lockedEnemy = enemy;
+            //lockedEnemy = enemy;
 
             // ロック解除したいなら↓
-            // lockedEnemy = null;
+            lockedEnemy = null;
 
             // 候補リセット
             resetCandidates();
@@ -1145,7 +1238,13 @@ export function handleEnemyKey(e) {
 
     if (candidateEnemies.length === 0) {
         nextCandidates = visibleTargets.filter(enemy => {
-            if (!enemy || enemy.isDead || !isEnemyVisible(enemy)) return false;
+            // ★防御ワードは isDead や isEnemyVisible のチェックをスキップ
+            if (enemy.isAttack) {
+                // activeAttack オブジェクト自体は isDead を持たないので、その参照元(ref)の敵が死んでいないかチェック
+                if (!enemy.ref || enemy.ref.isDead) return false;
+            } else if (!enemy || enemy.isDead || !isEnemyVisible(enemy)) {
+                return false;
+            }
             // ★修正：マッチング精度向上のため replaceAll を使用
             const targetRoma = (enemy.baseRomaji || "").toLowerCase()
                 .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-").replaceAll("「", "[").replaceAll("」", "]").replaceAll("　", " ");
@@ -1153,6 +1252,13 @@ export function handleEnemyKey(e) {
         });
     } else {
         nextCandidates = candidateEnemies.filter(enemy => {
+            // ★防御ワードは isDead や isEnemyVisible のチェックをスキップ
+            if (enemy.isAttack) {
+                if (!enemy.ref || enemy.ref.isDead) return false;
+            } else if (!enemy || enemy.isDead || !isEnemyVisible(enemy)) {
+                // このパスは既に絞り込まれた候補なので、isDeadチェックは重要
+                return false;
+            }
             const targetRoma = (enemy.baseRomaji || "").toLowerCase()
                 .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-").replaceAll("「", "[").replaceAll("」", "]").replaceAll("　", " ");
             return targetRoma.startsWith(typedBuffer);
@@ -1163,21 +1269,19 @@ export function handleEnemyKey(e) {
     // ミス時
     // 候補は維持・入力1文字だけ取り消す
     // =====================
-    if (nextCandidates.length === 0) {
+    if (nextCandidates.length === 0 && typedBuffer.length > 0) { // typedBufferに何か入力されていて、かつ候補がなくなった場合のみミスと判定
 
         // 今回押した1文字だけなかったことにする
         typedBuffer = typedBuffer.slice(0, -1);
         
         if (gameState.enemyStats) {
             const stats = gameState.enemyStats;
-
-            // ★ すでにミス終了が確定している場合は処理しない
-            if (stats.failed && gameState.stage?.endConditions?.failOnMiss) return;
-
-            stats.mistakeCount++;
-              if (gameState.enemyStats) {
-                    gameState.enemyStats.currentCombo = 0;
-                }
+            
+            // ロック前のミスはグローバルミスカウントと敵モードミスカウント両方に影響
+            gameState.mistakeCount++; // グローバルミスカウント
+            stats.mistakeCount++; // 敵モードミスカウント
+            
+            stats.currentCombo = 0;
 
             // Chain penalty
             stats.chainBar -= stats.missPenalty;
@@ -1186,7 +1290,6 @@ export function handleEnemyKey(e) {
                 stats.chainBar = 0;
                 stats.chainCount = 0;
             }
-
             // ★ミス即終了の設定がある場合、即座に失敗フラグを立てる
             if (gameState.stage?.endConditions?.failOnMiss) {
                 stats.failed = true;
@@ -1217,17 +1320,20 @@ export function handleEnemyKey(e) {
         enemies.forEach(enemy=>{
         enemy.progress = 0;
         });
-
         // gameState初期化
         gameState.text = lockedEnemy.text;
-        gameState.pos = 0;
+        gameState.pos = 0; // lockedEnemyのposは0から開始
         gameState.inputedRomaji = "";
         gameState.typed = "";
-        
-        // 今までの入力を適用
-        for (const ch of typedBuffer) {
 
-            handleKey({ key: ch });
+        // typedBufferの内容をlockedEnemyとgameStateに適用
+        // handleKeyをsilentモードで呼び出す代わりに、直接状態を更新する
+        for (const ch of typedBuffer) {
+            const tempState = { ...gameState, text: lockedEnemy.text };
+            const result = handleKey({ key: ch }, true, tempState);
+            if (result.success) {
+                Object.assign(gameState, tempState);
+            }
         }
 
         lockedEnemy.pos = gameState.pos;
@@ -1261,21 +1367,17 @@ export function showHud(show){
 }
 
 // プレイヤーステータス初期化関数
-function initPlayerByMode(isQuestMode, canvasSize, stage) {
+function initPlayerByMode(isQuestMode, canvasSize, stage, stats) {
 
-    const p = ENEMY_MODE_CONFIG.player;
+    const baseP = ENEMY_MODE_CONFIG.player;
 
-    if (isQuestMode) {
-        const stats = getPlayerStatsForEnemy(
-            isQuestMode ? "quest" : "enemy"
-        );
-
+    // クエストモードまたはフリーモードの場合：statsオブジェクトの数値をそのまま反映
+    if (isQuestMode || gameState.isFreeMode) {
         player.maxHp = stats.maxHp;
         player.hp = stats.maxHp;
         player.defense = stats.defense;
         player.radius = stats.radius;
 
-        // 任意：レベル依存で強化
         // サボタージュのHP減少設定を反映 (stage.player が存在する場合のみ)
         player.hpDrainPerSec = stage?.player?.hpDrainPerSec ?? 0;
         player._hpDrainAccumulator = 0;
@@ -1284,11 +1386,11 @@ function initPlayerByMode(isQuestMode, canvasSize, stage) {
         player.level = stats.level;
 
     } else {
-        // 従来の固定値（エネミーモード）
-        player.maxHp = p.maxHp;
-        player.hp = p.maxHp;
-        player.defense = p.defense;
-        player.radius = p.radius;
+        // デイリーモード：常に初期固定値（Lv.1相当）を使用
+        player.maxHp = baseP.maxHp;
+        player.hp = baseP.maxHp;
+        player.defense = baseP.defense;
+        player.radius = baseP.radius;
         player.hpDrainPerSec = 0; // 通常モードでは減少なし
         player._hpDrainAccumulator = 0;
         player.disableActiveSkill = false; // 通常モードではスキル禁止なし
@@ -1430,6 +1532,7 @@ export async function startEnemyMode(config = {}) {
 
     gameState.mode = GameModes.ENEMY_MODE;
     gameState.isFreeMode = config.isFreeMode ?? false;
+    gameState.isQuestMode = config.isQuestMode ?? false;
     gameState.currentMode = GameModes.ENEMY_MODE;
     
     setLastWasEnemyMode(true);
@@ -1463,9 +1566,11 @@ export async function startEnemyMode(config = {}) {
     const isMultiPhase = Array.isArray(stage.phases) && stage.phases.length > 0;
     const currentPhase = isMultiPhase ? stage.phases[0] : stage;
 
-    const playerStats = getPlayerStatsForEnemy(
-        config.isQuestMode ? "quest" : "enemy"
-    );
+    // クエストまたはフリーモードの場合は、成長計算ロジック(quest)を使用
+    // フリーモード時はUIスライダーのレベル(config.level)を適用し、クエスト時は現在のレベルを使用する
+    const statsMode = (config.isQuestMode || config.isFreeMode) ? "quest" : "enemy";
+    const levelOverride = config.isFreeMode ? config.level : undefined;
+    let playerStats = getPlayerStatsForEnemy(statsMode, levelOverride);
 
     // ===============================
     // Active Skill Stock上限設定
@@ -1637,10 +1742,15 @@ export async function startEnemyMode(config = {}) {
         const ctx = canvas.getContext("2d");
         // ★DPR初期化（これだけで全部揃う）
         canvasSize = setupCanvasDPR(canvas, container, ctx);
+        // ★UIセーフエリアを計算
+        updateUISafeTop();
+        // ★ウィンドウリサイズ時にも再計算
+        window.removeEventListener("resize", updateUISafeTop); // 多重登録防止
+        window.addEventListener("resize", updateUISafeTop);
     }
 
-    //player初期化
-    initPlayerByMode(config.isQuestMode, canvasSize, stage);
+    //player初期化 (計算済みの playerStats をそのまま渡す)
+    initPlayerByMode(config.isQuestMode, canvasSize, stage, playerStats);
 
     setGameActive(true);
     gameState.enemyMode = true;   // ←追加
@@ -2001,6 +2111,8 @@ export async function endEnemyMode() {
         const expResult = addExp(gainedExp); // ★受け取る
 
         const afterStats = getPlayerStatsForEnemy();
+        const hpUp = expResult.hpIncrease || 0;
+        const defUp = expResult.defIncrease || 0;
 
         const totalSlotIncrease =
             (expResult.slotIncrease || 0) +
@@ -2030,6 +2142,8 @@ export async function endEnemyMode() {
             // level up
             leveledUp: expResult.levelUpCount > 0,
             levelUpCount: expResult.levelUpCount,
+            hpIncrease: hpUp,
+            defIncrease: defUp,
             // slot
             slotIncreased: totalSlotIncrease > 0,
             slotIncreaseCount: totalSlotIncrease,

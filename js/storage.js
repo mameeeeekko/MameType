@@ -546,6 +546,7 @@ function getQuestSnapshot() {
   return {
     progress: JSON.parse(localStorage.getItem("questProgress")),
     playerStats: JSON.parse(localStorage.getItem("questPlayerStats")),
+    stars: JSON.parse(localStorage.getItem("questStars")),
   };
 }
 // ================================
@@ -572,6 +573,7 @@ export function saveQuestSlot(slotIndex) {
 
   const stats = data.playerStats || {};
   const progress = data.progress || {};
+  const stars = data.stars || {};
 
   const furthestNode = getFurthestNodeId(progress.cleared);
 
@@ -579,6 +581,7 @@ export function saveQuestSlot(slotIndex) {
   slots[slotIndex] = {
     progress,
     playerStats: stats,
+    stars,
     
     // ===== UI用サマリー =====
     summary: {
@@ -589,9 +592,9 @@ export function saveQuestSlot(slotIndex) {
       stage: getStageFromNode(furthestNode),
       // ★ 配列からカウント
       cleared: progress.cleared?.length ?? 0,
-      currentStars: getTotalStars(progress), // 現在の獲得★
+      currentStars: getTotalStars(), // 現在の獲得★
       maxStars: getAvailableMaxStars(),               // 最大★（後述）
-      playTime: stats.playTime ?? 0          // プレイ時間（秒）
+      playTime: stats.questRecord?.totalPlayTime ?? 0 // プレイ時間（秒）
     },
 
     savedAt: Date.now() // ★保存日時追加（UI用）
@@ -645,13 +648,13 @@ function getFurthestNodeId(clearedList) {
 function applyQuestData(data) {
   if (!data) return false;
 
-  if (data.progress) {
-    localStorage.setItem("questProgress", JSON.stringify(data.progress));
-  }
-
-  if (data.playerStats) {
-    localStorage.setItem("questPlayerStats", JSON.stringify(data.playerStats));
-  }
+  // ★ 各スロットのデータを確実に反映（データがない場合は初期化）
+  // これにより、以前のセッションや他のスロットの星のデータが「混ざる」のを防ぎます
+  localStorage.setItem("questProgress", JSON.stringify(data.progress || { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1" }));
+  localStorage.setItem("questPlayerStats", JSON.stringify(data.playerStats || null));
+  
+  // stars が存在しない場合（古いセーブデータなど）は空のオブジェクトをセットして確実にリセットする
+  localStorage.setItem("questStars", JSON.stringify(data.stars || {}));
 
   return true;
 }
@@ -700,27 +703,25 @@ export function startQuestFromBeginning(defaultStats = null) {
   // ★ 星リセット
   localStorage.removeItem("questStars");
 
-  // 進行リセット
+  // 進行リセット (ノードIDの整合性を合わせる: Q1 -> W1_Q1)
   const initialProgress = {
-    unlocked: ["Q1"],  // 最初のノードだけ解放（必要に応じて変更）
-    cleared: []
+    unlocked: ["W1_Q1"],
+    cleared: [],
+    unlockedWorlds: ["WORLD1"],
+    selectedWorldId: "WORLD1"
   };
 
   localStorage.setItem("questProgress", JSON.stringify(initialProgress));
-
-  // ステータス初期化
-  if (defaultStats) {
-    localStorage.setItem("questPlayerStats", JSON.stringify(defaultStats));
-  } else {
-    localStorage.removeItem("questPlayerStats");
-  }
+  localStorage.setItem("questPlayerStats", JSON.stringify(defaultStats || null));
+  localStorage.setItem("questStars", JSON.stringify({}));
 
   // オートセーブも初期状態に
   localStorage.setItem(
-    "quest_auto_save",
+    QUEST_AUTO_KEY,
     JSON.stringify({
       progress: initialProgress,
-      playerStats: defaultStats ?? null
+      playerStats: defaultStats || null,
+      stars: {} // ★星データも初期化状態で含める
     })
   );
 }
@@ -735,6 +736,7 @@ export function exportQuestData() {
 
     questProgress: JSON.parse(localStorage.getItem("questProgress") || "null"),
     questPlayerStats: JSON.parse(localStorage.getItem("questPlayerStats") || "null"),
+    questStars: JSON.parse(localStorage.getItem("questStars") || "null"),
     questSlots: JSON.parse(localStorage.getItem(QUEST_SLOTS_KEY) || "[]"),
     questAutoSave: JSON.parse(localStorage.getItem(QUEST_AUTO_KEY) || "null"),
   };
@@ -782,17 +784,15 @@ export async function importQuestData(file) {
     );
   }
 
-  if (Array.isArray(data.questSlots)) {
-    localStorage.setItem(
-      QUEST_SLOTS_KEY,
-      JSON.stringify(data.questSlots)
-    );
-  }
+  // ★ インポート時も全データを確実に上書きし、不足している場合は初期値で埋める
+  localStorage.setItem("questProgress", JSON.stringify(data.questProgress || { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1" }));
+  localStorage.setItem("questPlayerStats", JSON.stringify(data.questPlayerStats || null));
+  localStorage.setItem("questStars", JSON.stringify(data.questStars || {}));
 
+  if (Array.isArray(data.questSlots)) {
+    localStorage.setItem(QUEST_SLOTS_KEY, JSON.stringify(data.questSlots));
+  }
   if (data.questAutoSave) {
-    localStorage.setItem(
-      QUEST_AUTO_KEY,
-      JSON.stringify(data.questAutoSave)
-    );
+    localStorage.setItem(QUEST_AUTO_KEY, JSON.stringify(data.questAutoSave));
   }
 }

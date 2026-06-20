@@ -1,19 +1,26 @@
 // enemy.js
 
 import { getUISafeTop, markDamageTaken, onEnemyRemovedByDamage, killEnemy } from "./enemyCore.js";
-import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect } from "./effectManager.js";
+import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect, 
+    spawnLaserEffect, spawnPlayerDamageEffect } from "./effectManager.js";
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { getRandomWordForType } from "./enemySpawner.js"; 
+import { getRandomWordForType, getWordForBehavior } from "./enemySpawner.js"; 
 import { devOverride } from "../dev/devOverride.js";
 import { addQuestItemPickup } from "./questPlayerStats.js";
 import { getUIAnchorPosition } from "./enemyRenderer.js";
 
 // 同じ敵をださない。
-function getUnusedLetter(state) {
+function getUnusedLetter(state, charType = 'alphabet') {
+    const pools = {
+        alphabet: "abcdefghijklmnopqrstuvwxyz".split(""),
+        number: "0123456789".split(""),
+        symbol: "!?,.-[]()@%:*+;".split(""),
+        all: "abcdefghijklmnopqrstuvwxyz0123456789!?,.-[]()@%:*+;".split("")
+    };
 
-    const letters =
-        "abcdefghijklmnopqrstuvwxyz!?".split("");
+    // charTypeが未指定または不正な場合は alphabet を使用
+    const letters = pools[charType] || pools.alphabet;
 
     const usedLetters = new Set();
 
@@ -85,6 +92,7 @@ export class Enemy {
         this.behaviorEffectTimer = 0;
         this.behaviorEffectDuration = 0;
         this.behaviorStates = {}; //特殊行動開始前にpreで警告をだすため状態をつくる
+        this.activeAttack = null; // 攻撃準備中のデータ
         this.freezeTimer = 0; //出現した敵のみフリーズさせるため
 
         this.pos = 0;
@@ -149,9 +157,33 @@ export class Enemy {
         const lengthPenalty = Math.max(0.3, 1.0 - (Math.max(0, (this.text?.length || 0) - 5) * 0.04));
         const moveSpeed = this.speed * 0.7 * lengthPenalty;
 
-        this.x += dx / dist * moveSpeed * scale;
-        this.y += dy / dist * moveSpeed * scale;
+        if (!this.activeAttack) {
+            this.x += dx / dist * moveSpeed * scale;
+            this.y += dy / dist * moveSpeed * scale;
+        }
         this.rotation += this.rotationSpeed * scale;
+
+        // 近接分離：他の敵と重ならないように軽く押し戻す
+        try {
+            const minGap = 4;
+            for (const other of state.enemies || []) {
+                if (!other || other === this || other.isDead) continue;
+                const otherR = other.type?.size || other.radius || 15;
+                const myR = this.type?.size || this.radius || 15;
+                const dxo = this.x - other.x;
+                const dyo = this.y - other.y;
+                const d = Math.hypot(dxo, dyo) || 0.0001;
+                const desired = myR + otherR + minGap;
+                if (d < desired) {
+                    const overlap = desired - d;
+                    const push = overlap * 0.5; // 自分側に少し押し戻す
+                    this.x += (dxo / d) * push;
+                    this.y += (dyo / d) * push;
+                }
+            }
+        } catch (err) {
+            // 安全のため失敗しても無視
+        }
 
         // behaviors処理 敵が出す弾や、召喚する敵の処理
         this.updateBehaviors(player, state, deltaTime);
@@ -194,6 +226,23 @@ export class Enemy {
 
                     behaviorState.charging = true;
 
+                    if (behavior.type === "attack") {
+                        const wordData = getWordForBehavior(behavior);
+                        if (wordData) {
+                            this.activeAttack = {
+                                id: "atk_" + Math.random().toString(36).substr(2, 9),
+                                word: wordData.word,
+                                text: wordData.text,
+                                isAttack: true,
+                                baseRomaji: buildBaseRomaji(wordData.text),
+                                pos: 0,
+                                typed: "",
+                                inputedRomaji: "",
+                                ref: this // 参照用
+                            };
+                        }
+                    }
+
                     this.startBehaviorEffect(
                         behavior.type,
                         preDelay
@@ -207,6 +256,14 @@ export class Enemy {
             ){
 
                 switch(behavior.type){
+
+                    case "attack":
+                        this.executeLaserAttack(
+                            behavior,
+                            player,
+                            state
+                        );
+                        break;
 
                     case "spawn":
                         this.spawnChildren(
@@ -234,8 +291,38 @@ export class Enemy {
         }
     }
 
-    startBehaviorEffect(type, duration = 1){
+    executeLaserAttack(behavior, player, state) {
+        const atk = this.activeAttack;
+        if (!atk) return;
 
+        const completionRatio = atk.text ? (atk.pos / atk.text.length) : 0;
+        const damage = Math.floor(behavior.damage * (1 - completionRatio));
+
+        // エフェクト演出
+        const options = {
+            attenuated: completionRatio >= 0.5,
+            diffused: completionRatio > 0,
+            completionRatio: completionRatio
+        };
+
+        // ★先にダメージ計算とHP減少を行う
+        if (damage > 0) {
+            player.hp = Math.max(0, player.hp - damage);
+            markDamageTaken();
+        }
+
+        // ★ダメージの有無に関わらず、レーザーとポップアップエフェクトを生成
+        spawnLaserEffect(this.x, this.y, player.x, player.y, options);
+        if (damage > 0) {
+            spawnPlayerDamageEffect(player.x, player.y);
+            spawnDamagePopup(player.x, player.y - 20, damage);
+        }
+
+        this.activeAttack = null;
+    }
+
+    startBehaviorEffect(type, duration = 1){
+        
         this.behaviorEffect = type;
         this.behaviorEffectTimer = duration;
         this.behaviorEffectDuration = duration;
@@ -281,8 +368,34 @@ export class Enemy {
                 y = player.y + (dy / dist) * minSpawnDist;
             }
 
+            // 既存の敵や弾と重ならないように位置を微調整
+            const maxAdjust = 6;
+            let adjX = x;
+            let adjY = y;
+            let adjusted = false;
+            for (let a = 0; a < maxAdjust; a++) {
+                let conflict = false;
+                for (const e of [...state.enemies, ...(state.enemyBullets || [])]) {
+                    if (!e || e.isDead) continue;
+                    const otherR = e.type?.size || e.radius || 15;
+                    const d = Math.hypot(adjX - e.x, adjY - e.y);
+                    if (d < (otherR + (enemyType.size || 15) + 8)) {
+                        conflict = true;
+                        break;
+                    }
+                }
+                if (!conflict) {
+                    adjusted = true;
+                    break;
+                }
+                // 角度を少しずらして離す
+                const shift = (a + 1) * 12;
+                adjX = this.x + Math.cos(angle + shift * 0.0174533) * (radius + a * 10);
+                adjY = this.y + Math.sin(angle + shift * 0.0174533) * (radius + a * 10);
+            }
+
             const enemy = createEnemyByType(
-                enemyType, x, y, state
+                enemyType, adjX, adjY, state
             );
 
             if (enemy) {
@@ -309,7 +422,9 @@ export class Enemy {
             let letter;
 
             do{
-                letter = getUnusedLetter(state);
+                // behavior.bullet 内に設定された charType を参照する
+                const charType = behavior.bullet.charType || 'alphabet';
+                letter = getUnusedLetter(state, charType);
             }
             while(reserved.has(letter));
 
@@ -373,7 +488,7 @@ export class Enemy {
             if (newWord) {
                 this.text = newWord.text;
                 this.word = newWord.word;
-                this.baseRomaji = buildBaseRomaji(this.text, 0);
+                this.baseRomaji = buildBaseRomaji(this.text);
                 this.pos = 0;
                 this.inputedRomaji = "";
             }
@@ -531,7 +646,7 @@ export class ItemEnemy extends Enemy {
         this.maxLifetime = type.lifetime || 300;
         this.lifetime = this.maxLifetime;
 
-        this.baseRomaji = buildBaseRomaji(this.text, 0);
+        this.baseRomaji = buildBaseRomaji(this.text);
     }
 
     update(player, difficulty, state, deltaTime){
@@ -601,7 +716,7 @@ function applyItemEffect(type, player, state = {}, enemies = []){
 
             const aliveEnemies =
                 enemies.filter(
-                    e => e && !e.isDead && !e.isItem
+                    e => e && !e.isDead && !e.isItem && !e.type?.id?.includes("boss")
                 );
 
             if (aliveEnemies.length === 0) break;
@@ -856,6 +971,8 @@ score           : 撃破スコア
 killSound       : 撃破SE番号
 damageSound     : 接触SE番号
 killedEffect    : 撃破エフェクトID
+shape           : 形状ID
+pattern         : 模様ID
 
 【問題生成】
 tags            : 使用タグ
@@ -867,8 +984,8 @@ maxLen          : 最大文字数
 
 【見た目】
 color           : 本体色
-shape           : "circle" "square" "pinwheel" "arrow"
-pattern         : null "stripe" "ring"
+shape           : "circle", "square", "pinwheel", "arrow", "hexagon", "chip", "gate", "pulsar", "relay", "glitch_tri", "core_unit", "shard", "array", "terminal", "omega", "diamond", "rhombus", "shield", "star", "cross", "triangle", "gear", "clover", "octagon", "nova"
+pattern         : null, "stripe", "ring", "circuit"
 rotationSpeed   : 回転速度
 
 【行動パターン】
@@ -894,6 +1011,7 @@ behaviors:[
             shape:"circle",
             pattern:"ring",
             rotationSpeed:0
+            charType: "all" , "alphabet" , "number" , "symbol"
         }
     }
 ]
@@ -907,14 +1025,14 @@ export const EnemyTypes = {
         id: "gray_circle_small", name: "Cookie",
         color: "#a4a4a4", shape: "circle", pattern: null, size: 14,
         speed: 0.6, rotationSpeed: 0.02, damage: 8,
-        tags: [], minLen: 2, maxLen: 4, score: 24, // 30 * 1.0 * 0.8
+        tags: [], minLen: 2, maxLen: 6, score: 24, // 30 * 1.0 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GRAY_CIRCLE_SMALL_RING: {
         id: "gray_circle_small_ring", name: "EncryptedCookie",
         color: "#a4a4a4", shape: "circle", pattern: "ring", size: 14,
         speed: 0.8, rotationSpeed: 0.02, damage: 8,
-        tags: [], minLen: 1, maxLen: 2, score: 72, // 24 * 3
+        tags: [], minLen: 1, maxLen: 3, score: 72, // 24 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -922,14 +1040,14 @@ export const EnemyTypes = {
         id: "gray_circle_small_stripe", name: "SessionID",
         color: "#a4a4a4", shape: "circle", pattern: "stripe", size: 14,
         speed: 1.2, rotationSpeed: 0.03, damage: 8, // 0.8 * 1.5
-        tags: [], minLen: 2, maxLen: 4, score: 36, // 24 * 1.5
+        tags: [], minLen: 2, maxLen: 5, score: 36, // 24 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GRAY_SQUARE_SMALL_RING: {
         id: "gray_square_small_ring", name: "SecureAdware",
         color: "#a4a4a4", shape: "square", pattern: "ring", size: 14,
         speed: 0.3, rotationSpeed: 0.01, damage: 8,
-        tags: [], minLen: 1, maxLen: 2, score: 51, // 17 * 3
+        tags: [], minLen: 1, maxLen: 3, score: 51, // 17 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -959,14 +1077,14 @@ export const EnemyTypes = {
         id: "gray_square_small", name: "Adware",
         color: "#a4a4a4", shape: "square", pattern: null, size: 14,
         speed: 0.4, rotationSpeed: 0.01, damage: 8,
-        tags: [], minLen: 2, maxLen: 4, score: 17, // 30 * 0.7 * 0.8
+        tags: [], minLen: 2, maxLen: 6, score: 17, // 30 * 0.7 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GRAY_SQUARE_SMALL_STRIPE: {
         id: "gray_square_small_stripe", name: "FastAdware",
         color: "#a4a4a4", shape: "square", pattern: "stripe", size: 14,
         speed: 0.6, rotationSpeed: 0.015, damage: 8,
-        tags: [], minLen: 2, maxLen: 4, score: 26, // 17 * 1.5
+        tags: [], minLen: 2, maxLen: 5, score: 26, // 17 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GRAY_SQUARE_NORMAL: {
@@ -1039,14 +1157,14 @@ export const EnemyTypes = {
         id: "gray_pinwheel_small", name: "Ping",
         color: "#a4a4a4", shape: "pinwheel", pattern: null, size: 14,
         speed: 0.9, rotationSpeed: 0.05, damage: 8,
-        tags: [], minLen: 2, maxLen: 4, score: 36, // 30 * 1.5 * 0.8
+        tags: [], minLen: 2, maxLen: 6, score: 36, // 30 * 1.5 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GRAY_PINWHEEL_SMALL_RING: {
         id: "gray_pinwheel_small_ring", name: "SecurePing",
         color: "#a4a4a4", shape: "pinwheel", pattern: "ring", size: 14,
         speed: 1.2, rotationSpeed: 0.05, damage: 8,
-        tags: [], minLen: 1, maxLen: 2, score: 108, // 36 * 3
+        tags: [], minLen: 1, maxLen: 3, score: 108, // 36 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1054,7 +1172,7 @@ export const EnemyTypes = {
         id: "gray_pinwheel_small_stripe", name: "HyperPing",
         color: "#a4a4a4", shape: "pinwheel", pattern: "stripe", size: 14,
         speed: 1.8, rotationSpeed: 0.075, damage: 8,
-        tags: [], minLen: 2, maxLen: 4, score: 54, // 36 * 1.5
+        tags: [], minLen: 2, maxLen: 5, score: 54, // 36 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GRAY_PINWHEEL_NORMAL: {
@@ -1107,14 +1225,14 @@ export const EnemyTypes = {
         id: "purple_square_small", name: "Token",
         color: "#b37feb", shape: "square", pattern: null, size: 14,
         speed: 0.3, rotationSpeed: 0.01, damage: 8,
-        tags: ["英語"], minLen: 2, maxLen: 4, score: 20, // 35 * 0.7 * 0.8
+        tags: ["英語"], minLen: 2, maxLen: 6, score: 20, // 35 * 0.7 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PURPLE_SQUARE_SMALL_RING: {
         id: "purple_square_small_ring", name: "SecureToken",
         color: "#b37feb", shape: "square", pattern: "ring", size: 14,
         speed: 0.4, rotationSpeed: 0.01, damage: 8,
-        tags: ["英語"], minLen: 1, maxLen: 2, score: 60, // 20 * 3
+        tags: ["英語"], minLen: 1, maxLen: 3, score: 60, // 20 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1122,7 +1240,7 @@ export const EnemyTypes = {
         id: "purple_square_small_stripe", name: "FastToken",
         color: "#b37feb", shape: "square", pattern: "stripe", size: 14,
         speed: 0.6, rotationSpeed: 0.015, damage: 8,
-        tags: ["英語"], minLen: 2, maxLen: 4, score: 30, // 20 * 1.5
+        tags: ["英語"], minLen: 2, maxLen: 5, score: 30, // 20 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PURPLE_SQUARE_NORMAL: {
@@ -1173,14 +1291,14 @@ export const EnemyTypes = {
         id: "purple_pinwheel_small", name: "Phishing",
         color: "#b37feb", shape: "pinwheel", pattern: null, size: 14,
         speed: 0.9, rotationSpeed: 0.05, damage: 8,
-        tags: ["英語"], minLen: 2, maxLen: 4, score: 42, // 35 * 1.5 * 0.8
+        tags: ["英語"], minLen: 2, maxLen: 6, score: 42, // 35 * 1.5 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PURPLE_PINWHEEL_SMALL_RING: {
         id: "purple_pinwheel_small_ring", name: "EncryptedPhishing",
         color: "#b37feb", shape: "pinwheel", pattern: "ring", size: 14,
         speed: 1.2, rotationSpeed: 0.05, damage: 8,
-        tags: ["英語"], minLen: 1, maxLen: 2, score: 126, // 42 * 3
+        tags: ["英語"], minLen: 1, maxLen: 3, score: 126, // 42 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1188,21 +1306,21 @@ export const EnemyTypes = {
         id: "purple_pinwheel_small_stripe", name: "FastPhishing",
         color: "#b37feb", shape: "pinwheel", pattern: "stripe", size: 14,
         speed: 1.8, rotationSpeed: 0.075, damage: 8, // 1.2 * 1.5, 0.05 * 1.5
-        tags: ["英語"], minLen: 2, maxLen: 4, score: 63, // 42 * 1.5
+        tags: ["英語"], minLen: 2, maxLen: 5, score: 63, // 42 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PURPLE_CIRCLE_SMALL: {
         id: "purple_circle_small", name: "Keylogger",
         color: "#b37feb", shape: "circle", pattern: null, size: 14,
         speed: 0.6, rotationSpeed: 0.02, damage: 8,
-        tags: ["英語"], minLen: 2, maxLen: 4, score: 28, // 35 * 1.0 * 0.8
+        tags: ["英語"], minLen: 2, maxLen: 6, score: 28, // 35 * 1.0 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PURPLE_CIRCLE_SMALL_RING: {
         id: "purple_circle_small_ring", name: "HiddenKeylogger",
         color: "#b37feb", shape: "circle", pattern: "ring", size: 14,
         speed: 0.8, rotationSpeed: 0.02, damage: 8,
-        tags: ["英語"], minLen: 1, maxLen: 2, score: 84, // 28 * 3
+        tags: ["英語"], minLen: 1, maxLen: 3, score: 84, // 28 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1210,7 +1328,7 @@ export const EnemyTypes = {
         id: "purple_circle_small_stripe", name: "FastKeylogger",
         color: "#b37feb", shape: "circle", pattern: "stripe", size: 14,
         speed: 1.2, rotationSpeed: 0.03, damage: 8,
-        tags: ["英語"], minLen: 2, maxLen: 4, score: 42, // 28 * 1.5
+        tags: ["英語"], minLen: 2, maxLen: 5, score: 42, // 28 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PURPLE_CIRCLE_NORMAL: {
@@ -1307,14 +1425,14 @@ export const EnemyTypes = {
         id: "blue_circle_small", name: "Proxy",
         color: "#40a9ff", shape: "circle", pattern: null, size: 14,
         speed: 0.6, rotationSpeed: 0.02, damage: 8,
-        tags: ["促音"], minLen: 2, maxLen: 4, score: 32, // 40 * 1.0 * 0.8
+        tags: ["促音"], minLen: 2, maxLen: 6, score: 32, // 40 * 1.0 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     BLUE_CIRCLE_SMALL_RING: {
         id: "blue_circle_small_ring", name: "EncryptedProxy",
         color: "#40a9ff", shape: "circle", pattern: "ring", size: 14,
         speed: 0.8, rotationSpeed: 0.02, damage: 8,
-        tags: ["促音"], minLen: 1, maxLen: 2, score: 96, // 32 * 3
+        tags: ["促音"], minLen: 1, maxLen: 3, score: 96, // 32 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1322,28 +1440,28 @@ export const EnemyTypes = {
         id: "blue_circle_small_stripe", name: "FastProxy",
         color: "#40a9ff", shape: "circle", pattern: "stripe", size: 14,
         speed: 1.2, rotationSpeed: 0.03, damage: 8,
-        tags: ["促音"], minLen: 2, maxLen: 4, score: 48, // 32 * 1.5
+        tags: ["促音"], minLen: 2, maxLen: 5, score: 48, // 32 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     BLUE_PINWHEEL_SMALL: {
         id: "blue_pinwheel_small", name: "Backdoor",
         color: "#40a9ff", shape: "pinwheel", pattern: null, size: 14,
         speed: 0.9, rotationSpeed: 0.05, damage: 8,
-        tags: ["促音"], minLen: 2, maxLen: 4, score: 48, // 40 * 1.5 * 0.8
+        tags: ["促音"], minLen: 2, maxLen: 6, score: 48, // 40 * 1.5 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     BLUE_PINWHEEL_SMALL_STRIPE: {
         id: "blue_pinwheel_small_stripe", name: "DDoS",
         color: "#40a9ff", shape: "pinwheel", pattern: "stripe", size: 14,
         speed: 1.8, rotationSpeed: 0.08, damage: 8, // 1.2 * 1.5
-        tags: ["促音"], minLen: 2, maxLen: 4, score: 72, // 48 * 1.5
+        tags: ["促音"], minLen: 2, maxLen: 5, score: 72, // 48 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     BLUE_PINWHEEL_SMALL_RING: {
         id: "blue_pinwheel_small_ring", name: "EncryptedBackdoor",
         color: "#40a9ff", shape: "pinwheel", pattern: "ring", size: 14,
         speed: 1.2, rotationSpeed: 0.05, damage: 8,
-        tags: ["促音"], minLen: 1, maxLen: 2, score: 144, // 48 * 3
+        tags: ["促音"], minLen: 1, maxLen: 3, score: 144, // 48 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1483,14 +1601,14 @@ export const EnemyTypes = {
         id: "blue_square_small", name: "Latency",
         color: "#40a9ff", shape: "square", pattern: null, size: 14,
         speed: 0.3, rotationSpeed: 0.01, damage: 8,
-        tags: ["促音"], minLen: 2, maxLen: 4, score: 22, // 40 * 0.7 * 0.8
+        tags: ["促音"], minLen: 2, maxLen: 6, score: 22, // 40 * 0.7 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     BLUE_SQUARE_SMALL_RING: {
         id: "blue_square_small_ring", name: "PersistentLatency",
         color: "#40a9ff", shape: "square", pattern: "ring", size: 14,
         speed: 0.4, rotationSpeed: 0.01, damage: 8,
-        tags: ["促音"], minLen: 1, maxLen: 2, score: 66, // 22 * 3
+        tags: ["促音"], minLen: 1, maxLen: 3, score: 66, // 22 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1498,7 +1616,7 @@ export const EnemyTypes = {
         id: "blue_square_small_stripe", name: "FastLatency",
         color: "#40a9ff", shape: "square", pattern: "stripe", size: 14,
         speed: 0.6, rotationSpeed: 0.015, damage: 8,
-        tags: ["促音"], minLen: 2, maxLen: 4, score: 33, // 22 * 1.5
+        tags: ["促音"], minLen: 2, maxLen: 5, score: 33, // 22 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
 
@@ -1507,14 +1625,14 @@ export const EnemyTypes = {
         id: "pink_circle_small", name: "Popup",
         color: "#ff85c0", shape: "circle", pattern: null, size: 14,
         speed: 0.6, rotationSpeed: 0.02, damage: 8,
-        tags: ["擬音"], minLen: 2, maxLen: 4, score: 36, // 45 * 1.0 * 0.8
+        tags: ["擬音"], minLen: 2, maxLen: 6, score: 36, // 45 * 1.0 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PINK_CIRCLE_SMALL_RING: {
         id: "pink_circle_small_ring", name: "StickyPopup",
         color: "#ff85c0", shape: "circle", pattern: "ring", size: 14,
         speed: 0.8, rotationSpeed: 0.02, damage: 8,
-        tags: ["擬音"], minLen: 1, maxLen: 2, score: 108, // 36 * 3
+        tags: ["擬音"], minLen: 1, maxLen: 3, score: 108, // 36 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1522,7 +1640,7 @@ export const EnemyTypes = {
         id: "pink_circle_small_stripe", name: "FastPopup",
         color: "#ff85c0", shape: "circle", pattern: "stripe", size: 14,
         speed: 1.2, rotationSpeed: 0.03, damage: 8,
-        tags: ["擬音"], minLen: 2, maxLen: 4, score: 54, // 36 * 1.5
+        tags: ["擬音"], minLen: 2, maxLen: 5, score: 54, // 36 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PINK_CIRCLE_NORMAL: {
@@ -1552,14 +1670,14 @@ export const EnemyTypes = {
         id: "pink_pinwheel_small", name: "Worm",
         color: "#ff85c0", shape: "pinwheel", pattern: null, size: 14,
         speed: 0.9, rotationSpeed: 0.05, damage: 8,
-        tags: ["擬音"], minLen: 2, maxLen: 4, score: 54, // 45 * 1.5 * 0.8
+        tags: ["擬音"], minLen: 2, maxLen: 6, score: 54, // 45 * 1.5 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PINK_PINWHEEL_SMALL_RING: {
         id: "pink_pinwheel_small_ring", name: "EncryptedWorm",
         color: "#ff85c0", shape: "pinwheel", pattern: "ring", size: 14,
         speed: 1.2, rotationSpeed: 0.05, damage: 8,
-        tags: ["擬音"], minLen: 1, maxLen: 2, score: 162, // 54 * 3
+        tags: ["擬音"], minLen: 1, maxLen: 3, score: 162, // 54 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1567,21 +1685,21 @@ export const EnemyTypes = {
         id: "pink_pinwheel_small_stripe", name: "HyperWorm",
         color: "#ff85c0", shape: "pinwheel", pattern: "stripe", size: 14,
         speed: 1.8, rotationSpeed: 0.075, damage: 8,
-        tags: ["擬音"], minLen: 2, maxLen: 4, score: 81, // 54 * 1.5
+        tags: ["擬音"], minLen: 2, maxLen: 5, score: 81, // 54 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PINK_SQUARE_SMALL: {
         id: "pink_square_small", name: "SmallMalware",
         color: "#ff85c0", shape: "square", pattern: null, size: 14,
         speed: 0.3, rotationSpeed: 0.01, damage: 8,
-        tags: ["擬音"], minLen: 2, maxLen: 4, score: 25, // 45 * 0.7 * 0.8
+        tags: ["擬音"], minLen: 2, maxLen: 6, score: 25, // 45 * 0.7 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PINK_SQUARE_SMALL_RING: {
         id: "pink_square_small_ring", name: "EncryptedSmallMalware",
         color: "#ff85c0", shape: "square", pattern: "ring", size: 14,
         speed: 0.4, rotationSpeed: 0.01, damage: 8,
-        tags: ["擬音"], minLen: 1, maxLen: 2, score: 75, // 25 * 3
+        tags: ["擬音"], minLen: 1, maxLen: 3, score: 75, // 25 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1589,7 +1707,7 @@ export const EnemyTypes = {
         id: "pink_square_small_stripe", name: "FastSmallMalware",
         color: "#ff85c0", shape: "square", pattern: "stripe", size: 14,
         speed: 0.6, rotationSpeed: 0.015, damage: 8, // 0.4 * 1.5, 0.01 * 1.5
-        tags: ["擬音"], minLen: 2, maxLen: 4, score: 38, // 25 * 1.5
+        tags: ["擬音"], minLen: 2, maxLen: 5, score: 38, // 25 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     PINK_SQUARE_NORMAL: {
@@ -1693,14 +1811,14 @@ export const EnemyTypes = {
         id: "yellow_circle_small", name: "SmallTrojan",
         color: "#fadb14", shape: "circle", pattern: null, size: 14,
         speed: 0.6, rotationSpeed: 0.02, damage: 8,
-        tags: ["ことわざ"], minLen: 2, maxLen: 4, score: 40, // 50 * 1.0 * 0.8
+        tags: ["ことわざ"], minLen: 2, maxLen: 6, score: 40, // 50 * 1.0 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     YELLOW_CIRCLE_SMALL_RING: {
         id: "yellow_circle_small_ring", name: "EncryptedTrojan",
         color: "#fadb14", shape: "circle", pattern: "ring", size: 14,
         speed: 0.8, rotationSpeed: 0.02, damage: 8,
-        tags: ["ことわざ"], minLen: 1, maxLen: 2, score: 120, // 40 * 3
+        tags: ["ことわざ"], minLen: 1, maxLen: 3, score: 120, // 40 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1708,21 +1826,21 @@ export const EnemyTypes = {
         id: "yellow_circle_small_stripe", name: "FastTrojan",
         color: "#fadb14", shape: "circle", pattern: "stripe", size: 14,
         speed: 1.2, rotationSpeed: 0.03, damage: 8, // 0.8 * 1.5, 0.02 * 1.5
-        tags: ["ことわざ"], minLen: 2, maxLen: 4, score: 60, // 40 * 1.5
+        tags: ["ことわざ"], minLen: 2, maxLen: 5, score: 60, // 40 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     YELLOW_SQUARE_SMALL: {
         id: "yellow_square_small", name: "Branch",
         color: "#fadb14", shape: "square", pattern: null, size: 14,
         speed: 0.3, rotationSpeed: 0.01, damage: 8,
-        tags: ["ことわざ"], minLen: 2, maxLen: 4, score: 28, // 50 * 0.7 * 0.8
+        tags: ["ことわざ"], minLen: 2, maxLen: 6, score: 28, // 50 * 0.7 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     YELLOW_SQUARE_SMALL_RING: {
         id: "yellow_square_small_ring", name: "SecureBranch",
         color: "#fadb14", shape: "square", pattern: "ring", size: 14,
         speed: 0.4, rotationSpeed: 0.01, damage: 8,
-        tags: ["ことわざ"], minLen: 1, maxLen: 2, score: 84, // 28 * 3
+        tags: ["ことわざ"], minLen: 1, maxLen: 3, score: 84, // 28 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1730,21 +1848,21 @@ export const EnemyTypes = {
         id: "yellow_square_small_stripe", name: "FastBranch",
         color: "#fadb14", shape: "square", pattern: "stripe", size: 14,
         speed: 0.6, rotationSpeed: 0.015, damage: 8,
-        tags: ["ことわざ"], minLen: 2, maxLen: 4, score: 42, // 28 * 1.5
+        tags: ["ことわざ"], minLen: 2, maxLen: 5, score: 42, // 28 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     YELLOW_PINWHEEL_SMALL: {
         id: "yellow_pinwheel_small", name: "Loop",
         color: "#fadb14", shape: "pinwheel", pattern: null, size: 14,
         speed: 0.9, rotationSpeed: 0.05, damage: 8,
-        tags: ["ことわざ"], minLen: 2, maxLen: 4, score: 60, // 50 * 1.5 * 0.8
+        tags: ["ことわざ"], minLen: 2, maxLen: 6, score: 60, // 50 * 1.5 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     YELLOW_PINWHEEL_SMALL_RING: {
         id: "yellow_pinwheel_small_ring", name: "SecureLoop",
         color: "#fadb14", shape: "pinwheel", pattern: "ring", size: 14,
         speed: 1.2, rotationSpeed: 0.05, damage: 8,
-        tags: ["ことわざ"], minLen: 1, maxLen: 2, score: 180, // 60 * 3
+        tags: ["ことわざ"], minLen: 1, maxLen: 3, score: 180, // 60 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1752,7 +1870,7 @@ export const EnemyTypes = {
         id: "yellow_pinwheel_small_stripe", name: "HyperLoop",
         color: "#fadb14", shape: "pinwheel", pattern: "stripe", size: 14,
         speed: 1.8, rotationSpeed: 0.075, damage: 8,
-        tags: ["ことわざ"], minLen: 2, maxLen: 4, score: 90, // 60 * 1.5
+        tags: ["ことわざ"], minLen: 2, maxLen: 5, score: 90, // 60 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     YELLOW_CIRCLE_NORMAL: {
@@ -1893,14 +2011,14 @@ export const EnemyTypes = {
         id: "green_circle_small", name: "Pointer",
         color: "#73d13d", shape: "circle", pattern: null, size: 14,
         speed: 0.6, rotationSpeed: 0.02, damage: 8,
-        tags: ["句読点"], minLen: 2, maxLen: 4, score: 44, // 55 * 1.0 * 0.8
+        tags: ["句読点"], minLen: 2, maxLen: 6, score: 44, // 55 * 1.0 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GREEN_CIRCLE_SMALL_RING: {
         id: "green_circle_small_ring", name: "HiddenPointer",
         color: "#73d13d", shape: "circle", pattern: "ring", size: 14,
         speed: 0.8, rotationSpeed: 0.02, damage: 8,
-        tags: ["句読点"], minLen: 1, maxLen: 2, score: 132, // 44 * 3
+        tags: ["句読点"], minLen: 1, maxLen: 3, score: 132, // 44 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1908,7 +2026,7 @@ export const EnemyTypes = {
         id: "green_circle_small_stripe", name: "FastPointer",
         color: "#73d13d", shape: "circle", pattern: "stripe", size: 14,
         speed: 1.2, rotationSpeed: 0.03, damage: 8,
-        tags: ["句読点"], minLen: 2, maxLen: 4, score: 66, // 44 * 1.5
+        tags: ["句読点"], minLen: 2, maxLen: 5, score: 66, // 44 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GREEN_CIRCLE_NORMAL: {
@@ -1951,14 +2069,14 @@ export const EnemyTypes = {
         id: "green_pinwheel_small", name: "Signal",
         color: "#73d13d", shape: "pinwheel", pattern: null, size: 14,
         speed: 0.9, rotationSpeed: 0.05, damage: 8,
-        tags: ["句読点"], minLen: 2, maxLen: 4, score: 66, // 55 * 1.5 * 0.8
+        tags: ["句読点"], minLen: 2, maxLen: 6, score: 66, // 55 * 1.5 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GREEN_PINWHEEL_SMALL_RING: {
         id: "green_pinwheel_small_ring", name: "SecureSignal",
         color: "#73d13d", shape: "pinwheel", pattern: "ring", size: 14,
         speed: 1.2, rotationSpeed: 0.05, damage: 8,
-        tags: ["句読点"], minLen: 1, maxLen: 2, score: 198, // 66 * 3
+        tags: ["句読点"], minLen: 1, maxLen: 3, score: 198, // 66 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -1966,7 +2084,7 @@ export const EnemyTypes = {
         id: "green_pinwheel_small_stripe", name: "HyperSignal",
         color: "#73d13d", shape: "pinwheel", pattern: "stripe", size: 14,
         speed: 1.8, rotationSpeed: 0.075, damage: 8,
-        tags: ["句読点"], minLen: 2, maxLen: 4, score: 99, // 66 * 1.5
+        tags: ["句読点"], minLen: 2, maxLen: 5, score: 99, // 66 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GREEN_SQUARE_LARGE: {
@@ -2017,7 +2135,7 @@ export const EnemyTypes = {
         id: "green_square_small", name: "SmallRansomware",
         color: "#73d13d", shape: "square", pattern: null, size: 14,
         speed: 0.4, rotationSpeed: 0.01, damage: 8,
-        tags: ["句読点"], minLen: 2, maxLen: 4, score: 31, // 55 * 0.7 * 0.8
+        tags: ["句読点"], minLen: 2, maxLen: 6, score: 31, // 55 * 0.7 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GREEN_CIRCLE_NORMAL_RING: {
@@ -2032,7 +2150,7 @@ export const EnemyTypes = {
         id: "green_square_small_ring", name: "EncryptedSmallRansomware",
         color: "#73d13d", shape: "square", pattern: "ring", size: 14,
         speed: 0.3, rotationSpeed: 0.01, damage: 8,
-        tags: ["句読点"], minLen: 1, maxLen: 2, score: 93, // 31 * 3
+        tags: ["句読点"], minLen: 1, maxLen: 3, score: 93, // 31 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -2040,7 +2158,7 @@ export const EnemyTypes = {
         id: "green_square_small_stripe", name: "FastSmallRansomware",
         color: "#73d13d", shape: "square", pattern: "stripe", size: 14,
         speed: 0.6, rotationSpeed: 0.015, damage: 8, // 0.4 * 1.5, 0.01 * 1.5
-        tags: ["句読点"], minLen: 2, maxLen: 4, score: 47, // 31 * 1.5
+        tags: ["句読点"], minLen: 2, maxLen: 5, score: 47, // 31 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     GREEN_CIRCLE_LARGE: {
@@ -2093,21 +2211,21 @@ export const EnemyTypes = {
         id: "red_circle_small", name: "SmallVirus",
         color: "#ff4d4f", shape: "circle", pattern: null, size: 14,
         speed: 0.8, rotationSpeed: 0.02, damage: 8,
-        tags: ["記号"], minLen: 2, maxLen: 4, score: 48, // 60 * 1.0 * 0.8
+        tags: ["記号"], minLen: 2, maxLen: 6, score: 48, // 60 * 1.0 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     RED_PINWHEEL_SMALL: {
         id: "red_pinwheel_small", name: "ActiveVirus",
         color: "#ff4d4f", shape: "pinwheel", pattern: null, size: 14,
         speed: 0.9, rotationSpeed: 0.05, damage: 8,
-        tags: ["記号"], minLen: 2, maxLen: 4, score: 72, // 60 * 1.5 * 0.8
+        tags: ["記号"], minLen: 2, maxLen: 6, score: 72, // 60 * 1.5 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     RED_PINWHEEL_SMALL_RING: {
         id: "red_pinwheel_small_ring", name: "SecureActiveVirus",
         color: "#ff4d4f", shape: "pinwheel", pattern: "ring", size: 14,
         speed: 1.2, rotationSpeed: 0.05, damage: 8,
-        tags: ["記号"], minLen: 1, maxLen: 2, score: 216, // 72 * 3
+        tags: ["記号"], minLen: 1, maxLen: 3, score: 216, // 72 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -2115,7 +2233,7 @@ export const EnemyTypes = {
         id: "red_circle_small_ring", name: "EncryptedSmallVirus",
         color: "#ff4d4f", shape: "circle", pattern: "ring", size: 14,
         speed: 0.6, rotationSpeed: 0.02, damage: 8,
-        tags: ["記号"], minLen: 1, maxLen: 2, score: 144, // 48 * 3
+        tags: ["記号"], minLen: 1, maxLen: 3, score: 144, // 48 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -2189,7 +2307,7 @@ export const EnemyTypes = {
         id: "red_circle_small_stripe", name: "FastSmallVirus",
         color: "#ff4d4f", shape: "circle", pattern: "stripe", size: 14,
         speed: 1.2, rotationSpeed: 0.03, damage: 8, // 0.8 * 1.5, 0.02 * 1.5
-        tags: ["記号"], minLen: 2, maxLen: 4, score: 72, // 48 * 1.5
+        tags: ["記号"], minLen: 2, maxLen: 5, score: 72, // 48 * 1.5
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     RED_CIRCLE_LARGE: {
@@ -2240,14 +2358,14 @@ export const EnemyTypes = {
         id: "red_square_small", name: "Panic",
         color: "#ff4d4f", shape: "square", pattern: null, size: 14,
         speed: 0.3, rotationSpeed: 0.01, damage: 8,
-        tags: ["記号"], minLen: 2, maxLen: 4, score: 34, // 60 * 0.7 * 0.8
+        tags: ["記号"], minLen: 2, maxLen: 6, score: 34, // 60 * 0.7 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
     RED_SQUARE_SMALL_RING: {
         id: "red_square_small_ring", name: "PersistentPanic",
         color: "#ff4d4f", shape: "square", pattern: "ring", size: 14,
         speed: 0.4, rotationSpeed: 0.01, damage: 8,
-        tags: ["記号"], minLen: 1, maxLen: 2, score: 102, // 34 * 3
+        tags: ["記号"], minLen: 1, maxLen: 3, score: 102, // 34 * 3
         killSound: 1, killedEffect: "enemy1", damageSound: 1,
         hitCount: 2, knockback: 40
     },
@@ -2379,9 +2497,167 @@ export const EnemyTypes = {
                     color:"#ed6f6f",
                     shape:"arrow",
                     pattern: null,
-                    rotationSpeed:1
+                    rotationSpeed:1,
+                    charType: "all" // 例として全て混成に設定
                 }
             }
+        ]
+    },
+
+    // --- ボスシリーズ ---
+
+    MID_BOSS_1: {
+        id: "mid_boss_1", name: "中ボス 1: Sentinel",
+        color: "#597ef7", shape: "chip", pattern: "circuit", size: 45,
+        speed: 0.4, rotationSpeed: 0.02, damage: 30,
+        tags: ["", "促音"], minLen: 12, maxLen: 18, score: 500,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 3, knockback: 40
+    },
+
+    MID_BOSS_2: {
+        id: "mid_boss_2", name: "中ボス 2: Guardian",
+        color: "#13c2c2", shape: "gate", pattern: "circuit", size: 45,
+        speed: 0.5, rotationSpeed: 0.015, damage: 35,
+        tags: ["","句読点", "ことわざ"], minLen: 12, maxLen: 18, score: 800,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 4, knockback: 45
+    },
+
+    MID_BOSS_3: {
+        id: "mid_boss_3", name: "中ボス 3: Gatekeeper",
+        color: "#fa8c16", shape: "relay", pattern: "circuit", size: 45,
+        speed: 0.6, rotationSpeed: 0.02, damage: 42,
+        tags: ["", "英語"], minLen: 14, maxLen: 20, score: 1200,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 5, knockback: 45
+    },
+
+    BOSS_1: {
+        id: "boss_1", name: "ボス 1: Overlord",
+        color: "#eb2f96", shape: "pulsar", pattern: "circuit", size: 50,
+        speed: 0.2, rotationSpeed: 0.04, damage: 40,
+        tags: ["", "英語", "擬音"], minLen: 12, maxLen: 18, score: 1500,
+        killSound: 6, killedEffect: "boss1", damageSound: 1,
+        hitCount: 3, knockback: 30,
+        behaviors: [
+            { type: "shoot", interval: 5, preDelay: 1.0, bullet: { count: 5, speed: 1.0, damage: 10, size: 12, shape: "arrow", color: "#eb2f96", charType: "alphabet" } }
+        ]
+    },
+
+    MID_BOSS_4: {
+        id: "mid_boss_4", name: "中ボス 4: Breaker",
+        color: "#a0d911", shape: "glitch_tri", pattern: "circuit", size: 45,
+        speed: 0.6, rotationSpeed: 0.03, damage: 45,
+        tags: ["", "促音", "擬音", "記号"], minLen: 14, maxLen: 20, score: 1400,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 5, knockback: 45
+    },
+
+    MID_BOSS_5: {
+        id: "mid_boss_5", name: "中ボス 5: Void",
+        color: "#2f54eb", shape: "shard", pattern: "circuit", size: 45,
+        speed: 0.9, rotationSpeed: 0.06, damage: 60,
+        tags: ["","ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2000,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 5, knockback: 55,
+        behaviors: [
+            { type: "spawn", interval: 12, preDelay: 1.5, spawnType: "gray_circle_small", count: 2 },
+        ]
+    },
+
+    MID_BOSS_6: {
+        id: "mid_boss_6", name: "中ボス 6: Ghost",
+        color: "#bfbfbf", shape: "array", pattern: "circuit", size: 45,
+        speed: 0.9, rotationSpeed: 0.01, damage: 70,
+        tags: ["","擬音", "記号"], minLen: 15, maxLen: 22, score: 2200,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 6, knockback: 55,
+        behaviors: [
+            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.5, damage: 15, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } }
+        ]
+    },
+
+    BOSS_2: {
+        id: "boss_2", name: "ボス 2: Cyber Core",
+        color: "#722ed1", shape: "core_unit", pattern: "circuit", size: 55,
+        speed: 0.15, rotationSpeed: 0.05, damage: 50,
+        tags: ["","句読点", "英語", "記号"], minLen: 15, maxLen: 22, score: 3000,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 6, knockback: 30,
+        behaviors: [
+            { type: "attack", interval: 10, preDelay: 6, tags: ["","英語"], minLen: 5, maxLen: 10, damage: 10 },
+            { type: "spawn", interval: 12, preDelay: 1.5, spawnType: "gray_circle_small", count: 2 },
+            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 6, speed: 1.5, damage: 15, size: 10, shape: "arrow", color: "#722ed1", charType: "alphabet" } }
+        ]
+    },
+
+    MID_BOSS_7: {
+        id: "mid_boss_7", name: "中ボス 5: Void",
+        color: "#2f54eb", shape: "shard", pattern: "circuit", size: 45,
+        speed: 0.9, rotationSpeed: 0.06, damage: 60,
+        tags: ["","ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2200,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 6, knockback: 55,
+        behaviors: [
+            { type: "spawn", interval: 10, preDelay: 1.5, spawnType: "gray_circle_small", count: 2 },
+        ]
+    },
+
+    MID_BOSS_8: {
+        id: "mid_boss_8", name: "中ボス 6: Ghost",
+        color: "#bfbfbf", shape: "array", pattern: "circuit", size: 45,
+        speed: 0.9, rotationSpeed: 0.01, damage: 70,
+        tags: ["","擬音", "記号"], minLen: 15, maxLen: 22, score: 2400,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 6, knockback: 55,
+        behaviors: [
+            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.5, damage: 20, size: 10, shape: "arrow", color: "#bfbfbf", charType: "number" } }
+        ]
+    },
+
+    MID_BOSS_9: {
+        id: "mid_boss_9", name: "中ボス 6: Ghost",
+        color: "#bfbfbf", shape: "array", pattern: "circuit", size: 45,
+        speed: 0.9, rotationSpeed: 0.01, damage: 70,
+        tags: ["","擬音", "記号", "英語"], minLen: 15, maxLen: 22, score: 2600,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 6, knockback: 55,
+        behaviors: [
+            { type: "shoot", interval: 10, preDelay: 1.0, bullet: { count: 10, speed: 1.5, damage: 15, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } }
+        ]
+    },
+
+
+    BOSS_3: {
+        id: "boss_3", name: "ボス 3: The Admin",
+        color: "#cf1322", shape: "terminal", pattern: "circuit", size: 40,
+        speed: 0.1, rotationSpeed: 0.02, damage: 60,
+        tags: ["", "英語", "記号", "句読点", "ことわざ"], minLen: 15, maxLen: 25, score: 5000,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 7, knockback: 30,
+        behaviors: [
+            { type: "spawn", interval: 16, preDelay: 1.5, spawnType: "gray_circle_small", count: 2 },
+            { type: "shoot", interval: 18, preDelay: 0.8, bullet: { count: 5, speed: 1.5, damage: 20, size: 10, color: "#cf1322", shape: "arrow", homing: 0.05, charType: "alphabet" } },
+            { type: "shoot", interval: 35, preDelay: 0.8, bullet: { count: 3, speed: 0.4, damage: 20, size: 9, color: "#cf1322", shape: "circle", homing: 0.01, charType: "symbol" } },
+            { type: "shoot", interval: 26, preDelay: 0.8, bullet: { count: 3, speed: 0.9, damage: 20, size: 12, color: "#cf1322", shape: "circle", homing: 0.02, charType: "number" } },
+        ]
+    },
+
+    LAST_BOSS: {
+        id: "last_boss", name: "ラスボス: Singularity",
+        color: "#000000", shape: "omega", pattern: "circuit", size: 45,
+        speed: 0.1, rotationSpeed: 0.08, damage: 99,
+        tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 30, maxLen: 100, score: 10000,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 10, knockback: 30,
+        behaviors: [
+            { type: "spawn", interval: 10, preDelay: 1.5, spawnType: "gray_circle_small", count: 1 },
+            { type: "spawn", interval: 21, preDelay: 1.5, spawnType: "gray_square_small", count: 1 },
+            { type: "spawn", interval: 31, preDelay: 1.5, spawnType: "purple_circle_small", count: 1 },
+            { type: "shoot", interval: 15, preDelay: 0.8, bullet: { count: 8, speed: 1.0, damage: 20, size: 10, color: "#000000", shape: "arrow", homing: 0.03, charType: "alphabet" } },
+            { type: "shoot", interval: 36, preDelay: 0.8, bullet: { count: 3, speed: 0.4, damage: 20, size: 9, color: "#000000", shape: "circle", homing: 0.01, charType: "symbol" } },
+            { type: "shoot", interval: 26, preDelay: 0.8, bullet: { count: 3, speed: 0.9, damage: 20, size: 12, color: "#000000", shape: "circle", homing: 0.02, charType: "number" } },
         ]
     }
 };

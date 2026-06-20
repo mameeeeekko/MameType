@@ -700,8 +700,15 @@ button {
 }
 
 
-#word, #word-long {
+#word {
   font-size: 2.1rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #f0f6fc;
+  letter-spacing: 0.02em;
+}
+#word-long {
+  font-size: 1.9rem;
   font-weight: 600;
   margin-bottom: 0.4rem;
   color: #f0f6fc;
@@ -730,7 +737,10 @@ button {
   word-break: break-all;
 }
 
-.done { color: #9aa0a6; }
+.done { 
+  color: #4a4d50; /* 少し暗めにして未入力との差を強調 */
+  text-shadow: none;
+}
 
 /* =====================================================
    残り時間表示
@@ -1069,12 +1079,23 @@ button {
   width: 500px;
   margin-top: 0;
   padding: 24px;
+  max-height: 85vh; /* 項目が増えても画面内に収まるように制限 */
+  overflow-y: auto; /* はみ出す場合はスクロール可能にする */
   background: rgba(13, 17, 23, 0.92);
   border: 1px solid rgba(88, 166, 255, 0.3);
   border-radius: 12px;
   backdrop-filter: blur(12px);
   text-align: left;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(88, 166, 255, 0.05);
+}
+
+/* 設定画面のスクロールバーをサイバー風に調整 */
+.free-config-container::-webkit-scrollbar {
+  width: 6px;
+}
+.free-config-container::-webkit-scrollbar-thumb {
+  background: rgba(88, 166, 255, 0.2);
+  border-radius: 3px;
 }
 
 .config-section-title {
@@ -1182,6 +1203,12 @@ button {
   color: #58a6ff;
   font-weight: bold;
   text-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
+}
+
+/* LV（レベル）設定値の特別色（黄緑系） */
+.config-value.level-color {
+  color: #9fe870; 
+  text-shadow: 0 0 8px rgba(159, 232, 112, 0.4);
 }
 
 /* パターンの詳細エリアのアニメーション */
@@ -4395,10 +4422,9 @@ button {
 }
 
 /* =====================================================
-   開始・終了ノードの装飾（細い外円）
+   中ボスノードの装飾（以前のスタート/ゴールの見た目を継承）
    ===================================================== */
-.map-node.start-node::before,
-.map-node.end-node::before {
+.map-node.mid-boss-node::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -4406,7 +4432,7 @@ button {
     transform: translate(-50%, -50%);
     width: 24px; /* ノード(14px)より一回り大きく */
     height: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.538);
+    border: 1px solid rgba(255, 255, 255, 0.6);
     border-radius: 50%;
     pointer-events: none;
     box-sizing: border-box;
@@ -4416,6 +4442,110 @@ button {
 @keyframes nodePulse {
     0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1.0); }
     50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* =====================================================
+   クエストマップ：ターゲットマーク装飾（真のスタート/ゴール用）
+   ===================================================== */
+.node-target-decor {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px; /* 外円のサイズ */
+    height: 28px;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* 一重の輪っか（内側） */
+.ring-inner {
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(189, 189, 189, 0.6); /* ノード同系色（グレー） */
+    border-radius: 50%;
+    box-sizing: border-box;
+    animation: ringRotate 8s linear infinite;
+}
+
+/* ターゲット三角形 */
+.target-tri {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4));
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+}
+
+/* 上：下向き */
+.tri-t {
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px 4px 0 4px;
+    border-color: #bdbdbd transparent transparent transparent;
+    animation-name: triMove-t;
+}
+
+/* 下：上向き */
+.tri-b {
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 4px 5px 4px;
+    border-color: transparent transparent #bdbdbd transparent;
+    animation-name: triMove-b;
+}
+
+/* 左：右向き */
+.tri-l {
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 4px 0 4px 5px;
+    border-color: transparent transparent transparent #bdbdbd;
+    animation-name: triMove-l;
+}
+
+/* 右：左向き */
+.tri-r {
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 4px 5px 4px 0;
+    border-color: transparent #bdbdbd transparent transparent;
+    animation-name: triMove-r;
+}
+
+/* ターゲットマーク用アニメーション */
+@keyframes ringRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes triMove-t {
+    0%, 100% { top: -4px; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)); }
+    50% { top: -8px; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
+}
+
+@keyframes triMove-b {
+    0%, 100% { bottom: -4px; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)); }
+    50% { bottom: -8px; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
+}
+
+@keyframes triMove-l {
+    0%, 100% { left: -4px; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)); }
+    50% { left: -8px; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
+}
+
+@keyframes triMove-r {
+    0%, 100% { right: -4px; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)); }
+    50% { right: -8px; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
+}
+
+/* 中ボスノードの強調 */
+.mid-boss-node {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+    background: #e0e0e0 !important; /* 中ボスは少し明るく */
 }
 
 /* =====================================================

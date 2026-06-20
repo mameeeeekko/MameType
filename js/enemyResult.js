@@ -121,17 +121,17 @@ export function showEnemyResult({
                 ${failedText}
                 
                 <div class="result-stats-grid">
-                    <div class="r-row"><span class="result-label">難易度</span><span class="result-value">${stats.difficultyName}</span></div>
-                    <div class="r-row"><span class="result-label">撃破数</span><span class="result-value">${stats.defeatedCount}</span></div>
-                    <div class="r-row"><span class="result-label">タイプ数</span><span class="result-value">${stats.totalTyped}</span></div>
-                    <div class="r-row"><span class="result-label">正確数</span><span class="result-value">${stats.correctCount}</span></div>
-                    <div class="r-row"><span class="result-label">ミス数</span><span class="result-value">${stats.mistakeCount}</span></div>
-                    <div class="r-row"><span class="result-label">正確性</span><span class="result-value">${stats.accuracy.toFixed(1)}%</span></div>
-                    <div class="r-row"><span class="result-label">総時間</span><span class="result-value">${((stats.endTime - stats.startTime)/1000).toFixed(1)}s</span></div>
-                    <div class="r-row"><span class="result-label">打鍵時間</span><span class="result-value">${((stats.typingActiveTime)/1000).toFixed(1)}s</span></div>
+                    <div class="r-row"><span class="result-label">Difficulty</span><span class="result-value">${stats.difficultyName}</span></div>
+                    <div class="r-row"><span class="result-label">Kills</span><span class="result-value">${stats.defeatedCount}</span></div>
+                    <div class="r-row"><span class="result-label">TotalKeystrokes</span><span class="result-value">${stats.totalTyped}</span></div>
+                    <div class="r-row"><span class="result-label">CorrectKeys</span><span class="result-value">${stats.correctCount}</span></div>
+                    <div class="r-row"><span class="result-label">Misses</span><span class="result-value">${stats.mistakeCount}</span></div>
+                    <div class="r-row"><span class="result-label">Accuracy</span><span class="result-value">${stats.accuracy.toFixed(1)}%</span></div>
+                    <div class="r-row"><span class="result-label">PlayTime</span><span class="result-value">${((stats.endTime - stats.startTime)/1000).toFixed(1)}s</span></div>
+                    <div class="r-row"><span class="result-label">TypingTime</span><span class="result-value">${((stats.typingActiveTime)/1000).toFixed(1)}s</span></div>
                     <div class="r-row"><span class="result-label">gKPM</span><span class="result-value">${stats.gKpm.toFixed(0)}</span></div>
-                    <div class="r-row"><span class="result-label">最大コンボ</span><span class="result-value">${stats.maxCombo}</span></div>
-                    <div class="r-row"><span class="result-label">最大チェイン</span><span class="result-value">${stats.maxChainCount}</span></div>
+                    <div class="r-row"><span class="result-label">MaxCombo</span><span class="result-value">${stats.maxCombo}</span></div>
+                    <div class="r-row"><span class="result-label">MaxChain</span><span class="result-value">${stats.maxChainCount}</span></div>
                 </div>
 
                 <div class="result-badges">

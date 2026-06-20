@@ -90,16 +90,85 @@ export function renderQuestBackground(ctx, node) {
 export function renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies = []) {
     ctx.textAlign = "center";
 
-    // 通常敵
-    for (const enemy of enemies) {
-        if (enemy === lockedEnemy) continue;
+    // lockedEnemy may be an `activeAttack` (has .ref) or an `enemy` directly.
+    const lockedRef = lockedEnemy ? (lockedEnemy.ref || lockedEnemy) : null;
+
+    // 通常敵：ロック対象を除いて Y 座標でソートして描画（前後関係を自然にする）
+    const nonLocked = enemies
+        .filter(e => e && e !== lockedRef)
+        .slice()
+        .sort((a, b) => (a.y || 0) - (b.y || 0));
+
+    for (const enemy of nonLocked) {
         drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies);
     }
 
-    // ロック敵は最後（最前面）
-    if (lockedEnemy) {
-        drawEnemy(ctx, lockedEnemy, lockedEnemy, candidateEnemies);
+    // ロック敵は常に最後（最前面）に描画
+    if (lockedRef && enemies.includes(lockedRef)) {
+        drawEnemy(ctx, lockedRef, lockedEnemy, candidateEnemies);
     }
+}
+
+export function renderActiveAttackUI(ctx, player, enemies, lockedTarget, candidateTargets) {
+    // 全ての敵から activeAttack を集める
+    const targets = enemies
+        .filter(en => en.activeAttack)
+        .map(en => en.activeAttack);
+
+    if (targets.length === 0) return;
+
+    targets.forEach((atk, index) => {
+        const enemy = atk.ref;
+        const behavior = enemy.type.behaviors?.find(b => b.type === "attack");
+        if (!behavior || !enemy.behaviorStates) return;
+
+        const key = behavior.type + "_" + behavior.interval;
+        const bState = enemy.behaviorStates[key];
+        if (!bState) return;
+
+        const preDelay = behavior.preDelay || 1;
+        const timerRatio = Math.max(0, (behavior.interval - bState.timer) / preDelay);
+
+        // ロックオン状態の判定
+        const isLocked = lockedTarget === atk;
+        const isCandidate = candidateTargets.includes(atk);
+
+        ctx.save();
+        ctx.textAlign = "center";
+        
+        const x = player.x;
+        // 複数の攻撃がある場合は上に積み上げる
+        const y = player.y - player.radius - 50 - (index * 45);
+
+        // 文字色の決定（ロックオン時はオレンジ、通常は赤系）
+        const mainColor = (isLocked || isCandidate) ? "#ff9100" : "#ff4d4d";
+        const romaColor = (isLocked || isCandidate) ? "#ffc107" : "#ff7875";
+
+        ctx.font = "14px sans-serif";
+        ctx.fillStyle = mainColor;
+        ctx.strokeStyle = "rgba(0,0,0,0.5)";
+        ctx.lineWidth = 3;
+        ctx.strokeText(atk.word, x, y - 20);
+        ctx.fillText(atk.word, x, y - 20);
+
+        const displayRoma = getDisplayRomaForEnemy(atk, getDisplayFullRoma);
+        const typedLen = atk.inputedRomaji.length + atk.typed.length;
+        const remainPart = displayRoma.slice(typedLen);
+        
+        ctx.font = "bold 14px monospace";
+        ctx.fillStyle = romaColor;
+        ctx.strokeText(remainPart, x, y);
+        ctx.fillText(remainPart, x, y);
+
+        const barW = 60;
+        const barH = 5;
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        ctx.fillRect(x - barW/2, y + 8, barW, barH);
+        ctx.fillStyle = mainColor;
+        ctx.fillRect(x - barW/2, y + 8, barW * timerRatio, barH);
+
+        ctx.restore();
+    });
 }
 
 function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
@@ -113,6 +182,10 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
     const word = enemy.word || "";
     const displayFull = getDisplayRomaForEnemy(enemy, getDisplayFullRoma);
 
+    // ロックまたは候補状態の判定（本体またはその攻撃が対象の場合）
+    const isLocked = lockedEnemy && (lockedEnemy === enemy || lockedEnemy.ref === enemy);
+    const isCandidate = candidateEnemies.some(c => c === enemy || c.ref === enemy);
+
     const typedLen =
         (enemy.inputedRomaji || "").length +
         (enemy.typed || "").length;
@@ -121,7 +194,7 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
 
     let enemyColor = enemy.type.color;
     //ロックした敵の色
-    if (enemy === lockedEnemy || candidateEnemies.includes(enemy)) {
+    if (isLocked || isCandidate) {
         enemyColor = "orange";
     }
 
@@ -169,7 +242,7 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
     let remainColor = "#a3c8e4"; // より鮮明なシアンに変更
 
     //ロックした敵の入力文字の色
-    if (enemy === lockedEnemy || candidateEnemies.includes(enemy)) {
+    if (isLocked || isCandidate) {
         remainColor = "rgb(255, 123, 0)";
     }
 
@@ -188,7 +261,7 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
     // =====================
     // ロックカーソル
     // =====================
-    if (enemy === lockedEnemy) {
+    if (isLocked) {
 
         const r = radius + 10;
 
@@ -245,7 +318,7 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
         ctx.fillStyle = "#ffffff";
         ctx.fillText(countText, enemy.x, boxY + 2);
         // ロック中だけ強調
-        if (enemy === lockedEnemy) {
+        if (isLocked) {
         ctx.fillStyle = "#ffd700";
         }
     }
@@ -463,6 +536,237 @@ function drawEnemyBody(ctx, enemy, color){
 }
 
 // ===============================
+// 形状のパスを定義するヘルパー（クリッピングや多重描画用）
+// ===============================
+function defineShapePath(ctx, x, y, shapeType, size) {
+    switch (shapeType) {
+        case "circle":
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            break;
+        case "pinwheel": {
+            for (let i = 0; i < 4; i++) {
+                const base = i * Math.PI / 2 + 0.25;
+                const mid  = base + Math.PI / 3;
+                const next = base + Math.PI / 2;
+                ctx.moveTo(x, y);
+                ctx.quadraticCurveTo(
+                    x + Math.cos(base) * size * 1.2,
+                    y + Math.sin(base) * size * 1.2,
+                    x + Math.cos(mid) * size,
+                    y + Math.sin(mid) * size
+                );
+                ctx.quadraticCurveTo(
+                    x + Math.cos(next) * size * 0.2,
+                    y + Math.sin(next) * size * 0.2,
+                    x, y
+                );
+                ctx.closePath();
+            }
+            break;
+        }
+        case "hexagon": {
+            const sw = size * 0.7;
+            const sh = size * 1.3;
+            ctx.moveTo(x, y - sh);
+            ctx.lineTo(x + sw, y - sh * 0.4);
+            ctx.lineTo(x + sw, y + sh * 0.4);
+            ctx.lineTo(x, y + sh);
+            ctx.lineTo(x - sw, y + sh * 0.4);
+            ctx.lineTo(x - sw, y - sh * 0.4);
+            ctx.closePath();
+            break;
+        }
+        case "square":
+            ctx.rect(x - size, y - size, size * 2, size * 2);
+            break;
+        case "arrow":
+            ctx.moveTo(x + size, y);
+            ctx.lineTo(x - size, y - size * 0.35);
+            ctx.lineTo(x - size, y + size * 0.35);
+            ctx.closePath();
+            break;
+        case "chip": { // ICチップ：サイドにピンがある四角
+            const s = size * 0.8;
+            const p = size * 0.2;
+            ctx.moveTo(x - s, y - s);
+            ctx.lineTo(x - p, y - s); ctx.lineTo(x - p, y - size); ctx.lineTo(x + p, y - size); ctx.lineTo(x + p, y - s);
+            ctx.lineTo(x + s, y - s);
+            ctx.lineTo(x + s, y - p); ctx.lineTo(x + size, y - p); ctx.lineTo(x + size, y + p); ctx.lineTo(x + s, y + p);
+            ctx.lineTo(x + s, y + s);
+            ctx.lineTo(x + p, y + s); ctx.lineTo(x + p, y + size); ctx.lineTo(x - p, y + size); ctx.lineTo(x - p, y + s);
+            ctx.lineTo(x - s, y + s);
+            ctx.lineTo(x - s, y + p); ctx.lineTo(x - size, y + p); ctx.lineTo(x - size, y - p); ctx.lineTo(x - s, y - p);
+            ctx.closePath();
+            break;
+        }
+        case "gate": { // 論理ゲート：D型の形状
+            const r = size;
+            ctx.moveTo(x - r, y - r);
+            ctx.lineTo(x - r * 0.2, y - r);
+            ctx.arc(x - r * 0.2, y, r, -Math.PI / 2, Math.PI / 2);
+            ctx.lineTo(x - r, y + r);
+            ctx.closePath();
+            break;
+        }
+        case "pulsar": { // 鋭い多角星
+            for (let i = 0; i < 16; i++) {
+                const r = i % 2 === 0 ? size : size * 0.3;
+                const angle = (Math.PI * 2 / 16) * i;
+                ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            break;
+        }
+        case "relay": { // 十字型の通信リレー
+            const s = size * 0.35;
+            for (let i = 0; i < 4; i++) {
+                const a = (Math.PI / 2) * i;
+                ctx.lineTo(x + Math.cos(a - 0.2) * size, y + Math.sin(a - 0.2) * size);
+                ctx.lineTo(x + Math.cos(a + 0.2) * size, y + Math.sin(a + 0.2) * size);
+                ctx.lineTo(x + Math.cos(a + 0.4) * s, y + Math.sin(a + 0.4) * s);
+            }
+            ctx.closePath();
+            break;
+        }
+        case "glitch_tri": { // 段差のある三角形
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size, y + size);
+            ctx.lineTo(x + size * 0.2, y + size);
+            ctx.lineTo(x + size * 0.2, y + size * 0.75);
+            ctx.lineTo(x - size * 0.2, y + size * 0.75);
+            ctx.lineTo(x - size * 0.2, y + size);
+            ctx.lineTo(x - size, y + size);
+            ctx.closePath();
+            break;
+        }
+        case "core_unit": { // 中央ユニット
+            for (let i = 0; i < 8; i++) {
+                const r = i % 2 === 0 ? size : size * 0.85;
+                const angle = (Math.PI * 2 / 8) * i;
+                ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            // 内部に十字の切り込み
+            ctx.moveTo(x - size * 0.5, y); ctx.lineTo(x + size * 0.5, y);
+            ctx.moveTo(x, y - size * 0.5); ctx.lineTo(x, y + size * 0.5);
+            break;
+        }
+        case "shard": { // 鋭利なクリスタル状
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size * 0.4, y - size * 0.2);
+            ctx.lineTo(x + size * 0.4, y + size * 0.2);
+            ctx.lineTo(x, y + size);
+            ctx.lineTo(x - size * 0.4, y + size * 0.2);
+            ctx.lineTo(x - size * 0.4, y - size * 0.2);
+            ctx.closePath();
+            break;
+        }
+        case "array": { // 3方向アンテナ配列
+            for (let i = 0; i < 3; i++) {
+                const a = (Math.PI * 2 / 3) * i - Math.PI / 2;
+                ctx.moveTo(x + Math.cos(a) * size * 0.2, y + Math.sin(a) * size * 0.2);
+                ctx.arc(x + Math.cos(a) * size * 0.6, y + Math.sin(a) * size * 0.6, size * 0.4, 0, Math.PI * 2);
+            }
+            break;
+        }
+        case "terminal": { // ブラケット付きの端末
+            const s = size;
+            const t = size * 0.4;
+            ctx.moveTo(x - s, y - s + t); ctx.lineTo(x - s, y - s); ctx.lineTo(x - s + t, y - s);
+            ctx.moveTo(x + s - t, y - s); ctx.lineTo(x + s, y - s); ctx.lineTo(x + s, y - s + t);
+            ctx.moveTo(x + s, y + s - t); ctx.lineTo(x + s, y + s); ctx.lineTo(x + s - t, y + s);
+            ctx.moveTo(x - s + t, y + s); ctx.lineTo(x - s, y + s); ctx.lineTo(x - s, y + s - t);
+            break;
+        }
+        case "omega": { // 最終形態：24芒星
+            for (let i = 0; i < 48; i++) {
+                const r = i % 2 === 0 ? size : size * 0.5;
+                const angle = (Math.PI * 2 / 48) * i;
+                ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            break;
+        }
+        case "diamond":
+        case "rhombus":
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size * 0.8, y);
+            ctx.lineTo(x, y + size);
+            ctx.lineTo(x - size * 0.8, y);
+            ctx.closePath();
+            break;
+        case "shield":
+            ctx.moveTo(x - size, y - size * 0.5);
+            ctx.quadraticCurveTo(x, y - size * 1.2, x + size, y - size * 0.5);
+            ctx.lineTo(x + size, y + size * 0.4);
+            ctx.lineTo(x, y + size * 1.2);
+            ctx.lineTo(x - size, y + size * 0.4);
+            ctx.closePath();
+            break;
+        case "star": {
+            for (let i = 0; i < 10; i++) {
+                const r = i % 2 === 0 ? size : size * 0.5;
+                const angle = (Math.PI * 2 / 10) * i - Math.PI / 2;
+                ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            break;
+        }
+        case "cross": {
+            const s = size * 0.4;
+            ctx.moveTo(x - s, y - size); ctx.lineTo(x + s, y - size); ctx.lineTo(x + s, y - s);
+            ctx.lineTo(x + size, y - s); ctx.lineTo(x + size, y + s); ctx.lineTo(x + s, y + s);
+            ctx.lineTo(x + s, y + size); ctx.lineTo(x - s, y + size); ctx.lineTo(x - s, y + s);
+            ctx.lineTo(x - size, y + s); ctx.lineTo(x - size, y - s); ctx.lineTo(x - s, y - s);
+            ctx.closePath();
+            break;
+        }
+        case "triangle":
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size, y + size * 0.8);
+            ctx.lineTo(x - size, y + size * 0.8);
+            ctx.closePath();
+            break;
+        case "gear": {
+            for (let i = 0; i < 16; i++) {
+                const r = i % 2 === 0 ? size : size * 0.8;
+                const angle = (Math.PI * 2 / 16) * i;
+                ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            break;
+        }
+        case "clover": {
+            for (let i = 0; i < 4; i++) {
+                const angle = (Math.PI / 2) * i;
+                ctx.arc(x + Math.cos(angle) * size * 0.5, y + Math.sin(angle) * size * 0.5, size * 0.5, 0, Math.PI * 2);
+            }
+            break;
+        }
+        case "octagon": {
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 / 8) * i - Math.PI / 8;
+                ctx.lineTo(x + Math.cos(angle) * size, y + Math.sin(angle) * size);
+            }
+            ctx.closePath();
+            break;
+        }
+        case "nova": {
+            for (let i = 0; i < 24; i++) {
+                const r = i % 2 === 0 ? size : size * 0.6;
+                const angle = (Math.PI * 2 / 24) * i;
+                ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            break;
+        }
+        default:
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            break;
+    }
+}
+
+// ===============================
 // 形を描く
 // ===============================
 function drawShape(ctx, x, y, type, color) {
@@ -527,32 +831,19 @@ function drawShape(ctx, x, y, type, color) {
             break;
 
         case "square":
+            ctx.beginPath();
+            defineShapePath(ctx, x, y, "square", size);
             ctx.fillStyle = grad;
-            ctx.fillRect(
-                x - size,
-                y - size,
-                size * 2,
-                size * 2
-            );
+            ctx.fill();
 
             ctx.strokeStyle = "rgba(255,255,255,0.14)";
             ctx.lineWidth = 1;
-            ctx.strokeRect(
-                x - size,
-                y - size,
-                size * 2,
-                size * 2
-            );
+            ctx.stroke();
             break;
 
         case "arrow":
             ctx.beginPath();
-            // 頂点（右）
-            ctx.moveTo(x + size, y);
-            // 後端（左上と左下）を狭くして細長くする
-            ctx.lineTo(x - size, y - size * 0.35);
-            ctx.lineTo(x - size, y + size * 0.35);
-            ctx.closePath();
+            defineShapePath(ctx, x, y, "arrow", size);
             
             ctx.fillStyle = grad;
             ctx.fill();
@@ -562,13 +853,16 @@ function drawShape(ctx, x, y, type, color) {
             ctx.stroke();
             break;
 
-        case "pinwheel":
-            drawPinwheelShape(ctx, x, y, type, color);
-            break;
-
         default:
             ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
+            defineShapePath(ctx, x, y, type.shape, size);
+            
+            if (type.shape === "pinwheel") {
+                // Pinwheelは独自描画を維持
+                drawPinwheelShape(ctx, x, y, type, color);
+                return;
+            }
+
             ctx.fillStyle = grad;
             ctx.fill();
     }
@@ -578,21 +872,14 @@ function drawShape(ctx, x, y, type, color) {
 // 六角形を描く
 // ===============================
 function drawHexagon(ctx, x, y, size, grad, color) {
-    const sw = size * 0.7;  // 横幅（スリムに）
-    const sh = size * 1.3;  // 縦幅（長く）
-
     ctx.beginPath();
-    // 頂点を上にした細長い六角形
-    ctx.moveTo(x, y - sh);
-    ctx.lineTo(x + sw, y - sh * 0.4);
-    ctx.lineTo(x + sw, y + sh * 0.4);
-    ctx.lineTo(x, y + sh);
-    ctx.lineTo(x - sw, y + sh * 0.4);
-    ctx.lineTo(x - sw, y - sh * 0.4);
-    ctx.closePath();
+    defineShapePath(ctx, x, y, "hexagon", size);
 
     ctx.fillStyle = grad;
     ctx.fill();
+
+    const sw = size * 0.7;
+    const sh = size * 1.3;
 
     // 内部のカットライン（クリスタル感の演出）
     ctx.strokeStyle = "rgba(255,255,255,0.3)";
@@ -705,6 +992,11 @@ function drawPattern(ctx, x, y, type){
         case "ring":
             drawRing(ctx, x, y, type);
             break;
+
+        // 電子回路
+        case "circuit":
+            drawCircuit(ctx, x, y, type);
+            break;
     }
 }
 
@@ -715,9 +1007,9 @@ function drawStripe(ctx, x, y, type){
 
     ctx.save();
 
-    // クリッピング（円）
+    // クリッピング（形状に合わせる）
     ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
+    defineShapePath(ctx, x, y, type.shape, size);
     ctx.clip();
 
     ctx.strokeStyle = "rgba(255,255,255,0.7)";
@@ -738,14 +1030,16 @@ function drawRing(ctx, x, y, type){
     if (!type) return;
     if (!Number.isFinite(type.size)) return;
 
-    const maxRing = Math.floor(type.size / 5);
+    const size = type.size;
+    const maxRing = Math.floor(size / 5);
 
     for(let i = 0; i < maxRing; i++){
 
-        const radius = type.size - i * 5;
+        const radius = size - i * 5;
+        if (radius <= 0) break;
 
         ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        defineShapePath(ctx, x, y, type.shape, radius);
 
         ctx.strokeStyle = i % 2 === 0
             ? "rgba(255,255,255,0.45)"
@@ -754,6 +1048,50 @@ function drawRing(ctx, x, y, type){
         ctx.lineWidth = 2;
         ctx.stroke();
     }
+}
+
+function drawCircuit(ctx, x, y, type) {
+    const size = type.size;
+    ctx.save();
+
+    // クリッピング
+    ctx.beginPath();
+    defineShapePath(ctx, x, y, type.shape, size);
+    ctx.clip();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.lineWidth = 1.5;
+
+    // 中心から放射状に伸びる回路ライン
+    const lineCount = 6;
+    for (let i = 0; i < lineCount; i++) {
+        const angle = (Math.PI * 2 / lineCount) * i;
+        const len = size * 0.8;
+        
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        
+        // 途中でカクッと曲がる配線
+        const midX = x + Math.cos(angle) * len * 0.5;
+        const midY = y + Math.sin(angle) * len * 0.5;
+        const endX = x + Math.cos(angle + 0.5) * len;
+        const endY = y + Math.sin(angle + 0.5) * len;
+
+        ctx.lineTo(midX, midY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        // 端子（ノード）
+        ctx.beginPath();
+        ctx.arc(endX, endY, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // センターコアの小さな四角
+    ctx.fillRect(x - 3, y - 3, 6, 6);
+
+    ctx.restore();
 }
 
 
@@ -1799,9 +2137,6 @@ export function renderScore(ctx, gameState, now) {
 
     const stats = gameState.enemyStats;
     if (!stats?.startTime || !now) return;
-
-    // ★これ追加（重要）
-    ctx.save();
 
     const x = ctx.canvas.clientWidth - 12;
     let y = 12;

@@ -12,7 +12,7 @@ import { TARGETS, TARGETS_LONG } from './target.js';
 import {
   render, initProgressBar, updateProgressBar, updateProgressText, markProgressDoneFromRight,
   initSpeedBar, updateSpeedBar,
-  setLongTextMode, setUIMode,
+  setLongTextMode, setUIMode, resetRendererState,
   initTimeBar, setTimeLeft, setSolvedCount
 } from './renderer.js';
 import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, playTestSound as playTestSoundEffect } from "./effectManager.js";
@@ -108,6 +108,7 @@ export const gameState = {
     mistakeCount: 0,
     text: "",
     displayWord: "",
+    segments: [],
     currentIndex: 0,
     solvedCount: 0,
     missedTargets: [],
@@ -133,6 +134,7 @@ export function fullResetGame() {
   stopTimeAttackTimer();
   stopBGM();
   stopTimeCircle();
+  resetRendererState();
   resetGameState();
   shuffledTargets = [];
   fullResetInput();
@@ -163,6 +165,7 @@ export function resetAllModes() {
   gameState.enemyMode = false;
   gameState.currentMode = null;
   gameState.currentQuestNode = null;
+  gameState.isQuestMode = false;
   gameState.currentChallenge = null;
 }
 
@@ -300,6 +303,7 @@ export function renderState() {
         typed: gameState.typed,             // gameState.typed に変更
         inputedRomaji: gameState.inputedRomaji, // gameState.inputedRomaji に変更
         displayWord: gameState.displayWord, // gameState.displayWord に変更
+                segments: gameState.segments,
         correctCount: gameState.correctCount,   // gameState.correctCount に変更
         mistakeCount: gameState.mistakeCount,   // gameState.mistakeCount に変更
         isFreeMode: currentIsFreeMode,
@@ -335,6 +339,7 @@ export function loadText(index) {
   candidateCache = {};
   gameState.displayWord = target.word || target.text;
   gameState.text = target.text;
+  gameState.segments = target.segments || [];
   gameState.pos = 0;
   gameState.typed = "";
   gameState.inputedRomaji = "";
@@ -379,7 +384,9 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
       : getCurrentDifficulty();
 
   currentIsFreeMode = normalizedConfig.isFreeMode;
+  gameState.isFreeMode = normalizedConfig.isFreeMode;
   gameState.currentMode = normalizedConfig.mode;
+  gameState.isQuestMode = !!config.isQuestMode;
   gameState.currentChallenge = config.custom || {}; //skillTree関連フラグ
   gameState.currentSkillNodeId = config.custom?.nodeId || null;
   isGameActive = true;
@@ -425,7 +432,15 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
 
     // ★① LONG_TEXTは専用処理
     if (gameState.currentMode.id === GameModes.LONG_TEXT.id) {
-      shuffledTargets = shuffleArray(TARGETS_LONG);
+      const tags = modeData.custom?.tags || [];
+      let filtered = TARGETS_LONG;
+      if (tags.length > 0) {
+        filtered = TARGETS_LONG.filter(target => {
+          const targetTags = target.tags || [];
+          return tags.every(tag => targetTags.includes(tag));
+        });
+      }
+      shuffledTargets = shuffleArray(filtered);
     } else {
       shuffledTargets = gameState.currentMode.buildTargets({
         TARGETS,
@@ -466,6 +481,8 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
 export async function doCountdown(config) {
 
   setPaused(false); // ★ポーズ解除
+  resetRendererState();
+  fullResetInput();
 
   const countdownDiv = document.getElementById("countdown"); // 数字表示用
   const gameDiv = document.getElementById("game");           // ゲームコンテナ
@@ -474,7 +491,7 @@ export async function doCountdown(config) {
   if (!countdownDiv || !gameDiv) return startGame(config);
 
   const ids = [
-    "word","jp-wrap","roma-wrap","jp-long-wrap","scroll-wrap",
+    "word-wrap","jp-wrap","roma-wrap","word-long-wrap","scroll-wrap",
     "modeLabel","freeModeBadge","missModeBadge","progress-container","time-bar-container","speed-container",
     "speed-label","timeLeft","solvedCount","backBtn","gameBackBtn"
   ];
@@ -876,15 +893,26 @@ function updateTimeAttack() {
 export function backToMenu(){
   stopBGM(); 
   isGameActive=false;
+  isFinishing = false;
+  gameState.isEnding = false;
+  isPaused = false; 
   stopTimeCircle();
   // モーダル閉じる
   const modal = document.getElementById("gameModal");
   if(modal) modal.style.display="none";
 
-    // ★ UIモードを通常に戻す（重要）
+  // ★ UIモードを通常に戻す（重要）
   setLongTextMode(false);
 
-  document.getElementById("menu").style.display="block";
+  // 中断したモードに合わせて適切なメニューカテゴリを表示する
+  // ※ showCategory, showQuestMenu はグローバルまたは他で定義されている前提
+  if (currentIsFreeMode && typeof showCategory === 'function') {
+    showCategory('free');
+  } else {
+    const menu = document.getElementById("menu");
+    if (menu) menu.style.display = "block";
+  }
+
   setTimeout(()=>document.body.focus(),0);
 }
 // =====================================================

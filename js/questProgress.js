@@ -122,7 +122,8 @@ export function resetQuestAll() {
 
     localStorage.setItem("quest_auto_save", JSON.stringify({
         progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1" },
-        playerStats: freshStats
+        playerStats: freshStats,
+        stars: {} // ★オートセーブに星データを含める
     }));
 
     resetQuestProgressMemory();

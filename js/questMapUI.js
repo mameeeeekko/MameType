@@ -247,6 +247,11 @@ export function renderQuestMapUI(){
 
         if (!isNodeVisible(node, depthMap) && !window.QUEST_MAP_ADMIN_SHOW_ALL) return;
 
+        // 開始・終了・中ボスの判定を先に行う
+        const isStartNode = !allNextsInWorld.has(node.id);
+        const isEndNode = trueEndNodes.has(node.id);
+        const isMidBoss = node.stage && node.stage.includes("MID_");
+
         const visibility = window.QUEST_MAP_ADMIN_SHOW_ALL
             ? "open"
             : getVisibility(node, depthMap);
@@ -302,58 +307,93 @@ export function renderQuestMapUI(){
             label.appendChild(rewardEl);
         }
 
-        // ▼ラベル位置調整（線と被らないようにする）
-        // ▼ラベル位置候補（8方向）
-        const LABEL_OFFSETS = [
-            { x: 0, y: -18 },   // 上
-            { x: 0, y: 18 },    // 下
-            { x: -22, y: 0 },   // 左
-            { x: 22, y: 0 },    // 右
-            { x: -18, y: -14 }, // 左上
-            { x: 18, y: -14 },  // 右上
-            { x: -18, y: 14 },  // 左下
-            { x: 18, y: 14 },   // 右下
+        // ▼ラベル・星の位置調整（線と被らないように一番広い隙間に配置）
+        const center = NODE_SIZE / 2;
+
+        // 1. 接続されている全ノード（前後）の角度を取得
+        const connections = [
+            ...world.nodes.filter(n => (n.next || []).includes(node.id)),
+            ...node.next.map(id => world.nodes.find(n => n.id === id)).filter(Boolean)
         ];
+        const angles = connections.map(conn => 
+            Math.atan2(conn.pos.y - node.pos.y, conn.pos.x - node.pos.x)
+        );
 
-        function isTooClose(x, y, nodes, minDist = 18) {
-            return nodes.some(n => {
-                const dx = n.pos.x - x;
-                const dy = n.pos.y - y;
-                return Math.sqrt(dx * dx + dy * dy) < minDist;
-            });
+        // 2. 最も広い角度の隙間を計算
+        let bestAngle = -Math.PI / 2; // デフォルトは上方向
+        if (angles.length > 0) {
+            angles.sort((a, b) => a - b);
+            let maxGap = 0;
+            for (let i = 0; i < angles.length; i++) {
+                const a1 = angles[i];
+                const a2 = (i === angles.length - 1) ? angles[0] + 2 * Math.PI : angles[i + 1];
+                const gap = a2 - a1;
+                if (gap > maxGap) {
+                    maxGap = gap;
+                    bestAngle = a1 + gap / 2;
+                }
+            }
         }
 
-        // ▼ラベル位置決定
-        let offsetX = 14;
-        let offsetY = -10;
+        // 3. 座標の計算と適用（ノード中心からのオフセット）
+        let distX = 20; 
+        let distY = 18; 
 
-        const candidates = LABEL_OFFSETS
-            .map(o => ({
-                x: node.pos.x + o.x,
-                y: node.pos.y + o.y,
-                ox: o.x,
-                oy: o.y
-            }))
-            .filter(p => !isTooClose(p.x, p.y, world.nodes));
-
-        // 一番マシな位置を採用
-        if (candidates.length > 0) {
-            offsetX = candidates[0].ox;
-            offsetY = candidates[0].oy;
+        // スタート/ゴール（中ボスを除く）の場合は、装飾と重ならないようラベルをさらに離す
+        if ((isStartNode || isEndNode) && !isMidBoss) {
+            distX += 12;
+            distY += 12;
         }
 
-        label.style.left = offsetX + "px";
-        label.style.top  = offsetY + "px";
+        // 下側に配置される場合、星（ラベルの14px上）がノードと被らないように距離を離す
+        if (Math.sin(bestAngle) > 0) {
+            distY += 14;
+        }
+        
+        const lx = Math.cos(bestAngle) * distX;
+        const ly = Math.sin(bestAngle) * distY;
+
+        const labelX = center + lx;
+        const labelY = center + ly;
+
+        // ラベルを隙間の中央に配置
+        label.style.left = labelX + "px";
+        label.style.top  = labelY + "px";
+
+        let labelTransform = "translateY(-50%)"; // デフォルトは左寄せ（ノードの右側）
+        if (lx < -0.01) { // ノードの左側に配置される場合
+            labelTransform = "translateX(-100%) translateY(-50%)"; // 右寄せ
+        } else if (Math.abs(lx) < 0.01) { // ノードの真上または真下に配置される場合
+            labelTransform = "translateX(-50%) translateY(-50%)"; // 中央寄せ
+        }
+        label.style.transform = labelTransform;
+
+        // 星の位置もラベルに追従（位置関係を維持するため、ラベルの少し上に固定）
+        starEl.style.left = labelX + "px";
+        starEl.style.top  = (labelY - 14) + "px";
+        starEl.style.transform = labelTransform; // ラベルと同じ水平方向のtransformを適用
 
         const canEnter = canEnterNode(node, world);
         const cleared = isCleared(node.id);
 
-        // 開始・終了ノードのクラス付与
-        const isStartNode = !allNextsInWorld.has(node.id);
-        const isEndNode = trueEndNodes.has(node.id);
+        if (isMidBoss) {
+            el.classList.add("mid-boss-node");
+        }
 
-        if (isStartNode) el.classList.add("start-node");
-        if (isEndNode) el.classList.add("end-node");
+        // スタート/ゴール（中ボスを除く）用のターゲットマーク装飾を追加
+        if ((isStartNode || isEndNode) && !isMidBoss) {
+            const decor = document.createElement("div");
+            decor.className = "node-target-decor";
+            // 一重の輪っかと上下左右の内向き三角形用の構造
+            decor.innerHTML = `
+                <div class="ring-inner"></div>
+                <span class="target-tri tri-t"></span>
+                <span class="target-tri tri-b"></span>
+                <span class="target-tri tri-l"></span>
+                <span class="target-tri tri-r"></span>
+            `;
+            el.appendChild(decor);
+        }
         
         //星表示
         if (cleared) {
@@ -410,7 +450,7 @@ export function renderQuestMapUI(){
                     tooltipLines.push("");
                 }
                 if (stage.enemyVariationDescription) {
-                    tooltipLines.push(`<span style="color:#69c0ff;">■ エネミー構成</span>`);
+                    tooltipLines.push(`<span style="color:#e1e1e1;">■ エネミー構成</span>`);
                     tooltipLines.push(stage.enemyVariationDescription);
                     tooltipLines.push("");
                 }
@@ -1264,9 +1304,22 @@ function showQuestTooltip(lines, targetEl) {
   document.body.appendChild(tooltipEl);
 
   const rect = targetEl.getBoundingClientRect();
+  const tooltipRect = tooltipEl.getBoundingClientRect();
 
-  tooltipEl.style.left = rect.right + 10 + "px";
-  tooltipEl.style.top  = rect.top + "px";
+  let left = rect.right + 10;
+  let top = rect.top;
+
+  // 画面右端からはみ出る場合は左側に表示
+  if (left + tooltipRect.width > window.innerWidth) {
+    left = Math.max(10, rect.left - tooltipRect.width - 10);
+  }
+  // 画面下端からはみ出る場合は表示位置を上に調整
+  if (top + tooltipRect.height > window.innerHeight) {
+    top = Math.max(10, window.innerHeight - tooltipRect.height - 10);
+  }
+
+  tooltipEl.style.left = left + "px";
+  tooltipEl.style.top  = top + "px";
 }
 
 function hideQuestTooltip() {
@@ -1289,11 +1342,23 @@ function showSkillTooltip(skill, event) {
 
     document.body.appendChild(tooltipEl);
 
-    const x = event?.pageX ?? 0;
-    const y = event?.pageY ?? 0;
+  const tooltipRect = tooltipEl.getBoundingClientRect();
+  const mouseX = event?.clientX ?? 0;
+  const mouseY = event?.clientY ?? 0;
 
-    tooltipEl.style.left = x + 12 + "px";
-    tooltipEl.style.top = y + 12 + "px";
+  let left = mouseX + 12;
+  let top = mouseY + 12;
+
+  // 画面端での折り返し判定
+  if (left + tooltipRect.width > window.innerWidth) {
+    left = mouseX - tooltipRect.width - 12;
+  }
+  if (top + tooltipRect.height > window.innerHeight) {
+    top = mouseY - tooltipRect.height - 12;
+  }
+
+  tooltipEl.style.left = (left + window.scrollX) + "px";
+  tooltipEl.style.top = (top + window.scrollY) + "px";
 }
 
 // =========================

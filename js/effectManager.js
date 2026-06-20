@@ -6,9 +6,12 @@ let audioCtx = null;
 let masterGain = null;
 export let bgmGain = null; // Exported
 export let seGain = null;  // Exported
+let seGainNode = null;
 export let typeGain = null; // Exported
 export let missGain = null; // Exported
 
+const laserEffects = [];
+const playerDamageEffects = [];
 let buffers = {};
 let bgmSource = null;
 
@@ -386,6 +389,120 @@ export function spawnHitWave(x, y){
 
 }
 
+export function spawnLaserEffect(sx, sy, tx, ty, options = {}) {
+    laserEffects.push({
+        sx, sy, tx, ty,
+        life: 30,
+        maxLife: 30,
+        ...options
+    });
+}
+
+export function spawnPlayerDamageEffect(x, y) {
+
+    const effect = {
+        x,
+        y,
+        life: 30,
+        maxLife: 30,
+        particles: []
+    };
+
+    for (let i = 0; i < 25; i++) {
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 5;
+
+        effect.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 20 + Math.random() * 15,
+            maxLife: 20 + Math.random() * 15,
+            radius: 1 + Math.random() * 2
+        });
+    }
+
+    playerDamageEffects.push(effect);
+}
+
+export function renderLaserEffects(ctx) {
+    for (let i = laserEffects.length - 1; i >= 0; i--) {
+        const e = laserEffects[i];
+        e.life--;
+        const t = e.life / e.maxLife;
+        const alpha = Math.sin(t * Math.PI); // フェードイン・アウト
+        
+        // ★防御成功時はレーザーの終点をバリア位置に補正
+        let endX = e.tx;
+        let endY = e.ty;
+        const barrierRadius = 30 + (1 - t) * 20;
+        if (e.diffused) {
+            const angle = Math.atan2(e.ty - e.sy, e.tx - e.sx);
+            endX = e.tx - Math.cos(angle) * barrierRadius;
+            endY = e.ty - Math.sin(angle) * barrierRadius;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // ★レーザーの色を赤系に統一
+        const laserColor = "#ff4d4d";
+        ctx.shadowColor = laserColor;
+
+        // 外側のグロー
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = `rgba(255, 77, 77, ${alpha * 0.3})`;
+        ctx.shadowBlur = 20;
+        
+        ctx.beginPath();
+        ctx.moveTo(e.sx, e.sy);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        // 外側のグロー
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = `rgba(255, 77, 77, ${alpha * 0.3})`;
+        ctx.shadowBlur = 20;
+
+        if (e.diffused) {
+            const barrierColor = "#44ccff";
+            
+            ctx.strokeStyle = barrierColor;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = barrierColor;
+            ctx.shadowBlur = 15;
+
+            // 六角形を描画
+            ctx.beginPath();
+            for (let j = 0; j < 6; j++) {
+                const angle = (Math.PI / 3) * j;
+                const x = e.tx + barrierRadius * Math.cos(angle);
+                const y = e.ty + barrierRadius * Math.sin(angle);
+                if (j === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            // 拡散パーティクルを強化
+            const sparkCount = Math.floor(15 * (e.completionRatio || 0));
+            const baseAngle = Math.atan2(e.sy - e.ty, e.sx - e.tx);
+            for (let j = 0; j < sparkCount; j++) { // ★拡散パーティクルの色をレーザー色に変更
+                const sa = baseAngle + (Math.random() - 0.5) * 2.5;
+                const dist = 40 + (1 - t) * 150; // より遠くへ
+                ctx.fillStyle = laserColor;
+                ctx.beginPath();
+                ctx.arc(e.tx + Math.cos(sa) * dist, e.ty + Math.sin(sa) * dist, 3, 0, Math.PI * 2); // 少し大きく
+                ctx.fill();
+            }
+        }
+        ctx.restore();
+        if (e.life <= 0) laserEffects.splice(i, 1);
+    }
+}
+
 export function renderHitWaveEffects(ctx){
 
     for(let i = hitWaveEffects.length - 1; i >= 0; i--){
@@ -419,6 +536,60 @@ export function renderHitWaveEffects(ctx){
 
         if(e.life <= 0){
             hitWaveEffects.splice(i, 1);
+        }
+    }
+}
+
+
+export function renderPlayerDamageEffects(ctx) {
+    for (let i = playerDamageEffects.length - 1; i >= 0; i--) {
+        const e = playerDamageEffects[i];
+        e.life--;
+        const t = 1 - (e.life / e.maxLife); // 0 -> 1
+        const alpha = Math.sin((1 - t) * Math.PI); // フェードアウト
+
+        // 💥 パーティクル描画
+        e.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life--;
+            const pAlpha = p.life / p.maxLife;
+            ctx.save();
+            ctx.globalAlpha = pAlpha;
+            ctx.fillStyle = "#ff6b6b";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // 💥 中央の閃光 (白 -> 黄 -> 赤)
+        const flashRadius = 60 * Math.sin(t * Math.PI * 0.5);
+        const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, flashRadius);
+        grad.addColorStop(0, `rgba(255, 255, 220, ${alpha * 0.9})`);
+        grad.addColorStop(0.5, `rgba(255, 180, 80, ${alpha * 0.6})`);
+        grad.addColorStop(1, `rgba(255, 80, 80, 0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(e.x - flashRadius, e.y - flashRadius, flashRadius * 2, flashRadius * 2);
+
+        // 💥 衝撃波 (外側に広がるリング)
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 40 * (1 - alpha), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 衝撃波
+        ctx.strokeStyle = `rgba(255, 100, 100, ${alpha})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 20 + 80 * t, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (e.life <= 0) {
+            playerDamageEffects.splice(i, 1);
         }
     }
 }
@@ -1043,6 +1214,7 @@ export function renderEnemyBehaviorEffect(
     switch(enemy.behaviorEffect){
 
         case "shoot":
+        case "attack":
 
             renderShootEffect(
                 ctx,
@@ -2108,4 +2280,6 @@ export function clearAllEffects() {
     damagePopups.length = 0;
 
     itemSkillEffects.length = 0;
+    laserEffects.length = 0;
+    playerDamageEffects.length = 0;
 }

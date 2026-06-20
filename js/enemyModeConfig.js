@@ -103,7 +103,7 @@ export function buildEndText(end, playerConfig = null) {
   }
 
   if (playerConfig && playerConfig.hpDrainPerSec > 0) {
-    lines.push(`<span style="color:#ff4d4f;">毎秒HPが ${playerConfig.hpDrainPerSec} 減少 (サボタージュ)</span>`);
+    lines.push(`<span style="color:#ff4d4f;">毎秒HPが ${Math.floor(playerConfig.hpDrainPerSec)} 減少 (サボタージュ)</span>`);
   }
 
   if (end.timerMs != null) {
@@ -244,7 +244,7 @@ STAGES = {
     // 敵出現テーブル
     // ---------------------------
     enemyTable: [
-      { type: "SLIME",  weight: 70 },
+      { type: "SLIME",  weight: 70, pos: { x: 100, y: 100 } }, // pos指定可（省略時はランダム）
       { type: "GOBLIN", weight: 20 },
       { type: "OGRE",   weight: 10 }
     ],
@@ -350,91 +350,91 @@ export const ENEMY_TIER_BALANCED = {
 // --- バリエーション: 英語多め (Purpleの比率が高い) ---
 export const ENEMY_TIER_ENGLISH_HEAVY = {
     description: "英語多め（Purpleタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 70 }, { type: "PURPLE_CIRCLE_SMALL", weight: 30 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 30 }, { type: "PURPLE_PINWHEEL_SMALL", weight: 30 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "PURPLE_SQUARE_NORMAL", weight: 30 }],
-    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 50 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "PURPLE_SQUARE_SMALL_RING", weight: 10 }, { type: "PURPLE_SQUARE_NORMAL", weight: 30 }],
-    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 40 }, { type: "GRAY_CIRCLE_LARGE", weight: 30 }, { type: "PURPLE_CIRCLE_LARGE", weight: 30 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 40 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 30 }, { type: "PURPLE_CIRCLE_LARGE_STRIPE", weight: 30 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 50 }, { type: "GRAY_CIRCLE_SMALL", weight: 35 }, { type: "PURPLE_CIRCLE_LARGE_RING", weight: 15 }],
-    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 60 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PURPLE_PINWHEEL_LARGE_RING", weight: 30 }],
-    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 60 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "PURPLE_PINWHEEL_LARGE_STRIPE", weight: 30 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 60 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PURPLE_CIRCLE_LARGE_RING", weight: 30 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "PURPLE_CIRCLE_SMALL", weight: 50 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "PURPLE_PINWHEEL_SMALL", weight: 50 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "PURPLE_SQUARE_NORMAL", weight: 50 }],
+    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "PURPLE_SQUARE_SMALL_RING", weight: 20 }, { type: "PURPLE_SQUARE_NORMAL", weight: 40 }],
+    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 25 }, { type: "GRAY_CIRCLE_LARGE", weight: 25 }, { type: "PURPLE_CIRCLE_LARGE", weight: 50 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 25 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 25 }, { type: "PURPLE_CIRCLE_LARGE_STRIPE", weight: 50 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "PURPLE_CIRCLE_LARGE_RING", weight: 40 }],
+    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PURPLE_PINWHEEL_LARGE_RING", weight: 50 }],
+    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 40 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "PURPLE_PINWHEEL_LARGE_STRIPE", weight: 50 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PURPLE_CIRCLE_LARGE_RING", weight: 50 }]
 };
 
 // --- バリエーション: 記号多め (Redの比率が高い) ---
 export const ENEMY_TIER_SYMBOL_HEAVY = {
     description: "記号多め（Redタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 70 }, { type: "RED_CIRCLE_SMALL", weight: 30 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 30 }, { type: "RED_PINWHEEL_SMALL", weight: 30 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "RED_SQUARE_NORMAL", weight: 30 }],
-    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 30 }, { type: "RED_CIRCLE_NORMAL", weight: 30 }],
-    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 40 }, { type: "GRAY_CIRCLE_LARGE", weight: 30 }, { type: "RED_PINWHEEL_LARGE", weight: 30 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 40 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 30 }, { type: "RED_PINWHEEL_LARGE_STRIPE", weight: 30 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 30 }],
-    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "RED_CIRCLE_LARGE_RING", weight: 30 }],
-    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 50 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 20 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 30 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 30 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "RED_CIRCLE_SMALL", weight: 50 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "RED_PINWHEEL_SMALL", weight: 50 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "RED_SQUARE_NORMAL", weight: 50 }],
+    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 20 }, { type: "RED_CIRCLE_NORMAL", weight: 50 }],
+    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 25 }, { type: "GRAY_CIRCLE_LARGE", weight: 25 }, { type: "RED_PINWHEEL_LARGE", weight: 50 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 25 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 25 }, { type: "RED_PINWHEEL_LARGE_STRIPE", weight: 50 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_SMALL", weight: 20 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 50 }],
+    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "RED_CIRCLE_LARGE_RING", weight: 50 }],
+    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 40 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 50 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 60 }]
 };
 
 // --- バリエーション: 擬音多め (Pinkの比率が高い) ---
 export const ENEMY_TIER_ONOMATOPOEIA_HEAVY = {
     description: "擬音多め（Pinkタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 70 }, { type: "PINK_SQUARE_SMALL", weight: 30 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 30 }, { type: "PINK_PINWHEEL_SMALL", weight: 30 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "PINK_CIRCLE_NORMAL", weight: 30 }],
-    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 30 }, { type: "PINK_SQUARE_NORMAL", weight: 30 }],
-    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 40 }, { type: "GRAY_CIRCLE_LARGE", weight: 30 }, { type: "PINK_PINWHEEL_LARGE", weight: 30 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 40 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 30 }, { type: "PINK_PINWHEEL_LARGE_STRIPE", weight: 30 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 30 }],
-    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "PINK_CIRCLE_LARGE_RING", weight: 30 }],
-    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 50 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 20 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 30 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 30 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "PINK_SQUARE_SMALL", weight: 50 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "PINK_PINWHEEL_SMALL", weight: 50 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "PINK_CIRCLE_NORMAL", weight: 50 }],
+    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 20 }, { type: "PINK_SQUARE_NORMAL", weight: 50 }],
+    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 25 }, { type: "GRAY_CIRCLE_LARGE", weight: 25 }, { type: "PINK_PINWHEEL_LARGE", weight: 50 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 25 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 25 }, { type: "PINK_PINWHEEL_LARGE_STRIPE", weight: 50 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 40 }],
+    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PINK_CIRCLE_LARGE_RING", weight: 50 }],
+    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 40 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 50 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 50 }]
 };
 
 // --- バリエーション: 句読点多め (Greenの比率が高い) ---
 export const ENEMY_TIER_PUNCTUATION_HEAVY = {
     description: "句読点多め（Greenタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 70 }, { type: "GREEN_SQUARE_SMALL", weight: 30 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 30 }, { type: "GREEN_PINWHEEL_SMALL", weight: 30 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GREEN_PINWHEEL_NORMAL", weight: 30 }],
-    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 30 }, { type: "GREEN_SQUARE_NORMAL", weight: 30 }],
-    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 40 }, { type: "GRAY_CIRCLE_LARGE", weight: 30 }, { type: "GREEN_CIRCLE_LARGE", weight: 30 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 40 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 30 }, { type: "GREEN_CIRCLE_LARGE_STRIPE", weight: 30 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 30 }],
-    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "GREEN_PINWHEEL_LARGE_RING", weight: 30 }],
-    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 50 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 20 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 30 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 30 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "GREEN_SQUARE_SMALL", weight: 50 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "GREEN_PINWHEEL_SMALL", weight: 50 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "GREEN_PINWHEEL_NORMAL", weight: 50 }],
+    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 20 }, { type: "GREEN_SQUARE_NORMAL", weight: 50 }],
+    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 25 }, { type: "GRAY_CIRCLE_LARGE", weight: 25 }, { type: "GREEN_CIRCLE_LARGE", weight: 50 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 25 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 25 }, { type: "GREEN_CIRCLE_LARGE_STRIPE", weight: 50 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 40 }],
+    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "GREEN_PINWHEEL_LARGE_RING", weight: 50 }],
+    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 40 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 50 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 50 }]
 };
 
 // --- バリエーション: 促音多め (Blueの比率が高い) ---
 export const ENEMY_TIER_SOKUON_HEAVY = {
     description: "促音多め（Blueタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 70 }, { type: "BLUE_PINWHEEL_SMALL", weight: 30 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 30 }, { type: "BLUE_CIRCLE_NORMAL", weight: 30 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "BLUE_CIRCLE_NORMAL_STRIPE", weight: 30 }],
-    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 30 }, { type: "BLUE_CIRCLE_NORMAL_RING", weight: 30 }],
-    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 40 }, { type: "GRAY_CIRCLE_LARGE", weight: 30 }, { type: "BLUE_SQUARE_LARGE", weight: 30 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 40 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 30 }, { type: "BLUE_SQUARE_LARGE_STRIPE", weight: 30 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "BLUE_PINWHEEL_LARGE", weight: 30 }],
-    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 30 }],
-    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 50 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 20 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 30 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 30 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "BLUE_PINWHEEL_SMALL", weight: 50 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "BLUE_CIRCLE_NORMAL", weight: 50 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "BLUE_CIRCLE_NORMAL_STRIPE", weight: 50 }],
+    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 20 }, { type: "BLUE_CIRCLE_NORMAL_RING", weight: 50 }],
+    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 25 }, { type: "GRAY_CIRCLE_LARGE", weight: 25 }, { type: "BLUE_SQUARE_LARGE", weight: 50 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 25 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 25 }, { type: "BLUE_SQUARE_LARGE_STRIPE", weight: 50 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "BLUE_PINWHEEL_LARGE", weight: 40 }],
+    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 50 }],
+    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 40 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 50 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 50 }]
 };
 
 // --- バリエーション: ことわざ多め (Yellowの比率が高い) ---
 export const ENEMY_TIER_PROVERB_HEAVY = {
     description: "ことわざ多め（Yellowタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 70 }, { type: "YELLOW_CIRCLE_SMALL", weight: 30 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 30 }, { type: "YELLOW_PINWHEEL_SMALL", weight: 30 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 40 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 30 }],
-    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 30 }, { type: "YELLOW_SQUARE_LARGE", weight: 30 }],
-    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 40 }, { type: "GRAY_CIRCLE_LARGE", weight: 30 }, { type: "YELLOW_CIRCLE_LARGE", weight: 30 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 40 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 30 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 30 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 40 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "YELLOW_PINWHEEL_LARGE", weight: 30 }],
-    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 30 }],
-    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 50 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 20 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 30 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 50 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 20 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 30 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "YELLOW_CIRCLE_SMALL", weight: 50 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "YELLOW_PINWHEEL_SMALL", weight: 50 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 50 }],
+    T4:  [{ type: "GRAY_SQUARE_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 20 }, { type: "YELLOW_SQUARE_LARGE", weight: 50 }],
+    T5:  [{ type: "GRAY_SQUARE_LARGE_STRIPE", weight: 25 }, { type: "GRAY_CIRCLE_LARGE", weight: 25 }, { type: "YELLOW_CIRCLE_LARGE", weight: 50 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 25 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 25 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 50 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 30 }, { type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "YELLOW_PINWHEEL_LARGE", weight: 40 }],
+    T8:  [{ type: "GRAY_SQUARE_SMALL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 50 }],
+    T9:  [{ type: "GRAY_PINWHEEL_SMALL", weight: 40 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 50 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 40 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 50 }]
 };
 
 // --- バリエーション: 標準（Gray）のみ ---
@@ -574,7 +574,29 @@ export function getTierEnemies(tierKey, table = ENEMY_TIER_BALANCED) {
  * 属性セットの説明を取得
  */
 export function getTierDescription(table = ENEMY_TIER_BALANCED) {
-    return table.description || "不明な属性";
+    const desc = table.description || "不明な属性";
+    
+    // 標準（Gray）またはそれに準ずる構成の場合はそのまま返す
+    if (table === ENEMY_TIER_BALANCED || table === ENEMY_TIER_GRAY_ONLY) {
+        return desc;
+    }
+
+    const colorMap = {
+        "Purple": "#d48df0", // 英語
+        "Red":    "#ff4d4f", // 記号
+        "Pink":   "#ff85c0", // 擬音
+        "Green":  "#73d13d", // 句読点
+        "Blue":   "#40a9ff", // 促音
+        "Yellow": "#ffec3d"  // ことわざ
+    };
+
+    for (const [key, color] of Object.entries(colorMap)) {
+        if (desc.includes(key)) {
+            return `<span style="color:${color}; font-weight:bold;">${desc}</span>`;
+        }
+    }
+
+    return desc;
 };
 
 const ITEM_TIER_TABLE = {
@@ -597,12 +619,86 @@ function getItemTierKey(stageNum) {
 // =====================================================
 // ステージ生成ロジック (1-100)
 // =====================================================
+/**
+ * ステージ自動生成リファレンス
+ * -----------------------------------------------------
+ * 1. ミッションパターン (0-9):
+ *    0: 【撃破目標】   - 標準。指定数撃破でクリア。
+ *    1: 【生存目標】   - 制限時間まで生存。無限湧き。
+ *    2: 【殲滅目標】   - 有限の出現数(limit)を全て倒す。
+ *    3: 【電撃戦】     - 短い制限時間 + 短い出現間隔。
+ *    4: 【精密防衛】   - 高密度サバイバル。出現数多め。
+ *    5: 【タイムアタック】- 時間内に通常より多いノルマを達成。
+ *    6: 【サボタージュ】- HP継続減少デバフ + 撃破目標。
+ *    7: 【圧倒】       - 同時出現上限(maxAlive)大幅増 + 生存目標。
+ *    8: 【精密射撃】   - 1ミスで即終了(failOnMiss) + 少数精鋭を撃破。
+ *    9: 【純粋なる試練】- アイテム・スキル使用禁止 + 撃破目標。
+ *    - 抽選ルール:
+ *        下一桁 1-3: パターン 0-2 (基本・撃破/生存/殲滅)
+ *        下一桁 9, 0: パターン 3-9 (応用・高難度/特殊条件)
+ * 
+ * 1.5 敵構成のアクセント:
+ *    - 通常は ENEMY_TIER_BALANCED (標準) を使用。
+ *    - 下1桁が 5 , 10のステージ (5, 10, 15, 20, 25...) では、属性混成テーブルからランダムに選択される。
+ *
+ * 2. 難易度スケーリング (変数 i = ステージ番号):
+ *    - 出現間隔: 2400ms - (i * 10ms)  ※下限1200ms
+ *    - 撃破目標: 5 + floor(i / 4)
+ *    - 制限時間: 30s + (i * 0.3s)
+ *    - 同時出現: 3 + floor(i / 25)  ※通常時最大6
+ *
+ * 3. ステージ/環境設定:
+ *    - 背景画像: 1-33:blue, 34-66:green, 67-100:gray
+ *    - アイテム: ステージ5で解禁。
+ *               出現率: 0.3 + (i * 0.005)
+ *               Tier遷移: 6ステージごとにT1→T5へ上昇。
+ *
+ * 4. エネミーTier定義:
+ *    - 10ステージごとに T1 ～ T10 へ自動遷移。
+ *    - T1-T2: 小型/標準 (Gray主体)
+ *    - T3-T5: 中型/特殊属性 (Purple, Blueなど) 混入開始
+ *    - T6-T8: 大型/リング/ストライプ等の高耐久・複雑なワード
+ *    - T9-T10: 各属性の最上位個体 + 低確率で超大型
+ *
+ * 5. スター評価:
+ *    - パターンに応じて「KPM/クリア時間/正確性/残りHP/残り時間/総合」から動的に選出。
+ */
 function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
+    // --- 属性アクセントの決定ロジック ---
+    let selectedTable = tierTable;
+    
+    // 下1桁が5または0のステージを「属性アクセントステージ」とする (例: 5, 10, 15, 20...)
+    // かつ、引数で明示的に指定されていない場合のみ自動選択
+    if ((i % 10 === 5 || i % 10 === 0) && tierTable === ENEMY_TIER_BALANCED) {
+        const accentTables = [
+            ENEMY_TIER_ENGLISH_HEAVY,
+            ENEMY_TIER_SYMBOL_HEAVY,
+            ENEMY_TIER_ONOMATOPOEIA_HEAVY,
+            ENEMY_TIER_PUNCTUATION_HEAVY,
+            ENEMY_TIER_SOKUON_HEAVY,
+            ENEMY_TIER_PROVERB_HEAVY
+        ];
+        // _ONLY 系を除いた混成テーブルからランダムに選択
+        selectedTable = accentTables[Math.floor(Math.random() * accentTables.length)];
+    }
+
+    // 以降、selectedTable を使用して生成
     const tier = getTierKey(i);
     const itemTier = getItemTierKey(i);
 
     // 1. ミッションパターンの決定 (0-9の10種類)
-    const pattern = Math.floor(Math.random() * 10);
+    let pattern;
+    const lastDigit = i % 10;
+    if (lastDigit >= 1 && lastDigit <= 3) {
+        // 下一桁が1-3の場合: ミッションパターン0-2（基本形）を選択
+        pattern = Math.floor(Math.random() * 3);
+    } else if (lastDigit === 9 || lastDigit === 0) {
+        // 下一桁が9-0の場合: ミッションパターン3-9（応用・高難度形）を選択
+        pattern = 3 + Math.floor(Math.random() * 7);
+    } else {
+        // それ以外（4-8）: 全パターンからランダム
+        pattern = Math.floor(Math.random() * 10);
+    }
 
     // 難易度の緩やかな上昇計算
     const baseSpawnInterval = Math.max(1200, 2400 - (i * 10)); // 下限を1200msに引き上げ、初期も2400msと余裕を持たせた
@@ -612,11 +708,11 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
 
     // ミッションパターンごとの説明
     const missionDescriptions = [
-        { name: "撃破目標", desc: "指定数の敵を撃破せよ！" },
-        { name: "生存目標", desc: "制限時間まで生き残れ！" },
-        { name: "殲滅目標", desc: "出現する敵を全て殲滅せよ！" },
+        { name: "撃破", desc: "指定数の敵を撃破せよ！" },
+        { name: "生存", desc: "制限時間まで生き残れ！" },
+        { name: "殲滅", desc: "出現する敵を全て殲滅せよ！" },
         { name: "電撃戦", desc: "短時間で敵を撃破せよ！" },
-        { name: "精密防衛", desc: "高密度攻撃をミスなく防衛せよ！" },
+        { name: "精密防衛", desc: "高密度攻撃を防衛せよ！" },
         { name: "タイムアタック", desc: "時間内に指定数撃破せよ！" },
         { name: "サボタージュ", desc: "HP減少の中、敵を撃破せよ！" },
         { name: "圧倒", desc: "大量の敵を捌き切れ！" },
@@ -625,7 +721,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
     ];
 
     const currentMission = missionDescriptions[pattern];
-    const currentEnemyVariationDescription = getTierDescription(tierTable);
+    const currentEnemyVariationDescription = getTierDescription(selectedTable);
 
     let config = {
         bgImage: i <= 33 ? "battle_blue" : i <= 66 ? "battle_green" : "battle_gray",
@@ -635,7 +731,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             maxAlive: maxAlive,
             immediateOnClear: false
         },
-        enemyTable: getTierEnemies(tier, tierTable),
+        enemyTable: getTierEnemies(tier, selectedTable),
         missionName: currentMission.name,
         missionDescription: currentMission.desc,
         enemyVariationDescription: currentEnemyVariationDescription,
@@ -647,21 +743,31 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.spawn.limit = Math.floor(killGoal * 1.5);
             config.endConditions = { hpZero: true, killCount: killGoal };
             config.clearConditions = { killCount: killGoal };
+            config.spawn.immediateOnClear = true; // 敵がいなくなったら即座に次を出す
             
             // スター：タイピング速度(KPM) または クリア時間
             if (Math.random() > 0.5) {
                 config.star = {
                     type: "typingSpeed",
                     thresholds: [
-                        80 + (i * 1.2), 120 + (i * 1.4), 160 + (i * 1.6), 200 + (i * 1.8), 240 + (i * 2.0)
+                        60 + (i * 0.8), 90 + (i * 1.0), 120 + (i * 1.2), 150 + (i * 1.4), 180 + (i * 1.6)
                     ]
                 };
             } else {
-                const baseTime = killGoal * 4000; // 1体4秒計算
+                // 最小スポーン時間 ＋ 最後の敵を倒すための猶予
+                const minSpawnTime = (killGoal - 1) * config.spawn.interval;
+                const typingBuffer = 1500; // 最低限必要なタイピング時間(ms)
+                const minPossibleTime = minSpawnTime + typingBuffer;
+                const baseTime = Math.max(minPossibleTime + 10000, killGoal * 4000); 
+
                 config.star = {
                     type: "clearTime",
                     thresholds: [
-                        baseTime, baseTime * 0.8, baseTime * 0.7, baseTime * 0.6, baseTime * 0.5
+                        baseTime,
+                        Math.max(minPossibleTime + 4000, baseTime * 0.8),
+                        Math.max(minPossibleTime + 2000, baseTime * 0.7),
+                        Math.max(minPossibleTime + 1000, baseTime * 0.6),
+                        Math.max(minPossibleTime + 500, baseTime * 0.5)
                     ]
                 };
             }
@@ -698,6 +804,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.spawn.limit = spawnLimit;
             config.endConditions = { hpZero: true, allSpawnedDefeated: true };
             config.clearConditions = { killCount: spawnLimit };
+            config.spawn.immediateOnClear = true; // 殲滅目標では即時スポーンが効果的
 
             // スター：総合評価(Composite)
             config.star = {
@@ -717,6 +824,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.spawn.interval *= 0.7; // 敵がどんどん出る
             config.endConditions = { hpZero: true, timerMs: blitzTime, killCount: killGoal };
             config.clearConditions = { killCount: killGoal };
+            config.spawn.immediateOnClear = true;
             
             // スター：残り時間率(timeRemaining) 
             config.star = {
@@ -725,9 +833,9 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             };
             break;
 
-        case 4: // 【精密防衛】ミスが許されない高密度サバイバル
-            config.spawn.maxAlive += 1; // 増加量を抑制
-            config.spawn.interval *= 0.8;
+        case 4: // 【精密防衛】高密度サバイバル
+            config.spawn.maxAlive += 2; // 増加量を抑制
+            config.spawn.interval *= 0.7;
             config.endConditions = { hpZero: true, timerMs: timeLimit * 0.8 };
             config.clearConditions = { survive: true };
 
@@ -751,20 +859,26 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.spawn.limit = Math.floor(timeAttackKillGoal * 1.5);
             config.endConditions = { hpZero: true, timerMs: timeAttackTime };
             config.clearConditions = { killCount: timeAttackKillGoal, timerMs: timeAttackTime };
+            config.spawn.immediateOnClear = true; // タイムアタックには必須級の機能
 
             // スター：クリア時間 または タイピング速度
             if (Math.random() > 0.5) {
+                const minPossibleTime = (timeAttackKillGoal - 1) * config.spawn.interval + 1500;
                 config.star = {
                     type: "clearTime",
                     thresholds: [
-                        timeAttackTime, timeAttackTime * 0.85, timeAttackTime * 0.7, timeAttackTime * 0.55, timeAttackTime * 0.4
+                        timeAttackTime,
+                        Math.max(minPossibleTime + 4000, timeAttackTime * 0.8),
+                        Math.max(minPossibleTime + 2000, timeAttackTime * 0.7),
+                        Math.max(minPossibleTime + 1000, timeAttackTime * 0.55),
+                        Math.max(minPossibleTime + 500, timeAttackTime * 0.4)
                     ]
                 };
             } else {
                 config.star = {
                     type: "typingSpeed",
-                    thresholds: [
-                        100 + (i * 1.8), 150 + (i * 2.1), 200 + (i * 2.4), 250 + (i * 2.7), 300 + (i * 3.0)
+                    thresholds: [ // タイムアタックは特に厳しかったため大幅緩和
+                        70 + (i * 1.0), 100 + (i * 1.2), 130 + (i * 1.4), 160 + (i * 1.6), 190 + (i * 1.8)
                     ]
                 };
             }
@@ -775,12 +889,26 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.spawn.limit = Math.floor(sabotageKillTarget * 1.5);
             config.endConditions = { hpZero: true, killCount: sabotageKillTarget };
             config.clearConditions = { killCount: sabotageKillTarget };
-            config.player = { ...ENEMY_MODE_CONFIG.player, hpDrainPerSec: 1 + (i * 0.05) }; // HPが徐々に減る
+            config.spawn.immediateOnClear = true;
+            
+            const hpDrain = 1 + (i * 0.05);
+            config.player = { ...ENEMY_MODE_CONFIG.player, hpDrainPerSec: hpDrain };
 
-            // スター：残りHP率 または 総合評価
+            // 期待クリア時間（スポーン待ち時間 + タイピング猶予）から不可避なダメージを計算
+            const expectedTimeSec = ((sabotageKillTarget - 1) * config.spawn.interval / 1000) + (sabotageKillTarget * 0.5);
+            const mandatoryLoss = expectedTimeSec * hpDrain;
+            const maxPossibleHp = Math.max(5, ENEMY_MODE_CONFIG.player.maxHp - mandatoryLoss);
+            const maxRatio = maxPossibleHp / ENEMY_MODE_CONFIG.player.maxHp;
+
             config.star = {
                 type: "hpRemaining",
-                thresholds: [0.1, 0.25, 0.4, 0.6, 0.75]
+                thresholds: [
+                    maxRatio * 0.2,
+                    maxRatio * 0.4,
+                    maxRatio * 0.6,
+                    maxRatio * 0.8,
+                    maxRatio * 0.95
+                ]
             };
             break;
 
@@ -795,12 +923,12 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
              // 圧倒的な敵を捌くにはタイピング速度が最も重要
             config.star = {
                 type: "typingSpeed",
-                thresholds: [
-                    120 + (i * 1.5), 
-                    180 + (i * 1.8), 
-                    240 + (i * 2.1), 
-                    300 + (i * 2.9), 
-                    350 + (i * 3.2)
+                thresholds: [ // 圧倒も厳しかったため緩和
+                    80 + (i * 1.0),
+                    120 + (i * 1.2),
+                    160 + (i * 1.4),
+                    200 + (i * 1.6),
+                    240 + (i * 1.8)
                 ]
             };
             break;
@@ -815,6 +943,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
                 allSpawnedDefeated: true,
                 failOnMiss: true 
             };
+            config.spawn.immediateOnClear = true;
             config.clearConditions = { 
                 killCount: precisionKillTarget,
                 noMiss: true // クリア条件に「ノーミス」を明示的に追加
@@ -824,11 +953,11 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.star = {
                 type: "typingSpeed",
                 thresholds: [
-                    80 + (i * 1.5), 
-                    120 + (i * 1.8), 
-                    160 + (i * 2.1), 
-                    200 + (i * 2.4), 
-                    250 + (i * 2.5)
+                    60 + (i * 1.0), // 精密射撃も緩和
+                    90 + (i * 1.2),
+                    120 + (i * 1.4),
+                    150 + (i * 1.6),
+                    180 + (i * 1.8)
                 ]
             };
             break;
@@ -838,6 +967,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.spawn.limit = Math.floor(pureTrialKillTarget * 1.5);
             config.endConditions = { hpZero: true, killCount: pureTrialKillTarget };
             config.clearConditions = { killCount: pureTrialKillTarget };
+            config.spawn.immediateOnClear = true;
             config.itemSpawn = null; // アイテム出現禁止
             config.player = { ...ENEMY_MODE_CONFIG.player, disableActiveSkill: true }; // アクティブスキル禁止
 
@@ -930,6 +1060,10 @@ export function clearQuestStageCache() {
 // =====================================================
 export const STAGES = {
 
+  // =====================================================
+  // デイリー
+  // =====================================================
+
   DAILYtest: {
     bgImage: "battle_gray",
     spawn: {
@@ -966,7 +1100,7 @@ export const STAGES = {
     ...generatedStages,
 
   // =====================================================
-  // ワールド1 ボスバトル定義
+  // ボスバトル定義
   // =====================================================
 
   // 第10ステージ後のレベルチェック（中ボス）
@@ -974,16 +1108,17 @@ export const STAGES = {
     phases: [
       {
         name: "Security Breach",
-        spawn: { interval: 1200, limit: 10, maxAlive: 5 },
+        spawn: { interval: 1200, limit: null, maxAlive: 4, immediateOnClear: true },
         enemyTable: getTierEnemies("T1", ENEMY_TIER_BALANCED),
+        immediateOnClear: true,
         phaseConditions: { killCount: 10 }
       },
       {
         name: "Adware King Appear",
         bgm: "bgm_enemy2",
-        spawn: { interval: 3000, limit: 1, maxAlive: 1 },
-        enemyTable: [{ type: "GRAY_SQUARE_LARGE_RING", weight: 100 }], // 高耐久個体
-        phaseConditions: { allSpawnedDefeated: true }
+        spawn: { interval: 1000, limit: 1, maxAlive: 1 },
+        enemyTable: [{ type: "MID_BOSS_1", weight: 100, pos: { x: 830, y: 150 } }], 
+        phaseConditions: { killCount: 1 }
       }
     ],
     endConditions: { hpZero: true },
@@ -996,7 +1131,7 @@ export const STAGES = {
     phases: [
       {
         name: "Botnet Invasion",
-        spawn: { interval: 1000, limit: 15, maxAlive: 6 },
+        spawn: { interval: 1200, limit: 15, maxAlive: 5, immediateOnClear: true },
         enemyTable: getTierEnemies("T2", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 15 }
       },
@@ -1004,13 +1139,34 @@ export const STAGES = {
         name: "Botnet Commander",
         bgm: "bgm_enemy2",
         spawn: { interval: 2500, limit: 1, maxAlive: 1 },
-        enemyTable: [{ type: "PURPLE_SQUARE_LARGE_RING", weight: 100 }],
-        phaseConditions: { allSpawnedDefeated: true }
+        enemyTable: [{ type: "MID_BOSS_2", weight: 100, pos: { x: 830, y: 150 }  }],
+        phaseConditions: { killCount: 1 }
       }
     ],
     endConditions: { hpZero: true },
     clearConditions: { killCount: 16 },
-    star: { type: "typingSpeed", thresholds: [150, 180, 210, 240, 270] }
+    star: { type: "typingSpeed", thresholds: [150, 180, 210, 240, 260] }
+  },
+
+  W1_MID_BOSS_3: {
+    phases: [
+      {
+        name: "Botnet Invasion",
+        spawn: { interval: 1000, limit: null, maxAlive: 6 },
+        enemyTable: getTierEnemies("T3", ENEMY_TIER_BALANCED),
+        phaseConditions: { timerMs: 40000}
+      },
+      {
+        name: "Botnet Commander",
+        bgm: "bgm_enemy2",
+        spawn: { interval: 1000, limit: 1, maxAlive: 1 },
+        enemyTable: [{ type: "MID_BOSS_3", weight: 100, pos: { x: 830, y: 150 }  }],
+        phaseConditions: { killcount: 1 }
+      }
+    ],
+    endConditions: { hpZero: true },
+    clearConditions: { survive: true },
+    star: { type: "typingSpeed", thresholds: [150, 180, 210, 240, 260] }
   },
 
   // 第30ステージ後のワールドボス
@@ -1018,23 +1174,26 @@ export const STAGES = {
     phases: [
       {
         name: "Gateway Security",
-        spawn: { interval: 900, limit: 20, maxAlive: 8 },
+        spawn: { interval: 900, limit: null, maxAlive: 8, immediateOnClear: true },
         enemyTable: getTierEnemies("T3", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 20 }
       },
       {
         name: "GATEWAY GUARDIAN",
         bgm: "bgm_enemy3",
-        spawn: { interval: 5000, limit: 1, maxAlive: 1 },
-        enemyTable: [{ type: "BOSS", weight: 100 }],
-        phaseConditions: { allSpawnedDefeated: true }
+        spawn: { interval: 1000, limit: 1, maxAlive: 1 },
+        enemyTable: [{ type: "BOSS_1", weight: 100, pos: { x: 830, y: 150 }  }],
+        phaseConditions: { killCount: 1 }
       }
     ],
     endConditions: { hpZero: true },
-    clearConditions: { killCount: 21 },
+    clearConditions: { survive: true },
     star: { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
   },
 
+// ========================================================
+// test
+// =========================================================
   // フェーズテスト用
   PHASE_TEST: {
     phases: [
@@ -1043,6 +1202,7 @@ export const STAGES = {
         spawn: {
           interval: 1500,
           limit: 5,
+          immediateOnClear: true
         },
         enemyTable: [{ type: "GRAY_CIRCLE_SMALL", weight: 100 }],
         phaseConditions: { allSpawnedDefeated: true }
@@ -1099,6 +1259,7 @@ export const STAGES = {
       interval: 2000,
       limit: 10,
       maxAlive: null,
+      immediateOnClear: true
     },
     itemSpawn: {
       interval: 5000,
@@ -1132,6 +1293,7 @@ export const STAGES = {
       interval: 1500,
       limit: 27,
       maxAlive: null,
+      immediateOnClear: true
     },
     enemyTable: [
       { type: "GRAY_CIRCLE_NORMAL", weight: 40 },
@@ -1178,25 +1340,23 @@ export const STAGES = {
     }
   },
 
-  STAGE4test: {
+  TESTSTAGE: {
     spawn: {
       interval: 1000,
-      limit: null,
+      limit: 1,
       maxAlive: null,
+      immediateOnClear: true
     },
     enemyTable: [
-      { type: "GRAY_CIRCLE_NORMAL", weight: 40 },
-      { type: "PURPLE_SQUARE_NORMAL", weight: 40 },
-      { type: "GRAY_SQUARE_LARGE", weight: 20 },
-      { type: "BOSS", weight: 5 }
+    { type: "BOSS_2", weight: 100 },
     ],
     endConditions: {
         hpZero: true,
-        killCount: 15,
+        killCount: 1,
         allSpawnedDefeated: false
     },
     clearConditions: {
-        killCount: 4
+        killCount: 1
     },
     star: {
       type: "accuracy",
