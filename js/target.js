@@ -1,9 +1,21 @@
 // target.js
 // id 今現在使用していない。
 // tags : 句読点、促音、記号、英語、ことわざ、擬音
+// tags(long): 文学、セキュリティ、おもしろ、プログラミング、自作キーボード
 export const TARGETS = [
   // --- 標準問題 (タグなし) ---
   { word: "空", text: "そら", tags: [] },
+  { word: "缶", text: "かん", tags: [] },
+  { word: "芯", text: "しん", tags: [] },
+  { word: "猫", text: "ねこ", tags: [] },
+  { word: "犬", text: "いぬ", tags: [] },
+  { word: "鳥", text: "とり", tags: [] },
+  { word: "魂胆", text: "こんたん", tags: [] },
+  { word: "花火", text: "はなび", tags: [] },
+  { word: "ランタン", text: "らんたん", tags: [] },
+  { word: "温暖", text: "おんだん", tags: [] },
+  { word: "煉炭", text: "れんたん", tags: [] },
+  { word: "防弾", text: "ぼうだん", tags: [] },
   { word: "青い海", text: "あおいうみ", tags: [] },
   { word: "山登り", text: "やまのぼり", tags: [] },
   { word: "ひまわりばたけ", text: "ひまわりばたけ", tags: [] },

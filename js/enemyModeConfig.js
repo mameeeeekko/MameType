@@ -604,7 +604,7 @@ const ITEM_TIER_TABLE = {
     T2: [{ type: "HEAL_SMALL", weight: 50 }, { type: "KILL_SMALL", weight: 50 }],
     T3: [{ type: "HEAL_SMALL", weight: 40 }, { type: "KILL_SMALL", weight: 40 }, { type: "FREEZE_SMALL", weight: 20 }],
     T4: [{ type: "HEAL_MEDIUM", weight: 30 }, { type: "KILL_MEDIUM", weight: 30 }, { type: "FREEZE_MEDIUM", weight: 20 }, { type: "COOLDOWN_SMALL", weight: 20 }],
-    T5: [{ type: "HEAL_LARGE", weight: 25 }, { type: "KILL_LARGE", weight: 25 }, { type: "FREEZE_LARGE", weight: 25 }, { type: "COOLDOWN_MEDIUM", weight: 25 }]
+    T5: [{ type: "HEAL_LARGE", weight: 15 }, { type: "KILL_LARGE", weight: 15 }, { type: "FREEZE_LARGE", weight: 15 }, { type: "COOLDOWN_MEDIUM", weight: 13 },{ type: "HEAL_MEDIUM", weight: 12 }, { type: "KILL_MEDIUM", weight: 13 }, { type: "FREEZE_MEDIUM", weight: 12 },{ type: "KILL_ALL", weight: 5}]
 };
 
 function getTierKey(stageNum) {
@@ -702,9 +702,9 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
 
     // 難易度の緩やかな上昇計算
     const baseSpawnInterval = Math.max(1200, 2400 - (i * 10)); // 下限を1200msに引き上げ、初期も2400msと余裕を持たせた
-    const killGoal = 5 + Math.floor(i / 4); // 討伐目標数
-    const timeLimit = 30000 + (i * 300); // 30秒〜60秒程度
-    const maxAlive = Math.min(6, 3 + Math.floor(i / 25)); // 通常ミッションは最大6体までに制限
+    const killGoal = 10 + Math.floor(i / 4); // 討伐目標数
+    const timeLimit = 30000 + (i * 1000); // 30秒〜130秒程度
+    const maxAlive = Math.min(8, 4 + Math.floor(i / 25)); // 通常ミッションは最大8体までに制限
 
     // ミッションパターンごとの説明
     const missionDescriptions = [
@@ -989,7 +989,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
     if (i >= 5 && config.itemSpawn !== null) {
         config.itemSpawn = {
             interval: 8000 - (i * 30),
-            chance: 0.3 + (i * 0.005), // 徐々にアイテムが出やすくなる
+            chance: 0.2 + (i * 0.001), // 徐々にアイテムが出やすくなる
             limit: null,
             maxAlive: 1
         };
@@ -1348,7 +1348,7 @@ export const STAGES = {
       immediateOnClear: true
     },
     enemyTable: [
-    { type: "BOSS_2", weight: 100 },
+    { type: "MID_BOSS_3", weight: 100 },
     ],
     endConditions: {
         hpZero: true,

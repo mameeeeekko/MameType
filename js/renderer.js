@@ -545,7 +545,7 @@ function renderWordDisplay(state) {
 
   // 英語問題の場合はメインの単語表示を隠す
   if (isEnglish(text)) {
-    wordDiv.style.display = "none";
+    wordDiv.style.display = "hidden";
   } else {
     wordDiv.style.display = "block";
   }
@@ -692,9 +692,9 @@ if (romaScroll) {
 function renderNormal({ text, pos, typed, inputedRomaji }) {
 const jpDiv = dom.jp();
 if (jpDiv) {
-  if (isEnglish(text)) {
-    jpDiv.style.display = "none";
-  } else {
+   if (isEnglish(text)) {
+     jpDiv.style.display = "none";
+   } else {
     jpDiv.style.display = "inline-block";
 
   const done = text.slice(0, pos);

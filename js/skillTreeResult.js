@@ -6,6 +6,8 @@ import { startSkillMode, checkSkillUnlocks, SKILL_TREE, checkUnlockByResult, get
 import { showSkillResultIntro } from "./skillTreeUI.js";
 import { getSkillById } from "./questSkills.js";
 import { getPlayerStats } from "./questPlayerStats.js";
+import { images } from "./assetsLoader.js";
+
 
 export function handleSkillModeResult(nodeId) {
 
@@ -125,7 +127,7 @@ export function handleSkillModeResult(nodeId) {
                         ? `
                         <div class="skill-result-header" style="display: flex; justify-content: center; align-items: center; margin-bottom: 5px;">
                             <div class="skill-result-icon">
-                                <img src="${skill.icon}" alt="${skill.name}">
+                                <img src="${images[skill.icon]?.src || ""}" alt="${skill.name}">
                             </div>
 
                             <div class="skill-name">

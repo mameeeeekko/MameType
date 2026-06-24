@@ -7,9 +7,10 @@ import { buildBaseRomaji } from "./typingLogic.js";
 import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, 
     renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBurstEffect, 
     renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
-    renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, 
+    renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, spawnItemSkillEffect,
     renderItemSkillEffects, clearAllEffects, playErrorSound, playPhaseWarningSound,
-    renderLaserEffects, renderPlayerDamageEffects, spawnLaserEffect, spawnHitWave} from "./effectManager.js";
+    renderLaserEffects, renderPlayerDamageEffects, spawnLaserEffect, spawnHitWave,
+    renderPlayerNegateEffects, spawnPlayerNegateEffect} from "./effectManager.js";
 import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
@@ -49,6 +50,7 @@ const player = {
     y: canvas.height / 2,
     radius: p.radius,
     _hpDrainAccumulator: 0, // HP減少の蓄積用
+    lastDeathCause: null, // 復活スキル判断のためのフラグ
 };
 
 let candidateEnemies = []; // ロック前の候補敵
@@ -275,10 +277,10 @@ export function killEnemy(enemy, state, options = {}) {
 // ===============================
 function gameLoop(timestamp) {
 
-    if (endingSequence) {
-        loopId = requestAnimationFrame(gameLoop);
-        return;
-    }
+    // NOTE: do not early-return when `endingSequence` is true.
+    // We want to continue rendering remaining effects (enemy kill effects,
+    // particles, etc.) so the player can see the final animations.
+    // Spawning and phase progression are already gated by `endingSequence`.
 
     if (!enemyLoopActive) return;
 
@@ -325,6 +327,16 @@ function gameLoop(timestamp) {
     const isPureEnemyMode =
         gameState.mode === GameModes.ENEMY_MODE &&
         !gameState.currentQuestNode;
+
+    // プレイヤー無敵タイマーの減算
+    if (gameState.player && gameState.player.invincibleTimer > 0) {
+        gameState.player.invincibleTimer = Math.max(0, gameState.player.invincibleTimer - deltaTime);
+    }
+
+    // 復活スキル使用済みフラグのリセット
+    if (gameState._reviveUsed && player.hp > 0) {
+        player.lastDeathCause = null;
+    }
 
     // ===============================
     // Active Skill Charge Update
@@ -433,6 +445,60 @@ function gameLoop(timestamp) {
     }
     // 敵更新
     enemies.forEach(enemy => {
+        // ======================
+        // スキルノックバック
+        // ======================
+
+        if (enemy.knockbackDelay > 0) {
+
+            enemy.knockbackDelay--;
+
+            if (enemy.knockbackDelay === 0) {
+
+                spawnKnockbackEffect(
+                    enemy.x,
+                    enemy.y
+                );
+            }
+
+            return;
+        }
+
+        if (enemy.knockbackTime !== undefined) {
+
+            enemy.knockbackTime++;
+
+            const t =
+                enemy.knockbackTime /
+                enemy.knockbackDuration;
+
+            enemy.x =
+                enemy.knockbackStartX +
+                (enemy.knockbackTargetX -
+                enemy.knockbackStartX) * t;
+
+            enemy.y =
+                enemy.knockbackStartY +
+                (enemy.knockbackTargetY -
+                enemy.knockbackStartY) * t;
+
+            if (enemy.knockbackTime >= enemy.knockbackDuration) {
+
+                delete enemy.knockbackTime;
+                delete enemy.knockbackDelay;
+
+                delete enemy.knockbackStartX;
+                delete enemy.knockbackStartY;
+
+                delete enemy.knockbackTargetX;
+                delete enemy.knockbackTargetY;
+
+                delete enemy.knockbackDuration;
+            }
+
+            return;
+        }
+
         if (enemy && !enemy.isDead) {
 
             enemy.update(
@@ -488,6 +554,20 @@ function gameLoop(timestamp) {
     enemyBullets.length = 0;
     enemyBullets.push(...aliveBullets);
 
+    // =========================
+    // 毎フレーム：プレイヤー防御値を同期
+    // クエスト中は `getPlayerStatsForEnemy("quest")` の最終ステータスを
+    // 参照して `player.defense` を上書きする（スキルの反映漏れ防止）
+    // =========================
+    try {
+        if (gameState.isQuestMode) {
+            const syncStats = getPlayerStatsForEnemy("quest");
+            player.defense = Number(syncStats.defense) || 0;
+        }
+    } catch (e) {
+        // フォールバック不要：同期失敗してもゲーム継続
+    }
+
     renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies);
     renderEnemies(ctx, enemyBullets, lockedEnemy, []);
     renderPlayer(ctx, player, gameState.enemyStats);
@@ -516,7 +596,8 @@ function gameLoop(timestamp) {
 
     renderLockOnEffects(ctx);
     renderLaserEffects(ctx); // ★追加
-    renderPlayerDamageEffects(ctx); // ★追加
+    renderPlayerDamageEffects(ctx); // レーザーダメージ
+    renderPlayerNegateEffects(ctx); // 敵の攻撃防いだエフェクト
 
     renderShotEffects(ctx);
     renderHitParticles(ctx);
@@ -530,95 +611,96 @@ function gameLoop(timestamp) {
         // =============================================================
         if (!endingSequence && !stats.isTransitioning) {
 
-        // 全滅時即座に出現フラグの確認
-        const immediate = currentPhase.spawn?.immediateOnClear;
-        // 画面上に敵（ターゲット）が一体もいないか判定
-        const isScreenEmpty = (enemies.length === 0 && enemyBullets.length === 0);
+            // 全滅時即座に出現フラグの確認
+            const immediate = currentPhase.spawn?.immediateOnClear;
+            // 画面上に敵（ターゲット）が一体もいないか判定
+            const isScreenEmpty = (enemies.length === 0 && enemyBullets.length === 0);
 
-        // ★一定時間ごとに敵出現、または「即座に出現」がONで敵がいない場合
-        if ((now - lastSpawnTime > spawnInterval) || (immediate && isScreenEmpty)) {
+            // ★一定時間ごとに敵出現、または「即座に出現」がONで敵がいない場合
+            if ((now - lastSpawnTime > spawnInterval) || (immediate && isScreenEmpty)) {
 
-            const spawnLimitOk =
-                currentPhase.spawn.limit == null ||
-                spawnedCount < currentPhase.spawn.limit;
+                const spawnLimitOk =
+                    currentPhase.spawn.limit == null ||
+                    spawnedCount < currentPhase.spawn.limit;
 
-            // maxAlive未設定なら無制限 DEV対応
-            const maxAlive =
-                devOverride.spawn?.maxAlive ??
-                currentPhase.spawn.maxAlive;
+                // maxAlive未設定なら無制限 DEV対応
+                const maxAlive =
+                    devOverride.spawn?.maxAlive ??
+                    currentPhase.spawn.maxAlive;
 
-            const aliveLimitOk =
-                maxAlive == null ||
-                enemies.length < maxAlive;
+                const aliveLimitOk =
+                    maxAlive == null ||
+                    enemies.length < maxAlive;
 
-            if (spawnLimitOk && aliveLimitOk) {
+                if (spawnLimitOk && aliveLimitOk) {
 
-                const enemy = spawnEnemy(
-                    player,
-                    enemies,
-                    canvas,
-                    currentPhase,
-                    enemyDiff
-                );
+                    const enemy = spawnEnemy(
+                        player,
+                        enemies,
+                        canvas,
+                        currentPhase,
+                        enemyDiff
+                    );
 
-                if (enemy && enemy.word) {
+                    if (enemy && enemy.word) {
 
-                    enemy.originalWord = enemy.word;
-                    enemy.pos = 0;
-                    enemy.inputedRomaji = "";
-                    enemy.typed = "";
-                    enemy.baseRomaji = buildBaseRomaji(enemy.text,0);
+                        enemy.originalWord = enemy.word;
+                        enemy.pos = 0;
+                        enemy.inputedRomaji = "";
+                        enemy.typed = "";
+                        enemy.baseRomaji = buildBaseRomaji(enemy.text,0);
 
-                    if (enemy) {
+                        if (enemy) {
 
-                        // フリーモード時はすべての敵をノルマ対象(isObjective)として扱う
-                        if (gameState.isFreeMode) {
-                            enemy.isObjective = true;
+                            // フリーモード時はすべての敵をノルマ対象(isObjective)として扱う
+                            if (gameState.isFreeMode) {
+                                enemy.isObjective = true;
+                            }
+
+                            enemies.push(enemy);
+
+                            if (enemy.isObjective) {
+                                gameState.enemyStats.objectiveSpawned++;
+                            }
+
+                            if (currentPhase.spawn?.limit != null) {
+                                gameState.enemyStats.remainingSpawn--;
+                            }
+
+                            spawnedCount++;
+                            lastSpawnTime = now;
                         }
 
-                        enemies.push(enemy);
+                        // ======================================
+                        // アイテムスポーン
+                        // ======================================
+                        if (currentPhase.itemSpawn || stage.itemSpawn) {
+                            const itemConfig = currentPhase.itemSpawn || stage.itemSpawn;
+                            const itemInterval = itemConfig.interval ?? 10000;
 
-                        if (enemy.isObjective) {
-                            gameState.enemyStats.objectiveSpawned++;
-                        }
+                            if (now - lastItemSpawnTime >= itemInterval) {
 
-                        if (currentPhase.spawn?.limit != null) {
-                            gameState.enemyStats.remainingSpawn--;
-                        }
+                                const itemTable = currentPhase.itemTable || stage.itemTable;
+                                spawnItemEnemy({
+                                    enemies,
+                                    player,
+                                    canvas
+                                }, itemConfig, itemTable);
 
-                        spawnedCount++;
-                        lastSpawnTime = now;
-                    }
-
-                    // ======================================
-                    // アイテムスポーン
-                    // ======================================
-                    if (currentPhase.itemSpawn || stage.itemSpawn) {
-                        const itemConfig = currentPhase.itemSpawn || stage.itemSpawn;
-                        const itemInterval = itemConfig.interval ?? 10000;
-
-                        if (now - lastItemSpawnTime >= itemInterval) {
-
-                            const itemTable = currentPhase.itemTable || stage.itemTable;
-                            spawnItemEnemy({
-                                enemies,
-                                player,
-                                canvas
-                            }, itemConfig, itemTable);
-
-                            lastItemSpawnTime = now;
+                                lastItemSpawnTime = now;
+                            }
                         }
                     }
                 }
             }
         }
-        }
-//  // ログ
-// console.log(
-//     "spawned:", spawnedCount,
-//     "limit:", ENEMY_MODE_CONFIG.spawn.limit,
-//     "alive:", enemies.length
-// );
+    //  // ログ
+    // console.log(
+    //     "spawned:", spawnedCount,
+    //     "limit:", ENEMY_MODE_CONFIG.spawn.limit,
+    //     "alive:", enemies.length
+    // );
+
     // ===============================
     // 終了条件チェック
     // ===============================
@@ -634,13 +716,76 @@ function gameLoop(timestamp) {
     const phaseCond = currentPhase.phaseConditions || currentPhase.endConditions || {};
  
     // 全体失敗条件のチェック
-    if (globalEnd.hpZero && player.hp <= 0) {
-        gameState.enemyStats.failed = true;
-        forceFail = true;
+    if (globalEnd.hpZero && player.hp <= 0){
+
+        const deathCause = player.lastDeathCause;
+
+        // ★ボス接触は復活不可
+        const canRevive = deathCause !== "boss_contact";
+
+        try {
+            const stats = getPlayerStatsForEnemy("quest");
+            const reviveChance = Number(stats.reviveChance) || 0;
+
+            if (canRevive && reviveChance > 0 && !gameState._reviveUsed && Math.random() < reviveChance) {
+
+                // ★復活成功 3割のHP
+                player.hp = Math.max(1, Math.floor((player.maxHp || 1) * 0.3));
+                gameState._reviveUsed = true;
+
+                player.lastDeathCause = null;
+
+                // ★超重要：失敗状態を完全リセット
+                gameState.enemyStats.failed = false;
+                forceFail = false;
+                endingSequence = false;
+
+                // ★追加（これが重要）
+                gameState.enemyStats.mistakeCount = 0;
+                gameState.enemyStats.lastKeyTime = getNow();
+
+                // ★追加：HP0判定再発防止用フラグ
+                gameState._reviving = true;
+
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        gameState._reviving = false;
+                    });
+                });
+
+                // 復活時に入力状態リセット
+                fullResetInput();
+                resetCandidates();
+                typedBuffer = "";
+                lockedEnemy = null;
+
+                // 復活したのでフレームループを継続する（早期 return の前に予約）
+                loopId = requestAnimationFrame(gameLoop);
+
+                spawnItemSkillEffect({
+                    category: "revive",
+                    source: "skill",
+                    x: player.x,
+                    y: player.y
+                });
+
+                return;
+            }
+
+            // =========================
+            // ★復活失敗 → 死亡確定
+            // =========================
+            gameState.enemyStats.failed = true;
+            forceFail = true;
+
+        } catch (e) {
+            gameState.enemyStats.failed = true;
+            forceFail = true;
+        }
     }
 
     // ★ 精密射撃（ミス即終了）または他所での失敗確定の判定
-    if ((globalEnd.failOnMiss && stats.mistakeCount > 0) || stats.failed) {
+    if (!gameState._reviving && (globalEnd.failOnMiss && stats.mistakeCount > 0 || stats.failed)) {
         gameState.enemyStats.failed = true;
         forceFail = true;
     }
@@ -1136,7 +1281,18 @@ export function handleEnemyKey(e) {
             }
 
             // タイプでチェイン増加 スキル加算＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
-            stats.chainBar += stats.gainOnType * stats.chainRate;
+            // デバッグ出力：増加量が0の場合に原因追跡しやすくする
+            try {
+                const gainOnType = stats.gainOnType ?? 0;
+                const chainRate = stats.chainRate ?? 1;
+                const inc = gainOnType * chainRate;
+                if (inc === 0) {
+                    console.log("[DEBUG] Chain type add zero:", { gainOnType, chainRate, chainBar: stats.chainBar });
+                }
+                stats.chainBar += inc;
+            } catch (e) {
+                console.error("[DEBUG] Error computing chain gain on type", e);
+            }
 
             if (stats.chainBar > stats.chainBarMax) {
                 stats.chainBar = stats.chainBarMax;
@@ -1881,6 +2037,8 @@ export function restartEnemyMode() {
 export async function endEnemyMode() {
 
     gameState.enemyMode = false;
+    // 戦闘終了時に「一度だけ復活」フラグをリセットする
+    gameState._reviveUsed = false;
 
     stopBGM();
     
@@ -2053,12 +2211,12 @@ export async function endEnemyMode() {
                 !hasReceivedStageReward(node.id)
             ) {
 
-                const beforeSlot = getPlayerStatsForEnemy().skillSlotMax;
+                const beforeSlot = getPlayerStatsForEnemy("quest").skillSlotMax;
                 const beforeStock = getActiveSkillStockMax();
 
                 applySkillNodeEffect(node.reward, "stage");
 
-                const afterSlot = getPlayerStatsForEnemy().skillSlotMax;
+                const afterSlot = getPlayerStatsForEnemy("quest").skillSlotMax;
                 const afterStock = getActiveSkillStockMax();
 
                 // =========================
@@ -2080,7 +2238,7 @@ export async function endEnemyMode() {
         }
 
         // ⭐ ① 先に取得（これを追加）
-        const playerBefore = structuredClone(getPlayerStatsForEnemy());
+        const playerBefore = structuredClone(getPlayerStatsForEnemy("quest"));
         // EXP計算（補正版）
         let gainedExp = 0;
 
@@ -2102,15 +2260,16 @@ export async function endEnemyMode() {
 
             const starMultiplier = starMultiplierTable[starCount] ?? 1.0;
 
-            // ★最終EXP
-            gainedExp = Math.floor(baseExp * failMultiplier * starMultiplier);
+            // ★最終EXP（パッシブでの経験値倍率を反映）
+            const expMultiplierFromSkills = (playerBefore.expMultiplier || 1);
+            gainedExp = Math.floor(baseExp * failMultiplier * starMultiplier * expMultiplierFromSkills);
         }
         
         const prevExp = playerBefore.exp;
         // EXP加算
         const expResult = addExp(gainedExp); // ★受け取る
 
-        const afterStats = getPlayerStatsForEnemy();
+        const afterStats = getPlayerStatsForEnemy("quest");
         const hpUp = expResult.hpIncrease || 0;
         const defUp = expResult.defIncrease || 0;
 

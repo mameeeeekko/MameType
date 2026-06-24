@@ -1,4 +1,5 @@
 import { Enemy, EnemyTypes, ItemEnemy, ItemTypes } from "./enemy.js";
+import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getUISafeTop } from "./enemyCore.js";
 import { getWord } from "./target.js";
 import { buildBaseRomaji } from "./typingLogic.js";
@@ -238,8 +239,17 @@ export function spawnItemEnemy(state, config, itemTableOverride){
     const {player, canvas} = state;
     if (!config) return;
 
-    // chance
-    if (Math.random() > config.chance) {
+    // chance (クエスト用の最終ステータスからアイテム出現率ボーナスを適用)
+    let chanceBase = (config.chance || 0);
+    try {
+        const stats = getPlayerStatsForEnemy("quest");
+        const mult = Number(stats.itemSpawnMultiplier) || 1;
+        chanceBase = chanceBase * mult;
+    } catch (e) {
+        // ignore
+    }
+
+    if (Math.random() > chanceBase) {
         return;
     }
 

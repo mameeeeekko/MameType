@@ -6,6 +6,8 @@ import { backToMenu, exitSkillMode } from "./gameCore.js";
 import { backToQuestMap } from "./main.js";
 import { devOverride } from "../dev/devOverride.js";
 import { setupCanvasDPR } from "./canvasUtil.js";
+import { images } from "./assetsLoader.js";
+
 
 // =========================================================
 // ノード座標（固定配置）
@@ -14,22 +16,86 @@ import { setupCanvasDPR } from "./canvasUtil.js";
 const NODE_POS = {
     START: { x: 0, y: 0 },
 
-    // 上（チェイン）
-    CHAIN_1: { x: 0, y: -80 },
-    CHAIN_2: { x: 0, y: -160 },
+    // 左（チェイン系）
+    CHAIN_UP_1: { x: -80, y: 0 },
+    CHAIN_UP_2: { x: -400, y: 0 },
+    CHAIN_UP_3: { x: -480, y: 70 },
+    CHAIN_UP_4: { x: -720, y: -70 },
 
-    // 右（スコア）
-    SCORE_1: { x: 120, y: 0 },
+    CHAIN_DECAY_1: { x: -160, y: 0 },
+    CHAIN_DECAY_2: { x: -320, y: 70 },
+    CHAIN_DECAY_3: { x: -560, y: 70 },
+    CHAIN_DECAY_4: { x: -720, y: 70 },
 
-    // 下（耐久）
-    DEF_1: { x: 0, y: 120 },
+    GLASS_CHAIN_1: { x: -240, y: 0 },
+    GLASS_CHAIN_2: { x: -240, y: 70 },
+    GLASS_CHAIN_3: { x: -480, y: -70 },
+    GLASS_CHAIN_4: { x: -640, y: 0 },
 
-    // 左（自由枠）
-    ACTIVE_1: { x: -120, y: 0 },
-    SLOT_1: { x: -120, y: 120 },
-    STOCK_1: { x: -120, y: -120 },
-    ACTIVE_2: { x: -240, y: 0 },
-    ACTIVE_3: { x: -360, y: 0 },
+    CHAIN_BONUS_1: { x: -240, y: -70 },
+    CHAIN_BONUS_2: { x: -320, y: -70 },
+    CHAIN_BONUS_3: { x: -560, y: -70 },
+    CHAIN_BONUS_4: { x: -720, y: 0 },
+
+    // 右（防御回復系）
+    HEAL_SMALL: { x: 80, y: 0 },
+    HEAL_MEDIUM: {x: 240, y: 140},
+    HEAL_HIGH: {x: 320, y: 140},
+
+    DAMAGE_NEGATE_1: {x: 160, y: 0},
+    DAMAGE_NEGATE_2: {x: 240, y: 0},
+    DAMAGE_NEGATE_3: {x: 320, y: 0},
+
+    REVIVE_1: {x: 160, y: -70},
+    REVIVE_2: {x: 240, y: -70},
+    REVIVE_3: {x: 320, y: -70},
+
+
+    INVINCIBLE_SHORT: {x: 160, y: 70},
+    INVINCIBLE_MEDIUM: {x: 240, y: 70},
+    INVINCIBLE_LONG: {x: 320, y: 70},
+
+    // 上（攻撃系）
+    
+    KB_UP_1: { x: 0, y: -70 },
+    KB_UP_2: { x: 0, y: -140 },
+    KB_UP_3: { x: -80, y: -280 },
+    KB_UP_4: { x: 0, y: -350 },
+
+    KNOCKBACK_EDGE: {x: 80, y: -420},
+
+    FREEZE_LIGHT: { x: 80, y: -140 },
+    FREEZE_MEDIUM: {x: 80, y: -210},
+    FREEZE_HEAVY: {x: 80, y: -280},
+    
+    KILL_NEAREST: { x: -80, y: -140 },
+    KILL_RANDOM: { x: -80, y: -210 },
+    KILL_NEAREST_H: { x: -160, y: -210 },
+    KILL_ALL: {x: -80, y: -420},
+
+   // 下 （補助系）
+
+    ITEM_SPAWN_1: {x: 80, y: 210},
+    ITEM_SPAWN_2: {x: 160, y: 350},
+    ITEM_SPAWN_3: {x: 160, y: 490},
+
+    SLOT_1: { x: 0, y: 280 },
+    STOCK_1: { x: 0, y: 350 },
+    
+    // Max HP ノード（左下）
+    MAX_HP_1: { x: 0, y: 140 },
+    MAX_HP_2: { x: 160, y: 280 },
+    MAX_HP_3: { x: 0, y: 490 },
+
+    // DEF ノード（左寄り）
+    DEF_UP_1: { x: 0, y: 70 },
+    DEF_UP_2: { x: -160, y: 280 },
+    DEF_UP_3: { x: -160, y: 490 },
+
+    // EXP ノード（右下）
+    EXP_UP_1: { x: -80, y: 210 },
+    EXP_UP_2: { x: -160, y: 350 },
+    EXP_UP_3: { x: 0, y: 420 },
     
 };
 
@@ -50,6 +116,51 @@ export function renderSkillTreeUI(container){
 
     const centerX = width / 2;
     const centerY = height / 2;
+
+    // =========================
+    // 自動フィット: NODE_POS の範囲を取得して
+    // キャンバス内に収まるように scale と origin を計算する
+    // =========================
+    const nodeKeys = Object.keys(NODE_POS).filter(k => SKILL_TREE[k]);
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    nodeKeys.forEach(k => {
+        const p = NODE_POS[k];
+        if (!p) return;
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
+    });
+
+    if (minX === Infinity) {
+        minX = -200; minY = -200; maxX = 200; maxY = 200;
+    }
+
+    const padding = 80; // px
+    const contentW = (maxX - minX) || 1;
+    const contentH = (maxY - minY) || 1;
+
+    // required size in px (account for padding)
+    const requiredW = contentW + padding * 2;
+    const requiredH = contentH + padding * 2;
+
+    // scale to fit (but allow upscaling a bit)
+    const fitScale = Math.min(width / requiredW, height / requiredH, 1.5);
+
+    // origin such that bbox center aligns with canvas center
+    const bboxCenterX = (minX + maxX) / 2;
+    const bboxCenterY = (minY + maxY) / 2;
+
+    const originX = centerX - bboxCenterX * fitScale;
+    const originY = centerY - bboxCenterY * fitScale;
+
+    function toCanvasPos(pos) {
+        return {
+            x: originX + (pos.x || 0) * fitScale,
+            y: originY + (pos.y || 0) * fitScale
+        };
+    }
 
     const stats = getPlayerStats();
 
@@ -109,16 +220,19 @@ export function renderSkillTreeUI(container){
     Object.values(SKILL_TREE).forEach(node => {
         if (!node.children) return;
 
-        const from = NODE_POS[node.id];
-        if (!from) return;
+            const from = NODE_POS[node.id];
+            if (!from) return;
 
-        node.children.forEach(childId => {
-            const to = NODE_POS[childId];
-            if (!to) return;
+            node.children.forEach(childId => {
+                const to = NODE_POS[childId];
+                if (!to) return;
 
-            ctx.beginPath();
-            ctx.moveTo(centerX + from.x, centerY + from.y);
-            ctx.lineTo(centerX + to.x, centerY + to.y);
+                const pFrom = toCanvasPos(from);
+                const pTo = toCanvasPos(to);
+
+                ctx.beginPath();
+                ctx.moveTo(pFrom.x, pFrom.y);
+                ctx.lineTo(pTo.x, pTo.y);
 
             const fromUnlocked = unlocked.includes(node.id);
             const toUnlocked = unlocked.includes(childId);
@@ -146,8 +260,9 @@ export function renderSkillTreeUI(container){
         const pos = NODE_POS[node.id];
         if (!pos) return;
 
-        const x = centerX + pos.x;
-        const y = centerY + pos.y;
+        const cp = toCanvasPos(pos);
+        const x = cp.x;
+        const y = cp.y;
 
         const isUnlocked = unlocked.includes(node.id);
 
@@ -162,8 +277,9 @@ export function renderSkillTreeUI(container){
             }
         }
 
+        const scaledRadius = Math.max(8, nodeRadius * fitScale);
         ctx.beginPath();
-        ctx.arc(x, y, nodeRadius, 0, Math.PI * 2);
+        ctx.arc(x, y, scaledRadius, 0, Math.PI * 2);
 
         if (isUnlocked) {
             ctx.fillStyle = "#4caf50";
@@ -195,7 +311,7 @@ export function renderSkillTreeUI(container){
             id: node.id,
             x,
             y,
-            r: nodeRadius,
+            r: scaledRadius,
             canUnlock
         });
     });
@@ -324,19 +440,20 @@ export function renderSkillTreeUI(container){
 
         tooltip.style.display = "block";
 
-        const containerRect = container.getBoundingClientRect();
         const tooltipWidth = 260;
         const tooltipHeight = 180;
 
-        let left = containerRect.left + mx + 16;
-        let top = containerRect.top + my + 16;
+        let left = mx + 20;
+        let top = my + 20;
 
-        if (left + tooltipWidth > window.innerWidth) {
-            left = containerRect.left + mx - tooltipWidth - 16;
+        // コンテナ右端を超えたら左へ
+        if (left + tooltipWidth > container.clientWidth) {
+            left = mx - tooltipWidth - 20;
         }
 
-        if (top + tooltipHeight > window.innerHeight) {
-            top = containerRect.top + my - tooltipHeight - 16;
+        // コンテナ下端を超えたら上へ
+        if (top + tooltipHeight > container.clientHeight) {
+            top = my - tooltipHeight - 20;
         }
 
         tooltip.style.left = `${left}px`;
@@ -345,10 +462,13 @@ export function renderSkillTreeUI(container){
         const unlockText = getUnlockText(node.unlock);
         const challengeText = getChallengeText(node.challenge);
         const requirementText = getRequirementText(node.requirements);
+        const tagHtml = (node.challenge.tags || [])
+            .map(tag => `<span class="skill-tag">${tag}</span>`)
+            .join("");
 
         tooltip.innerHTML = `
             <div class="title">
-                <img class="skill-icon-img" src="${skill.icon}" />
+                <img class="skill-icon-img" src="${images[skill.icon]?.src || ""}" />
                 <span>${skill.name}</span>
             </div>
             <div class="desc">${skill.desc}</div>
@@ -370,6 +490,15 @@ export function renderSkillTreeUI(container){
                     <div class="challenge">
                         <div class="label">-挑戦内容-</div>
                         <div class="value">${challengeText}</div>
+                    </div>
+                `
+                : ""
+            }
+
+            ${tagHtml
+                ? `
+                    <div class="skill-tags">
+                        ${tagHtml}
                     </div>
                 `
                 : ""
@@ -440,13 +569,16 @@ export function showSkillIntro(node, onStart, onCancel) {
 
   const unlockText = getUnlockText(node.unlock);
   const challengeText = getChallengeText(node.challenge);
+  const tagHtml = (node.challenge.tags || [])
+            .map(tag => `<span class="skill-tag">${tag}</span>`)
+            .join("");
 
   overlay.innerHTML = `
     <div class="stage-intro-box">
       <h2>SKILL CHALLENGE</h2>
 
       <div class="intro-section">
-        <img class="skill-icon-img" src="${skill.icon}" />
+        <img class="skill-icon-img" src="${images[skill.icon]?.src || ""}" />
         <div>${skill?.name || "-"}</div>
         <div>${skill?.desc || ""}</div>
       </div>
@@ -461,6 +593,15 @@ export function showSkillIntro(node, onStart, onCancel) {
         `
         : ""
       }
+
+        ${tagHtml
+            ? `
+                <div class="skill-tags">
+                    ${tagHtml}
+                </div>
+            `
+            : ""
+        }
 
       ${
         unlockText
@@ -526,7 +667,7 @@ export function showSkillResultIntro(node, isClear, onNext) {
       <h2>${title}</h2>
 
       <div class="intro-section">
-        <img class="skill-icon-img" src="${skill.icon}" />
+        <img class="skill-icon-img" src="${images[skill.icon]?.src || ""}" />
         <div>${skill?.name || "-"}</div>
       </div>
       

@@ -27,7 +27,6 @@ import { getPlayerStats } from "./playerStats.js";
 import { updateHud, initAchievementsUI } from "./hud.js";
 import { handleKey } from './inputCore.js';
 import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode } from './enemyCore.js';
-import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
 import { renderQuestMapUI, openQuestMenuModal } from "./questMapUI.js";
 import { reloadQuestProgress, resetQuestAll } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
@@ -38,6 +37,12 @@ import { loadAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
 import { clearQuestStageCache, refreshStages, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
+import {
+  DIFFICULTIES,
+  getCurrentDifficulty,
+  setCurrentDifficulty,
+  getDifficultyDescription
+} from "./difficulties.js";
 
 
 
@@ -338,7 +343,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("versionLabel").textContent = `v${APP_VERSION}`;
 
-  initDifficultyButtons()
+  createDifficultySelector(
+    "standardDifficultyButtons",
+    "standardDifficultyInfo",
+    "free",
+    "standard"
+  );
+
+  createDifficultySelector(
+    "timeAttackDifficultyButtons",
+    "timeAttackDifficultyInfo",
+    "free",
+    "timeattack"
+  );
+
+  createDifficultySelector(
+    "enemyDifficultyButtons",
+    "enemyDifficultyInfo",
+    "free",
+    "enemy"
+  );
+
   initKeybinds();
   initAchievementsUI();
   // ゲーム画面描画準備
@@ -608,37 +633,59 @@ function renderQuestSlots() {
 // =====================================================
 // 難易度セレクト初期化
 // =====================================================
-function initDifficultyButtons() {
-  const difficultyButtons = document.getElementById("difficultyButtons");
+function createDifficultySelector(
+  buttonContainerId,
+  infoContainerId,
+  scope,
+  mode
+) {
+  const container =
+    document.getElementById(buttonContainerId);
 
-  // 初期状態取得
-  let current = getCurrentDifficulty();
+  const info =
+    document.getElementById(infoContainerId);
+
+  container.innerHTML = "";
+
+  // ← 追加
+  container.classList.add("pattern-selector");
+
+  let current = getCurrentDifficulty(scope);
+
+  function updateInfo(diff) {
+    info.textContent =
+      getDifficultyDescription(diff, mode);
+  }
 
   for (const d of Object.values(DIFFICULTIES)) {
-    const btn = document.createElement("button");
-    btn.className = "diff-btn";
-    btn.textContent = d.name;
-    btn.dataset.diff = d.id;
 
-    // ★現在難易度を反映
+    const btn = document.createElement("button");
+
+    // diff-btn → pattern-btn
+    btn.className = "pattern-btn";
+    btn.textContent = d.name;
+
     if (d.id === current.id) {
       btn.classList.add("active");
     }
 
     btn.addEventListener("click", () => {
-      // UI更新
-      difficultyButtons
-        .querySelectorAll(".diff-btn")
+
+      container
+        .querySelectorAll(".pattern-btn")
         .forEach(b => b.classList.remove("active"));
 
       btn.classList.add("active");
-      // ★ここが最重要
-      setCurrentDifficulty(d.id);
-  
+
+      setCurrentDifficulty(d.id, scope);
+
+      updateInfo(d);
     });
 
-    difficultyButtons.appendChild(btn);
+    container.appendChild(btn);
   }
+
+  updateInfo(current);
 }
 
 // =====================================================
@@ -696,6 +743,26 @@ function initSettingsUI() {
 
   //keybinde
 
+  // 末尾「ん」入力方式設定
+  const finalNModeEl = document.getElementById("finalNMode");
+  if (finalNModeEl) {
+    // 初期値読み込み（localStorageに保存されていればそれを使う）
+    try {
+      const stored = localStorage.getItem("final_n_mode");
+      finalNModeEl.value = stored || "nn";
+    } catch (e) {
+      finalNModeEl.value = "nn";
+    }
+
+    finalNModeEl.addEventListener("change", (e) => {
+      try {
+        localStorage.setItem("final_n_mode", e.target.value);
+      } catch (err) {
+        console.warn("failed to save final_n_mode", err);
+      }
+    });
+  }
+
   saveKeybindBtn?.addEventListener("click", () => {
 
     const bind = {
@@ -752,9 +819,11 @@ function saveFreeModeConfig() {
     lastModeId: currentFreeModeId,
     lastEnemyPattern: currentEnemyPattern,
     standard: {
+      genre: document.getElementById("standardGenreSelect")?.value || "all",
       count: parseInt(document.getElementById("stdCountSlider")?.value) || 20
     },
     timeAttack: {
+      genre: document.getElementById("timeAttackGenreSelect")?.value || "all",
       time: parseInt(document.getElementById("taTimeSlider")?.value) || 60
     },
     long: {
@@ -788,10 +857,20 @@ function loadFreeModeConfig() {
       const el = document.getElementById("stdCountSlider");
       if (el) { el.value = config.standard.count; updateConfigSliderLabel("stdCountSlider", el.value); }
     }
+    if (config.standard?.genre){
+      const el = document.getElementById("standardGenreSelect");
+      if (el) el.value = config.standard.genre;
+    }
+
     if (config.timeAttack?.time) {
       const el = document.getElementById("taTimeSlider");
       if (el) { el.value = config.timeAttack.time; updateConfigSliderLabel("taTimeSlider", el.value); }
     }
+    if (config.timeAttack?.genre){
+      const el = document.getElementById("timeAttackGenreSelect");
+      if (el) el.value = config.timeAttack.genre;
+    }
+
     if (config.long?.genre) {
       const el = document.getElementById("longGenreSelect");
       if (el) el.value = config.long.genre;
@@ -955,9 +1034,21 @@ function initFreeModeConfigUI() {
     });
   }
 
+  // ジャンル選択変更時に保存
+  document.getElementById("standardGenreSelect")?.addEventListener("change", () => {
+    saveFreeModeConfig();
+  });
+
   // 各設定パネル内の開始ボタンにイベントを登録
   document.getElementById("startStandardFree")?.addEventListener("click", () => {
     const count = parseInt(document.getElementById("stdCountSlider").value);
+    const genre = document.getElementById("standardGenreSelect")?.value || "all";
+    let tags = [];
+
+    if (genre !== "all") {
+      tags.push(genre);
+    }
+
     hideAllScreens();
 
     gameState.isFreeMode = true;
@@ -967,12 +1058,24 @@ function initFreeModeConfigUI() {
       mode: GameModes.NORMAL,
       isFreeMode: true,
       difficulty: getCurrentDifficulty().id,
-      custom: { questionLimit: count }
+      custom: { questionLimit: count, tags: tags}
     });
+  });
+
+  // ジャンル選択変更時に保存
+  document.getElementById("timeAttackGenreSelect")?.addEventListener("change", () => {
+    saveFreeModeConfig();
   });
 
   document.getElementById("startTimeAttackFree")?.addEventListener("click", () => {
     const time = parseInt(document.getElementById("taTimeSlider").value);
+    const genre = document.getElementById("timeAttackGenreSelect")?.value || "all";
+    let tags = [];
+
+    if (genre !== "all") {
+      tags.push(genre);
+    }
+
     hideAllScreens();
 
     gameState.isFreeMode = true;
@@ -982,11 +1085,11 @@ function initFreeModeConfigUI() {
       mode: GameModes.TIME_ATTACK,
       isFreeMode: true,
       difficulty: getCurrentDifficulty().id,
-      custom: { limitSec: time }
+      custom: { limitSec: time , tags: tags}
     });
   });
 
-  // ジャンル選択変更時に保存
+  // 長文ジャンル選択変更時に保存
   document.getElementById("longGenreSelect")?.addEventListener("change", () => {
     saveFreeModeConfig();
   });

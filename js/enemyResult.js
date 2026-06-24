@@ -36,19 +36,19 @@ export function showEnemyResult({
         const clearHTML = breakdown.clearBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">CLEAR</div>
-                <div class="value">+${breakdown.clearBonus.toFixed(2)}</div>
+                <div class="value">${formatSigned(breakdown.clearBonus)}</div>
             </div>
         ` : "";
         const noDamageHTML = breakdown.noDamageBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">NO DMG</div>
-                <div class="value">+${breakdown.noDamageBonus.toFixed(2)}</div>
+                <div class="value">${formatSigned(breakdown.noDamageBonus)}</div>
             </div>
         ` : "";
         const noMissHTML = breakdown.noMissBonus > 0 ? `
             <div class="calc-item bonus">
                 <div class="label">NO MISS</div>
-                <div class="value">+${breakdown.noMissBonus.toFixed(2)}</div>
+                <div class="value">${formatSigned(breakdown.noMissBonus)}</div>
             </div>
         ` : "";
         
@@ -73,22 +73,22 @@ export function showEnemyResult({
             <div class="calc-grid">
                 <div class="calc-item">
                     <div class="label">ACC</div>
-                    <div class="value">+${breakdown.accuracy.toFixed(2)}</div>
+                    <div class="value">${formatSigned(breakdown.accuracy)}</div>
                 </div>
 
                 <div class="calc-item">
                     <div class="label">CHAIN</div>
-                    <div class="value">+${breakdown.chain.toFixed(2)}</div>
+                    <div class="value">${formatSigned(breakdown.chain)}</div>
                 </div>
 
                 <div class="calc-item">
                     <div class="label">SPEED</div>
-                    <div class="value">+${breakdown.speed.toFixed(2)}</div>
+                    <div class="value">${formatSigned(breakdown.speed)}</div>
                 </div>
 
                 <div class="calc-item">
                     <div class="label">DIFF</div>
-                    <div class="value">+${breakdown.difficulty.toFixed(2)}</div>
+                    <div class="value">${formatSigned(breakdown.difficulty)}</div>
                 </div>
             </div>
 
@@ -191,4 +191,11 @@ function playCalcAnimation() {
         }, items.length * 140 + 120);
 
     }, 50);
+}
+
+function formatSigned(value, digits = 2) {
+    const num = Number(value) || 0;
+    return num >= 0
+        ? `+${num.toFixed(digits)}`
+        : num.toFixed(digits);
 }

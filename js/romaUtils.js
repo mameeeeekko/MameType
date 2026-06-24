@@ -116,7 +116,29 @@ export function getRomajiCandidates(kana){
   const normalizedKana = toHalfWidthAlpha(kana);
 
   // テーブルにあればそれを返す（数字や括弧もここを通るようになる）
-  if(ROMA_TABLE[normalizedKana]) return ROMA_TABLE[normalizedKana];
+  if(ROMA_TABLE[normalizedKana]) {
+    // 特殊処理: 末尾 'ん' の入力方式をユーザー設定で優先する
+    if (normalizedKana === 'ん' || kana === 'ん') {
+      const candidates = [...ROMA_TABLE[normalizedKana]];
+      try {
+        const mode = localStorage.getItem('final_n_mode') || 'nn';
+        if (mode === 'n') {
+          // 'n' を先頭に移動
+          const idx = candidates.indexOf('n');
+          if (idx > 0) candidates.splice(0, 0, ...candidates.splice(idx, 1));
+        } else {
+          // デフォルトは 'nn' を優先
+          const idx = candidates.indexOf('nn');
+          if (idx > 0) candidates.splice(0, 0, ...candidates.splice(idx, 1));
+        }
+      } catch (e) {
+        // localStorage 取得エラーでも通常の配列を返す
+      }
+      return candidates;
+    }
+
+    return ROMA_TABLE[normalizedKana];
+  }
   if(ROMA_TABLE[kana]) return ROMA_TABLE[kana]; // 念のため変換前でもチェック
 
   // 英数字・記号（ASCII可視文字）の場合、半角と全角の両方を受け付けるようにする

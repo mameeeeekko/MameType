@@ -430,26 +430,14 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
 
     const key = diff.id;
 
-    // ★① LONG_TEXTは専用処理
-    if (gameState.currentMode.id === GameModes.LONG_TEXT.id) {
-      const tags = modeData.custom?.tags || [];
-      let filtered = TARGETS_LONG;
-      if (tags.length > 0) {
-        filtered = TARGETS_LONG.filter(target => {
-          const targetTags = target.tags || [];
-          return tags.every(tag => targetTags.includes(tag));
-        });
-      }
-      shuffledTargets = shuffleArray(filtered);
-    } else {
-      shuffledTargets = gameState.currentMode.buildTargets({
+    shuffledTargets =
+      gameState.currentMode.buildTargets({
         TARGETS,
         TARGETS_LONG,
         shuffleArray,
         modeData,
         diff,
       }) || [];
-    }
   }
 
   if (gameState.currentMode.id === GameModes.TIME_ATTACK.id) { 

@@ -98,14 +98,6 @@
 <div id="freeStartMenu" style="display:none; margin-top:20px;">
   <h2>FREE MODE<span id="switchToNormalBtn" title="モード切替">🔄</span></h2>
 
-    <!-- 難易度選択 -->
-  <div>
-    <label>
-      難易度:
-      <div id="difficultyButtons"></div>
-    </label>
-  </div>
-
   <button id="freeStartBtn">STANDARD</button>
   <button id="freeTimeAttackBtn">TIME ATTACK</button>
   <button id="freeLongTextBtn">LONG TEXT</button>
@@ -117,6 +109,27 @@
     
     <div id="configStandard" class="mode-config-group">
       <div class="config-section-title">Standard Config</div>
+            <div class="config-row">
+              <label>難易度</label>
+              <div id="standardDifficultyButtons" class="difficulty-buttons"></div>
+            </div>
+
+             <div id="standardDifficultyInfo" class="difficulty-info"></div>
+
+            <div class="config-row">
+              <label>ジャンル</label>
+              <select id="standardGenreSelect">
+                <option value="all">すべて</option>
+                <option value="empty">標準</option>
+                <option value="句読点">句読点</option>
+                <option value="促音">促音</option>
+                <option value="記号">記号</option>
+                <option value="英語">英語</option>
+                <option value="ことわざ">ことわざ</option>
+                <option value="擬音">擬音</option>
+              </select>
+            </div>
+
       <div class="config-row">
         <label>問題数</label>
         <input type="range" id="stdCountSlider" min="5" max="50" step="1" value="20" 
@@ -128,6 +141,26 @@
 
     <div id="configTimeAttack" class="mode-config-group" style="display: none;">
       <div class="config-section-title">Time Attack Config</div>
+            <div class="config-row">
+              <label>難易度</label>
+              <div id="timeAttackDifficultyButtons" class="difficulty-buttons"></div>
+            </div>
+
+            <div id="timeAttackDifficultyInfo" class="difficulty-info"></div>
+
+            <div class="config-row">
+              <label>ジャンル</label>
+              <select id="timeAttackGenreSelect">
+                <option value="all">すべて</option>
+                <option value="empty">標準</option>
+                <option value="句読点">句読点</option>
+                <option value="促音">促音</option>
+                <option value="記号">記号</option>
+                <option value="英語">英語</option>
+                <option value="ことわざ">ことわざ</option>
+                <option value="擬音">擬音</option>
+              </select>
+            </div>
       <div class="config-row">
         <label>制限時間</label>
         <input type="range" id="taTimeSlider" min="10" max="600" step="5" value="60"
@@ -138,8 +171,17 @@
     </div>
 
     <div id="configEnemy" class="mode-config-group" style="display: none;">
-      <div class="config-section-title">Enemy Mode Pattern</div>
-      
+
+      <div class="config-section-title">Difficulty</div>
+
+          <div class="config-row">
+            <label><span class="setting-label">難易度</span></label>
+            <div id="enemyDifficultyButtons" class="difficulty-buttons"></div>
+          </div>
+
+          <div id="enemyDifficultyInfo" class="difficulty-info"></div>
+
+      <div class="config-section-title"  style="margin-top: 40px;">Enemy Mode Pattern</div>
       <!-- 出現設定 (Tier & 種類) -->
       <div class="config-subset-section" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 15px;">
         <div class="config-row">
@@ -179,7 +221,7 @@
         </div>
       </div>
 
-      <div class="config-section-title" style="font-size: 0.8em; opacity: 0.7;">Rule Settings</div>
+      <div class="config-section-title" style="margin-top: 40px;">Rule Settings</div>
       <div class="pattern-selector">
         <button class="pattern-btn active" data-pattern="time">時間制限</button>
         <button class="pattern-btn" data-pattern="count">討伐数指定</button>
@@ -210,7 +252,7 @@
       <button id="startEnemyFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
 
       <!-- 新しい設定項目: スポーン間隔 -->
-      <div class="config-section-title" style="font-size: 0.8em; opacity: 0.7; margin-top: 20px;">Spawn Settings</div>
+      <div class="config-section-title" style="margin-top: 40px;">Spawn Settings</div>
       <div class="config-row">
         <label>スポーン間隔: <span id="enemyIntervalValue">2.0</span>s</label>
         <input type="range" id="enemyIntervalSlider" min="500" max="5000" step="100" value="2000"
@@ -356,6 +398,19 @@
           <button id="resetQuestBtn">Reset</button>
         </div>
         <input type="file" id="importQuestFile" accept=".json" style="display:none">
+      </fieldset>
+
+      <fieldset>
+        <legend>ROMAJI</legend>
+        <div class="config-row">
+          <label>末尾の「ん」を入力する方式</label>
+            <div class="romaji-keybind-controls">
+              <select id="finalNMode">
+                <option value="nn">nn</option>
+                <option value="n">n</option>
+              </select>
+            </div>
+        </div>
       </fieldset>
     </div>
   </div>

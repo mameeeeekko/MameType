@@ -4,14 +4,17 @@
 // ===========================================
 let audioCtx = null;
 let masterGain = null;
+let delayNode = null;
+let feedbackGain = null;
+let echoGain = null;
 export let bgmGain = null; // Exported
 export let seGain = null;  // Exported
-let seGainNode = null;
 export let typeGain = null; // Exported
 export let missGain = null; // Exported
 
 const laserEffects = [];
 const playerDamageEffects = [];
+const playerNegateEffects = [];
 let buffers = {};
 let bgmSource = null;
 
@@ -78,12 +81,28 @@ function getAudioContext() {
         typeGain = audioCtx.createGain();
         missGain = audioCtx.createGain();
 
+        delayNode = audioCtx.createDelay();
+        feedbackGain = audioCtx.createGain();
+        echoGain = audioCtx.createGain();
+
         masterGain.connect(audioCtx.destination);
 
         bgmGain.connect(masterGain);
         seGain.connect(masterGain);
         typeGain.connect(masterGain);
         missGain.connect(masterGain);
+
+        delayNode.delayTime.value = 0.08;
+        feedbackGain.gain.value = 0.18;
+        echoGain.gain.value = 0.25;
+
+        // フィードバックループ
+        delayNode.connect(feedbackGain);
+        feedbackGain.connect(delayNode);
+
+        // 出力
+        delayNode.connect(echoGain);
+        echoGain.connect(masterGain);
 
         masterGain.gain.value = masterVolume;
         bgmGain.gain.value = volumes.bgm;
@@ -233,10 +252,42 @@ export function playSE(
 }
 
 export function playTypeSound() {
-    const freq = 680 + Math.random() * 40; // 微揺れ
 
-    getAudioContext();
-    playTone(freq, 0.06, "triangle", 0.4, typeGain);
+    const freq = 680 + Math.random() * 40;
+
+    const ctx = getAudioContext();
+
+    playTone(
+        freq,
+        0.06,
+        "triangle",
+        0.35,
+        typeGain
+    );
+
+    // 倍音
+    playTone(
+        freq * 2,
+        0.03,
+        "sine",
+        0.08,
+        typeGain
+    );
+
+    // エコー
+    const g = ctx.createGain();
+    g.gain.value = 0.15;
+
+    const osc = ctx.createOscillator();
+
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+
+    osc.connect(g);
+    g.connect(delayNode);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
 }
 
 export function playMissSound() {
@@ -267,7 +318,13 @@ export function playTestSound(key, settings) {
 }
 
 export function playEnemyKillSound(type=1){
-    if(type===1) playSE("kill1",0.35);
+    if(type===1){
+        playSE("kill1",0.35);
+
+        setTimeout(()=>{
+            playSE("kill1",0.12);
+        },80);
+    }
     if(type===2) playSE("kill2",0.35);
     if(type===3) playSE("kill3",0.35);
     if(type===4) playSE("killLaser",0.35);
@@ -286,11 +343,34 @@ export function playErrorSound(){
 }
 
 export function playPhaseWarningSound() {
-    // 警告音：不穏な矩形波の2連音
-    playTone(400, 0.15, "square", 0.3);
+
+    // G4
+    playTone(
+        392,
+        0.25,
+        "triangle",
+        0.25
+    );
+
+    // C5
     setTimeout(() => {
-        playTone(400, 0.15, "square", 0.3);
-    }, 200);
+        playTone(
+            523,
+            0.30,
+            "triangle",
+            0.25
+        );
+    }, 250);
+
+    // G5
+    setTimeout(() => {
+        playTone(
+            784,
+            1.2,
+            "sine",
+            0.35
+        );
+    }, 600);
 }
 // ===========================================
 // BGM
@@ -392,8 +472,8 @@ export function spawnHitWave(x, y){
 export function spawnLaserEffect(sx, sy, tx, ty, options = {}) {
     laserEffects.push({
         sx, sy, tx, ty,
-        life: 30,
-        maxLife: 30,
+        life: 40,
+        maxLife: 40,
         ...options
     });
 }
@@ -403,8 +483,8 @@ export function spawnPlayerDamageEffect(x, y) {
     const effect = {
         x,
         y,
-        life: 30,
-        maxLife: 30,
+        life: 40,
+        maxLife: 40,
         particles: []
     };
 
@@ -427,6 +507,45 @@ export function spawnPlayerDamageEffect(x, y) {
     playerDamageEffects.push(effect);
 }
 
+export function spawnPlayerNegateEffect(
+    x,
+    y,
+    value = "GUARD",
+    color = "#9befff"
+) {
+
+    const effect = {
+        x,
+        y,
+        value,
+        color,
+        life: 40,
+        maxLife: 40,
+        particles: []
+    };
+
+    for (let i = 0; i < 25; i++) {
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 5;
+
+        effect.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 20 + Math.random() * 15,
+            maxLife: 20 + Math.random() * 15,
+            radius: 1 + Math.random() * 2
+        });
+    }
+
+    playerNegateEffects.push(effect);
+}
+
+// ===============================
+// 敵attackのレーザーの描出および、ガード演出
+// ===============================
 export function renderLaserEffects(ctx) {
     for (let i = laserEffects.length - 1; i >= 0; i--) {
         const e = laserEffects[i];
@@ -475,16 +594,68 @@ export function renderLaserEffects(ctx) {
             ctx.shadowBlur = 15;
 
             // 六角形を描画
-            ctx.beginPath();
-            for (let j = 0; j < 6; j++) {
-                const angle = (Math.PI / 3) * j;
-                const x = e.tx + barrierRadius * Math.cos(angle);
-                const y = e.ty + barrierRadius * Math.sin(angle);
-                if (j === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+            const rings = 3;
+
+            for (let r = 0; r < rings; r++) {
+
+                const radius =
+                    barrierRadius * (1 + r * 0.25);
+
+                ctx.beginPath();
+
+                for (let j = 0; j < 6; j++) {
+
+                    const angle =
+                        (Math.PI / 3) * j;
+
+                    const x =
+                        e.tx +
+                        radius * Math.cos(angle);
+
+                    const y =
+                        e.ty +
+                        radius * Math.sin(angle);
+
+                    if (j === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+
+                ctx.closePath();
+
+                ctx.strokeStyle =
+                    `rgba(68,204,255,${
+                        0.8 - r * 0.2
+                    })`;
+
+                ctx.lineWidth =
+                    3 - r * 0.5;
+
+                ctx.stroke();
             }
-            ctx.closePath();
-            ctx.stroke();
+
+            // GUARD文字
+            ctx.save();
+
+            ctx.globalAlpha = alpha * 0.9;
+
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            ctx.fillStyle = "rgba(255,255,255,0.95)";
+            ctx.shadowColor = "#88ddff";
+            ctx.shadowBlur = 8;
+
+            ctx.fillText(
+                "GUARD",
+                e.tx,
+                e.ty
+            );
+
+            ctx.restore();
 
             // 拡散パーティクルを強化
             const sparkCount = Math.floor(15 * (e.completionRatio || 0));
@@ -591,6 +762,263 @@ export function renderPlayerDamageEffects(ctx) {
         if (e.life <= 0) {
             playerDamageEffects.splice(i, 1);
         }
+    }
+}
+
+export function renderPlayerNegateEffects(ctx) {
+    for (let i = playerNegateEffects.length - 1; i >= 0; i--) {
+
+        const e = playerNegateEffects[i];
+
+        e.life--;
+
+        // 寿命切れなら削除
+        if (e.life <= 0) {
+            playerNegateEffects.splice(i, 1);
+            continue;
+        }
+
+        // 安全対策
+        const maxLife = Math.max(1, e.maxLife || 1);
+
+        const t =
+            Math.min(
+                1,
+                Math.max(
+                    0,
+                    1 - (e.life / maxLife)
+                )
+            );
+
+        const alpha = Math.sin((1 - t) * Math.PI);
+
+        // 💥 パーティクル描画
+        e.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life--;
+            const pAlpha = p.life / p.maxLife;
+            ctx.save();
+            ctx.globalAlpha = pAlpha;
+            ctx.fillStyle = "#45bffc";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // 💥 中央の閃光 (白 -> 黄 -> 赤)
+        const flashRadius = Math.max(
+            0.1,
+            60 * Math.sin(t * Math.PI * 0.5)
+        );
+
+        const grad = ctx.createRadialGradient(
+            e.x,
+            e.y,
+            0,
+            e.x,
+            e.y,
+            flashRadius
+        );
+        grad.addColorStop(0, `rgba(255, 255, 220, ${alpha * 0.9})`);
+        grad.addColorStop(0.5,`rgba(120,220,255,${alpha * 0.6})`);
+        grad.addColorStop(1,`rgba(80, 179, 255, 0.06)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(e.x - flashRadius, e.y - flashRadius, flashRadius * 2, flashRadius * 2);
+
+        // =====================================
+        // ATフィールド風シールド
+        // =====================================
+
+        const shieldPulse = Math.sin(t * Math.PI);
+        const shieldAlpha = alpha * 0.4;
+
+        // 外側グロー
+        ctx.save();
+        ctx.globalAlpha = shieldAlpha * 0.25;
+
+        const glowGrad = ctx.createRadialGradient(
+            e.x, e.y, 20,
+            e.x, e.y, 90
+        );
+
+        glowGrad.addColorStop(0, "rgba(120,220,255,0.6)");
+        glowGrad.addColorStop(1, "rgba(120,220,255,0)");
+
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 90, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+
+        // =====================================
+        // 六角形シールド（3重）
+        // =====================================
+
+        [55, 68, 82].forEach((baseRadius, index) => {
+
+            const radius =
+                baseRadius +
+                Math.sin(t * 12 + index) * 2;
+
+            ctx.save();
+
+            ctx.globalAlpha =
+                shieldAlpha * (1 - index * 0.2);
+
+            ctx.strokeStyle = "#8df0ff";
+            ctx.lineWidth = index === 0 ? 3 : 1.5;
+
+            ctx.beginPath();
+
+            for (let k = 0; k < 6; k++) {
+
+                const angle =
+                    -Math.PI / 2 +
+                    (Math.PI * 2 / 6) * k;
+
+                const px =
+                    e.x +
+                    Math.cos(angle) * radius;
+
+                const py =
+                    e.y +
+                    Math.sin(angle) * radius;
+
+                if (k === 0) {
+                    ctx.moveTo(px, py);
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.restore();
+        });
+
+
+        // =====================================
+        // シールド内部
+        // =====================================
+
+        ctx.save();
+
+        ctx.globalAlpha =
+            0.08 + shieldPulse * 0.08;
+
+        ctx.fillStyle = "#5dd7ff";
+
+        ctx.beginPath();
+
+        for (let k = 0; k < 6; k++) {
+
+            const angle =
+                -Math.PI / 2 +
+                (Math.PI * 2 / 6) * k;
+
+            const px =
+                e.x +
+                Math.cos(angle) * 55;
+
+            const py =
+                e.y +
+                Math.sin(angle) * 55;
+
+            if (k === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+        }
+
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+
+
+        // =====================================
+        // 六角形ライン
+        // =====================================
+
+        ctx.save();
+
+        ctx.globalAlpha = shieldAlpha * 0.35;
+        ctx.strokeStyle = "#d9ffff";
+        ctx.lineWidth = 1;
+
+        for (let r = 30; r <= 80; r += 15) {
+
+            ctx.beginPath();
+
+            for (let k = 0; k < 6; k++) {
+
+                const angle =
+                    -Math.PI / 2 +
+                    (Math.PI * 2 / 6) * k;
+
+                const px =
+                    e.x +
+                    Math.cos(angle) * r;
+
+                const py =
+                    e.y +
+                    Math.sin(angle) * r;
+
+                if (k === 0) {
+                    ctx.moveTo(px, py);
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // 💥 衝撃波 (外側に広がるリング)
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(80, 179, 255, 0.57)";
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 40 * (1 - alpha), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 衝撃波
+        ctx.strokeStyle = `rgba(120,220,255,${alpha})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 20 + 80 * t, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // =====================================
+        // GUARD文字
+        // =====================================
+
+        ctx.save();
+
+        ctx.globalAlpha = alpha;
+
+        const textY = e.y - 45 - (1 - alpha) * 15;
+
+        ctx.font = "bold 14px Arial";
+        ctx.textAlign = "center";
+
+        ctx.fillStyle = "#9befff";
+        ctx.fillText(
+            e.value,
+            e.x,
+            textY
+        );
+
+        ctx.restore();
     }
 }
 
@@ -942,13 +1370,13 @@ export function renderEnemyEffects(ctx) {
 
             ctx.globalAlpha = alpha;
 
-            ctx.strokeStyle = "#ffb560";
+            ctx.strokeStyle = "#ffddb6";
 
             ctx.lineWidth =
                 18 * alpha;
 
             ctx.shadowBlur = 40;
-            ctx.shadowColor = "#febe5c";
+            ctx.shadowColor = "#ffdfaedc";
 
             ctx.beginPath();
             ctx.arc(
@@ -1588,6 +2016,18 @@ export function spawnItemSkillEffect(opts = {}) {
             spawnSkillFreezeEffect(opts);
         }
 
+        else if (category === "knockback") {
+            spawnSkillKnockbackEffect(opts);
+        }
+
+        else if (category === "invincible") {
+            spawnSkillInvincibleBarrier(opts);
+        }
+
+        else if (category === "revive") {
+            spawnSkillReviveEffect(opts);
+        }
+
     }
 
     // item
@@ -1924,6 +2364,140 @@ function spawnSkillFreezeEffect({
 }
 
 // ======================================
+// SKILL : KNOCKBACK
+// 全周衝撃波
+// ======================================
+
+function spawnSkillKnockbackEffect({
+    x,
+    y
+}){
+
+    itemSkillEffects.push({
+
+        type: "skill_knockback_wave",
+
+        x,
+        y,
+
+        radius: 40,
+        maxRadius: 500,
+
+        life: 24,
+        maxLife: 24
+    });
+
+    // 飛散粒子
+    for(let i = 0; i < 32; i++){
+
+        const angle =
+            (Math.PI * 2 / 32) * i;
+
+        itemSkillEffects.push({
+
+            type: "skill_knockback_particle",
+
+            x,
+            y,
+
+            vx: Math.cos(angle) * 8,
+            vy: Math.sin(angle) * 8,
+
+            life: 20,
+            maxLife: 20
+        });
+    }
+}
+
+// ======================================
+// SKILL : invincible
+// barrier
+// ======================================
+function spawnSkillInvincibleBarrier({
+    x,
+    y,
+    value = 5 // 秒
+}) {
+    const now = performance.now();
+
+    itemSkillEffects.push({
+        type: "skill_invincible_barrier",
+
+        x,
+        y,
+
+        startTime: now,
+        durationMs: value * 1000,
+        endTime: now + value * 1000,
+
+        radius: 85,
+
+        angle: 0,
+        particles: []
+    });
+}
+
+// ======================================
+// SKILL : REVIVE
+// 十字架蘇生
+// ======================================
+function spawnSkillReviveEffect({
+    x,
+    y
+}) {
+
+    itemSkillEffects.push({
+
+        type: "skill_revive_cross",
+
+        x,
+        y,
+
+        radius: 120,
+
+        angle: 0,
+
+        life: 50,
+        maxLife: 50
+    });
+
+    // 光粒子
+    for(let i = 0; i < 40; i++){
+
+        const angle =
+            Math.random() * Math.PI * 2;
+
+        const dist =
+            Math.random() * 60;
+
+        itemSkillEffects.push({
+
+            type: "skill_revive_particle",
+
+            x:
+                x +
+                Math.cos(angle) * dist,
+
+            y:
+                y +
+                Math.sin(angle) * dist,
+
+            vx:
+                (Math.random() - 0.5) * 0.6,
+
+            vy:
+                -1 - Math.random() * 2,
+
+            radius:
+                2 + Math.random() * 3,
+
+            life: 40,
+            maxLife: 40
+        });
+    }
+}
+
+// ======================================
 // ITEM : FREEZE
 // 氷霧
 // ======================================
@@ -2215,6 +2789,333 @@ export function renderItemSkillEffects(ctx) {
         }
 
         // ======================================
+        // Skill knocback egde wave particle
+        // ======================================
+        else if (
+            e.type === "skill_knockback_wave"
+        ){
+
+            const t =
+                1 - (e.life / e.maxLife);
+
+            const radius =
+                e.radius +
+                (e.maxRadius - e.radius) * t;
+
+            // 外リング
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 10 * alpha;
+
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = "#ffffff";
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.stroke();
+
+            // 内リング
+            ctx.lineWidth = 4 * alpha;
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                radius * 0.75,
+                0,
+                Math.PI * 2
+            );
+            ctx.stroke();
+
+            // 中心フラッシュ
+            const flashRadius =
+                120 * (1 - t);
+
+            ctx.fillStyle =
+                `rgba(
+                    255,
+                    255,
+                    255,
+                    ${alpha * 0.35}
+                )`;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                e.x,
+                e.y,
+                flashRadius,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+        }
+
+        else if (
+            e.type === "skill_knockback_particle"
+        ){
+
+            e.x += e.vx;
+            e.y += e.vy;
+
+            ctx.fillStyle =
+                "#d9d9d9";
+
+            ctx.beginPath();
+
+            ctx.arc(
+                e.x,
+                e.y,
+                3,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+        }
+
+        // ======================================
+        // INVINCIBLE BARRIER
+        // ======================================
+        else if (e.type === "skill_invincible_barrier") {
+
+            const now = performance.now();
+
+            const remaining = e.endTime - now;
+            const duration = e.durationMs;
+
+            // 終了判定
+            if (remaining <= 0) {
+                e.life = 0;
+                return;
+            }
+
+            const t = Math.max(0, Math.min(1, remaining / duration));
+
+            e.angle += 0.02;
+
+            // =========================
+            // ① コア
+            // =========================
+            const coreAlpha =
+                0.18 + Math.sin(now * 0.003) * 0.05;
+
+            const coreGrad = ctx.createRadialGradient(
+                e.x, e.y, 0,
+                e.x, e.y, e.radius
+            );
+
+            coreGrad.addColorStop(0, `rgba(120,200,255,${coreAlpha})`);
+            coreGrad.addColorStop(1, "rgba(80,160,255,0)");
+
+            ctx.fillStyle = coreGrad;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // =========================
+            // ② 回転リング
+            // =========================
+            for (let i = 0; i < 3; i++) {
+
+                const r = e.radius + 18 + i * 12;
+
+                ctx.save();
+                ctx.translate(e.x, e.y);
+                ctx.rotate(e.angle * (1 + i * 0.3));
+
+                ctx.strokeStyle = `rgba(120,200,255,${0.6 - i * 0.15})`;
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+
+                for (let j = 0; j < 6; j++) {
+                    const a = (Math.PI * 2 / 6) * j;
+                    const x = Math.cos(a) * r;
+                    const y = Math.sin(a) * r;
+
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // =========================
+            // ③ 粒子
+            // =========================
+            if (!e.particles) e.particles = [];
+
+            if (Math.random() < 0.35) {
+                const a = Math.random() * Math.PI * 2;
+                const d = e.radius + Math.random() * 40;
+
+                e.particles.push({
+                    x: e.x + Math.cos(a) * d,
+                    y: e.y + Math.sin(a) * d,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: -0.2 + Math.random() * 0.4,
+                    life: 40
+                });
+            }
+
+            for (const p of e.particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+
+                const a = p.life / 40;
+
+                ctx.fillStyle = `rgba(140,220,255,${a})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            e.particles = e.particles.filter(p => p.life > 0);
+
+            // =========================
+            // ④ バー（完全ms連動）
+            // =========================
+            const barW = 120;
+            const barH = 6;
+
+            const bx = e.x - barW / 2;
+            const by = e.y + e.radius + 30;
+
+            const progress = remaining / duration;
+
+            ctx.fillStyle = "rgba(20,40,80,0.5)";
+            ctx.fillRect(bx, by, barW, barH);
+
+            ctx.fillStyle = "rgba(80,180,255,0.9)";
+            ctx.fillRect(bx, by, barW * progress, barH);
+
+            ctx.strokeStyle = "rgba(120,200,255,0.8)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(bx, by, barW, barH);
+        }
+
+        // ======================================
+        // REVIVE CROSS
+        // ======================================
+        else if (e.type === "skill_revive_cross") {
+
+            const t =
+                1 - (e.life / e.maxLife);
+
+            e.angle += 0.03;
+
+            // 外周リング
+            ctx.strokeStyle = "#7dff9f";
+            ctx.lineWidth = 5;
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = "#7dff9f";
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                30 + t * e.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.stroke();
+
+            // 十字架
+            ctx.save();
+
+            ctx.translate(e.x, e.y);
+            ctx.rotate(e.angle);
+
+            ctx.fillStyle = "#a8ffb8";
+
+            // 縦棒
+            ctx.fillRect(
+                -8,
+                -60,
+                16,
+                90
+            );
+
+            // 横棒
+            ctx.fillRect(
+                -30,
+                -20,
+                60,
+                16
+            );
+
+            ctx.restore();
+
+            // 中央閃光
+            const flash =
+                80 * Math.sin(t * Math.PI);
+
+            const grad =
+                ctx.createRadialGradient(
+                    e.x,
+                    e.y,
+                    0,
+                    e.x,
+                    e.y,
+                    flash
+                );
+
+            grad.addColorStop(
+                0,
+                `rgba(220,255,220,${alpha})`
+            );
+
+            grad.addColorStop(
+                1,
+                "rgba(120,255,180,0)"
+            );
+
+            ctx.fillStyle = grad;
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                flash,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+        }
+
+        else if (e.type === "skill_revive_particle") {
+
+            e.x += e.vx;
+            e.y += e.vy;
+
+            ctx.fillStyle = "#8dffae";
+
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#8dffae";
+
+            ctx.beginPath();
+            ctx.arc(
+                e.x,
+                e.y,
+                e.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        // ======================================
         // Skill Cooldown HUD
         // ======================================
         else if (e.type === "skill_cooldown_hud") {
@@ -2282,4 +3183,5 @@ export function clearAllEffects() {
     itemSkillEffects.length = 0;
     laserEffects.length = 0;
     playerDamageEffects.length = 0;
+    playerNegateEffects.length = 0;
 }

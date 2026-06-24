@@ -124,3 +124,39 @@ export function setCurrentDifficulty(id, scope = "free") {
   currentDifficultyMap[scope] = diff;
   localStorage.setItem(STORAGE_KEYS[scope], diff.id);
 }
+
+
+// -------------------------------
+// 難易度説明関数
+// -------------------------------
+export function getDifficultyDescription(diff, mode) {
+
+    if (mode === "standard" || mode === "timeattack") {
+      return `
+  文字数:
+  ${diff.basic.min} ～ ${diff.basic.max === 999 ? "∞" : diff.basic.max}文字
+  `;
+    }
+
+    if (mode === "enemy") {
+
+      return `
+  スポーン率: ${(diff.enemy.spawnRate * 100).toFixed(0)}%
+  敵速度: ${(diff.enemy.enemySpeed * 100).toFixed(0)}%
+  被ダメージ: ${(diff.enemy.damageMultiplier * 100).toFixed(0)}%
+  チェイン減衰: ${(diff.enemy.chainDecay * 100).toFixed(0)}%
+  スコア倍率: ${(diff.enemy.scoreMultiplier * 100).toFixed(0)}%
+
+  クリアボーナス:
+  +${(diff.enemy.scoreBonus.clearBonus * 100).toFixed(0)}%
+
+  ノーミス:
+  +${(diff.enemy.scoreBonus.noMissBonus * 100).toFixed(0)}%
+
+  ノーダメ:
+  +${(diff.enemy.scoreBonus.noDamageBonus * 100).toFixed(0)}%
+  `;
+    }
+
+    return "";
+}

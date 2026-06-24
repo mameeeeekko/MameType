@@ -8,6 +8,7 @@ import { SKILL_TREE } from "./skillTree.js";
 import { openQuestMenuModal } from "./questMapUI.js";
 import { handleGlobalSoundToggle } from "./main.js";
 import { getSoundEnabled } from "./gameCore.js";
+import { images } from "./assetsLoader.js";
 
 function formatDateOnly(dateStr){
   if(!dateStr) return "";
@@ -164,6 +165,17 @@ function setupStatsModal(options = {}) {
   if (!btn || !modal || !closeBtn || !closeBtnQuest) return;
   
   const fresh = getPlayerStats();
+  // クエストステータスモーダルの横幅を広げ、中央揃えを確実にする
+  const modalBox = modalQuest?.querySelector(".quest-modal-box");
+  if (modalBox) {
+    // 横幅をさらに広げる
+    modalBox.style.maxWidth = "1200px";
+  }
+
+  if (modalQuest) {
+    modalQuest.style.justifyContent = "center";
+  }
+
   //詳細ステータス分岐
   btn.onclick = () => {
     if(isQuest){
@@ -191,7 +203,7 @@ function setupStatsModal(options = {}) {
 }
 
 function updateQuestHud() {
-  const s = getPlayerStatsForEnemy() || {};
+  const s = getPlayerStatsForEnemy("quest") || {};
 
   const level   = Number(s.level) || 1;
   const exp     = Number(s.exp) || 0;
@@ -287,9 +299,15 @@ function renderQuestStatsModal() {
 
   const skillData = calcQuestSkillStats();
   const skillStats = skillData;
-  const s = getPlayerStatsForEnemy() || {};
+  const s = getPlayerStatsForEnemy("quest") || {};
   const r = s.questRecord || {};
   const totalStars = getTotalStars();
+
+  // メインコンテンツエリアのスタイル
+  const mainContent = document.getElementById("questMainContent");
+  if (mainContent) {
+    mainContent.style.cssText = "display: flex; justify-content: center; align-items: flex-start; gap: 20px; width: 100%;";
+  }
   const maxStars = getAvailableMaxStars();
   const starsPercent = Math.floor(totalStars / maxStars * 100);
   const exp = Number(s.exp) || 0;
@@ -311,8 +329,8 @@ function renderQuestStatsModal() {
       <div class="quest-stats-section">STATUS</div>
 
         <div class="quest-stats-row"><span>Lv</span><span>${s.level}</span></div>
-        <div class="quest-stats-row"><span>HP</span><span>${s.maxHp}</span></div>
-        <div class="quest-stats-row"><span>DEF</span><span>${s.defense}</span></div>
+        <div class="quest-stats-row"><span>HP</span><span>${s.maxHp} ${skillStats.maxHp ? `<span class="stat-plus">(+${skillStats.maxHp})</span>` : ''}</span></div>
+        <div class="quest-stats-row"><span>DEF</span><span>${s.defense} ${skillStats.defense ? `<span class="stat-plus">(+${skillStats.defense})</span>` : ''}</span></div>
         <div class="quest-stats-row"><span>EXP</span><span>${exp} / ${nextExp}</span></div>
 
         <div class="quest-exp-wrap">
@@ -347,6 +365,36 @@ function renderQuestStatsModal() {
           <span>x${skillStats.knockbackBonus.toFixed(2)}</span>
         </div>
 
+        <div class="quest-skill-row">
+          <span>MaxHP</span>
+          <span class="skill-plain-val">+${skillStats.maxHp || 0}</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>DEF</span>
+          <span class="skill-plain-val">+${skillStats.defense || 0}</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>EXP</span>
+          <span class="skill-plain-val">x${(skillStats.expMultiplier || 1).toFixed(2)}</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>ITEM SPAWN</span>
+          <span class="skill-plain-val">x${(skillStats.itemSpawnMultiplier || 1).toFixed(2)}</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>GUARD</span>
+          <span class="skill-plain-val">${((skillStats.damageNegateChance || 0) * 100).toFixed(0)}%</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>REVIVE</span>
+          <span class="skill-plain-val">${((skillStats.reviveChance || 0) * 100).toFixed(0)}%</span>
+        </div>
+
       <div class="quest-stats-section">INPUT</div>
         <div class="quest-stats-row"><span>Avg.KPM</span><span>${(r.avgKpm || 0).toFixed(1)}</span></div>
         <div class="quest-stats-row"><span>Max KPM</span><span>${r.maxKpm || 0}</span></div>
@@ -370,6 +418,14 @@ function renderQuestStatsModal() {
   if (bottom) {
 
     const r = s.questRecord || {};
+
+    // スクロール可能にするためのスタイルを適用
+    const logContainerStyle = `max-height: 250px; overflow-y: auto; padding-right: 10px;`;
+    // 2つのカードを均等に並べるためのスタイル
+    const gridContainerStyle = `display: grid; grid-template-columns: 1fr 1fr; gap: 10px;`;
+    // カード内のコンテンツをスクロールさせるためのスタイル
+    const cardContentStyle = `max-height: 220px; overflow-y: auto; padding-right: 10px; margin-top: 8px;`;
+
 
     bottom.innerHTML = `
   
@@ -411,7 +467,7 @@ function renderQuestStatsModal() {
             ・RECORD + ACTIVITY を横2列で並べる
           ====================================================== -->
           <div class="quest-status-grid">
-
+            <div style="${logContainerStyle}">
             <!-- ======================================================
               RECORD（完全版復元）
               ・戦績 / 進行 / 総合実績
@@ -519,7 +575,7 @@ function renderQuestStatsModal() {
               </div>
 
             </div>
-
+            </div>
           </div>
 
         </div>
@@ -530,13 +586,15 @@ function renderQuestStatsModal() {
           ・成長・解放系データ
         ====================================================== -->
         <div class="quest-tab-content" id="tab-progression">
-
+          <div style="${logContainerStyle}">
           <div class="quest-status-grid">
+            <div style="${gridContainerStyle}">
 
             <div class="quest-bottom-grid">
               <!-- ===== STAGE LOG ===== -->
               <div class="quest-bottom-card">
                 <div class="quest-bottom-title">STAGE LOG</div>
+                <div style="${cardContentStyle}">
 
                 ${
                   Object.entries(r.stageAttemptCount || {})
@@ -569,12 +627,13 @@ function renderQuestStatsModal() {
                     })
                     .join("")
                 }
+                </div>
               </div>
 
               <!-- ===== NODE LOG ===== -->
               <div class="quest-bottom-card">
                 <div class="quest-bottom-title">SKILL NODE LOG</div>
-
+                <div style="${cardContentStyle}">
                 ${
                   Object.entries(r.skillNodeAttemptCount || {})
                     .sort((a, b) => b[1] - a[1])
@@ -590,12 +649,10 @@ function renderQuestStatsModal() {
                       </div>
                     `).join("")
                 }
+                </div>
               </div>
-
-            </div>
-          
           </div>
-
+          </div>
         </div>
 
         <!-- ======================================================
@@ -603,14 +660,16 @@ function renderQuestStatsModal() {
           ・スキル使用履歴 + 戦闘スタイル
         ====================================================== -->
         <div class="quest-tab-content" id="tab-skill">
-
+          <div style="${logContainerStyle}">
           <div class="quest-status-grid">
+            <div style="${gridContainerStyle}">
             
             <div class="quest-bottom-grid">
 
               <!-- ===== SKILL USE HISTORY ===== -->
               <div class="quest-bottom-card">
                 <div class="quest-bottom-title">SKILL USES</div>
+                <div style="${cardContentStyle}">
 
                 ${
                   Object.entries(r.activeSkillUseCount || {})
@@ -650,12 +709,13 @@ function renderQuestStatsModal() {
                       `;
                     }).join("")
                 }
+                </div>
               </div>
 
               <!-- ===== AUTO PASSIVE SKILL ===== -->
               <div class="quest-bottom-card">
                 <div class="quest-bottom-title">AUTO PASSIVE SKILLS</div>
-
+                <div style="${cardContentStyle}">
                 ${
                     unlockedNodes
                     .map(nodeId => SKILL_TREE[nodeId])
@@ -699,11 +759,9 @@ function renderQuestStatsModal() {
                       `;
                     }).join("")
                   }
-
+                </div>
               </div>
-
             </div>
-          </div>
         </div>
       </div>
     `;
@@ -735,7 +793,7 @@ function renderQuestEquipmentSkills() {
 
     item.innerHTML = `
       <div class="skill-icon-wrap">
-        <img src="${skill.icon}" class="skill-icon">
+        <img src="${images[skill.icon]?.src || ""}" class="skill-icon">
       </div>
       <div class="skill-main">
         <div class="skill-name">◆ ${skill.name}</div>
@@ -775,7 +833,7 @@ function renderQuestActiveSkills() {
   const el = document.getElementById("questActiveSkills");
   if (!el) return;
 
-  const stats = getPlayerStatsForEnemy() || {};
+  const stats = getPlayerStatsForEnemy("quest") || {};
 
   // 装備中アクティブ
   const equipped = stats.equippedActiveSkills || [];
@@ -801,7 +859,7 @@ function renderQuestActiveSkills() {
 
     item.innerHTML = `
       <div class="skill-icon-wrap">
-        <img src="${skill.icon}" class="skill-icon">
+        <img src="${images[skill.icon]?.src || ""}" class="skill-icon">
       </div>
 
       <div class="skill-main">
@@ -823,7 +881,7 @@ function renderQuestActiveStock() {
   const el = document.getElementById("questActiveStock");
   if (!el) return;
 
-  const s = getPlayerStatsForEnemy() || {};
+  const s = getPlayerStatsForEnemy("quest") || {};
   const stockMax = Number(s.activeSkillStockMax || 1);
 
   el.innerHTML = "";
@@ -1134,7 +1192,7 @@ function closeQuestStatsModal() {
 
 //=== skillパラメータ関連関数 ======================
 function calcQuestSkillStats() {
-  const stats = getPlayerStatsForEnemy() || {};
+  const stats = getPlayerStatsForEnemy("quest") || {};
   const equipped = stats.equippedSkills || [];
 
   console.log("equippedSkills =", equipped);
@@ -1143,7 +1201,10 @@ function calcQuestSkillStats() {
     chainRate: 1,
     chainDecayRate: 1,
     chainBonus: 1,
-    knockbackBonus: 1
+    knockbackBonus: 1,
+    maxHp: 0,
+    defense: 0,
+    expMultiplier: 1
   };
 
   equipped.forEach(id => {
@@ -1173,10 +1234,13 @@ function renderQuestStatBar(value, inverse = false) {
   // inverse=true は小さいほど強い
   const delta = inverse ? base - value : value - base;
 
-  // ±1.0 を最大幅にする
-  const scale = 45;
+  // 表示上限を基準の3倍 (x3) にする。
+  // base=1 の場合、最大表示 (center→edge) は value = 3 で到達するようにする。
+  const maxMultiplier = 3;
+  const maxDelta = Math.max(0.0001, maxMultiplier - base); // 安全対策（ゼロ除算防止）
+  const scale = 50 / maxDelta; // delta * scale がパーセンテージ幅にマッピングされる
 
-  const width = Math.min(Math.abs(delta) * scale, 45);
+  const width = Math.min(Math.abs(delta) * scale, 50);
   const left = delta >= 0 ? 50 : 50 - width;
   const dir = delta >= 0 ? "up" : "down";
 

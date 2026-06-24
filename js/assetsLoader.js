@@ -5,14 +5,19 @@ export const images = {};
 function loadImage(name, src) {
   return new Promise(resolve => {
     const img = new Image();
+
     img.onload = () => {
       images[name] = img;
       resolve();
     };
+
     img.onerror = () => {
-      console.error(`Failed to load image: ${src}`);
-      resolve(); // 失敗しても次に進めるようにする
+      console.error(
+        `[IMAGE LOAD ERROR] name=${name} src=${src}`
+      );
+      resolve();
     };
+
     img.src = src;
   });
 }
@@ -22,10 +27,62 @@ export async function loadAssets(onProgress) {
   await initAudio();
 
   const assets = [
-    // スキル画像
-    { type: "img", name: "chain_up", src: "./assets/pic/chain_up.jpeg" },
-    { type: "img", name: "chain_bonus", src: "./assets/pic/chain_bonus.jpeg" },
-    { type: "img", name: "skill_1", src: "./assets/pic/skill_1.jpeg" },
+    // passiveスキル画像
+    { type: "img", name: "chain_up_1", src: "./assets/pic/skill/chain_up_1.png" },
+    { type: "img", name: "chain_up_2", src: "./assets/pic/skill/chain_up_2.png" },
+    { type: "img", name: "chain_up_3", src: "./assets/pic/skill/chain_up_3.png" },
+    { type: "img", name: "chain_up_4", src: "./assets/pic/skill/chain_up_4.png" },
+    { type: "img", name: "chain_bonus_1", src: "./assets/pic/skill/chain_bonus_1.png" },
+    { type: "img", name: "chain_bonus_2", src: "./assets/pic/skill/chain_bonus_2.png" },
+    { type: "img", name: "chain_bonus_3", src: "./assets/pic/skill/chain_bonus_3.png" },
+    { type: "img", name: "chain_bonus_4", src: "./assets/pic/skill/chain_bonus_4.png" },
+    { type: "img", name: "chain_decay_1", src: "./assets/pic/skill/chain_decay_1.png" },
+    { type: "img", name: "chain_decay_2", src: "./assets/pic/skill/chain_decay_2.png" },
+    { type: "img", name: "chain_decay_3", src: "./assets/pic/skill/chain_decay_3.png" },
+    { type: "img", name: "chain_decay_4", src: "./assets/pic/skill/chain_decay_4.png" },
+    { type: "img", name: "glass_1", src: "./assets/pic/skill/glass_1.png" },
+    { type: "img", name: "glass_2", src: "./assets/pic/skill/glass_2.png" },
+    { type: "img", name: "glass_3", src: "./assets/pic/skill/glass_3.png" },
+    { type: "img", name: "glass_4", src: "./assets/pic/skill/glass_4.png" },
+    { type: "img", name: "kb_1", src: "./assets/pic/skill/kb_1.png" },
+    { type: "img", name: "kb_2", src: "./assets/pic/skill/kb_2.png" },
+    { type: "img", name: "kb_3", src: "./assets/pic/skill/kb_3.png" },
+    { type: "img", name: "kb_4", src: "./assets/pic/skill/kb_4.png" },
+    { type: "img", name: "hpup_1", src: "./assets/pic/skill/hpup_1.png" },
+    { type: "img", name: "hpup_2", src: "./assets/pic/skill/hpup_2.png" },
+    { type: "img", name: "hpup_3", src: "./assets/pic/skill/hpup_3.png" },
+    { type: "img", name: "defup_1", src: "./assets/pic/skill/defup_1.png" },
+    { type: "img", name: "defup_2", src: "./assets/pic/skill/defup_2.png" },
+    { type: "img", name: "defup_3", src: "./assets/pic/skill/defup_3.png" },
+    { type: "img", name: "expup_1", src: "./assets/pic/skill/expup_1.png" },
+    { type: "img", name: "expup_2", src: "./assets/pic/skill/expup_2.png" },
+    { type: "img", name: "expup_3", src: "./assets/pic/skill/expup_3.png" },
+    { type: "img", name: "negate_1", src: "./assets/pic/skill/negate_1.png" },
+    { type: "img", name: "negate_2", src: "./assets/pic/skill/negate_2.png" },
+    { type: "img", name: "negate_3", src: "./assets/pic/skill/negate_3.png" },
+    { type: "img", name: "revive_1", src: "./assets/pic/skill/revive_1.png" },
+    { type: "img", name: "revive_2", src: "./assets/pic/skill/revive_2.png" },
+    { type: "img", name: "revive_3", src: "./assets/pic/skill/revive_3.png" },
+    { type: "img", name: "item_1", src: "./assets/pic/skill/item_1.png" },
+    { type: "img", name: "item_2", src: "./assets/pic/skill/item_2.png" },
+    { type: "img", name: "item_3", src: "./assets/pic/skill/item_3.png" },
+    { type: "img", name: "skillslot_1", src: "./assets/pic/skill/skillslot_1.png" },
+    { type: "img", name: "stock_1", src: "./assets/pic/skill/stock_1.png" },
+    // activeスキル画像
+    { type: "img", name: "guard_1", src: "./assets/pic/skill/guard_1.png" },
+    { type: "img", name: "guard_2", src: "./assets/pic/skill/guard_2.png" },
+    { type: "img", name: "guard_3", src: "./assets/pic/skill/guard_3.png" },
+    { type: "img", name: "freeze_1", src: "./assets/pic/skill/freeze_1.png" },
+    { type: "img", name: "freeze_2", src: "./assets/pic/skill/freeze_2.png" },
+    { type: "img", name: "freeze_3", src: "./assets/pic/skill/freeze_3.png" },
+    { type: "img", name: "recover_1", src: "./assets/pic/skill/recover_1.png" },
+    { type: "img", name: "recover_2", src: "./assets/pic/skill/recover_2.png" },
+    { type: "img", name: "recover_3", src: "./assets/pic/skill/recover_3.png" },
+    { type: "img", name: "kill_1", src: "./assets/pic/skill/kill_1.png" },
+    { type: "img", name: "kill_near", src: "./assets/pic/skill/kill_near.png" },
+    { type: "img", name: "kill_random", src: "./assets/pic/skill/kill_random.png" },
+    { type: "img", name: "kill_all", src: "./assets/pic/skill/kill_all.png" },
+    { type: "img", name: "knockback", src: "./assets/pic/skill/knockback.png" },
 
     // タイトル画面背景
     { type: "img", name: "title_menu", src: "./assets/pic/title_menu.png" },
@@ -67,6 +124,9 @@ export async function loadAssets(onProgress) {
   onProgress?.(0, total);
 
   for (const a of assets) {
+
+    console.log("loading:", a.name, a.src);
+
     if (a.type === "img") {
       await loadImage(a.name, a.src);
     } else if (a.type === "sound") {
@@ -77,6 +137,7 @@ export async function loadAssets(onProgress) {
     onProgress?.(loaded, total);
   }
 
+console.log("asset loaded", assets.length);
   console.log("asset loaded", images);
 console.log("title_menu", images.title_menu);
 }

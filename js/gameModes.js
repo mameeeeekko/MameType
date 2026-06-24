@@ -14,7 +14,27 @@ function filterByDifficulty(targets, difficultyId) {
   });
 }
 
+function filterByTags(targets, tags = []) {
 
+  if (!tags.length) {
+    return targets;
+  }
+
+  if (tags.includes("empty")) {
+    return targets.filter(t => {
+      const targetTags = t.tags || [];
+      return targetTags.length === 0;
+    });
+  }
+
+  return targets.filter(t => {
+    const targetTags = t.tags || [];
+
+    return tags.every(tag =>
+      targetTags.includes(tag)
+    );
+  });
+}
 
 export const GameModes = {
   NORMAL: {
@@ -42,15 +62,21 @@ export const GameModes = {
     // ★ 出題リストを決める責務もここへ
     buildTargets({ TARGETS, shuffleArray, modeData }) {
 
-      const filtered = filterByDifficulty(TARGETS, modeData.difficulty);
+      const tags = modeData.custom?.tags || [];
+
+      let filtered = filterByDifficulty(
+        TARGETS,
+        modeData.difficulty
+      );
+
+      filtered = filterByTags(filtered, tags);
+
       let shuffled = shuffleArray(filtered);
 
       const limit = modeData.fixedQuestionLimit;
 
-      // 足りなければ補充
       if (shuffled.length < limit) {
-        const extra = shuffleArray(TARGETS);
-        shuffled = shuffled.concat(extra);
+        shuffled = shuffleArray(filtered);
       }
 
       return shuffled.slice(0, limit);
@@ -90,8 +116,17 @@ export const GameModes = {
     },
 
     buildTargets({ TARGETS, shuffleArray, modeData }) {
-      const filtered = filterByDifficulty(TARGETS, modeData.difficulty);
-      return shuffleArray(filtered); 
+
+      const tags = modeData.custom?.tags || [];
+
+      let filtered = filterByDifficulty(
+        TARGETS,
+        modeData.difficulty
+      );
+
+      filtered = filterByTags(filtered, tags);
+
+      return shuffleArray(filtered);
     },
 
     buildResultExtra(state) {
@@ -119,9 +154,21 @@ LONG_TEXT: {
   },
 
   buildTargets({ TARGETS_LONG, modeData, shuffleArray }) {
-    const filtered = filterByDifficulty(TARGETS_LONG, modeData.difficulty);
+
+    const tags = modeData.custom?.tags || [];
+    let filtered = TARGETS_LONG;
+
+    filtered = filterByTags(
+      filtered,
+      tags
+    );
+
     const shuffled = shuffleArray(filtered);
-    return shuffled.slice(0, modeData.questionLimit);
+
+    return shuffled.slice(
+      0,
+      modeData.questionLimit
+    );
   },
 
   buildResultExtra(state) {

@@ -46,7 +46,15 @@ export function getCandidatesForKana(text, pos) {
   // ん
   if (isN(kana)) {
     const nextKana = getKana(text, pos + kana.length);
-    return isNaRow(nextKana) ? ["n","nn"] : ["n"];
+    try {
+      const mode = localStorage.getItem('final_n_mode') || 'nn';
+      if (!nextKana) {
+        return mode === 'n' ? ["n"] : ["nn"];
+      }
+      return isNaRow(nextKana) ? (mode === 'n' ? ["n","nn"] : ["nn","n"]) : ["n"];
+    } catch (e) {
+      return isNaRow(nextKana) ? ["n","nn"] : ["n"];
+    }
   }
 
   // 通常かな
@@ -162,10 +170,6 @@ function resetCombo() {
   target.currentCombo = 0;
 }
 
-// =====================================================
-// 入力処理関数
-// キー入力を受け取り、正誤判定・候補更新・確定を行う
-// =====================================================
   export function handleKey(e, silent = false, state = gameState) {
     //log
     // console.log("INPUT", {
@@ -214,17 +218,51 @@ function resetCombo() {
 
       // 文末の場合 → n を1回で確定
       if (!nextKana) {
-        if (key === "n") {
-          state.inputedRomaji += "n"; // 確定
-          if (!silent) onCorrectType(1); //正解処理
-
-          state.typed = "";            // typed をクリア
-          state.pos += kana.length;    // pos を進める
-          resetCandidates();     // 次の候補をセット
-          
+        // 既に typed が 'n' の場合、2回目の 'n' で 'nn' を確定させる
+        if (state.typed === "n" && key === "n") {
+          state.inputedRomaji += "nn";
+          if (!silent) onCorrectType(2);
+          state.typed = "";
+          state.pos += kana.length;
+          resetCandidates();
           if (!silent) { updateRender(); updateGameEnd(); }
-          return { success: true, isMiss: false, charCount: 1, isComplete: true };
+          return { success: true, isMiss: false, charCount: 2, isComplete: true };
         }
+
+        if (key === "n") {
+          // 設定に応じて文末の'n'を確定するか決める
+          try {
+            const mode = localStorage.getItem('final_n_mode') || 'nn';
+            if (mode === 'n') {
+              // single 'n' で確定
+              state.inputedRomaji += "n"; // 確定
+              if (!silent) onCorrectType(1); //正解処理
+
+              state.typed = "";            // typed をクリア
+              state.pos += kana.length;    // pos を進める
+              resetCandidates();     // 次の候補をセット
+
+              if (!silent) { updateRender(); updateGameEnd(); }
+              return { success: true, isMiss: false, charCount: 1, isComplete: true };
+            } else {
+              // 'nn' モード: single 'n' では確定せず typed バッファに入れる
+              state.typed = "n";
+              if (!silent) { updateRender(); }
+              return { success: true, isMiss: false, charCount: 0 };
+            }
+          } catch (e) {
+            // localStorage 失敗時は従来の single 'n' 動作
+            state.inputedRomaji += "n"; // 確定
+            if (!silent) onCorrectType(1);
+
+            state.typed = "";
+            state.pos += kana.length;
+            resetCandidates();
+            if (!silent) { updateRender(); updateGameEnd(); }
+            return { success: true, isMiss: false, charCount: 1, isComplete: true };
+          }
+        }
+
         if (!silent) handleMiss(); // (handleMissは呼ばれた)
         return { success: false, isMiss: true, charCount: 0 };
       }
@@ -248,7 +286,7 @@ function resetCombo() {
           state.pos += kana.length;
           resetCandidates();
 
-          if (!silent) { updateRender(); }
+          if (!silent) { updateRender(); updateGameEnd(); }
           return { success: true, isMiss: false, charCount: 2, isComplete: true };
         }
 
@@ -337,7 +375,8 @@ function resetCombo() {
     if (complete) {
         state.inputedRomaji += state.typed;
 
-        if (!silent) onCorrectType(state.typed.length);
+          const confirmedCharCount = state.typed.length;
+          if (!silent) onCorrectType(confirmedCharCount);
         
         const nextKana = getKana(state.text, state.pos + kana.length);
         state.pos += kana.length;
@@ -354,7 +393,7 @@ function resetCombo() {
         resetCandidates();       // 次の候補セット
         if (!silent) { updateRender(); }
         if (!silent) { updateGameEnd(); }      // ゲーム終了判定
-        return { success: true, isMiss: false, charCount: gameState.typed.length, isComplete: true };
+        return { success: true, isMiss: false, charCount: confirmedCharCount, isComplete: true };
     } 
     else { if (!silent) { updateRender(); } return { success: true, isMiss: false, charCount: 0 }; } // 完全一致でなければ表示更新のみ (typed buffer updated)
   }

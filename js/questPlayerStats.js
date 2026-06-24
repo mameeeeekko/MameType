@@ -18,7 +18,7 @@ const DEFAULT_STATS = {
     nextExp: 500,
     
     maxHp: 35,
-    defense: 0, //max 50
+    defense: 0, //max 99
 
     radius: 15,
 
@@ -105,6 +105,10 @@ function buildFinalStats(base) {
         chainDecayRate: 1,
         chainBonus: 1,
         knockbackBonus: 1,
+        expMultiplier: 1,
+        itemSpawnMultiplier: 1,
+        damageNegateChance: 0,
+        reviveChance: 0,
 
         skillSlotMax: (base.baseSkillSlot || 0) + (base.bonusSkillSlot || 0),
         activeSkillStockMax: (base.baseActiveSkillStockMax || 0) + (base.bonusActiveSkillStockMax || 0)
@@ -327,7 +331,7 @@ export function getPlayerStatsForEnemy(mode = "enemy", levelOverride = null) {
     base.level = levelOverride;
     // クエストモードの成長式を流用
     base.maxHp = Math.min(999, 45 + (base.level - 1) * 8);
-    base.defense = Math.min(50, (DEFAULT_STATS.defense || 0) + (base.level - 1));
+    base.defense = Math.min(99, (DEFAULT_STATS.defense || 0) + (base.level - 1));
     // 次の経験値もレベルに合わせて更新
     base.nextExp = Math.floor(650 * Math.pow(1.16, base.level - 1));
   }
@@ -405,10 +409,17 @@ function levelUp() {
     );
 
     // 防御成長（ゆるやか）
-    playerStats.defense = Math.min(
-        50,
-        playerStats.defense + 1
-    );
+    // 推奨: スキルで防御を上げる場合のバランス調整として、
+    // レベルごとの防御成長を一部のレベルでスキップする。
+    // デフォルト：5レベル間隔でスキップ（Lv%5===0 の時は +1 しない）。
+    const DEF_GROWTH_SKIP_INTERVAL = 5;
+
+    if (playerStats.level % DEF_GROWTH_SKIP_INTERVAL !== 0) {
+        playerStats.defense = Math.min(99, playerStats.defense + 1);
+    } else {
+        // スキップ時は成長しない（ただし上限は維持）
+        playerStats.defense = Math.min(99, playerStats.defense);
+    }
 
     //skill slot ,activeSkill stock増加
     if (playerStats.level === 2) { playerStats.bonusSkillSlot++; slotIncrease++; playerStats.bonusActiveSkillStockMax++; stockIncrease++; }//test

@@ -696,19 +696,53 @@ export function openQuestMenuModal(type = "difficulty") {
         difficulty: () => {
             title.textContent = "DIFFICULTY";
 
-            const currentLabel = document.createElement("div");
-            currentLabel.className = "quest-current-difficulty";
-            content.appendChild(currentLabel);
+            // `現在`ラベルは表示しない（UI要望により削除）
 
             const btnContainer = document.createElement("div");
             btnContainer.className = "quest-difficulty-list";
             content.appendChild(btnContainer);
+            
+            // 難易度説明を描画するヘルパー
+            function renderDiffDescription(diff) {
+                if (!diff) return;
 
+                // 既存の説明要素があれば全部削除してから再生成（重複を防ぐ）
+                const prevs = document.querySelectorAll('#questDifficultyDesc');
+                prevs.forEach(p => p.remove());
+
+                const desc = document.createElement("div");
+                desc.id = "questDifficultyDesc";
+                desc.className = "quest-difficulty-desc";
+                desc.style.marginTop = "12px";
+                desc.style.fontSize = "0.9em";
+                desc.style.color = "#ddd";
+                content.appendChild(desc);
+
+                const e = diff.enemy || {};
+                const sb = e.scoreBonus || {};
+
+                // 整形して表示（不足する値は '-' で表示）
+                desc.innerHTML = `
+                    <div style="font-weight:700; margin-bottom:6px;">${diff.name} の設定</div>
+                    <div>■ 敵関連</div>
+                    <div>・敵出現頻度 (spawnRate): ${e.spawnRate ?? '-' } 倍</div>
+                    <div>・敵速度 (enemySpeed): ${e.enemySpeed ?? '-' } 倍</div>
+                    <div>・敵ダメージ倍率 (damageMultiplier): ${e.damageMultiplier ?? '-' } 倍</div>
+                    <div>・チェイン減衰 (chainDecay): ${e.chainDecay ?? '-' } 倍</div>
+                    <div style="margin-top:8px">■ スコア関連</div>
+                    <div>・スコア倍率 (scoreMultiplier): ${e.scoreMultiplier ?? '-' } 倍</div>
+                    <div>・クリアボーナス: +${Math.round((sb.clearBonus ?? 0)*100)}%</div>
+                    <div>・ノーミスボーナス: +${Math.round((sb.noMissBonus ?? 0)*100)}%</div>
+                    <div>・被ダメージなしボーナス: +${Math.round((sb.noDamageBonus ?? 0)*100)}%</div>
+                `;
+            }
             function update(){
                 const current = getCurrentDifficulty("quest");
-                //currentLabel.textContent = `現在: ${current.name}`;
+                // 現在選択中のラベル表示は不要のため省略
 
                 btnContainer.innerHTML = "";
+
+                // 説明要素は renderDiffDescription が生成するためここでは作らない
 
                 Object.values(DIFFICULTIES).forEach(diff=>{
                     const btn = document.createElement("button");
@@ -719,13 +753,18 @@ export function openQuestMenuModal(type = "difficulty") {
                         btn.classList.add("active");
                     }
 
+                    // クリックで選択すると説明を切り替える
                     btn.onclick = ()=>{
                         setCurrentDifficulty(diff.id, "quest");
                         update();
+                        renderDiffDescription(getCurrentDifficulty("quest"));
                     };
 
                     btnContainer.appendChild(btn);
                 });
+
+                // 初期説明は常に表示する（現在の選択を反映）
+                renderDiffDescription(current);
             }
 
             update();
@@ -735,8 +774,17 @@ export function openQuestMenuModal(type = "difficulty") {
             title.textContent = "SKILL TREE";
 
             const treeBox = document.createElement("div");
-            treeBox.style.height = "400px";
+            treeBox.className = "skill-tree-box";
+            // make height responsive and allow scrolling if content is large
+            // 高さはモーダルの max-height と干渉しないように調整
+            treeBox.style.height = "calc(90vh - 120px)";
+            treeBox.style.maxHeight = "calc(90vh - 120px)";
             treeBox.style.border = "1px solid #333";
+            treeBox.style.overflow = "auto";
+            treeBox.style.width = "100%";
+            treeBox.style.maxWidth = "1200px";
+            treeBox.style.boxSizing = "border-box";
+            treeBox.style.margin = "0 auto";
 
             content.appendChild(treeBox);
 
@@ -780,7 +828,13 @@ export function openQuestMenuModal(type = "difficulty") {
                     chainRate: 1,
                     chainDecayRate: 1,
                     chainBonus: 1,
-                    knockbackBonus: 1 
+                    knockbackBonus: 1,
+                    maxHp: 0,
+                    defense: 0,
+                    expMultiplier: 1,
+                    itemSpawnMultiplier: 1,
+                    damageNegateChance: 0,
+                    reviveChance: 0
                 };
 
                 nextEquipped.forEach(id => {
@@ -808,6 +862,36 @@ export function openQuestMenuModal(type = "difficulty") {
                         ${buildStatRow("Chain減衰", current.chainDecayRate, next.chainDecayRate, true)}
                         ${buildStatRow("Chainボーナス補正", current.chainBonus, next.chainBonus)}
                         ${buildStatRow("ノックバック", current.knockbackBonus, next.knockbackBonus)}
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">Max HP</div>
+                            <div class="skill-stat-current">${current.maxHp}</div>
+                            <div class="skill-stat-value">${next.maxHp !== current.maxHp ? `<span class="stat-up">(+${next.maxHp - current.maxHp})</span>` : ''}</div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">DEF</div>
+                            <div class="skill-stat-current">${current.defense}</div>
+                            <div class="skill-stat-value">${next.defense !== current.defense ? `<span class="stat-up">(+${next.defense - current.defense})</span>` : ''}</div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">EXP倍率</div>
+                            <div class="skill-stat-current">x${current.expMultiplier.toFixed(2)}</div>
+                            <div class="skill-stat-value">${next.expMultiplier !== current.expMultiplier ? `<span class="stat-up">(x${next.expMultiplier.toFixed(2)})</span>` : ''}</div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">アイテム出現率</div>
+                            <div class="skill-stat-current">x${current.itemSpawnMultiplier.toFixed(2)}</div>
+                            <div class="skill-stat-value">${next.itemSpawnMultiplier !== current.itemSpawnMultiplier ? `<span class="stat-up">(x${next.itemSpawnMultiplier.toFixed(2)})</span>` : ''}</div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">ダメージ無効化率</div>
+                            <div class="skill-stat-current">${(current.damageNegateChance * 100).toFixed(0)}%</div>
+                            <div class="skill-stat-value">${next.damageNegateChance !== current.damageNegateChance ? `<span class="stat-up">(${(next.damageNegateChance * 100).toFixed(0)}%)</span>` : ''}</div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">REVIVE</div>
+                            <div class="skill-stat-current">${(current.reviveChance * 100).toFixed(0)}%</div>
+                            <div class="skill-stat-value">${next.reviveChance !== current.reviveChance ? `<span class="stat-up">(${(next.reviveChance * 100).toFixed(0)}%)</span>` : ''}</div>
+                        </div>
                     `;
                 } else {
                     html = `
@@ -815,6 +899,36 @@ export function openQuestMenuModal(type = "difficulty") {
                         ${buildStatRow("Chain減衰", current.chainDecayRate, null, true)}
                         ${buildStatRow("Chainボーナス補正", current.chainBonus)}
                         ${buildStatRow("ノックバック", current.knockbackBonus)}
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">Max HP</div>
+                            <div class="skill-stat-current">${current.maxHp}</div>
+                            <div class="skill-stat-value"></div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">DEF</div>
+                            <div class="skill-stat-current">${current.defense}</div>
+                            <div class="skill-stat-value"></div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">EXP倍率</div>
+                            <div class="skill-stat-current">x${current.expMultiplier.toFixed(2)}</div>
+                            <div class="skill-stat-value"></div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">アイテム出現率</div>
+                            <div class="skill-stat-current">x${current.itemSpawnMultiplier.toFixed(2)}</div>
+                            <div class="skill-stat-value"></div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">ダメージ無効化率</div>
+                            <div class="skill-stat-current">${(current.damageNegateChance * 100).toFixed(0)}%</div>
+                            <div class="skill-stat-value"></div>
+                        </div>
+                        <div class="skill-stat-row">
+                            <div class="skill-stat-name">REVIVE</div>
+                            <div class="skill-stat-current">${(current.reviveChance * 100).toFixed(0)}%</div>
+                            <div class="skill-stat-value"></div>
+                        </div>
                     `;
                 }
 
@@ -845,17 +959,19 @@ export function openQuestMenuModal(type = "difficulty") {
                     : null;
 
                 // 最大±0.5を100%として表示（必要なら調整）
-                const scale = 100 / 2.0;
+                            // HUD と同様に表示上限を基準の3倍 (x3) に合わせる
+                            const maxMultiplier = 3;
+                            const maxDelta = Math.max(0.0001, maxMultiplier - base);
+                            const scale = 50 / maxDelta; // delta * scale がパーセンテージ幅にマッピングされる
 
-                const currentWidth = Math.abs(currentDelta) * scale;
-                const nextWidth = nextDelta !== null ? Math.abs(nextDelta - currentDelta) * scale : 0;
+                            const currentWidth = Math.min(Math.abs(currentDelta) * scale, 50);
+                            const nextWidth = nextDelta !== null ? Math.min(Math.abs(nextDelta - currentDelta) * scale, 50) : 0;
 
                 const currentDir = currentDelta >= 0 ? "up" : "down";
                 const nextDir =
                     nextDelta !== null && nextDelta - currentDelta >= 0 ? "up" : "down";
 
-                const currentLeft =
-                    currentDelta >= 0 ? 50 : 50 - currentWidth;
+                const currentLeft = currentDelta >= 0 ? 50 : 50 - currentWidth;
 
                 let diffHTML = "";
 
@@ -863,7 +979,7 @@ export function openQuestMenuModal(type = "difficulty") {
                     const diffStart =
                         nextDelta >= currentDelta
                             ? (currentDelta >= 0 ? 50 + currentWidth : 50 - nextWidth)
-                            : (nextDelta >= 0 ? 50 + Math.abs(nextDelta) * scale : 50 - Math.abs(nextDelta) * scale);
+                            : (nextDelta >= 0 ? 50 + Math.min(Math.abs(nextDelta) * scale, 50) : 50 - Math.min(Math.abs(nextDelta) * scale, 50));
 
                     diffHTML = `
                         <div class="skill-bar-diff ${nextDir}"
@@ -928,7 +1044,7 @@ export function openQuestMenuModal(type = "difficulty") {
                         const skill = getSkillById(skillId);
 
                         slot.innerHTML = `
-                            <img src="${skill.icon}" class="equip-slot-icon">
+                            <img src="${images[skill.icon]?.src || ""}" class="equip-slot-icon">
                         `;
 
                         slot.onclick = () => {
@@ -976,7 +1092,7 @@ export function openQuestMenuModal(type = "difficulty") {
                         const skill = getSkillById(skillId);
 
                         slot.innerHTML = `
-                            <img src="${skill.icon}" class="equip-slot-icon">
+                            <img src="${images[skill.icon]?.src || ""}" class="equip-slot-icon">
                         `;
 
                         slot.onclick = () => {
@@ -1066,7 +1182,7 @@ export function openQuestMenuModal(type = "difficulty") {
 
                         item.innerHTML = `
                             <div class="skill-grid-icon-wrap">
-                                <img src="${skill.icon}" class="skill-grid-icon">
+                                <img src="${images[skill.icon]?.src || ""}" class="skill-grid-icon">
                             </div>
                             <div class="skill-grid-name">${skill.name}</div>
                         `;
@@ -1104,7 +1220,7 @@ export function openQuestMenuModal(type = "difficulty") {
 
                         item.innerHTML = `
                             <div class="skill-grid-icon-wrap">
-                                <img src="${skill.icon}" class="skill-grid-icon">
+                                <img src="${images[skill.icon]?.src || ""}" class="skill-grid-icon">
                             </div>
                             <div class="skill-grid-name">${skill.name}</div>
                         `;
@@ -1126,7 +1242,7 @@ export function openQuestMenuModal(type = "difficulty") {
 
                     item.innerHTML = `
                         <div class="skill-grid-icon-wrap">
-                            <img src="${skill.icon}" class="skill-grid-icon">
+                            <img src="${images[skill.icon]?.src || ""}" class="skill-grid-icon">
                         </div>
                         <div class="skill-grid-name">${skill.name}</div>
                     `;

@@ -2606,8 +2606,7 @@ function drawSkillIconCircle(ctx, skill, x, y, size, ready) {
     ctx.save();
 
     if (!skill._img) {
-        skill._img = new Image();
-        skill._img.src = skill.icon;
+        skill._img = images[skill.icon];
     }
 
     if (
