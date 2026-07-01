@@ -120,8 +120,10 @@ export const gameState = {
     totalTime: 0,
     speedCorrectChars: 0,
     speedStartTime: 0,
-        // ★追加
-    enemyStats: {
+    startTime: 0, // Game start time for all modes
+    // ★追加
+    currentBgmInfo: null,
+    enemyStats: { // gameState に含める
         startTime: 0,
         endTime: 0,
     }
@@ -159,6 +161,8 @@ export function resetGameState() {
   gameState.correctCount = 0;
   gameState.mistakeCount = 0;
   gameState.currentIndex = 0;
+  gameState.startTime = 0; // Reset game start time
+  gameState.currentBgmInfo = null;
 } 
 
 export function resetAllModes() {
@@ -371,8 +375,11 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
 
   await initAudio();
   if (getSoundEnabled() && getSoundSettings().bgm) {
-  playBGM("bgm_normal1",0.2);
+    // モード設定からBGM IDを取得。なければデフォルトを再生
+    const bgmId = config.mode?.bgm || "bgm_normal1";
+    playBGM(bgmId, 0.5);
   }
+  gameState.startTime = getNow(); // BGM表示のために開始時間をセット
 
   const modal = document.getElementById("gameModal");
   if(modal) modal.style.display="flex";
@@ -460,6 +467,7 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   lastSpeedUpdate=0;
 
   loadText(gameState.currentIndex);
+  gameState.startTime = getNow(); // Set game start time here for all modes
   updateProgressBar(gameState.currentIndex, shuffledTargets.length);
   updateProgressText(gameState.currentIndex, shuffledTargets.length);
   updateGameButtonsUI();
@@ -469,6 +477,8 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
 export async function doCountdown(config) {
 
   setPaused(false); // ★ポーズ解除
+  gameState.currentBgmInfo = null;
+  gameState.startTime = 0;
   resetRendererState();
   fullResetInput();
 
@@ -517,6 +527,7 @@ export async function doCountdown(config) {
         // 元の要素を復帰
         ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = originalDisplay[id]; });
         
+        updateGameButtonsUI(); // UIを更新
         // 速度メーター初期化
         gameState.speedCorrectChars = 0;
         gameState.speedStartTime = getNow();
@@ -625,6 +636,7 @@ async function finishGame(config = {}) {
     stopTimeAttackTimer();
     stopTimeCircle(); 
     stopBGM();
+    gameState.currentBgmInfo = null;
 
     if (typeof gameState.solvedCount !== "number" || gameState.solvedCount < 0) gameState.solvedCount = 0;
 
@@ -880,6 +892,8 @@ function updateTimeAttack() {
 // =====================================================
 export function backToMenu(){
   stopBGM(); 
+  gameState.startTime = 0;
+  gameState.currentBgmInfo = null;
   isGameActive=false;
   isFinishing = false;
   gameState.isEnding = false;
@@ -919,6 +933,9 @@ function speedTick(now){
     return;
   }
 
+  // 通常モードの描画更新ループ
+  renderState();
+
   if (gameState.currentMode.id === GameModes.TIME_ATTACK.id) {
     updateTimeAttack();
   }
@@ -938,18 +955,22 @@ function updateGameButtonsUI() {
   const gameBackBtn = document.getElementById("gameBackBtn");
   const backBtn = document.getElementById("backBtn");
 
-  if (!gameBackBtn || !backBtn) return;
+  if (!gameBackBtn) return;
 
   // ★ スキルモード
   if (gameState.currentChallenge?.isSkillMode) {
-    gameBackBtn.textContent = "戻る";
-    backBtn.style.display = "none";
+    gameBackBtn.textContent = "BACK";
+    gameBackBtn.style.display = "block"; // gameBackBtn を表示
+    gameBackBtn.style = "center"; // 中央に配置
+    if (backBtn) backBtn.style.display = "none";
     return;
   }
 
   // ★ 通常
-  gameBackBtn.textContent = "戻る";
-  backBtn.style.display = "block";
+  gameBackBtn.textContent = "BACK";
+  gameBackBtn.style.display = "block"; // gameBackBtn を表示
+  gameBackBtn.style = "center"; // 中央に配置
+  if (backBtn) backBtn.style.display = "block";
 }
 
 // ===============================

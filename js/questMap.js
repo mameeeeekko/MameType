@@ -37,7 +37,8 @@ export const QUEST_MAP = {
         bgImage: "map_blue",
         nodes: [
             { id: "W1_Q1",  name: "接続テスト", stage: "STAGE1", bgm: "bgm_enemy1", bgImage: "battle_blue", next: ["W1_Q2","W1_TEST"], pos: { x: 100, y: 350 } },
-            { id: "W1_TEST",  name: "テスト", stage: "TESTSTAGE", bgm: "bgm_enemy1", bgImage: "battle_blue", next: [], pos: { x: 100, y: 100 } },
+            //rewordはtestでいれている。
+            { id: "W1_TEST",  name: "テスト", stage: "TESTSTAGE", bgm: "bgm_enemy1", bgImage: "battle_blue", next: [], pos: { x: 100, y: 100 },reward: { type: "slot", value: 1 },  }, 
             { id: "W1_Q2",  name: "パケットの海", stage: "STAGE2", bgm: "bgm_enemy1", bgImage: "battle_blue", next: ["W1_Q3"], pos: { x: 140, y: 290 } },
             { id: "W1_Q3",  name: "Cookie採取", stage: "STAGE3", bgm: "bgm_enemy1", bgImage: "battle_blue", next: ["W1_Q4"], pos: { x: 180, y: 230 } },
             { id: "W1_Q4",  name: "ログ解析", stage: "STAGE4", bgm: "bgm_enemy1", bgImage: "battle_blue", next: ["W1_Q5"], pos: { x: 220, y: 170 } },
@@ -49,7 +50,7 @@ export const QUEST_MAP = {
             { id: "W1_Q10", name: "最終チェックポイント", stage: "STAGE10", bgm: "bgm_enemy1", bgImage: "battle_blue", next: ["W1_MiniBoss_1"], pos: { x: 350, y: 300 } },
             { 
                 id: "W1_MiniBoss_1", 
-                name: "中ボス: Adware King", 
+                name: "Adware King", 
                 stage: "W1_MID_BOSS_1", 
                 bgm: "bgm_enemy2", 
                 bgImage: "battle_blue", 
@@ -68,7 +69,7 @@ export const QUEST_MAP = {
             { id: "W1_Q20", name: "司令部目前", stage: "STAGE20", bgm: "bgm_enemy1", bgImage: "battle_blue", next: ["W1_MiniBoss_2"], pos: { x: 630, y: 475 } },
             { 
                 id: "W1_MiniBoss_2", 
-                name: "中ボス: Botnet Commander", 
+                name: "Botnet Commander", 
                 stage: "W1_MID_BOSS_2", 
                 bgm: "bgm_enemy2", 
                 bgImage: "battle_blue", 
@@ -88,7 +89,7 @@ export const QUEST_MAP = {
             { id: "W1_Q30", name: "ゲートウェイの門", stage: "STAGE30", bgm: "bgm_enemy1", bgImage: "battle_blue", next: ["W1_MiniBoss_3"], pos: { x: 1300, y: 325 } },
             { 
                 id: "W1_MiniBoss_3", 
-                name: "中ボス: Botnet Commander", 
+                name: "Botnet Commander", 
                 stage: "W1_MID_BOSS_3", 
                 bgm: "bgm_enemy2", 
                 bgImage: "battle_blue", 
@@ -98,7 +99,7 @@ export const QUEST_MAP = {
             },
             { 
                 id: "W1_BOSS", 
-                name: "Gateway Guardian", 
+                name: "Gateway", 
                 stage: "W1_WORLD_BOSS", 
                 bgm: "bgm_enemy3", 
                 bgImage: "battle_blue", 

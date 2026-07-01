@@ -1,6 +1,8 @@
 // enemyResult.js
 
-import { gameState } from "./gameCore.js";
+import { gameState, fullResetGame, backToMenu } from "./gameCore.js";
+import { GameModes } from "./gameModes.js";
+import { showRecordsView } from "./recordsView.js";
 import { resetResultButtons } from "./resultView.js";
 import { renderOnlineRanking } from "../online/getRanking.js";
 
@@ -13,6 +15,13 @@ export function showEnemyResult({
     const stats = gameState.enemyStats ?? {}; // ←必ず stats を定義
 
     resetResultButtons("enemy_mode", { missedCount: stats.mistakeCount });
+
+    // ★「記録を見る」ボタンに現在のモードIDを保存する
+    const resultOpenRecordsBtn = document.getElementById("resultOpenRecordsBtn");
+    if (resultOpenRecordsBtn) {
+        // main.jsのイベントリスナーがこのIDを使う
+        resultOpenRecordsBtn.dataset.modeId = GameModes.ENEMY_MODE.id;
+    }
 
     const modal = document.querySelector(".game-modal");
     const resultDiv = document.getElementById("result");

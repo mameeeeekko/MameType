@@ -8,11 +8,13 @@ let delayNode = null;
 let feedbackGain = null;
 let echoGain = null;
 export let bgmGain = null; // Exported
-export let seGain = null;  // Exported
+export let seGain = null; // Exported
 export let typeGain = null; // Exported
 export let missGain = null; // Exported
 
-const laserEffects = [];
+export let laserEffects = [];
+import { gameState } from "./gameCore.js";
+const loopingSounds = {};
 const playerDamageEffects = [];
 const playerNegateEffects = [];
 let buffers = {};
@@ -20,6 +22,7 @@ let bgmSource = null;
 
 let initialized = false;
 
+const soundMeta = {};
 const volumes = {
     bgm: 0.5,
     se: 0.5,
@@ -92,9 +95,9 @@ function getAudioContext() {
         typeGain.connect(masterGain);
         missGain.connect(masterGain);
 
-        delayNode.delayTime.value = 0.08;
-        feedbackGain.gain.value = 0.18;
-        echoGain.gain.value = 0.25;
+        delayNode.delayTime.value = 0.08; // ディレイ時間
+        feedbackGain.gain.value = 0.14; // フィードバック量（エコーの繰り返し）
+        echoGain.gain.value = 0.20; // エコー全体の音量
 
         // フィードバックループ
         delayNode.connect(feedbackGain);
@@ -118,14 +121,18 @@ function getAudioContext() {
 // サウンドロード
 // ===========================================
 
-export async function loadSound(name, url) {
+export async function loadSound(asset) {
 
     const ctx = getAudioContext();
 
-    const res = await fetch(url);
+    const res = await fetch(asset.src);
     const arrayBuffer = await res.arrayBuffer();
 
-    buffers[name] = await ctx.decodeAudioData(arrayBuffer);
+    buffers[asset.name] = await ctx.decodeAudioData(arrayBuffer);
+    soundMeta[asset.name] = {
+        title: asset.title || "-",
+        composer: asset.composer || "-",
+    };
 }
 
 // ===========================================
@@ -325,21 +332,21 @@ export function playEnemyKillSound(type=1){
             playSE("kill1",0.12);
         },80);
     }
-    if(type===2) playSE("kill2",0.35);
-    if(type===3) playSE("kill3",0.35);
-    if(type===4) playSE("killLaser",0.35);
-    if(type===5) playSE("kill5",0.35);
-    if(type===6) playSE("killBullet",0.35,1,0,1);
-    if(type===7) playSE("killItem",0.35,1,0,1);
+    if(type===2) playSE("kill2",0.5);
+    if(type===3) playSE("kill3",0.5);
+    if(type===4) playSE("killLaser",0.5);
+    if(type===5) playSE("kill5",0.5);
+    if(type===6) playSE("killBullet",0.5,1,0,1);
+    if(type===7) playSE("killItem",0.5,1,0,1);
 }
 
 
 export function playDamageSound(){
-    playSE("damage1",0.4);
+    playSE("damage1",0.5);
 }
 
 export function playErrorSound(){
-    playSE("error1",0.6, 1, 0, 1);
+    playSE("error1",0.5, 1, 0, 1);
 }
 
 export function playPhaseWarningSound() {
@@ -373,6 +380,38 @@ export function playPhaseWarningSound() {
     }, 600);
 }
 // ===========================================
+// ループ再生
+// ===========================================
+export function playLoopSE(name, volume = 0.5) {
+    if (loopingSounds[name]) return; // すでに再生中なら何もしない
+
+    const ctx = getAudioContext();
+    const buffer = buffers[name];
+    if (!buffer) return;
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const gain = ctx.createGain();
+    gain.gain.value = volume;
+
+    source.connect(gain).connect(seGain);
+    source.start();
+
+    loopingSounds[name] = { source, gain };
+}
+
+export function stopLoopSE(name) {
+    if (loopingSounds[name]) {
+        try {
+            loopingSounds[name].source.stop();
+        } catch (e) {}
+        delete loopingSounds[name];
+    }
+}
+
+// ===========================================
 // BGM
 // ===========================================
 
@@ -389,6 +428,11 @@ export function playBGM(name="bgm1", volume=0.4){
     if(!buffer) return;
 
     stopBGM();
+
+    // gameStateに現在のBGM情報を保存
+    if (gameState) {
+        gameState.currentBgmInfo = soundMeta[name] || null;
+    }
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
@@ -455,7 +499,7 @@ export function flashMiss(){
 // プレイヤーエフェクト
 // ===============================
 
-export const hitWaveEffects = [];
+export let hitWaveEffects = [];
 
 export function spawnHitWave(x, y){
 
@@ -1025,7 +1069,7 @@ export function renderPlayerNegateEffects(ctx) {
 // ===============================
 // 敵エフェクト
 // ===============================
-let particles = [];
+export let particles = [];
 
 export function spawnEnemyEffect(x, y, effect = "enemy1") {
 
@@ -1048,6 +1092,141 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
                 radius: 3,
                 life: 30,
                 maxLife: 30
+            });
+        }
+    }
+
+    // =====================================
+    // 少し強い通常敵
+    // =====================================
+    else if (effect === "enemy2") {
+        // 多めのパーティクル
+        for (let i = 0; i < 20; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 6;
+            particles.push({
+                type: "enemy2_particle",
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 2 + Math.random() * 2,
+                life: 35,
+                maxLife: 35
+            });
+        }
+        // 衝撃波
+        particles.push({
+            type: "enemy2_wave",
+            x, y,
+            radius: 10, maxRadius: 60,
+            life: 20, maxLife: 20
+        });
+    }
+
+    // =====================================
+    // 中ボス1
+    // =====================================
+    else if (effect === "midboss1") {
+        // 多めのパーティクル
+        for (let i = 0; i < 40; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 3 + Math.random() * 7;
+            particles.push({
+                type: "midboss1_particle",
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 2.5 + Math.random() * 3,
+                life: 45,
+                maxLife: 45
+            });
+        }
+        // 衝撃波 (2重)
+        // 外側
+        particles.push({
+            type: "midboss1_wave",
+            x, y,
+            radius: 15, maxRadius: 100,
+            life: 30, maxLife: 30
+        });
+        particles.push({
+            type: "midboss1_wave_inner", // 内側の衝撃波を別タイプに
+            x, y,
+            radius: 5, maxRadius: 160,
+            life: 40, maxLife: 40
+        });
+        // 中央の閃光
+        particles.push({
+            type: "midboss1_flash",
+            x,
+            y,
+            radius: 120,
+            life: 20,
+            maxLife: 20
+        });
+        // 十字の光芒
+        particles.push({
+            type: "midboss1_cross_flare",
+            x,
+            y,
+            length: 200,
+            width: 25,
+            life: 25,
+            maxLife: 25
+        });
+    }
+
+    // =====================================
+    // ラストボス
+    // =====================================
+    else if (effect === "boss2") {
+        // 大量のパーティクル
+        for (let i = 0; i < 50; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 4 + Math.random() * 10;
+            particles.push({
+                type: "boss2_particle",
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 2.5 + Math.random() * 3.5,
+                life: 60, maxLife: 60
+            });
+        }
+        // 3重の衝撃波
+        particles.push({
+            type: "boss2_wave",
+            x, y, radius: 20, maxRadius: 200,
+            life: 40, maxLife: 40, color: "#d3adf7" // 薄紫
+        });
+        particles.push({
+            type: "boss2_wave",
+            x, y, radius: 10, maxRadius: 400,
+            life: 50, maxLife: 50, color: "#ffd666" // 金色
+        });
+        particles.push({
+            type: "boss2_wave",
+            x, y, radius: 0, maxRadius: 800,
+            life: 60, maxLife: 60, color: "#ffffff" // 白
+        });
+        // 巨大な閃光
+        particles.push({
+            type: "boss2_flash",
+            x, y, radius: 600,
+            life: 30, maxLife: 30
+        });
+        // 回転する光の柱
+        for (let i = 0; i < 8; i++) {
+            particles.push({
+                type: "boss2_pillar",
+                x, y,
+                angle: (Math.PI * 2 / 8) * i,
+                rotationSpeed: 0.05 + Math.random() * 0.05,
+                width: 40 + Math.random() * 20,
+                length: 1200,
+                life: 50, maxLife: 50
             });
         }
     }
@@ -1187,6 +1366,212 @@ export function renderEnemyEffects(ctx) {
             ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
             ctx.fill();
         }
+        // =====================================
+        // 少し強い通常敵：パーティクル
+        // =====================================
+        else if (p.type === "enemy2_particle") {
+            ctx.fillStyle = "#ffc53d"; // 少し明るいオレンジ
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#ffc53d";
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // =====================================
+        // 少し強い通常敵：衝撃波
+        // =====================================
+        else if (p.type === "enemy2_wave") {
+            const t = 1 - (p.life / p.maxLife);
+            const radius = p.radius + (p.maxRadius - p.radius) * t;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+
+            ctx.strokeStyle = "#ffc53d";
+            ctx.lineWidth = 4 * alpha;
+
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#ffc53d";
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+        // =====================================
+        // 中ボス1：パーティクル
+        // =====================================
+        else if (p.type === "midboss1_particle") {
+            // 速度減衰
+            p.vx *= 0.98;
+            p.vy *= 0.98;
+
+            // 時間経過で色を変化させる (白銀 -> 黄 -> オレンジ)
+            const lifeRatio = p.life / p.maxLife;
+            if (lifeRatio > 0.7) {
+                ctx.fillStyle = "#e0e0e0"; // 白銀
+            } else if (lifeRatio > 0.4) {
+                ctx.fillStyle = "#ffffaa"; // 明るい黄色
+            } else {
+                ctx.fillStyle = "#ffc53d"; // オレンジ
+            }
+
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = "#ffffff";
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // =====================================
+        // ラストボス：パーティクル
+        // =====================================
+        else if (p.type === "boss2_particle") {
+            p.vx *= 0.98;
+            p.vy *= 0.98;
+
+            const lifeRatio = p.life / p.maxLife;
+            if (lifeRatio > 0.7) ctx.fillStyle = "#d3adf7"; // 紫
+            else if (lifeRatio > 0.4) ctx.fillStyle = "#ffd666"; // 金
+            else ctx.fillStyle = "#ffffff"; // 白
+
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = ctx.fillStyle;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius * alpha, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // =====================================
+        // ラストボス：衝撃波
+        // =====================================
+        else if (p.type === "boss2_wave") {
+            const t = 1 - (p.life / p.maxLife);
+            const radius = p.radius + (p.maxRadius - p.radius) * t;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = 6 * alpha;
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = p.color;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+        // =====================================
+        // ラストボス：巨大な閃光
+        // =====================================
+        else if (p.type === "boss2_flash") {
+            const t = 1 - (p.life / p.maxLife);
+            const radius = p.radius * Math.sin(t * Math.PI);
+
+            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+            grad.addColorStop(0.5, `rgba(255, 240, 200, ${alpha * 0.7})`);
+            grad.addColorStop(1, `rgba(210, 180, 255, 0)`);
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // =====================================
+        // ラストボス：光の柱
+        // =====================================
+        else if (p.type === "boss2_pillar") {
+            const t = 1 - (p.life / p.maxLife);
+            const currentAngle = p.angle + t * p.rotationSpeed * 20; // 回転
+            const currentWidth = p.width * (1 - t); // 徐々に細くなる
+
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.7;
+            ctx.translate(p.x, p.y);
+            ctx.rotate(currentAngle);
+
+            const grad = ctx.createLinearGradient(-p.length / 2, 0, p.length / 2, 0);
+            grad.addColorStop(0, "rgba(255, 255, 255, 0)");
+            grad.addColorStop(0.3, `rgba(211, 173, 247, ${alpha * 0.6})`); // 紫
+            grad.addColorStop(0.5, `rgba(255, 255, 255, ${alpha})`); // 白
+            grad.addColorStop(0.7, `rgba(255, 214, 102, ${alpha * 0.6})`); // 金
+            grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+            ctx.fillStyle = grad;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "#ffffff";
+
+            ctx.fillRect(-p.length / 2, -currentWidth / 2, p.length, currentWidth);
+
+            ctx.restore();
+        }
+        // =====================================
+        // 中ボス1：衝撃波 (外側)
+        // =====================================
+        else if (p.type === "midboss1_wave") {
+            const t = 1 - (p.life / p.maxLife);
+            const radius = p.radius + (p.maxRadius - p.radius) * t;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+
+            ctx.strokeStyle = "#e0e0e0";
+            ctx.lineWidth = 5 * alpha;
+
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "#ffffff";
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+        // =====================================
+        // 中ボス1：衝撃波 (内側)
+        // =====================================
+        else if (p.type === "midboss1_wave_inner") {
+            const t = 1 - (p.life / p.maxLife);
+            const radius = p.radius + (p.maxRadius - p.radius) * t;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+
+            ctx.strokeStyle = "#ffffaa"; // 明るい黄色
+            ctx.lineWidth = 3 * alpha;
+
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#ffffaa";
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+        // =====================================
+        // 中ボス1：中央の閃光
+        // =====================================
+        else if (p.type === "midboss1_flash") {
+            const t = 1 - (p.life / p.maxLife);
+            const radius = p.radius * Math.sin(t * Math.PI); // 膨らんで消える
+
+            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
+            grad.addColorStop(0.6, `rgba(255, 255, 220, ${alpha * 0.5})`);
+            grad.addColorStop(1, `rgba(255, 255, 200, 0)`);
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+
 
         // =====================================
         // 弾破壊：火花
@@ -1398,7 +1783,7 @@ export function renderEnemyEffects(ctx) {
 }
 
 // ノックバック時
-export const knockbackEffects = [];
+export let knockbackEffects = [];
 
 export function spawnKnockbackEffect(x, y){
 
@@ -1448,7 +1833,7 @@ export function renderKnockbackEffects(ctx){
 // ===============================
 // ロックオンエフェクト
 // ===============================
-const lockOnEffects = [];
+export let lockOnEffects = [];
 
 export function spawnLockOnEffect(enemy) {
     const size = 80; // 初期サイズ
@@ -1498,7 +1883,7 @@ export function renderLockOnEffects(ctx) {
 // =====================
 // プレイヤー→敵 弾エフェクト
 // =====================
-const shotEffects = [];
+export let shotEffects = [];
 
 export function spawnShotEffect(sx, sy, tx, ty) {
     shotEffects.push({
@@ -1569,7 +1954,7 @@ export function renderShotEffects(ctx) {
 // =====================
 // 攻撃ヒットエフェクト（衝撃波）
 // =====================
-const hitEffects = [];
+export let hitEffects = [];
 
 export function playHitEffect(x, y) {
     hitEffects.push({
@@ -1787,7 +2172,7 @@ export function renderFreezeAura(
 // ===============================
 // Chain Burst Effects
 // ===============================
-const chainBurstEffects = [];
+export let chainBurstEffects = [];
 
 export function spawnChainBurstEffect(x, y){
     chainBurstEffects.push({
@@ -1831,7 +2216,7 @@ export function renderChainBurstEffects(ctx){
 // スコアポップアップ（敵倒した時）
 // ===============================
 
-let scorePopups = [];
+export let scorePopups = [];
 
 export function spawnScorePopup(x, y, score, multiplier) {
 
@@ -1893,7 +2278,7 @@ export function renderScorePopups(ctx) {
 // ダメージポップアップ（攻撃を受けた時）
 // ===============================
 
-let damagePopups = [];
+export let damagePopups = [];
 
 export function spawnDamagePopup(x, y, damage) {
     damagePopups.push({
@@ -1971,7 +2356,7 @@ export function renderDamagePopups(ctx) {
 // 現在の演出一覧
 // ---------------------------------
 // [skill]
-// kill
+// kill 
 //   - 白HUDロック
 //   - 上空レーザー
 //   - 白インパクトリング
@@ -1984,7 +2369,7 @@ export function renderDamagePopups(ctx) {
 // cooldown - 流線HUD
 // ================================================
 
-const itemSkillEffects = [];
+export let itemSkillEffects = [];
 
 // ======================================
 // Public
@@ -2022,6 +2407,10 @@ export function spawnItemSkillEffect(opts = {}) {
 
         else if (category === "invincible") {
             spawnSkillInvincibleBarrier(opts);
+        }
+
+        else if (category === "revive") {
+            spawnSkillReviveEffect(opts);
         }
 
         else if (category === "revive") {
@@ -2095,44 +2484,39 @@ export function playEffectSound(
 
     // heal
     else if (category === "heal") {
-
-        playTone(
-            source === "skill" ? 740 : 620,
-            0.18,
-            "triangle",
-            0.28
-        );
-
-        setTimeout(() => {
-            playTone(
-                source === "skill" ? 980 : 880,
-                0.2,
-                "sine",
-                0.2
-            );
-        }, 60);
+        if (source === "skill") {
+            if (level === "large") playSE("heal3", 0.5);
+            else if (level === "medium") playSE("heal2", 0.5);
+            else playSE("heal1", 0.5);
+        } else {
+            playTone(620, 0.18, "triangle", 0.28);
+            setTimeout(() => {
+                playTone(880, 0.2, "sine", 0.2);
+            }, 60);
+        }
     }
 
     // freeze
     else if (category === "freeze") {
+        if (source === "skill") {
+            playSE("freeze", 0.5);
+        } else {
+            playNoise(0.06, 0.15);
+            setTimeout(() => {
+                playTone(180, 0.08, "square", 0.15);
+            }, 20);
+        }
+    }
 
-        playNoise(0.06, 0.15);
-
-        setTimeout(() => {
-
-            playTone(
-                180,
-                0.08,
-                "square",
-                0.15
-            );
-
-        }, 20);
+    // knockback
+    else if (category === "knockback") {
+        if (source === "skill") {
+            playSE("edgeknockback", 0.5);
+        }
     }
 
     // cooldown
     else if (category === "cooldown") {
-
         playTone(
             1200,
             0.05,
@@ -3184,4 +3568,21 @@ export function clearAllEffects() {
     laserEffects.length = 0;
     playerDamageEffects.length = 0;
     playerNegateEffects.length = 0;
+}
+
+// ===========================================
+// 全エフェクト完了チェック
+// ===========================================
+export function areAllEffectsDone() {
+    return particles.length === 0 &&
+           itemSkillEffects.length === 0 &&
+           hitWaveEffects.length === 0 &&
+           lockOnEffects.length === 0 &&
+           laserEffects.length === 0 &&
+           playerDamageEffects.length === 0 &&
+           playerNegateEffects.length === 0 &&
+           shotEffects.length === 0 &&
+           hitEffects.length === 0 &&
+           knockbackEffects.length === 0 &&
+           chainBurstEffects.length === 0;
 }

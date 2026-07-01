@@ -6,6 +6,7 @@
 import { getDisplayFullRoma } from "./typingLogic.js";
 import { getNow, getPaused } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
+import { gameState } from "./gameCore.js"; // Import gameState
 /* =====================================================
   ユーティリティ
   ===================================================== */
@@ -54,6 +55,7 @@ result: () => document.getElementById("result"),
 solvedCount: () => document.getElementById("solvedCount"),
 freeModeBadge: () => document.getElementById("freeModeBadge"),
 missModeBadge: () => document.getElementById("missModeBadge"),
+bgmInfoDisplay: () => document.getElementById("bgmInfoDisplay"), // New BGM info display element
 
 };
 
@@ -411,8 +413,9 @@ export function render(state) {
     }
 
     renderStats(state);
-    renderFreeModeBadge(state.isFreeMode);
-    renderMissModeBadge(state.isMissPractice)
+    renderFreeModeBadge(state.isFreeMode); // Existing
+    renderMissModeBadge(state.isMissPractice); // Existing
+    renderBgmInfo(getNow()); // Call new BGM info rendering function
   });
 }
 
@@ -460,28 +463,62 @@ export function resetRendererState() {
  * segments が空の場合は word と text の差分から自動生成する
  */
 function buildFinalSegments(displayWord, text, segments) {
+  // ★重要：計算前に、表示用・読み用の両方で改行とインデントスペースをまとめて1文字スペースに統一する
+  // これにより、空白の行は何もないものとして扱える
+  const cleanedText = text.replace(/(\r?\n[ 　]*)+/g, ' ');
+
+  const displayIndexMap = [];
+  let cleanedDisplayWord = '';
+  let cleanedIndex = 0;
+  let inNewlineGroup = false;
+
+  for (let i = 0; i < displayWord.length; i++) {
+    const char = displayWord[i];
+    if (char === '\r') continue;
+    if (char === '\n') {
+      if (!inNewlineGroup) {
+        displayIndexMap[i] = cleanedIndex;
+        cleanedDisplayWord += ' ';
+        cleanedIndex += 1;
+        inNewlineGroup = true;
+      } else {
+        displayIndexMap[i] = cleanedIndex - 1;
+      }
+      continue;
+    }
+
+    if (inNewlineGroup && (char === ' ' || char === '　')) {
+      displayIndexMap[i] = -1;
+      continue;
+    }
+
+    inNewlineGroup = false;
+    displayIndexMap[i] = cleanedIndex;
+    cleanedDisplayWord += char;
+    cleanedIndex += 1;
+  }
+
   // 漢字、々、〇、に加え、カタカナ（全角・半角）もマッピング対象に含める
   const kanjiRegex = /[\u4E00-\u9FFF\u3005\u3007\u303B\uF900-\uFAFF\u30A0-\u30FF\uFF66-\uFF9F]+/g;
-  const matches = [...displayWord.matchAll(kanjiRegex)];
   const result = [];
 
   // 1. 非漢字（ひらがな等）を「固定点（ピン）」として抽出
   const pins = [];
   let last = 0;
-  for (const m of matches) {
-    if (m.index > last) pins.push({ s: displayWord.slice(last, m.index), d: last });
+  for (const m of [...cleanedDisplayWord.matchAll(kanjiRegex)]) {
+    if (m.index > last) pins.push({ s: cleanedDisplayWord.slice(last, m.index), d: last });
     last = m.index + m[0].length;
   }
-  if (last < displayWord.length) pins.push({ s: displayWord.slice(last), d: last });
+  if (last < cleanedDisplayWord.length) pins.push({ s: cleanedDisplayWord.slice(last), d: last });
 
   // 2. 読みテキスト（text）側でのピンの正確な位置を特定
   let searchFrom = 0;
   pins.forEach(p => {
     const cleanS = p.s.replace(/[、。，．,.？！?! ]/g, "");
-    let found = text.indexOf(p.s, searchFrom);
+    let found = cleanedText.indexOf(p.s, searchFrom);
     let matchedLen = p.s.length;
 
-    if (found === -1 || (found - searchFrom) > 20) {
+    if (found === -1) {
       if (cleanS !== "") {
         found = text.indexOf(cleanS, searchFrom);
         matchedLen = cleanS.length;
@@ -491,12 +528,12 @@ function buildFinalSegments(displayWord, text, segments) {
       }
     }
 
-    if (found !== -1 && (found - searchFrom) < 20) {
+    if (found !== -1) {
       p.t = found;
       p.len = matchedLen;
       searchFrom = found + matchedLen;
     } else {
-      p.t = Math.floor((p.d / displayWord.length) * text.length);
+      p.t = Math.floor((p.d / cleanedDisplayWord.length) * cleanedText.length);
       p.len = cleanS.length;
       searchFrom = p.t + p.len;
     }
@@ -504,20 +541,31 @@ function buildFinalSegments(displayWord, text, segments) {
 
   // 3. 表示文字1文字ずつに対して読みを割り当てる
   let kIdx = 0;
+  const kanjiMatches = [...cleanedDisplayWord.matchAll(kanjiRegex)];
+
   for (let i = 0; i < displayWord.length; i++) {
     const char = displayWord[i];
-    const m = matches.find(x => i >= x.index && i < x.index + x[0].length);
+    const cleanedPos = displayIndexMap[i];
+
+    if (char === '\r') continue;
+    if (cleanedPos === -1) {
+      const prevStart = result.length > 0 ? result[result.length - 1].start : 0;
+      result.push({ w: char, t: "", start: prevStart });
+      continue;
+    }
+
+    const m = kanjiMatches.find(x => cleanedPos >= x.index && cleanedPos < x.index + x[0].length);
 
     if (m) {
       // 漢字の場合：前後のピンから読みの範囲を特定し、等分する
       const nextP = pins.find(p => p.d >= m.index + m[0].length);
       const prevP = [...pins].reverse().find(p => p.d + p.s.length <= m.index);
       const bStartT = prevP ? prevP.t + (prevP.len || 0) : 0;
-      const bEndT = nextP ? nextP.t : text.length;
+      const bEndT = nextP ? nextP.t : cleanedText.length;
       const bRead = text.slice(bStartT, bEndT);
 
       let r;
-      const sub = i - m.index;
+      const sub = cleanedPos - m.index;
       if (segments && segments[kIdx]) {
         r = segments[kIdx];
       } else {
@@ -528,11 +576,11 @@ function buildFinalSegments(displayWord, text, segments) {
       }
       const rLen = bRead.length / m[0].length;
       result.push({ w: char, t: r, start: bStartT + Math.floor(sub * rLen) });
-      if (i === m.index + m[0].length - 1) kIdx += m[0].length;
+      if (cleanedPos === m.index + m[0].length - 1) kIdx += m[0].length;
     } else {
       // 非漢字の場合：特定したピンの座標をそのまま使う
-      const p = pins.find(x => i >= x.d && i < x.d + x.s.length);
-      result.push({ w: char, t: char, start: p.t + (i - p.d) });
+      const p = pins.find(x => cleanedPos >= x.d && cleanedPos < x.d + x.s.length);
+      result.push({ w: char, t: char, start: p.t + (cleanedPos - p.d) });
     }
   }
   return result;
@@ -543,7 +591,7 @@ function renderWordDisplay(state) {
   const wordDiv = isLongTextMode ? dom.wordLong() : dom.word();
   if (!wordDiv) return;
 
-  // 英語問題の場合はメインの単語表示を隠す
+  // 英語問題の場合はメインの単語表示を非表示に
   if (isEnglish(text)) {
     wordDiv.style.display = "hidden";
   } else {
@@ -566,42 +614,56 @@ function renderWordDisplay(state) {
 
     const frag = document.createDocumentFragment();
     for (let i = 0; i < displayWord.length; i++) {
-      const span = document.createElement("span");
-      span.textContent = displayWord[i];
-      frag.appendChild(span);
-      longWordSpans.push(span);
+      const char = displayWord[i];
+      if (char === '\n') {
+        frag.appendChild(document.createElement('br'));
+      } else {
+        const span = document.createElement("span");
+        span.textContent = char;
+        frag.appendChild(span);
+        longWordSpans.push(span);
+      }
     }
     wordDiv.appendChild(frag);
   }
 
   // ハイライト状態の更新
   let activeKanjiIdx = 0;
+  let currentSpanIndex = 0; // 現在の文字の<span>要素のインデックス
   let foundCurrent = false;
   const EPSILON = 0.1; // わずかな入力誤差を許容
+  let spanIndex = 0; // longWordSpans用のインデックス
 
   for (let i = 0; i < currentFinalSegments.length; i++) {
     const seg = currentFinalSegments[i];
-    const span = longWordSpans[i];
+    if (seg.w === '\n') continue; // 改行セグメントはスキップ
+
+    const span = longWordSpans[spanIndex];
     if (!span) continue;
 
-    const charDoneAt = seg.start + seg.t.length;
+
+    const charDoneAt = seg.start + (seg.t ? seg.t.length : 0);
 
     if (pos >= charDoneAt - EPSILON) {
       span.className = "done";
     } else if (!foundCurrent) {
       span.className = "current";
       activeKanjiIdx = i;
+      currentSpanIndex = spanIndex;
       foundCurrent = true;
     } else {
       span.className = "";
     }
+    spanIndex++;
   }
 
-  if (!foundCurrent) activeKanjiIdx = Math.max(0, longWordSpans.length - 1);
+  if (!foundCurrent) {
+    currentSpanIndex = Math.max(0, longWordSpans.length - 1);
+  }
 
 // ===== 中央追従スクロール =====
 const container = dom.wordLongWrap();
-const current = longWordSpans[activeKanjiIdx];
+const current = longWordSpans[currentSpanIndex];
 if (!container || !current) return;
 
 const containerHeight = container.clientHeight;
@@ -625,68 +687,133 @@ container.scrollTop = targetScroll;
 }
 
 function renderLongText(state) {
+
   const { text, pos, typed, inputedRomaji } = state;
-// --- かな表示 ---
-const kanaScroll = dom.kanaScroll();
-if (kanaScroll) {
-  if (isEnglish(text)) {
-    kanaScroll.style.display = "none";
-  } else {
-    kanaScroll.style.display = "block";
+  
+  // --- かな表示 ---
+  const kanaScroll = dom.kanaScroll();
+  if (kanaScroll) {
+    if (isEnglish(text)) {
+      kanaScroll.style.display = "none";
+    } else {
+      kanaScroll.style.display = "block";
 
-  const DISPLAY_LEN = 40;
-  const CENTER_POS = Math.floor(DISPLAY_LEN / 2);
+      const DISPLAY_LEN = 40;
+      const CENTER_POS = Math.floor(DISPLAY_LEN / 2);
 
-  // 単語単位ではなく、入力中の文字（pos）を基準に中央寄せ
-  let start = Math.max(pos - CENTER_POS, 0);
-  if (start + DISPLAY_LEN > text.length) start = Math.max(text.length - DISPLAY_LEN, 0);
+      // ★改行と、改行直後のスペースを1文字スペースに統一 (ローマ字表示とロジックを統一)
+      const cleanedText = text.replace(/(\r?\n[ 　]*)+/g, ' ');
+      const textIndexMap = [];
+      let cleanedTextIndex = 0;
+      let inNewlineGroup = false;
 
-  const visibleKana = text.slice(start, start + DISPLAY_LEN);
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '\r') continue;
+        if (char === '\n') {
+          if (!inNewlineGroup) {
+            textIndexMap[i] = cleanedTextIndex;
+            cleanedTextIndex += 1;
+            inNewlineGroup = true;
+          } else {
+            textIndexMap[i] = cleanedTextIndex - 1;
+          }
+          continue;
+        }
 
-  kanaScroll.innerHTML = "";
-  for (let i = 0; i < visibleKana.length; i++) {
-    const span = document.createElement("span");
-    const charPos = start + i;
-    span.textContent = visibleKana[i];
-    
-    if (charPos < pos) {
-      span.className = "done";
-    } else if (charPos === pos) {
-      span.className = "current"; // 今打つべき文字を強調
+        if (inNewlineGroup && (char === ' ' || char === '　')) {
+          textIndexMap[i] = -1;
+          continue;
+        }
+
+        inNewlineGroup = false;
+        textIndexMap[i] = cleanedTextIndex;
+        cleanedTextIndex += 1;
+      }
+
+      const chars = cleanedText.split("").map((c, i) => ({ char: c, index: i }));
+
+      const getVisiblePos = position => {
+        if (position >= textIndexMap.length) return cleanedTextIndex;
+        const mapped = textIndexMap[position];
+        if (mapped !== -1) return mapped;
+
+        for (let j = position + 1; j < textIndexMap.length; j++) {
+          if (textIndexMap[j] !== -1) return textIndexMap[j];
+        }
+        return cleanedTextIndex;
+      };
+
+      const visiblePos = getVisiblePos(pos);
+      const safePos = visiblePos === -1 ? chars.length : visiblePos;
+
+      let start = Math.max(safePos - CENTER_POS, 0);
+
+      const visibleKana = chars.slice(start, start + DISPLAY_LEN);
+
+      kanaScroll.innerHTML = "";
+      for (let i = 0; i < visibleKana.length; i++) {
+        const span = document.createElement("span");
+
+        span.textContent = visibleKana[i].char;
+
+        // visibleKanaのi番目の要素は、元のchars配列では start + i 番目にあたる
+        const originalCharIndexInChars = start + i;
+
+        if (originalCharIndexInChars < safePos) {
+          span.className = "done";
+        } else if (originalCharIndexInChars === safePos) {
+          span.className = "current";
+        }
+
+        kanaScroll.appendChild(span);
+      }
+    }
+  }
+
+  // --- ローマ字表示 ---
+  const romaScroll = dom.romaScroll();
+
+  if (romaScroll) {
+    const DISPLAY_LEN = 40;
+    const CENTER_POS = Math.floor(DISPLAY_LEN / 2);
+
+    const displayFull = getDisplayFullRoma({ text, pos, typed, inputedRomaji });
+
+
+    // ★改行と、改行直後のスペースを1文字スペースに統一
+    const cleanedRoma = displayFull.replace(/(\r?\n[ 　]*)+/g, ' ');
+    const romaMap = cleanedRoma.split("").map((c, i) => ({ char: c, index: i }));
+
+    const typedLen = inputedRomaji.length + typed.length;
+
+    const safePos = Math.min(typedLen, romaMap.length);
+
+    let start;
+    if (safePos + CENTER_POS >= romaMap.length) {
+      start = Math.max(romaMap.length - DISPLAY_LEN, 0);
+    } else {
+      start = Math.max(safePos - CENTER_POS, 0);
     }
 
-    kanaScroll.appendChild(span);
+    const visibleRoma = romaMap.slice(start, start + DISPLAY_LEN);
+    const relativeTyped = typedLen - start;
+
+    romaScroll.innerHTML = "";
+    for (let i = 0; i < visibleRoma.length; i++) {
+      const s = document.createElement("span");
+      const char = visibleRoma[i].char;
+      if (char === ' ') {
+        s.textContent = '␣';
+        s.classList.add('space-char');
+      } else {
+        s.textContent = char;
+      }
+
+      if (i < safePos - start) s.classList.add("done");
+      romaScroll.appendChild(s);
+    }
   }
-}
-}
-
-// --- ローマ字表示 ---
-const romaScroll = dom.romaScroll();
-if (romaScroll) {
-  const DISPLAY_LEN = 40;
-  const CENTER_POS = Math.floor(DISPLAY_LEN / 2);
-
-  const displayFull = getDisplayFullRoma({ text, pos, typed, inputedRomaji });
-  const typedLen = inputedRomaji.length + typed.length;
-
-  let start;
-  if (typedLen + CENTER_POS >= displayFull.length) {
-    start = Math.max(displayFull.length - DISPLAY_LEN, 0);
-  } else {
-    start = Math.max(typedLen - CENTER_POS, 0);
-  }
-
-  const visibleRoma = displayFull.slice(start, start + DISPLAY_LEN);
-  const relativeTyped = typedLen - start;
-
-  romaScroll.innerHTML = "";
-  for (let i = 0; i < visibleRoma.length; i++) {
-    const span = document.createElement("span");
-    span.textContent = visibleRoma[i];
-    if (i < relativeTyped) span.className = "done";
-    romaScroll.appendChild(span);
-  }
-}
 }
 
 function renderNormal({ text, pos, typed, inputedRomaji }) {
@@ -717,7 +844,13 @@ if (romaDiv) {
 
     for (let j = 0; j < displayFull.length; j++) {
       const s = document.createElement("span");
-      s.textContent = displayFull[j];
+      const char = displayFull[j];
+      if (char === ' ') {
+        s.textContent = '␣';
+        s.classList.add('space-char');
+      } else {
+        s.textContent = char;
+      }
       if (j < typedLen) s.className = "done";
       fragment.appendChild(s);
     }
@@ -755,4 +888,39 @@ function renderMissModeBadge(isMissPractice) {
   badge.style.display = isMissPractice ? "block" : "none";
 
 
+}
+
+/**
+ * 現在再生中のBGM情報を表示する
+ * @param {number} now - 現在のタイムスタンプ
+ */
+function renderBgmInfo(now) {
+    const info = gameState.currentBgmInfo;
+    const displayEl = dom.bgmInfoDisplay();
+
+    if (!displayEl) return;
+    // startTimeがリセットされている場合も非表示
+    if (!info || !gameState.startTime || gameState.startTime === 0) {
+        displayEl.style.opacity = "0";
+        return;
+    }
+
+    // Update text content
+    displayEl.textContent = `♪ ${info.title} / ${info.composer}`;
+
+    // Fade in/out logic
+    const fadeDuration = 2000;
+    const displayDuration = 15000; // Display duration
+    const elapsed = now - (gameState.startTime || 0); // Use gameState.startTime
+
+    let alpha = 0;
+    if (elapsed < fadeDuration) {
+        alpha = elapsed / fadeDuration; // Fade in
+    } else if (elapsed < displayDuration - fadeDuration) {
+        alpha = 1; // Stay
+    } else if (elapsed < displayDuration) {
+        alpha = (displayDuration - elapsed) / fadeDuration; // Fade out
+    }
+
+    displayEl.style.opacity = Math.max(0, alpha).toString();
 }

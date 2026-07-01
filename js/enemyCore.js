@@ -4,8 +4,8 @@ import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,
     showGameMessage,renderSystemMessage,  updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI} from "./enemyRenderer.js";
 import { setupCanvasDPR } from "./canvasUtil.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, 
-    renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBurstEffect, 
+import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone,
+    renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBurstEffect, playLoopSE, stopLoopSE,
     renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
     renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, spawnItemSkillEffect,
     renderItemSkillEffects, clearAllEffects, playErrorSound, playPhaseWarningSound,
@@ -123,7 +123,9 @@ function updateChainBar(){
 
     stats.lastChainUpdate = now;
     // 減衰
-    const diff = getCurrentDifficulty();
+    const diff = getCurrentDifficulty(
+        gameState.isFreeMode ? "free-enemy" : (gameState.isQuestMode ? "quest" : "daily")
+    );
     const enemyDiff = diff.enemy;
     // スキル計算　chainDecayRateがスキル　decayRateはDef enemyDill.chainDecayは難易度別の値
     stats.chainBar -= delta * stats.decayRate * enemyDiff.chainDecay * stats.chainDecayRate;
@@ -284,15 +286,13 @@ function gameLoop(timestamp) {
 
     if (!enemyLoopActive) return;
 
-    const stats = gameState.enemyStats;
-
     // ★ポーズ中でもループは維持
     if (getPaused()) {
         // ポーズ中、経過した時間分だけ開始時間を後ろにずらすことで、タイマーを停止させる
         const deltaMs = timestamp - (gameState._lastFrameTime || timestamp);
         if (enemyStartTime != null) enemyStartTime += deltaMs;
-        if (stats.startTime != null) stats.startTime += deltaMs;
-        if (stats.phaseStartTime != null) stats.phaseStartTime += deltaMs;
+        if (gameState.enemyStats.startTime != null) gameState.enemyStats.startTime += deltaMs;
+        if (gameState.enemyStats.phaseStartTime != null) gameState.enemyStats.phaseStartTime += deltaMs;
         if (lastSpawnTime != null) lastSpawnTime += deltaMs;
 
         // ポーズ中も現在時刻を同期
@@ -302,16 +302,17 @@ function gameLoop(timestamp) {
     }
     
     const now = timestamp; 
-    const diff = getCurrentDifficulty();
-    const enemyDiff = diff.enemy;
+    const diff = getCurrentDifficulty(
+        gameState.isFreeMode ? "free-enemy" : (gameState.isQuestMode ? "quest" : "daily")
+    );
 
     // フェーズ管理
+    const stats = gameState.enemyStats;
     const stage = gameState.stage;
     const isMultiPhase = Array.isArray(stage.phases) && stage.phases.length > 0;
     const currentPhaseIndex = stats.currentPhaseIndex || 0;
     const currentPhase = isMultiPhase ? stage.phases[currentPhaseIndex] : stage;
 
-    const spawnInterval = currentPhase.spawn.interval * enemyDiff.spawnRate; //ms
     const deltaTime = (now - (gameState._lastFrameTime || now)) / 1000; //sec
 
     gameState._lastFrameTime = now;
@@ -331,6 +332,14 @@ function gameLoop(timestamp) {
     // プレイヤー無敵タイマーの減算
     if (gameState.player && gameState.player.invincibleTimer > 0) {
         gameState.player.invincibleTimer = Math.max(0, gameState.player.invincibleTimer - deltaTime);
+        // ★無敵音の開始
+        if (!gameState.invincibleSoundPlaying) {
+            playLoopSE("guard", 0.4);
+            gameState.invincibleSoundPlaying = true;
+        }
+    } else if (gameState.invincibleSoundPlaying) {
+        stopLoopSE("guard");
+        gameState.invincibleSoundPlaying = false;
     }
 
     // 復活スキル使用済みフラグのリセット
@@ -503,7 +512,7 @@ function gameLoop(timestamp) {
 
             enemy.update(
                 player,
-                enemyDiff,
+                diff, // ★ diff を渡す
                 gameState,
                 deltaTime
             );
@@ -515,7 +524,7 @@ function gameLoop(timestamp) {
         if (bullet && !bullet.isDead) {
             bullet.update(
                 player,
-                enemyDiff,
+                diff, // ★ diff を渡す
                 gameState,
                 deltaTime
             );
@@ -539,7 +548,11 @@ function gameLoop(timestamp) {
     // 死亡した敵を削除
     const aliveEnemies =
         enemies.filter(
-            enemy => enemy && !enemy.isDead
+            enemy => {
+                if (!enemy) return false;
+                if (enemy.isDead && enemy.lifeAfterDeath > 0) enemy.lifeAfterDeath--;
+                return !enemy.isDead || enemy.lifeAfterDeath > 0;
+            }
         );
 
     enemies.length = 0;
@@ -548,7 +561,11 @@ function gameLoop(timestamp) {
     // 撃ち落とした弾を削除
     const aliveBullets =
         enemyBullets.filter(
-            bullet => bullet && !bullet.isDead
+            bullet => {
+                if (!bullet) return false;
+                if (bullet.isDead && bullet.lifeAfterDeath > 0) bullet.lifeAfterDeath--;
+                return !bullet.isDead || bullet.lifeAfterDeath > 0;
+            }
         );
 
     enemyBullets.length = 0;
@@ -561,7 +578,8 @@ function gameLoop(timestamp) {
     // =========================
     try {
         if (gameState.isQuestMode) {
-            const syncStats = getPlayerStatsForEnemy("quest");
+            const statsMode = gameState.isQuestMode ? "quest" : "enemy";
+            const syncStats = getPlayerStatsForEnemy(statsMode);
             player.defense = Number(syncStats.defense) || 0;
         }
     } catch (e) {
@@ -617,7 +635,7 @@ function gameLoop(timestamp) {
             const isScreenEmpty = (enemies.length === 0 && enemyBullets.length === 0);
 
             // ★一定時間ごとに敵出現、または「即座に出現」がONで敵がいない場合
-            if ((now - lastSpawnTime > spawnInterval) || (immediate && isScreenEmpty)) {
+            if ((now - lastSpawnTime > (currentPhase.spawn.interval * diff.enemy.spawnRate)) || (immediate && isScreenEmpty)) {
 
                 const spawnLimitOk =
                     currentPhase.spawn.limit == null ||
@@ -639,7 +657,7 @@ function gameLoop(timestamp) {
                         enemies,
                         canvas,
                         currentPhase,
-                        enemyDiff
+                        diff
                     );
 
                     if (enemy && enemy.word) {
@@ -724,7 +742,8 @@ function gameLoop(timestamp) {
         const canRevive = deathCause !== "boss_contact";
 
         try {
-            const stats = getPlayerStatsForEnemy("quest");
+            const statsMode = gameState.isQuestMode ? "quest" : "enemy";
+            const stats = getPlayerStatsForEnemy(statsMode);
             const reviveChance = Number(stats.reviveChance) || 0;
 
             if (canRevive && reviveChance > 0 && !gameState._reviveUsed && Math.random() < reviveChance) {
@@ -785,7 +804,10 @@ function gameLoop(timestamp) {
     }
 
     // ★ 精密射撃（ミス即終了）または他所での失敗確定の判定
-    if (!gameState._reviving && (globalEnd.failOnMiss && stats.mistakeCount > 0 || stats.failed)) {
+    const missLimit = globalEnd.failOnMissCount;
+    const failOnMissCondition = (missLimit !== undefined && stats.mistakeCount >= missLimit) || (globalEnd.failOnMiss && stats.mistakeCount > 0);
+
+    if (!gameState._reviving && (failOnMissCondition || stats.failed)) {
         gameState.enemyStats.failed = true;
         forceFail = true;
     }
@@ -884,39 +906,39 @@ function gameLoop(timestamp) {
             }
         }
 
-        // エフェクト表示待ち
-        setTimeout(async () => {
+        // エフェクト完了を待ってから結果表示
+        const checkEffectsDone = async () => {
+            if (areAllEffectsDone()) {
+                const rankingResult = await endEnemyMode();
 
-            const rankingResult = await endEnemyMode();
+                const isFailed = gameState.enemyStats.failed;
+                let introText = isFailed
+                    ? "FAILED"
+                    : "MISSION COMPLETE";
 
-            const isFailed = gameState.enemyStats.failed;
-            let introText = isFailed
-                ? "FAILED"
-                : "MISSION COMPLETE";
-            
-            // ★ エンドレス用の演出テキスト
-            if (isEndless) introText = "ENDLESS FINISH";
+                // ★ エンドレス用の演出テキスト
+                if (isEndless) introText = "ENDLESS FINISH";
 
-            showEnemyEndIntro(introText, () => {
+                showEnemyEndIntro(introText, () => {
+                    if (lastEnemyConfig?.isQuestMode) {
+                        showQuestResult(gameState.questStats);
+                    } else {
+                        showEnemyResult({
+                            isNewRecord: rankingResult?.isNewRecord ?? false,
+                            isRankIn: rankingResult?.isRankIn ?? false,
+                            rankPos: rankingResult?.rankPos ?? null
+                        });
+                    }
+                });
+            } else {
+                // まだエフェクトが残っていれば、次のフレームで再チェック
+                requestAnimationFrame(checkEffectsDone);
+            }
+        };
 
-                if (lastEnemyConfig?.isQuestMode) {
-
-                    showQuestResult(gameState.questStats);
-
-                } else {
-
-                    showEnemyResult({
-                        isNewRecord: rankingResult?.isNewRecord ?? false,
-                        isRankIn: rankingResult?.isRankIn ?? false,
-                        rankPos: rankingResult?.rankPos ?? null
-                    });
-
-                }
-
-            });
-
-        }, 1000); // ← 好きな時間
-        }
+        // 最初のチェックを開始
+        checkEffectsDone();
+      }
     }
 
     renderChainBurstEffects(ctx);
@@ -1713,7 +1735,7 @@ export async function startEnemyMode(config = {}) {
         currentEnemyDifficulty = getDifficulty(config.difficulty || "normal");
     } else if (config.isFreeMode) {
         // ★フリーはグローバル
-        currentEnemyDifficulty = getCurrentDifficulty();
+        currentEnemyDifficulty = getCurrentDifficulty("free-enemy"); // ★スコープを "free-enemy" に修正
     } else {
         // ★通常エネミー（単体起動など）
         currentEnemyDifficulty = getDifficulty(config.difficulty || "normal");
@@ -1724,7 +1746,7 @@ export async function startEnemyMode(config = {}) {
 
     // クエストまたはフリーモードの場合は、成長計算ロジック(quest)を使用
     // フリーモード時はUIスライダーのレベル(config.level)を適用し、クエスト時は現在のレベルを使用する
-    const statsMode = (config.isQuestMode || config.isFreeMode) ? "quest" : "enemy";
+    const statsMode = config.isQuestMode ? "quest" : "enemy";
     const levelOverride = config.isFreeMode ? config.level : undefined;
     let playerStats = getPlayerStatsForEnemy(statsMode, levelOverride);
 
@@ -1740,11 +1762,16 @@ export async function startEnemyMode(config = {}) {
     // ★ここで統計を初期化
     const diff = currentEnemyDifficulty;
 
+    // ★難易度設定をenemyStatsにコピー
+    const enemyDiff = diff.enemy;
+
+
     // ===============================
     // enemyStats!!!!
     // ===============================
     gameState.enemyStats = {
         difficulty: diff.id,
+        invincibleSoundPlaying: false, // 無敵音再生フラグ
         difficultyName: diff.name,
         typingActiveTime: 0, // ★実入力時間
         lastKeyTime: 0,      // ★前回キー時間
@@ -1798,7 +1825,10 @@ export async function startEnemyMode(config = {}) {
         // cooldown計算用
         lastCooldownUpdate: getNow(),
         //コンボによるアクティブスキルのクールダウン補正
-        cooldownSpeed: playerStats.cooldownSpeed ?? 1,
+        cooldownSpeed: playerStats.cooldownSpeed ?? 1, 
+        // ★難易度設定をここに含める
+        spawnRate: enemyDiff.spawnRate,
+        chainDecay: enemyDiff.chainDecay,
         activeBgm: null,
     };
     
@@ -1884,6 +1914,7 @@ export async function startEnemyMode(config = {}) {
     await initAudio();   // ← 音読み込み
     if (getSoundEnabled() && getSoundSettings().bgm) {
         playBGM(initialBgm, 0.2);
+        gameState.startTime = getNow(); // BGM表示のために開始時間をセット
     }
 
     const canvas = document.getElementById("enemyModeCanvas");
@@ -2078,7 +2109,9 @@ export async function endEnemyMode() {
     // ベース（プレイ中に稼いだスコア）
     let finalScore = stats.gScore;
     const sc = ENEMY_MODE_CONFIG.score;
-    const diff = getCurrentDifficulty();
+    const diff = getCurrentDifficulty(
+        gameState.isFreeMode ? "free-enemy" : (gameState.isQuestMode ? "quest" : "daily")
+    );
     const enemyDiff = diff.enemy;
 
     // 補正①：正確性
@@ -2145,6 +2178,10 @@ export async function endEnemyMode() {
     // Enemyモードフラグ解除
     gameState.enemyMode = false;
     // ★ゲーム状態停止
+    if (gameState.invincibleSoundPlaying) {
+        stopLoopSE("guard");
+        gameState.invincibleSoundPlaying = false;
+    }
     setGameActive(false);
     // Enemyモード状態リセット
     lockedEnemy = null;
@@ -2211,8 +2248,9 @@ export async function endEnemyMode() {
                 !hasReceivedStageReward(node.id)
             ) {
 
-                const beforeSlot = getPlayerStatsForEnemy("quest").skillSlotMax;
-                const beforeStock = getActiveSkillStockMax();
+                const statsMode = gameState.isQuestMode ? "quest" : "enemy";
+                const beforeSlot = getPlayerStatsForEnemy(statsMode).skillSlotMax;
+                const beforeStock = getActiveSkillStockMax(statsMode);
 
                 applySkillNodeEffect(node.reward, "stage");
 
@@ -2238,7 +2276,8 @@ export async function endEnemyMode() {
         }
 
         // ⭐ ① 先に取得（これを追加）
-        const playerBefore = structuredClone(getPlayerStatsForEnemy("quest"));
+        const statsMode = gameState.isQuestMode ? "quest" : "enemy";
+        const playerBefore = structuredClone(getPlayerStatsForEnemy(statsMode));
         // EXP計算（補正版）
         let gainedExp = 0;
 
@@ -2269,7 +2308,7 @@ export async function endEnemyMode() {
         // EXP加算
         const expResult = addExp(gainedExp); // ★受け取る
 
-        const afterStats = getPlayerStatsForEnemy("quest");
+        const afterStats = getPlayerStatsForEnemy(statsMode);
         const hpUp = expResult.hpIncrease || 0;
         const defUp = expResult.defIncrease || 0;
 
@@ -2486,7 +2525,7 @@ function tryUseActiveSkill() {
         }
     }
 
-    if ((gameState.activeSkillStock ?? 0) <= 0) {
+    if (!devOverride.skill?.infinite && (gameState.activeSkillStock ?? 0) <= 0) {
 
         console.log("NO STOCK");
 
@@ -2502,6 +2541,12 @@ function tryUseActiveSkill() {
     // 発動
     // ===============================
     activateSkill(skillId, gameState, enemies || []);
+
+    // DEVモードで無限スキルが有効なら、ここで処理を終了
+    if (devOverride.skill?.infinite) {
+        console.log("[DEV] Infinite skill used. Stock and cooldown not affected.");
+        return;
+    }
 
     // ===============================
     // 使用回数記録

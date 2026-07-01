@@ -30,9 +30,15 @@ function filterByTags(targets, tags = []) {
   return targets.filter(t => {
     const targetTags = t.tags || [];
 
-    return tags.every(tag =>
-      targetTags.includes(tag)
-    );
+    // 長文モードの場合（tagsに"長文"が含まれる）はAND条件
+    if (tags.includes("長文")) {
+      // 指定されたすべてのタグがターゲットに含まれているかチェック
+      return tags.every(tag => targetTags.includes(tag));
+    } else {
+      // それ以外のモードではOR条件
+      // 指定されたタグのいずれかがターゲットに含まれているかチェック
+      return tags.some(tag => targetTags.includes(tag));
+    }
   });
 }
 
@@ -40,6 +46,7 @@ export const GameModes = {
   NORMAL: {
     id: "normal",
     name: "通常モード",
+    bgm: "bgm_rainy",
     description: "決められた問題数をクリアするモード",
 
     onStart(state) {
@@ -93,6 +100,7 @@ export const GameModes = {
   TIME_ATTACK: {
     id: "time_attack",
     name: "タイムトライアル",
+    bgm: "bgm_cracker",
 
     LIMIT_SEC: 15,
 
@@ -140,6 +148,7 @@ export const GameModes = {
 LONG_TEXT: {
   id: "long_text",
   name: "長文問題",
+  bgm: "bgm_yakanhikou",
 
   onStart(state) {
     state.modeData.questionLimit = 1;
@@ -158,10 +167,7 @@ LONG_TEXT: {
     const tags = modeData.custom?.tags || [];
     let filtered = TARGETS_LONG;
 
-    filtered = filterByTags(
-      filtered,
-      tags
-    );
+    filtered = filterByTags(filtered, tags);
 
     const shuffled = shuffleArray(filtered);
 

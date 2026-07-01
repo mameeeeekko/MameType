@@ -37,9 +37,9 @@ export function activateSkill(skillId, gameState, enemies = []) {
             source: "skill",
 
             level:
-                skill.value >= 50
-                    ? "large"
-                    : "medium",
+                skill.value >= 100 ? "large" :
+                skill.value >= 60  ? "medium" :
+                "small",
 
             x: gameState.player.x,
             y: gameState.player.y
@@ -271,7 +271,7 @@ export const PASSIVE_SKILLS = {
   // チェイン系
   // =====================
   chain_up_1: {
-    name: "チェイン増強強化Ⅰ",
+    name: "連鎖増強Ⅰ",
     icon: "chain_up_1",
     desc: "チェイン増加が10%上昇",
     equipable: true,
@@ -281,7 +281,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_up_2: {
-    name: "チェイン増強強化Ⅱ",
+    name: "連鎖増強Ⅱ",
     icon: "chain_up_2",
     desc: "チェイン増加が15%上昇",
     equipable: true,
@@ -291,7 +291,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_up_3: {
-    name: "チェイン増強強化Ⅲ",
+    name: "連鎖増強Ⅲ",
     icon: "chain_up_3",
     desc: "チェイン増加が20%上昇",
     equipable: true,
@@ -301,7 +301,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_up_4: {
-    name: "チェイン増強強化Ⅳ",
+    name: "連鎖増強Ⅳ",
     icon: "chain_up_4",
     desc: "チェイン増加が25%上昇",
     equipable: true,
@@ -311,7 +311,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_decay_1: {
-    name: "チェイン維持強化Ⅰ",
+    name: "連鎖維持Ⅰ",
     icon: "chain_decay_1",
     desc: "チェイン減衰が10%緩和",
     equipable: true,
@@ -321,7 +321,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_decay_2: {
-    name: "チェイン維持強化Ⅱ",
+    name: "連鎖維持Ⅱ",
     icon: "chain_decay_2",
     desc: "チェイン減衰が15%緩和",
     equipable: true,
@@ -331,7 +331,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_decay_3: {
-    name: "チェイン維持強化Ⅲ",
+    name: "連鎖維持Ⅲ",
     icon: "chain_decay_3",
     desc: "チェイン減衰が20%緩和",
     equipable: true,
@@ -341,7 +341,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_decay_4: {
-    name: "チェイン維持強化Ⅳ",
+    name: "連鎖維持Ⅳ",
     icon: "chain_decay_4",
     desc: "チェイン減衰が25%緩和",
     equipable: true,
@@ -351,7 +351,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_bonus_1: {
-    name: "チェインボーナスⅠ",
+    name: "連鎖獲得Ⅰ",
     icon: "chain_bonus_1",
     desc: "チェインボーナスが10%上昇",
     equipable: true,
@@ -361,7 +361,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_bonus_2: {
-    name: "チェインボーナスⅡ",
+    name: "連鎖獲得Ⅱ",
     icon: "chain_bonus_2",
     desc: "チェインボーナスが15%上昇",
     equipable: true,
@@ -371,7 +371,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_bonus_3: {
-    name: "チェインボーナスⅢ",
+    name: "連鎖獲得Ⅲ",
     icon: "chain_bonus_3",
     desc: "チェインボーナスが20%上昇",
     equipable: true,
@@ -381,7 +381,7 @@ export const PASSIVE_SKILLS = {
   },
 
   chain_bonus_4: {
-    name: "チェインボーナスⅣ",
+    name: "連鎖獲得Ⅳ",
     icon: "chain_bonus_4",
     desc: "チェインボーナスが25%上昇",
     equipable: true,
@@ -391,7 +391,7 @@ export const PASSIVE_SKILLS = {
   },
 
   glass_chain_1: {
-    name: "極限集中",
+    name: "集中",
     icon: "glass_1",
     desc: "チェイン倍率+15% / 切れやすさ+5%",
     equipable: true,
@@ -402,7 +402,7 @@ export const PASSIVE_SKILLS = {
   },
 
   glass_chain_2: {
-    name: "極限集中Ⅱ",
+    name: "集中Ⅱ",
     icon: "glass_2",
     desc: "チェイン倍率+25% / 切れやすさ+10%",
     equipable: true,
@@ -413,7 +413,7 @@ export const PASSIVE_SKILLS = {
   },
 
   glass_chain_3: {
-    name: "極限集中Ⅲ",
+    name: "集中Ⅲ",
     icon: "glass_3",
     desc: "チェイン倍率+35% / 切れやすさ+15%",
     equipable: true,
@@ -424,7 +424,7 @@ export const PASSIVE_SKILLS = {
   },
 
   glass_chain_4: {
-    name: "極限集中Ⅳ",
+    name: "集中Ⅳ",
     icon: "glass_4",
     desc: "チェイン倍率+45% / 切れやすさ+20%",
     equipable: true,
@@ -438,7 +438,7 @@ export const PASSIVE_SKILLS = {
   // ノックバック系
   // =====================
   kb_up_1: {
-    name: "ノックバック強化Ⅰ",
+    name: "反発Ⅰ",
     icon: "kb_1",
     desc: "ノックバック性能が15%上昇",
     equipable: true,
@@ -448,7 +448,7 @@ export const PASSIVE_SKILLS = {
   },
 
   kb_up_2: {
-    name: "ノックバック強化Ⅱ",
+    name: "反発Ⅱ",
     icon: "kb_2",
     desc: "ノックバック性能が25%上昇",
     equipable: true,
@@ -458,7 +458,7 @@ export const PASSIVE_SKILLS = {
   },
 
   kb_up_3: {
-    name: "ノックバック強化Ⅲ",
+    name: "反発Ⅲ",
     icon: "kb_3",
     desc: "ノックバック性能が35%上昇",
     equipable: true,
@@ -468,7 +468,7 @@ export const PASSIVE_SKILLS = {
   },
 
   kb_up_4: {
-    name: "ノックバック強化Ⅳ",
+    name: "反発Ⅳ",
     icon: "kb_4",
     desc: "ノックバック性能が45%上昇",
     equipable: true,
@@ -511,7 +511,7 @@ export const PASSIVE_SKILLS = {
   defense_up_1: {
     name: "防御強化Ⅰ",
     icon: "defup_1",
-    desc: "防御が5増加（最大99）",
+    desc: "DEFが5増加（最大99）",
     equipable: true,
     apply: (p) => {
       p.defense = Math.min(99, (p.defense || 0) + 5);
@@ -521,7 +521,7 @@ export const PASSIVE_SKILLS = {
   defense_up_2: {
     name: "防御強化Ⅱ",
     icon: "defup_2",
-    desc: "防御が10増加（最大99）",
+    desc: "DEFが10増加（最大99）",
     equipable: true,
     apply: (p) => {
       p.defense = Math.min(99, (p.defense || 0) + 10);
@@ -531,7 +531,7 @@ export const PASSIVE_SKILLS = {
   defense_up_3: {
     name: "防御強化Ⅲ",
     icon: "defup_3",
-    desc: "防御が15増加（最大99）",
+    desc: "DEFが15増加（最大99）",
     equipable: true,
     apply: (p) => {
       p.defense = Math.min(99, (p.defense || 0) + 15);
@@ -543,7 +543,7 @@ export const PASSIVE_SKILLS = {
   // 合計すると +100% (x2) になるよう additive に設定
   // =====================
   exp_up_1: {
-    name: "経験値増加Ⅰ",
+    name: "修練Ⅰ",
     icon: "expup_1",
     desc: "獲得経験値が20%上昇",
     equipable: true,
@@ -553,7 +553,7 @@ export const PASSIVE_SKILLS = {
   },
 
   exp_up_2: {
-    name: "経験値増加Ⅱ",
+    name: "修練Ⅱ",
     icon: "expup_2",
     desc: "獲得経験値が30%上昇",
     equipable: true,
@@ -563,7 +563,7 @@ export const PASSIVE_SKILLS = {
   },
 
   exp_up_3: {
-    name: "経験値増加Ⅲ",
+    name: "修練Ⅲ",
     icon: "expup_3",
     desc: "獲得経験値が50%上昇",
     equipable: true,
@@ -573,11 +573,45 @@ export const PASSIVE_SKILLS = {
   },
 
   // =====================
+  // クールダウン短縮系
+  // =====================
+  cooldown_speed_1: {
+    name: "高速詠唱Ⅰ",
+    icon: "chain_up_1", // TODO: アイコンを後で差し替える
+    desc: "スキルのクールダウン速度が10%上昇",
+    equipable: true,
+    apply: (p) => {
+      // cooldownSpeed は高いほど速くなる（乗算）
+      p.cooldownSpeed = (p.cooldownSpeed || 1) + 0.10;
+    }
+  },
+
+  cooldown_speed_2: {
+    name: "高速詠唱Ⅱ",
+    icon: "chain_up_2", // TODO: アイコンを後で差し替える
+    desc: "スキルのクールダウン速度が15%上昇",
+    equipable: true,
+    apply: (p) => {
+      p.cooldownSpeed = (p.cooldownSpeed || 1) + 0.15;
+    }
+  },
+
+  cooldown_speed_3: {
+    name: "高速詠唱Ⅲ",
+    icon: "chain_up_3", // TODO: アイコンを後で差し替える
+    desc: "スキルのクールダウン速度が20%上昇",
+    equipable: true,
+    apply: (p) => {
+      p.cooldownSpeed = (p.cooldownSpeed || 1) + 0.20;
+    }
+  },
+
+  // =====================
   // 自動効果系
   // =====================
   // アイテム出現率アップ
   item_spawn_1: {
-    name: "アイテム出現率アップⅠ",
+    name: "幸運Ⅰ",
     icon: "item_1",
     desc: "アイテム出現率が20%上昇",
     equipable: true,
@@ -587,7 +621,7 @@ export const PASSIVE_SKILLS = {
   },
 
   item_spawn_2: {
-    name: "アイテム出現率アップⅡ",
+    name: "幸運Ⅱ",
     icon: "item_2",
     desc: "アイテム出現率が25%上昇",
     equipable: true,
@@ -597,7 +631,7 @@ export const PASSIVE_SKILLS = {
   },
 
   item_spawn_3: {
-    name: "アイテム出現率アップⅢ",
+    name: "幸運Ⅲ",
     icon: "item_3",
     desc: "アイテム出現率が30%上昇",
     equipable: true,
@@ -608,7 +642,7 @@ export const PASSIVE_SKILLS = {
 
   // 一定確率でダメージ無効化 boss接触無効
   damage_negate_1: {
-    name: "ダメージ無効化Ⅰ",
+    name: "ブロックⅠ",
     icon: "negate_1",
     desc: "攻撃を10%の確率で無効化",
     equipable: true,
@@ -618,7 +652,7 @@ export const PASSIVE_SKILLS = {
   },
 
   damage_negate_2: {
-    name: "ダメージ無効化Ⅱ",
+    name: "ブロックⅡ",
     icon: "negate_2",
     desc: "攻撃を13%の確率で無効化",
     equipable: true,
@@ -628,7 +662,7 @@ export const PASSIVE_SKILLS = {
   },
 
   damage_negate_3: {
-    name: "ダメージ無効化Ⅲ",
+    name: "ブロックⅢ",
     icon: "negate_3",
     desc: "攻撃を16%の確率で無効化",
     equipable: true,
@@ -639,7 +673,7 @@ export const PASSIVE_SKILLS = {
 
   // 一度だけ復活（確率）
   revive_once_1: {
-    name: "一度だけ復活Ⅰ",
+    name: "復活Ⅰ",
     icon: "revive_1",
     desc: "死亡時に20%の確率で一度だけ復活",
     equipable: true,
@@ -649,7 +683,7 @@ export const PASSIVE_SKILLS = {
   },
 
   revive_once_2: {
-    name: "一度だけ復活Ⅱ",
+    name: "復活Ⅱ",
     icon: "revive_2",
     desc: "死亡時に30%の確率で一度だけ復活",
     equipable: true,
@@ -659,7 +693,7 @@ export const PASSIVE_SKILLS = {
   },
 
   revive_once_3: {
-    name: "一度だけ復活Ⅲ",
+    name: "復活Ⅲ",
     icon: "revive_3",
     desc: "死亡時に40%の確率で一度だけ復活",
     equipable: true,
@@ -676,11 +710,14 @@ export const PASSIVE_SKILLS = {
   },
 
   skill_stock_1: {
-    name: "アクティブスキルストック+1",
+    name: "スキルストック+1",
     icon: "stock_1",
     desc: "アクティブスキルのストックが1増える",
     equipable: false,
   },
+
+
+
 
 };
 
@@ -705,19 +742,19 @@ export const PASSIVE_SKILLS = {
 export const ACTIVE_SKILLS = {
 
   heal_small: {
-    name: "リカバー",
+    name: "エイド",
     icon: "recover_1",
-    desc: "HPを小回復",
-    cooldown: 60, //sec
+    desc: "HPを30回復",
+    cooldown: 50, //sec
     type: "heal",
     value: 30,
   },
 
   heal_medium: {
-    name: "リカバー",
+    name: "キュア",
     icon: "recover_2",
-    desc: "HPを中回復",
-    cooldown: 120, //sec
+    desc: "HPを60回復",
+    cooldown: 100, //sec
     type: "heal",
     value: 60,
   },
@@ -725,8 +762,8 @@ export const ACTIVE_SKILLS = {
   heal_high: {
     name: "リカバー",
     icon: "recover_3",
-  desc: "HPを大回復",
-    cooldown: 180, //sec
+  desc: "HPを100回復",
+    cooldown: 160, //sec
     type: "heal",
     value: 100,
   },
@@ -735,8 +772,8 @@ export const ACTIVE_SKILLS = {
   freeze_light: {
     name: "フリーズ3",
     icon: "freeze_1",
-    desc: "敵を一定時間停止",
-    cooldown: 60,
+    desc: "敵を3秒間停止",
+    cooldown: 50,
     type: "freeze",
     value: 3, // seconds
   },
@@ -744,8 +781,8 @@ export const ACTIVE_SKILLS = {
   freeze_medium: {
     name: "フリーズ5",
     icon: "freeze_2",
-    desc: "敵を一定時間停止",
-    cooldown: 120,
+    desc: "敵を5秒間停止",
+    cooldown: 100,
     type: "freeze",
     value: 5, // seconds
   },
@@ -753,18 +790,18 @@ export const ACTIVE_SKILLS = {
   freeze_heavy: {
     name: "フリーズ8",
     icon: "freeze_3",
-    desc: "敵を一定時間停止",
-    cooldown: 180,
+    desc: "敵を8秒間停止",
+    cooldown: 170,
     type: "freeze",
     value: 8, // seconds
   },
 
 
   kill_nearest: {
-    name: "処刑",
+    name: "照準",
     icon: "kill_1",
     desc: "最も近い敵を2体撃破",
-    cooldown: 80, //80
+    cooldown: 70, //80
     type: "kill",
     value: {
       mode: "nearest",
@@ -773,10 +810,10 @@ export const ACTIVE_SKILLS = {
   },
 
   kill_random: {
-    name: "処刑",
+    name: "熱線",
     icon: "kill_random",
     desc: "ランダムで敵を4体撃破",
-    cooldown: 160, //160
+    cooldown: 130, //160
     type: "kill",
     value: {
       mode: "random",
@@ -785,10 +822,10 @@ export const ACTIVE_SKILLS = {
   },
 
   kill_nearest_h: {
-    name: "処刑",
+    name: "光線",
     icon: "kill_near",
     desc: "最も近い敵を4体撃破",
-    cooldown: 200, //200
+    cooldown: 150, //200
     type: "kill",
     value: {
       mode: "nearest",
@@ -797,10 +834,10 @@ export const ACTIVE_SKILLS = {
   }
 
   ,kill_all: {
-    name: "処刑",
+    name: "殲光",
     icon: "kill_all",
     desc: "すべての敵を撃破",
-    cooldown: 300,
+    cooldown: 200,
     type: "kill",
     value: {
       mode: "all",
@@ -809,10 +846,10 @@ export const ACTIVE_SKILLS = {
 
   // ノックバック：敵を画面端まで押し出す
   knockback_edge: {
-    name: "エッジノックバック",
+    name: "山嵐",
     icon: "knockback",
     desc: "画面端まで敵をノックバックさせる",
-    cooldown: 200, //200
+    cooldown: 180, //200
     type: "knockback",
     value: {
       mode: "edge"
@@ -821,28 +858,28 @@ export const ACTIVE_SKILLS = {
 
   // 無敵（短時間）
   invincible_short: {
-    name: "バリア（短）",
+    name: "シールド",
     icon: "guard_1",
-    desc: "一定時間無敵になる（短）",
-    cooldown: 120, //120
+    desc: "3秒間無敵になる",
+    cooldown: 100, //120
     type: "invincible",
     value: 3
   },
 
   invincible_medium: {
-    name: "バリア（中）",
+    name: "ウォール",
     icon: "guard_2",
-    desc: "一定時間無敵になる（中）",
-    cooldown: 180,
+    desc: "5秒間無敵になる",
+    cooldown: 150,
     type: "invincible",
     value: 5
   },
 
   invincible_long: {
-    name: "バリア（長）",
+    name: "バリア",
     icon: "guard_3",
-    desc: "一定時間無敵になる（長）",
-    cooldown: 240,//240
+    desc: "8秒間無敵になる",
+    cooldown: 190,//240
     type: "invincible",
     value: 8
   }

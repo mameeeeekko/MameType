@@ -4,6 +4,7 @@ import { getPlayerStats } from "../js/playerStats.js";
 import { savePlayerStats } from "../js/storage.js";
 import { gameState } from "../js/gameCore.js";
 import { forceSetLevel } from "../js/questPlayerStats.js";
+import { killEnemy } from "../js/enemyCore.js";
 import { updateHud } from "../js/hud.js";
 import { STAGES, ENEMY_MODE_CONFIG } from "../js/enemyModeConfig.js";
 import { renderQuestMapUI, openQuestMenuModal } from "../js/questMapUI.js";
@@ -171,21 +172,52 @@ export const dev = {
     },
 
     killAllEnemies() {
-        gameState.enemyStats.defeatedCount = 9999;
-        log("KillAll triggered");
+        if (!gameState.enemyMode) {
+            log("Not in enemy mode.");
+            return;
+        }
+
+        // 画面上のすべての敵と弾を強制的に撃破
+        const targets = [
+            ...(gameState.enemies || []),
+            ...(gameState.enemyBullets || [])
+        ];
+
+        targets.forEach(enemy => {
+            if (enemy && !enemy.isDead) {
+                killEnemy(enemy, gameState, { fromSkill: true });
+            }
+        });
+
+        log(`KillAll triggered. ${targets.length} enemies killed.`);
     },
 
     // 終了条件の敵を殺す数
-    setKillLimit(value) {    
-        if (!devOverride.stage.global) {
-            devOverride.stage.global = {};
+    setKillLimit(value) {
+        if (!gameState.enemyMode) {
+            log("Not in enemy mode.");
+            return;
         }
 
-        devOverride.stage.global.endConditions = {
-            killCount: value
-        };
+        // 画面上の敵を取得（弾は除外）
+        const targets = (gameState.enemies || []).filter(
+            (enemy) => enemy && !enemy.isDead
+        );
 
-        log("Global Kill limit:", value);
+        if (targets.length === 0) {
+            log("No enemies to kill.");
+            return;
+        }
+
+        // 倒す数を制限
+        const killCount = Math.min(targets.length, value);
+        const enemiesToKill = targets.slice(0, killCount);
+
+        enemiesToKill.forEach((enemy) => {
+            killEnemy(enemy, gameState, { fromSkill: true });
+        });
+
+        log(`${killCount} enemy/enemies killed.`);
     },
     
     // デバッグ補助 --------------------------------------------------
@@ -200,6 +232,19 @@ export const dev = {
             : "MAP ALL: OFF";
 
         renderQuestMapUI();
+    },
+
+    toggleInfiniteSkill(btn) {
+        devOverride.skill = devOverride.skill || {};
+        devOverride.skill.infinite = !devOverride.skill.infinite;
+
+        btn.textContent = devOverride.skill.infinite
+            ? "SKILL INF: ON"
+            : "SKILL INF: OFF";
+
+        if (devOverride.skill.infinite) {
+            log("Infinite skill enabled");
+        }
     },
 
     toggleUnlockAllSkills(btn) {

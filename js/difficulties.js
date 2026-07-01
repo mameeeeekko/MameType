@@ -1,5 +1,4 @@
 // difficulties.js
-
 export const DIFFICULTIES = {
   easy: {
     id: "easy",
@@ -79,13 +78,15 @@ export const DIFFICULTIES = {
 const STORAGE_KEYS = {
   free: "difficulty_free",
   daily: "difficulty_daily",
-  quest: "difficulty_quest"
+  quest: "difficulty_quest",
+  "free-enemy": "difficulty_free_enemy" // ★追加
 };
 
 const currentDifficultyMap = {
   free: getDifficulty(localStorage.getItem(STORAGE_KEYS.free) || "normal"),
   daily: getDifficulty(localStorage.getItem(STORAGE_KEYS.daily) || "normal"),
   quest: getDifficulty(localStorage.getItem(STORAGE_KEYS.quest) || "normal"),
+  "free-enemy": getDifficulty(localStorage.getItem(STORAGE_KEYS["free-enemy"]) || "normal"), // ★追加
 };
 
 //共通取得
@@ -133,29 +134,17 @@ export function getDifficultyDescription(diff, mode) {
 
     if (mode === "standard" || mode === "timeattack") {
       return `
-  文字数:
-  ${diff.basic.min} ～ ${diff.basic.max === 999 ? "∞" : diff.basic.max}文字
-  `;
+文字数 ${diff.basic.min}～${diff.basic.max === 999 ? "∞" : diff.basic.max}
+`;
     }
 
     if (mode === "enemy") {
 
       return `
-  スポーン率: ${(diff.enemy.spawnRate * 100).toFixed(0)}%
-  敵速度: ${(diff.enemy.enemySpeed * 100).toFixed(0)}%
-  被ダメージ: ${(diff.enemy.damageMultiplier * 100).toFixed(0)}%
-  チェイン減衰: ${(diff.enemy.chainDecay * 100).toFixed(0)}%
-  スコア倍率: ${(diff.enemy.scoreMultiplier * 100).toFixed(0)}%
+敵出現間隔 ${(diff.enemy.spawnRate * 100).toFixed(0)}%  / 敵速度 ${(diff.enemy.enemySpeed * 100).toFixed(0)}%  / 被ダメージ ${(diff.enemy.damageMultiplier * 100).toFixed(0)}%  / Chain減衰 ${(diff.enemy.chainDecay * 100).toFixed(0)}%  / Score ×${diff.enemy.scoreMultiplier.toFixed(1)}
 
-  クリアボーナス:
-  +${(diff.enemy.scoreBonus.clearBonus * 100).toFixed(0)}%
-
-  ノーミス:
-  +${(diff.enemy.scoreBonus.noMissBonus * 100).toFixed(0)}%
-
-  ノーダメ:
-  +${(diff.enemy.scoreBonus.noDamageBonus * 100).toFixed(0)}%
-  `;
+CLEAR +${(diff.enemy.scoreBonus.clearBonus * 100).toFixed(0)}%  / NO MISS +${(diff.enemy.scoreBonus.noMissBonus * 100).toFixed(0)}%  / NO DMG +${(diff.enemy.scoreBonus.noDamageBonus * 100).toFixed(0)}%
+`;
     }
 
     return "";

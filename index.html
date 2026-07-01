@@ -123,7 +123,7 @@
                 <option value="empty">標準</option>
                 <option value="句読点">句読点</option>
                 <option value="促音">促音</option>
-                <option value="記号">記号</option>
+                <option value="記号">記号、数字</option>
                 <option value="英語">英語</option>
                 <option value="ことわざ">ことわざ</option>
                 <option value="擬音">擬音</option>
@@ -155,7 +155,7 @@
                 <option value="empty">標準</option>
                 <option value="句読点">句読点</option>
                 <option value="促音">促音</option>
-                <option value="記号">記号</option>
+                <option value="記号">記号、数字</option>
                 <option value="英語">英語</option>
                 <option value="ことわざ">ことわざ</option>
                 <option value="擬音">擬音</option>
@@ -199,7 +199,7 @@
           <select id="freeEnemyTypeSet">
             <option value="ENEMY_TIER_BALANCED">標準構成</option>
             <option value="ENEMY_TIER_ENGLISH_HEAVY">英語多め</option>
-            <option value="ENEMY_TIER_SYMBOL_HEAVY">記号多め</option>
+            <option value="ENEMY_TIER_SYMBOL_HEAVY">記号、数字多め</option>
             <option value="ENEMY_TIER_ONOMATOPOEIA_HEAVY">擬音多め</option>
             <option value="ENEMY_TIER_PUNCTUATION_HEAVY">句読点多め</option>
             <option value="ENEMY_TIER_SOKUON_HEAVY">促音多め</option>
@@ -210,11 +210,11 @@
             <option value="ENEMY_TIER_BLUE_ONLY">促音（Blue）のみ</option>
             <option value="ENEMY_TIER_PINK_ONLY">擬音（Pink）のみ</option>
             <option value="ENEMY_TIER_GREEN_ONLY">句読点（Green）のみ</option>
-            <option value="ENEMY_TIER_RED_ONLY">記号（Red）のみ</option>
+            <option value="ENEMY_TIER_RED_ONLY">記号、数字（Red）のみ</option>
           </select>
         </div>
         <div class="config-row">
-          <label>PLAYER LV (ステータス反映)</label>
+          <label>PLAYER Lv</label>
           <input type="range" id="playerLvRange" min="1" max="100" step="1" value="1"
                  oninput="document.getElementById('enemyLvValue').innerText = this.value">
           <span class="config-value level-color" id="enemyLvValue">1</span>
@@ -624,8 +624,6 @@
     <div class="hud-panel right">
 
       <!-- Active -->
-      <div class="hud-section-title">ACTIVE SKILLS</div>
-
       <div class="stock-row">
         <div class="stock-label">STOCKS</div>
         <div id="questActiveStock"></div>
@@ -634,9 +632,6 @@
       <div id="questActiveSkills"></div>
 
       <!-- Passive -->
-      <div class="hud-section-title passive-title">
-        PASSIVE SKILLS
-      </div>
       <div id="questRight"></div>
 
     </div>
@@ -785,6 +780,11 @@
       <div id="stats"></div>
       
       <button id="gameBackBtn" class="game-back-btn">BACK</button>
+
+      <!-- BGM Information Display -->
+    <div id="bgmInfoDisplay" style="position: absolute; bottom: 12px; right: 12px; color: #e4e4e4; font-size: 14px; text-align: right; opacity: 0; transition: opacity 0.5s ease-out; pointer-events: none; z-index: 100;">
+        <!-- BGMのタイトルと作曲者はJavaScriptによってここに挿入されます -->
+    </div>
       
     </div>
 
@@ -1012,6 +1012,7 @@
   <div class="dev-row">
     <button onclick="dev.toggleMapAdmin(this)">MAP ALL: OFF</button>
     <button onclick="dev.toggleUnlockAllSkills(this)">SKILL ALL: OFF</button>
+    <button onclick="dev.toggleInfiniteSkill(this)">SKILL INF: OFF</button>
     <button onclick="dev.logState()">Log</button>
     <button onclick="dev.resetAll()">Reset</button>
     <button onclick="dev.resetEnemyStats()">EnemyStatsReset</button>

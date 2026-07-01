@@ -552,24 +552,24 @@ export function getActiveSkillStockMax() {
 // ===============================
 // Combo Tier
 // ===============================
-export const OVERDRIVE_COMBO = 60;
-export const OVERDRIVE_SPEED = 3.0;
+export const OVERDRIVE_COMBO = 70;
+export const OVERDRIVE_SPEED = 4.0;
 
 export const COMBO_TIERS = [
     {
         min: 1,
-        max: 15,
+        max: 20,
         cooldownSpeed: 1.00,
     },
     {
-        min: 16,
-        max: 30,
-        cooldownSpeed: 1.5,
+        min: 21,
+        max: 40,
+        cooldownSpeed: 2.0,
     },
     {
-        min: 31,
+        min: 41,
         max: OVERDRIVE_COMBO - 1,
-        cooldownSpeed: 2.0,
+        cooldownSpeed: 3.0,
     },
 ];
 

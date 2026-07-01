@@ -203,12 +203,10 @@ export function spawnEnemy(
     // 難易度補正
     if (diff) {
 
-        enemy.speed =
-            type.speed * diff.enemySpeed;
+        enemy.speed = type.speed; // 初期速度はそのまま
 
-        enemy.damage =
-            type.damage *
-            diff.damageMultiplier;
+        // ダメージは calcDamage で難易度補正されるため、ここでは基本ダメージを設定
+        enemy.damage = type.damage;
 
     } else {
         enemy.damage = type.damage;

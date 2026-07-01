@@ -23,6 +23,20 @@ export function getDisplayFullRoma({ text, pos, typed, inputedRomaji }) {
 
     const kana = getKana(text, i);
 
+    if (kana === '\r') {
+      i += 1;
+      continue;
+    }
+
+    if (kana === '\n') {
+      result += ' ';
+      i += 1;
+      while (i < text.length && (text[i] === '\n' || text[i] === '\r' || text[i] === ' ' || text[i] === '　')) {
+        i += 1;
+      }
+      continue;
+    }
+
     // 記号
     if (isSymbol(kana)) {
       result += SYMBOL_TABLE[kana];

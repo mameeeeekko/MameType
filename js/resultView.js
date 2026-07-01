@@ -73,6 +73,12 @@ export function showResult({
 
   resetResultButtons(mode, { missedCount: totalMistake });
 
+  // ★「記録を見る」ボタンに現在のモードIDを保存する
+  const resultOpenRecordsBtn = document.getElementById("resultOpenRecordsBtn");
+  if (resultOpenRecordsBtn) {
+    resultOpenRecordsBtn.dataset.modeId = mode;
+  }
+
   const resultStats = dom.resultStats();
   if (!resultStats) return;
 

@@ -24,7 +24,14 @@ export function handleSkillModeResult(nodeId) {
             ? 0
             : Math.round((gameState.totalCorrect / totalInputs) * 1000) / 10;
 
-    const totalKpm = Math.round(gameState.totalChars / (gameState.totalTime / 60));       
+    const totalKpm = Math.round(gameState.totalChars / (gameState.totalTime / 60));
+
+    const eScore =
+        (totalKpm > 0 && totalInputs > 0)
+            ? Math.round(
+                totalKpm * Math.pow(gameState.totalCorrect / totalInputs, 3)
+            )
+            : 0;
 
     // =========================
     // result生成
@@ -33,7 +40,7 @@ export function handleSkillModeResult(nodeId) {
         mode: challenge.mode,
         solvedCount: gameState.solvedCount,
         totalMistake: gameState.totalMistake,
-        score: gameState.score,
+        score: eScore,
         totalTime: gameState.totalTime,
         accuracy,
         kpm: totalKpm,
@@ -48,7 +55,19 @@ export function handleSkillModeResult(nodeId) {
     const node = SKILL_TREE[nodeId];
 
     if (node?.unlock) {
-        isClear = checkUnlockByResult(node.unlock, resultData);
+
+        const unlocks = Array.isArray(node.unlock)
+            ? node.unlock
+            : [node.unlock];
+
+        isClear = unlocks.every(cond => {
+
+            if (cond.mode && cond.mode !== resultData.mode) {
+                return false;
+            }
+
+            return checkUnlockByResult(cond, resultData);
+        });
     }
 
     resultData.isClear = isClear;
@@ -162,13 +181,17 @@ export function handleSkillModeResult(nodeId) {
             <div class="block-title">ステータス</div>
 
             <div class="stats-row" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;">
-                
+
                 <div class="stat">
-                    <div class="label">クリア数</div>
+                    <div class="label">eSCORE</div>
+                    <div class="value">${resultData.score}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">CLEAR</div>
                     <div class="value">${gameState.solvedCount}</div>
                 </div>
                 <div class="stat">
-                    <div class="label">時間</div>
+                    <div class="label">TIME</div>
                     <div class="value">${formatTimeMMSS(gameState.totalTime)}</div>
                 </div>
                 <div class="stat">
@@ -176,11 +199,11 @@ export function handleSkillModeResult(nodeId) {
                     <div class="value">${resultData.kpm || 0}</div>
                 </div>
                 <div class="stat">
-                    <div class="label">正確性</div>
+                    <div class="label">ACCURACY</div>
                     <div class="value">${accuracy}%</div>
                 </div>
                 <div class="stat">
-                    <div class="label">ミス</div>
+                    <div class="label">MISSES</div>
                     <div class="value">${gameState.totalMistake}</div>
                 </div>
 

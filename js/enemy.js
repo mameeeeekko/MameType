@@ -11,6 +11,143 @@ import { addQuestItemPickup } from "./questPlayerStats.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getUIAnchorPosition } from "./enemyRenderer.js";
 
+// =====================================================
+// 敵タイプ生成ルール
+/*
+ 【基本設計ルール】
+ 1. 色と対応タグ（スコア順：赤 > 緑 > 黄 > ピンク > 青 > 紫 > グレー）
+    - 赤 (#ff4d4f): 記号、数字 ["記号","数字"] (Score: 60)
+    - 緑 (#73d13d): 句読点 ["句読点"] (Score: 55)
+    - 黄 (#fadb14): ことわざ ["ことわざ"] (Score: 50)
+    - ピンク (#ff85c0): 擬音 ["擬音"] (Score: 45)
+    - 青 (#40a9ff): 促音 ["促音"] (Score: 40)
+    - 紫 (#b37feb): 英語 ["英語"] (Score: 35)
+    - グレー (#a4a4a4): 標準 [] (Score: 30)
+
+ 2. 形とスピード（早いほど高スコア）
+    - pinwheel (高速): speed 1.0, rotation 0.05 (Score x1.5)
+    - circle   (標準): speed 0.8, rotation 0.02 (Score x1.0)
+    - square   (低速): speed 0.4, rotation 0.01 (Score x0.7)
+
+ 3. サイズと難易度（大きいほど高ダメージ・長文・高スコア）
+    - Large  (size:28): damage:60, len:12-20 (Score x2.0)
+    - Normal (size:20): damage:30, len:5-10  (Score x1.2)
+    - Small  (size:14): damage:15,  len:2-4   (Score x0.8)
+
+ 4. パターンによる特殊効果
+    - ring (同心円): hitCount 2 / knockback 40 / スコア 3倍（強力個体）
+    - stripe (縞々): スピード 1.5倍 / rotationSpeed 1.5倍 / スコア 1.5倍（高速個体）
+    - null (無地): 標準
+
+*/
+// =====================================================
+
+const COLOR_PROPS = {
+    RED:    { name: "Red",    color: "#ff4d4f", tags: ["記号", "数字"], baseScore: 60 },
+    GREEN:  { name: "Green",  color: "#73d13d", tags: ["句読点"],       baseScore: 55 },
+    YELLOW: { name: "Yellow", color: "#fadb14", tags: ["ことわざ"],     baseScore: 50 },
+    PINK:   { name: "Pink",   color: "#ff85c0", tags: ["擬音"],         baseScore: 45 },
+    BLUE:   { name: "Blue",   color: "#40a9ff", tags: ["促音"],         baseScore: 40 },
+    PURPLE: { name: "Purple", color: "#b37feb", tags: ["英語"],         baseScore: 35 },
+    GRAY:   { name: "Gray",   color: "#a4a4a4", tags: [],               baseScore: 30 },
+};
+
+const SHAPE_PROPS = {
+    PINWHEEL: { name: "Pinwheel", shape: "pinwheel", speed: 1.0, rotationSpeed: 0.05, scoreMultiplier: 1.5 },
+    CIRCLE:   { name: "Circle",   shape: "circle",   speed: 0.8, rotationSpeed: 0.02, scoreMultiplier: 1.0 },
+    SQUARE:   { name: "Square",   shape: "square",   speed: 0.4, rotationSpeed: 0.01, scoreMultiplier: 0.7 },
+};
+
+const SIZE_PROPS = {
+    LARGE:  { name: "Large",  size: 28, damage: 60, minLen: 9, maxLen: 17, scoreMultiplier: 2.0, killSound: 5, killedEffect: "boss1" },
+    NORMAL: { name: "Normal", size: 20, damage: 30, minLen: 5,  maxLen: 10, scoreMultiplier: 1.2, killSound: 1, killedEffect: "enemy1" },
+    SMALL:  { name: "Small",  size: 14, damage: 15, minLen: 2,  maxLen: 4,  scoreMultiplier: 0.8, killSound: 1, killedEffect: "enemy1" },
+};
+
+const PATTERN_PROPS = {
+    RING:   { name: "Ring",   pattern: "ring",   hitCount: 2, knockback: 80, scoreMultiplier: 3.0 },
+    STRIPE: { name: "Stripe", pattern: "stripe", speedMultiplier: 1.3, rotationSpeedMultiplier: 1.5, scoreMultiplier: 1.5 },
+    NULL:   { name: "Null",   pattern: null },
+};
+
+/**
+ * ルールに基づいて敵タイプを生成する関数
+ * @param {object} colorProp - COLOR_PROPSのいずれか
+ * @param {object} shapeProp - SHAPE_PROPSのいずれか
+ * @param {object} sizeProp - SIZE_PROPSのいずれか
+ * @param {object} patternProp - PATTERN_PROPSのいずれか
+ * @returns {object} 生成された敵タイプのオブジェクト
+ */
+function createEnemyType(colorProp, shapeProp, sizeProp, patternProp) {
+    const id = `${colorProp.name}_${shapeProp.name}_${sizeProp.name}${patternProp.name !== 'Null' ? `_${patternProp.name}` : ''}`.toUpperCase();
+    const name = `${colorProp.name} ${shapeProp.name} ${sizeProp.name}${patternProp.name !== 'Null' ? ` ${patternProp.name}` : ''}`;
+
+    let finalSpeed = shapeProp.speed;
+    let finalRotationSpeed = shapeProp.rotationSpeed;
+    let finalScore = colorProp.baseScore * shapeProp.scoreMultiplier * sizeProp.scoreMultiplier;
+
+    const enemyData = {
+        id: id,
+        name: name,
+        color: colorProp.color,
+        shape: shapeProp.shape,
+        pattern: patternProp.pattern,
+        size: sizeProp.size,
+        damage: sizeProp.damage,
+        tags: colorProp.tags,
+        minLen: sizeProp.minLen,
+        maxLen: sizeProp.maxLen,
+        killSound: sizeProp.killSound,
+        killedEffect: sizeProp.killedEffect,
+        damageSound: 1,
+    };
+
+    if (patternProp.pattern === 'stripe') {
+        finalSpeed *= patternProp.speedMultiplier;
+        finalRotationSpeed *= patternProp.rotationSpeedMultiplier;
+        finalScore *= patternProp.scoreMultiplier;
+    } else if (patternProp.pattern === 'ring') {
+        Object.assign(enemyData, {
+            hitCount: patternProp.hitCount,
+            knockback: patternProp.knockback,
+        });
+        finalScore *= patternProp.scoreMultiplier;
+    }
+
+    enemyData.speed = finalSpeed;
+    enemyData.rotationSpeed = finalRotationSpeed;
+    enemyData.score = Math.round(finalScore);
+
+    return enemyData;
+}
+
+/**
+ * 全ての敵タイプを自動生成する
+ * @returns {object} EnemyTypesオブジェクト
+ */
+function generateAllEnemyTypes() {
+    const types = {};
+    for (const colorKey in COLOR_PROPS) {
+        for (const shapeKey in SHAPE_PROPS) {
+            for (const sizeKey in SIZE_PROPS) {
+                for (const patternKey in PATTERN_PROPS) {
+                    // 特定の組み合わせをスキップするルール（もしあれば）
+                    // 例: if (sizeKey === 'LARGE' && patternKey === 'RING') continue;
+
+                    const enemy = createEnemyType(
+                        COLOR_PROPS[colorKey],
+                        SHAPE_PROPS[shapeKey],
+                        SIZE_PROPS[sizeKey],
+                        PATTERN_PROPS[patternKey]
+                    );
+                    types[enemy.id] = enemy;
+                }
+            }
+        }
+    }
+    return types;
+}
+
 // 同じ敵をださない。
 function getUnusedLetter(state, charType = 'alphabet') {
     const pools = {
@@ -160,7 +297,7 @@ export class Enemy {
             }
             spawnHitWave(player.x, player.y);
 
-            const damage = calcDamage(this.type, player, difficulty);
+            const damage = calcDamage(this.type, player, difficulty); // 変更なし（正しい）
 
             // 無敵タイマーがあればダメージ無効
             if (player.invincibleTimer > 0) {
@@ -173,7 +310,8 @@ export class Enemy {
 
             // パッシブの確率無効化判定
             try {
-                const stats = getPlayerStatsForEnemy("quest");
+                const statsMode = state.isQuestMode ? "quest" : "enemy";
+                const stats = getPlayerStatsForEnemy(statsMode);
                 const negateChance = Number(stats.damageNegateChance) || 0;
 
                 const isBoss =
@@ -208,7 +346,7 @@ export class Enemy {
 
         // 全体的な減速(0.7倍)と、文字数が多いほどさらに遅くする補正(5文字を超えた分から適用)
         const lengthPenalty = Math.max(0.3, 1.0 - (Math.max(0, (this.text?.length || 0) - 5) * 0.04));
-        const moveSpeed = this.speed * 0.7 * lengthPenalty;
+        const moveSpeed = this.speed * 0.7 * lengthPenalty * (difficulty.enemy?.enemySpeed ?? 1);
 
         if (!this.activeAttack) {
             this.x += dx / dist * moveSpeed * scale;
@@ -618,7 +756,7 @@ export class BulletEnemy extends Enemy{
         if( dist < player.radius + this.type.size){
 
             // 弾によるダメージは防御を反映するため calcDamage を使う
-            const damage = calcDamage(this.type, player, difficulty);
+            const damage = calcDamage(this.type, player, difficulty); // ★ .enemy を削除
 
             if (player.invincibleTimer > 0) {
                 spawnPlayerDamageEffect(player.x, player.y, "GUARD", "#9befff");
@@ -627,7 +765,8 @@ export class BulletEnemy extends Enemy{
             }
 
             try {
-                const stats = getPlayerStatsForEnemy("quest");
+                const statsMode = state.isQuestMode ? "quest" : "enemy";
+                const stats = getPlayerStatsForEnemy(statsMode);
                 const negateChance = Number(stats.damageNegateChance) || 0;
                 if (Math.random() < negateChance) {
                     spawnPlayerDamageEffect(player.x, player.y, "GUARD", "#9befff");
@@ -697,7 +836,8 @@ function calcDamage(enemyType, player, difficulty) {
     if (typeof defense === "number" && !isFinite(defense)) defense = NaN;
     if (isNaN(defense)) {
         try {
-            const stats = getPlayerStatsForEnemy("quest");
+            const statsMode = gameState.isQuestMode ? "quest" : "enemy";
+            const stats = getPlayerStatsForEnemy(statsMode);
             defense = Number(stats.defense) || 0;
         } catch (e) {
             defense = 0;
@@ -1017,30 +1157,6 @@ function createEnemyByType(type, x, y, state){
 // EnemyType設定
 // =====================================================
 /*
- 【基本設計ルール】
- 1. 色と対応タグ（スコア順：赤 > 緑 > 黄 > ピンク > 青 > 紫 > グレー）
-    - 赤 (#ff4d4f): 記号 ["記号"] (Score: 60)
-    - 緑 (#73d13d): 句読点 ["句読点"] (Score: 55)
-    - 黄 (#fadb14): ことわざ ["ことわざ"] (Score: 50)
-    - ピンク (#ff85c0): 擬音 ["擬音"] (Score: 45)
-    - 青 (#40a9ff): 促音 ["促音"] (Score: 40)
-    - 紫 (#b37feb): 英語 ["英語"] (Score: 35)
-    - グレー (#a4a4a4): 標準 [] (Score: 30)
-
- 2. 形とスピード（早いほど高スコア）
-    - pinwheel (高速): speed 1.2, rotation 0.05 (Score x1.5)
-    - circle   (標準): speed 0.8, rotation 0.02 (Score x1.0)
-    - square   (低速): speed 0.4, rotation 0.01 (Score x0.7)
-
- 3. サイズと難易度（大きいほど高ダメージ・長文・高スコア）
-    - Large  (size:28): damage:25, len:12-20 (Score x2.0)
-    - Normal (size:20): damage:15, len:5-10  (Score x1.2)
-    - Small  (size:14): damage:8,  len:2-4   (Score x0.8)
-
- 4. パターンによる特殊効果
-    - ring (同心円): hitCount 2 / knockback 40 / スコア 3倍（強力個体）
-    - stripe (縞々): スピード 1.5倍 / rotationSpeed 1.5倍 / スコア 1.5倍（高速個体）
-    - null (無地): 標準
 
 【基本ステータス】
 id              : 敵ID
@@ -1053,7 +1169,7 @@ speed           : 移動速度
 score           : 撃破スコア
 killSound       : 撃破SE番号
 damageSound     : 接触SE番号
-killedEffect    : 撃破エフェクトID
+killedEffect    : 撃破エフェクトID enemy1, enemy2, midboss1,boss1, bullet
 shape           : 形状ID
 pattern         : 模様ID
 
@@ -1101,1366 +1217,26 @@ behaviors:[
 */
 // =====================================================
 
-export const EnemyTypes = {
+export const EnemyTypes = generateAllEnemyTypes();
 
-    // --- GRAY: Standard (タグなし / Base 30) ---
-    GRAY_CIRCLE_SMALL: {
+// --- ボスや特殊な敵はここで個別に追加・上書き ---
+Object.assign(EnemyTypes, {
+    GRAY_CIRCLE_SMALL_LEGACY: { // Example of keeping an old one if needed, or just overwrite
         id: "gray_circle_small", name: "Cookie",
         color: "#a4a4a4", shape: "circle", pattern: null, size: 14,
         speed: 0.6, rotationSpeed: 0.02, damage: 10,
         tags: [], minLen: 2, maxLen: 6, score: 24, // 30 * 1.0 * 0.8
         killSound: 1, killedEffect: "enemy1", damageSound: 1
     },
-    GRAY_CIRCLE_SMALL_RING: {
-        id: "gray_circle_small_ring", name: "EncryptedCookie",
-        color: "#a4a4a4", shape: "circle", pattern: "ring", size: 14,
-        speed: 0.8, rotationSpeed: 0.02, damage: 10,
-        tags: [], minLen: 1, maxLen: 3, score: 72, // 24 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_CIRCLE_SMALL_STRIPE: {
-        id: "gray_circle_small_stripe", name: "SessionID",
-        color: "#a4a4a4", shape: "circle", pattern: "stripe", size: 14,
-        speed: 1.2, rotationSpeed: 0.03, damage: 10, // 0.8 * 1.5
-        tags: [], minLen: 2, maxLen: 5, score: 36, // 24 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_SQUARE_SMALL_RING: {
-        id: "gray_square_small_ring", name: "SecureAdware",
-        color: "#a4a4a4", shape: "square", pattern: "ring", size: 14,
-        speed: 0.3, rotationSpeed: 0.01, damage: 10,
-        tags: [], minLen: 1, maxLen: 3, score: 51, // 17 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_CIRCLE_NORMAL: {
-        id: "gray_circle_normal", name: "JunkData",
-        color: "#a4a4a4", shape: "circle", pattern: null, size: 20,
-        speed: 0.6, rotationSpeed: 0.02, damage: 20,
-        tags: [], minLen: 5, maxLen: 10, score: 36, // 30 * 1.0 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_CIRCLE_NORMAL_RING: {
-        id: "gray_circle_normal_ring", name: "EncryptedJunkData",
-        color: "#a4a4a4", shape: "circle", pattern: "ring", size: 20,
-        speed: 0.8, rotationSpeed: 0.02, damage: 20,
-        tags: [], minLen: 3, maxLen: 8, score: 108, // 36 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_CIRCLE_NORMAL_STRIPE: {
-        id: "gray_circle_normal_stripe", name: "FastJunkData",
-        color: "#a4a4a4", shape: "circle", pattern: "stripe", size: 20,
-        speed: 1.2, rotationSpeed: 0.03, damage: 20,
-        tags: [], minLen: 5, maxLen: 10, score: 54, // 36 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_SQUARE_SMALL: {
-        id: "gray_square_small", name: "Adware",
-        color: "#a4a4a4", shape: "square", pattern: null, size: 14,
-        speed: 0.4, rotationSpeed: 0.01, damage: 10,
-        tags: [], minLen: 2, maxLen: 6, score: 17, // 30 * 0.7 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_SQUARE_SMALL_STRIPE: {
-        id: "gray_square_small_stripe", name: "FastAdware",
-        color: "#a4a4a4", shape: "square", pattern: "stripe", size: 14,
-        speed: 0.6, rotationSpeed: 0.015, damage: 10,
-        tags: [], minLen: 2, maxLen: 5, score: 26, // 17 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_SQUARE_NORMAL: {
-        id: "gray_square_normal", name: "Buffer",
-        color: "#a4a4a4", shape: "square", pattern: null, size: 20,
-        speed: 0.3, rotationSpeed: 0.01, damage: 20,
-        tags: [], minLen: 5, maxLen: 10, score: 25, // 30 * 0.7 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_SQUARE_NORMAL_RING: {
-        id: "gray_square_normal_ring", name: "SecureBuffer",
-        color: "#a4a4a4", shape: "square", pattern: "ring", size: 20,
-        speed: 0.4, rotationSpeed: 0.01, damage: 20,
-        tags: [], minLen: 3, maxLen: 8, score: 75, // 25 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_SQUARE_NORMAL_STRIPE: {
-        id: "gray_square_normal_stripe", name: "FastBuffer",
-        color: "#a4a4a4", shape: "square", pattern: "stripe", size: 20,
-        speed: 0.6, rotationSpeed: 0.015, damage: 20,
-        tags: [], minLen: 5, maxLen: 10, score: 38, // 25 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_CIRCLE_LARGE: {
-        id: "gray_circle_large", name: "LogFile",
-        color: "#a4a4a4", shape: "circle", pattern: null, size: 28,
-        speed: 0.6, rotationSpeed: 0.02, damage: 35,
-        tags: [], minLen: 10, maxLen: 18, score: 60, // 30 * 1.0 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_CIRCLE_LARGE_RING: {
-        id: "gray_circle_large_ring", name: "EncryptedLogFile",
-        color: "#a4a4a4", shape: "circle", pattern: "ring", size: 28,
-        speed: 0.8, rotationSpeed: 0.02, damage: 35,
-        tags: [], minLen: 8, maxLen: 16, score: 180, // 60 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_CIRCLE_LARGE_STRIPE: {
-        id: "gray_circle_large_stripe", name: "FastLogFile",
-        color: "#a4a4a4", shape: "circle", pattern: "stripe", size: 28,
-        speed: 1.2, rotationSpeed: 0.03, damage: 35,
-        tags: [], minLen: 10, maxLen: 18, score: 90, // 60 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_SQUARE_LARGE: {
-        id: "gray_square_large", name: "Botnet",
-        color: "#a4a4a4", shape: "square", pattern: null, size: 28,
-        speed: 0.3, rotationSpeed: 0.01, damage: 35,
-        tags: [], minLen: 10, maxLen: 18, score: 42, // 30 * 0.7 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_SQUARE_LARGE_RING: {
-        id: "gray_square_large_ring", name: "EncryptedBotnet",
-        color: "#a4a4a4", shape: "square", pattern: "ring", size: 28,
-        speed: 0.4, rotationSpeed: 0.01, damage: 35,
-        tags: [], minLen: 8, maxLen: 16, score: 126, // 42 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_SQUARE_LARGE_STRIPE: {
-        id: "gray_square_large_stripe", name: "FastBotnet",
-        color: "#a4a4a4", shape: "square", pattern: "stripe", size: 28,
-        speed: 0.6, rotationSpeed: 0.015, damage: 35, // 0.4 * 1.5, 0.01 * 1.5
-        tags: [], minLen: 10, maxLen: 18, score: 63, // 30 * 0.7 * 2.0 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_PINWHEEL_SMALL: {
-        id: "gray_pinwheel_small", name: "Ping",
-        color: "#a4a4a4", shape: "pinwheel", pattern: null, size: 14,
-        speed: 0.9, rotationSpeed: 0.05, damage: 10,
-        tags: [], minLen: 2, maxLen: 6, score: 36, // 30 * 1.5 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_PINWHEEL_SMALL_RING: {
-        id: "gray_pinwheel_small_ring", name: "SecurePing",
-        color: "#a4a4a4", shape: "pinwheel", pattern: "ring", size: 14,
-        speed: 1.2, rotationSpeed: 0.05, damage: 10,
-        tags: [], minLen: 1, maxLen: 3, score: 108, // 36 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_PINWHEEL_SMALL_STRIPE: {
-        id: "gray_pinwheel_small_stripe", name: "HyperPing",
-        color: "#a4a4a4", shape: "pinwheel", pattern: "stripe", size: 14,
-        speed: 1.8, rotationSpeed: 0.075, damage: 10,
-        tags: [], minLen: 2, maxLen: 5, score: 54, // 36 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_PINWHEEL_NORMAL: {
-        id: "gray_pinwheel_normal", name: "Packet",
-        color: "#a4a4a4", shape: "pinwheel", pattern: null, size: 20,
-        speed: 0.9, rotationSpeed: 0.05, damage: 20,
-        tags: [], minLen: 5, maxLen: 10, score: 54, // 30 * 1.5 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_PINWHEEL_NORMAL_RING: {
-        id: "gray_pinwheel_normal_ring", name: "EncryptedPacket",
-        color: "#a4a4a4", shape: "pinwheel", pattern: "ring", size: 20,
-        speed: 1.2, rotationSpeed: 0.05, damage: 20,
-        tags: [], minLen: 3, maxLen: 8, score: 162, // 54 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_PINWHEEL_NORMAL_STRIPE: {
-        id: "gray_pinwheel_normal_stripe", name: "FastPacket",
-        color: "#a4a4a4", shape: "pinwheel", pattern: "stripe", size: 20,
-        speed: 1.8, rotationSpeed: 0.075, damage: 20, // 1.2 * 1.5, 0.05 * 1.5
-        tags: [], minLen: 5, maxLen: 10, score: 81, // 54 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_PINWHEEL_LARGE: {
-        id: "gray_pinwheel_large", name: "Traffic",
-        color: "#a4a4a4", shape: "pinwheel", pattern: null, size: 28,
-        speed: 0.9, rotationSpeed: 0.05, damage: 35,
-        tags: [], minLen: 10, maxLen: 18, score: 90, // 30 * 1.5 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GRAY_PINWHEEL_LARGE_RING: {
-        id: "gray_pinwheel_large_ring", name: "EncryptedTraffic",
-        color: "#a4a4a4", shape: "pinwheel", pattern: "ring", size: 28,
-        speed: 1.2, rotationSpeed: 0.05, damage: 35,
-        tags: [], minLen: 8, maxLen: 16, score: 270, // 90 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GRAY_PINWHEEL_LARGE_STRIPE: {
-        id: "gray_pinwheel_large_stripe", name: "HyperTraffic",
-        color: "#a4a4a4", shape: "pinwheel", pattern: "stripe", size: 28,
-        speed: 1.8, rotationSpeed: 0.075, damage: 35,
-        tags: [], minLen: 10, maxLen: 18, score: 135, // 90 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-
-    // --- PURPLE: English (英語 / Base 35) ---
-    PURPLE_SQUARE_SMALL: {
-        id: "purple_square_small", name: "Token",
-        color: "#b37feb", shape: "square", pattern: null, size: 14,
-        speed: 0.3, rotationSpeed: 0.01, damage: 10,
-        tags: ["英語"], minLen: 2, maxLen: 6, score: 20, // 35 * 0.7 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_SQUARE_SMALL_RING: {
-        id: "purple_square_small_ring", name: "SecureToken",
-        color: "#b37feb", shape: "square", pattern: "ring", size: 14,
-        speed: 0.4, rotationSpeed: 0.01, damage: 10,
-        tags: ["英語"], minLen: 1, maxLen: 3, score: 60, // 20 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_SQUARE_SMALL_STRIPE: {
-        id: "purple_square_small_stripe", name: "FastToken",
-        color: "#b37feb", shape: "square", pattern: "stripe", size: 14,
-        speed: 0.6, rotationSpeed: 0.015, damage: 10,
-        tags: ["英語"], minLen: 2, maxLen: 5, score: 30, // 20 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_SQUARE_NORMAL: {
-        id: "purple_square_normal", name: "Firewall",
-        color: "#b37feb", shape: "square", pattern: null, size: 20,
-        speed: 0.3, rotationSpeed: 0.01, damage: 20,
-        tags: ["英語"], minLen: 5, maxLen: 10, score: 29, // 35 * 0.7 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_SQUARE_NORMAL_RING: {
-        id: "purple_square_normal_ring", name: "SecureFirewall",
-        color: "#b37feb", shape: "square", pattern: "ring", size: 20,
-        speed: 0.4, rotationSpeed: 0.01, damage: 20,
-        tags: ["英語"], minLen: 3, maxLen: 8, score: 87, // 29 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_SQUARE_NORMAL_STRIPE: {
-        id: "purple_square_normal_stripe", name: "FastFirewall",
-        color: "#b37feb", shape: "square", pattern: "stripe", size: 20,
-        speed: 0.6, rotationSpeed: 0.015, damage: 20, // 0.4 * 1.5, 0.01 * 1.5
-        tags: ["英語"], minLen: 5, maxLen: 10, score: 44, // 29 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_SQUARE_LARGE: {
-        id: "purple_SQUARE_large", name: "Mainframe",
-        color: "#b37feb", shape: "square", pattern: null, size: 28,
-        speed: 0.3, rotationSpeed: 0.01, damage: 35,
-        tags: ["英語"], minLen: 10, maxLen: 18, score: 49, // 35 * 0.7 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_SQUARE_LARGE_RING: {
-        id: "purple_SQUARE_large_ring", name: "EncryptedMainframe",
-        color: "#b37feb", shape: "square", pattern: "ring", size: 28,
-        speed: 0.4, rotationSpeed: 0.01, damage: 35,
-        tags: ["英語"], minLen: 8, maxLen: 16, score: 147, // 49 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_SQUARE_LARGE_STRIPE: {
-        id: "purple_SQUARE_large_stripe", name: "FastMainframe",
-        color: "#b37feb", shape: "square", pattern: "stripe", size: 28,
-        speed: 0.6, rotationSpeed: 0.015, damage: 35,
-        tags: ["英語"], minLen: 10, maxLen: 18, score: 74, // 49 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_PINWHEEL_SMALL: {
-        id: "purple_pinwheel_small", name: "Phishing",
-        color: "#b37feb", shape: "pinwheel", pattern: null, size: 14,
-        speed: 0.9, rotationSpeed: 0.05, damage: 10,
-        tags: ["英語"], minLen: 2, maxLen: 6, score: 42, // 35 * 1.5 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_PINWHEEL_SMALL_RING: {
-        id: "purple_pinwheel_small_ring", name: "EncryptedPhishing",
-        color: "#b37feb", shape: "pinwheel", pattern: "ring", size: 14,
-        speed: 1.2, rotationSpeed: 0.05, damage: 10,
-        tags: ["英語"], minLen: 1, maxLen: 3, score: 126, // 42 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_PINWHEEL_SMALL_STRIPE: {
-        id: "purple_pinwheel_small_stripe", name: "FastPhishing",
-        color: "#b37feb", shape: "pinwheel", pattern: "stripe", size: 14,
-        speed: 1.8, rotationSpeed: 0.075, damage: 10, // 1.2 * 1.5, 0.05 * 1.5
-        tags: ["英語"], minLen: 2, maxLen: 5, score: 63, // 42 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_CIRCLE_SMALL: {
-        id: "purple_circle_small", name: "Keylogger",
-        color: "#b37feb", shape: "circle", pattern: null, size: 14,
-        speed: 0.6, rotationSpeed: 0.02, damage: 10,
-        tags: ["英語"], minLen: 2, maxLen: 6, score: 28, // 35 * 1.0 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_CIRCLE_SMALL_RING: {
-        id: "purple_circle_small_ring", name: "HiddenKeylogger",
-        color: "#b37feb", shape: "circle", pattern: "ring", size: 14,
-        speed: 0.8, rotationSpeed: 0.02, damage: 10,
-        tags: ["英語"], minLen: 1, maxLen: 3, score: 84, // 28 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_CIRCLE_SMALL_STRIPE: {
-        id: "purple_circle_small_stripe", name: "FastKeylogger",
-        color: "#b37feb", shape: "circle", pattern: "stripe", size: 14,
-        speed: 1.2, rotationSpeed: 0.03, damage: 10,
-        tags: ["英語"], minLen: 2, maxLen: 5, score: 42, // 28 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_CIRCLE_NORMAL: {
-        id: "purple_circle_normal", name: "SpamMail",
-        color: "#b37feb", shape: "circle", pattern: null, size: 20,
-        speed: 0.6, rotationSpeed: 0.02, damage: 20,
-        tags: ["英語"], minLen: 5, maxLen: 10, score: 42, // 35 * 1.0 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_CIRCLE_NORMAL_RING: {
-        id: "purple_circle_normal_ring", name: "SecureSpam",
-        color: "#b37feb", shape: "circle", pattern: "ring", size: 20,
-        speed: 0.8, rotationSpeed: 0.02, damage: 20,
-        tags: ["英語"], minLen: 3, maxLen: 8, score: 126, // 42 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_CIRCLE_NORMAL_STRIPE: {
-        id: "purple_circle_normal_stripe", name: "FastSpam",
-        color: "#b37feb", shape: "circle", pattern: "stripe", size: 20,
-        speed: 1.2, rotationSpeed: 0.03, damage: 20,
-        tags: ["英語"], minLen: 5, maxLen: 10, score: 63, // 42 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_PINWHEEL_NORMAL: {
-        id: "purple_pinwheel_normal", name: "Streamer",
-        color: "#b37feb", shape: "pinwheel", pattern: null, size: 20,
-        speed: 0.9, rotationSpeed: 0.05, damage: 20,
-        tags: ["英語"], minLen: 5, maxLen: 10, score: 63, // 35 * 1.5 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_PINWHEEL_NORMAL_RING: {
-        id: "purple_pinwheel_normal_ring", name: "SecureStreamer",
-        color: "#b37feb", shape: "pinwheel", pattern: "ring", size: 20,
-        speed: 1.2, rotationSpeed: 0.05, damage: 20,
-        tags: ["英語"], minLen: 3, maxLen: 8, score: 189, // 63 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_PINWHEEL_NORMAL_STRIPE: {
-        id: "purple_pinwheel_normal_stripe", name: "HyperStreamer",
-        color: "#b37feb", shape: "pinwheel", pattern: "stripe", size: 20,
-        speed: 1.8, rotationSpeed: 0.075, damage: 20,
-        tags: ["英語"], minLen: 5, maxLen: 10, score: 95, // 63 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_PINWHEEL_LARGE: {
-        id: "purple_pinwheel_large", name: "DataBreach",
-        color: "#b37feb", shape: "pinwheel", pattern: null, size: 28,
-        speed: 0.9, rotationSpeed: 0.05, damage: 35,
-        tags: ["英語"], minLen: 10, maxLen: 18, score: 105, // 35 * 1.5 * 2.0
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_PINWHEEL_LARGE_RING: {
-        id: "purple_pinwheel_large_ring", name: "EncryptedBreach",
-        color: "#b37feb", shape: "pinwheel", pattern: "ring", size: 28,
-        speed: 1.2, rotationSpeed: 0.05, damage: 35,
-        tags: ["英語"], minLen: 8, maxLen: 16, score: 315, // 105 * 3
-        killSound: 5, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_PINWHEEL_LARGE_STRIPE: {
-        id: "purple_pinwheel_large_stripe", name: "HyperBreach",
-        color: "#b37feb", shape: "pinwheel", pattern: "stripe", size: 28,
-        speed: 1.8, rotationSpeed: 0.075, damage: 35,
-        tags: ["英語"], minLen: 10, maxLen: 18, score: 158, // 105 * 1.5
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_CIRCLE_LARGE: {
-        id: "purple_circle_large", name: "LargePhishing",
-        color: "#b37feb", shape: "circle", pattern: null, size: 28,
-        speed: 0.6, rotationSpeed: 0.02, damage: 35,
-        tags: ["英語"], minLen: 10, maxLen: 18, score: 70, // 35 * 1.0 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PURPLE_CIRCLE_LARGE_RING: {
-        id: "purple_circle_large_ring", name: "EncryptedLargePhishing",
-        color: "#b37feb", shape: "circle", pattern: "ring", size: 28,
-        speed: 0.8, rotationSpeed: 0.02, damage: 35,
-        tags: ["英語"], minLen: 8, maxLen: 16, score: 210, // 70 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PURPLE_CIRCLE_LARGE_STRIPE: {
-        id: "purple_circle_large_stripe", name: "FastLargePhishing",
-        color: "#b37feb", shape: "circle", pattern: "stripe", size: 28,
-        speed: 1.2, rotationSpeed: 0.03, damage: 35, // 0.8 * 1.5, 0.02 * 1.5
-        tags: ["英語"], minLen: 10, maxLen: 18, score: 105, // 70 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-
-    // --- BLUE: Sokuon (促音 / Base 40) ---
-    BLUE_CIRCLE_SMALL: {
-        id: "blue_circle_small", name: "Proxy",
-        color: "#40a9ff", shape: "circle", pattern: null, size: 14,
-        speed: 0.6, rotationSpeed: 0.02, damage: 10,
-        tags: ["促音"], minLen: 2, maxLen: 6, score: 32, // 40 * 1.0 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_CIRCLE_SMALL_RING: {
-        id: "blue_circle_small_ring", name: "EncryptedProxy",
-        color: "#40a9ff", shape: "circle", pattern: "ring", size: 14,
-        speed: 0.8, rotationSpeed: 0.02, damage: 10,
-        tags: ["促音"], minLen: 1, maxLen: 3, score: 96, // 32 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_CIRCLE_SMALL_STRIPE: {
-        id: "blue_circle_small_stripe", name: "FastProxy",
-        color: "#40a9ff", shape: "circle", pattern: "stripe", size: 14,
-        speed: 1.2, rotationSpeed: 0.03, damage: 10,
-        tags: ["促音"], minLen: 2, maxLen: 5, score: 48, // 32 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_PINWHEEL_SMALL: {
-        id: "blue_pinwheel_small", name: "Backdoor",
-        color: "#40a9ff", shape: "pinwheel", pattern: null, size: 14,
-        speed: 0.9, rotationSpeed: 0.05, damage: 10,
-        tags: ["促音"], minLen: 2, maxLen: 6, score: 48, // 40 * 1.5 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_PINWHEEL_SMALL_STRIPE: {
-        id: "blue_pinwheel_small_stripe", name: "DDoS",
-        color: "#40a9ff", shape: "pinwheel", pattern: "stripe", size: 14,
-        speed: 1.8, rotationSpeed: 0.08, damage: 10, // 1.2 * 1.5
-        tags: ["促音"], minLen: 2, maxLen: 5, score: 72, // 48 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_PINWHEEL_SMALL_RING: {
-        id: "blue_pinwheel_small_ring", name: "EncryptedBackdoor",
-        color: "#40a9ff", shape: "pinwheel", pattern: "ring", size: 14,
-        speed: 1.2, rotationSpeed: 0.05, damage: 10,
-        tags: ["促音"], minLen: 1, maxLen: 3, score: 144, // 48 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_CIRCLE_NORMAL: {
-        id: "blue_circle_normal", name: "Backdoor",
-        color: "#40a9ff", shape: "circle", pattern: null, size: 20,
-        speed: 0.6, rotationSpeed: 0.02, damage: 20,
-        tags: ["促音"], minLen: 5, maxLen: 10, score: 48, // 40 * 1.0 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_CIRCLE_NORMAL_RING: {
-        id: "blue_circle_normal_ring", name: "EncryptedBackdoor",
-        color: "#40a9ff", shape: "circle", pattern: "ring", size: 20,
-        speed: 0.8, rotationSpeed: 0.02, damage: 20,
-        tags: ["促音"], minLen: 3, maxLen: 8, score: 144, // 48 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_CIRCLE_NORMAL_STRIPE: {
-        id: "blue_circle_normal_stripe", name: "FastBackdoor",
-        color: "#40a9ff", shape: "circle", pattern: "stripe", size: 20,
-        speed: 1.2, rotationSpeed: 0.03, damage: 20, // 0.8 * 1.5, 0.02 * 1.5
-        tags: ["促音"], minLen: 5, maxLen: 10, score: 72, // 48 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_PINWHEEL_NORMAL: {
-        id: "blue_pinwheel_normal", name: "Encoder",
-        color: "#40a9ff", shape: "pinwheel", pattern: null, size: 20,
-        speed: 0.9, rotationSpeed: 0.05, damage: 20,
-        tags: ["促音"], minLen: 5, maxLen: 10, score: 72, // 40 * 1.5 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_PINWHEEL_NORMAL_RING: {
-        id: "blue_pinwheel_normal_ring", name: "SecureEncoder",
-        color: "#40a9ff", shape: "pinwheel", pattern: "ring", size: 20,
-        speed: 1.2, rotationSpeed: 0.05, damage: 20,
-        tags: ["促音"], minLen: 3, maxLen: 8, score: 216, // 72 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_PINWHEEL_NORMAL_STRIPE: {
-        id: "blue_pinwheel_normal_stripe", name: "HyperEncoder",
-        color: "#40a9ff", shape: "pinwheel", pattern: "stripe", size: 20,
-        speed: 1.8, rotationSpeed: 0.075, damage: 20,
-        tags: ["促音"], minLen: 5, maxLen: 10, score: 108, // 72 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_SQUARE_LARGE: {
-        id: "blue_square_large", name: "LargeDDoS",
-        color: "#40a9ff", shape: "square", pattern: null, size: 28,
-        speed: 0.3, rotationSpeed: 0.01, damage: 35,
-        tags: ["促音"], minLen: 10, maxLen: 18, score: 56, // 40 * 0.7 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_SQUARE_LARGE_RING: {
-        id: "blue_square_large_ring", name: "EncryptedLargeDDoS",
-        color: "#40a9ff", shape: "square", pattern: "ring", size: 28,
-        speed: 0.4, rotationSpeed: 0.01, damage: 35,
-        tags: ["促音"], minLen: 8, maxLen: 16, score: 168, // 56 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_CIRCLE_LARGE: {
-        id: "blue_circle_large", name: "Bridge",
-        color: "#40a9ff", shape: "circle", pattern: null, size: 28,
-        speed: 0.6, rotationSpeed: 0.02, damage: 35,
-        tags: ["促音"], minLen: 10, maxLen: 18, score: 80, // 40 * 1.0 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_CIRCLE_LARGE_RING: {
-        id: "blue_circle_large_ring", name: "EncryptedBridge",
-        color: "#40a9ff", shape: "circle", pattern: "ring", size: 28,
-        speed: 0.8, rotationSpeed: 0.02, damage: 35,
-        tags: ["促音"], minLen: 8, maxLen: 16, score: 240, // 80 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_CIRCLE_LARGE_STRIPE: {
-        id: "blue_circle_large_stripe", name: "FastBridge",
-        color: "#40a9ff", shape: "circle", pattern: "stripe", size: 28,
-        speed: 1.2, rotationSpeed: 0.03, damage: 35,
-        tags: ["促音"], minLen: 10, maxLen: 18, score: 120, // 80 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_PINWHEEL_LARGE: {
-        id: "blue_pinwheel_large", name: "BurstTraffic",
-        color: "#40a9ff", shape: "pinwheel", pattern: null, size: 28,
-        speed: 0.9, rotationSpeed: 0.05, damage: 35,
-        tags: ["促音"], minLen: 10, maxLen: 18, score: 120, // 40 * 1.5 * 2.0
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_PINWHEEL_LARGE_RING: {
-        id: "blue_pinwheel_large_ring", name: "PersistentBurst",
-        color: "#40a9ff", shape: "pinwheel", pattern: "ring", size: 28,
-        speed: 1.2, rotationSpeed: 0.05, damage: 35,
-        tags: ["促音"], minLen: 8, maxLen: 16, score: 360, // 120 * 3
-        killSound: 5, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_PINWHEEL_LARGE_STRIPE: {
-        id: "blue_pinwheel_large_stripe", name: "HyperBurst",
-        color: "#40a9ff", shape: "pinwheel", pattern: "stripe", size: 28,
-        speed: 1.8, rotationSpeed: 0.075, damage: 35,
-        tags: ["促音"], minLen: 10, maxLen: 18, score: 180, // 120 * 1.5
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_SQUARE_LARGE_STRIPE: {
-        id: "blue_square_large_stripe", name: "FastLargeDDoS",
-        color: "#40a9ff", shape: "square", pattern: "stripe", size: 28,
-        speed: 0.6, rotationSpeed: 0.015, damage: 35, // 0.4 * 1.5, 0.01 * 1.5
-        tags: ["促音"], minLen: 10, maxLen: 18, score: 84, // 56 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_SQUARE_NORMAL: {
-        id: "blue_square_normal", name: "Sniffer",
-        color: "#40a9ff", shape: "square", pattern: null, size: 20,
-        speed: 0.3, rotationSpeed: 0.01, damage: 20,
-        tags: ["促音"], minLen: 5, maxLen: 10, score: 34, // 40 * 0.7 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_SQUARE_NORMAL_RING: {
-        id: "blue_square_normal_ring", name: "PersistentSniffer",
-        color: "#40a9ff", shape: "square", pattern: "ring", size: 20,
-        speed: 0.4, rotationSpeed: 0.01, damage: 20,
-        tags: ["促音"], minLen: 3, maxLen: 8, score: 102, // 34 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_SQUARE_NORMAL_STRIPE: {
-        id: "blue_square_normal_stripe", name: "FastSniffer",
-        color: "#40a9ff", shape: "square", pattern: "stripe", size: 20,
-        speed: 0.6, rotationSpeed: 0.015, damage: 20,
-        tags: ["促音"], minLen: 5, maxLen: 10, score: 51, // 34 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_SQUARE_SMALL: {
-        id: "blue_square_small", name: "Latency",
-        color: "#40a9ff", shape: "square", pattern: null, size: 14,
-        speed: 0.3, rotationSpeed: 0.01, damage: 10,
-        tags: ["促音"], minLen: 2, maxLen: 6, score: 22, // 40 * 0.7 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    BLUE_SQUARE_SMALL_RING: {
-        id: "blue_square_small_ring", name: "PersistentLatency",
-        color: "#40a9ff", shape: "square", pattern: "ring", size: 14,
-        speed: 0.4, rotationSpeed: 0.01, damage: 10,
-        tags: ["促音"], minLen: 1, maxLen: 3, score: 66, // 22 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    BLUE_SQUARE_SMALL_STRIPE: {
-        id: "blue_square_small_stripe", name: "FastLatency",
-        color: "#40a9ff", shape: "square", pattern: "stripe", size: 14,
-        speed: 0.6, rotationSpeed: 0.015, damage: 10,
-        tags: ["促音"], minLen: 2, maxLen: 5, score: 33, // 22 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-
-    // --- PINK: Gion (擬音 / Base 45) ---
-    PINK_CIRCLE_SMALL: {
-        id: "pink_circle_small", name: "Popup",
-        color: "#ff85c0", shape: "circle", pattern: null, size: 14,
-        speed: 0.6, rotationSpeed: 0.02, damage: 10,
-        tags: ["擬音"], minLen: 2, maxLen: 6, score: 36, // 45 * 1.0 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_CIRCLE_SMALL_RING: {
-        id: "pink_circle_small_ring", name: "StickyPopup",
-        color: "#ff85c0", shape: "circle", pattern: "ring", size: 14,
-        speed: 0.8, rotationSpeed: 0.02, damage: 10,
-        tags: ["擬音"], minLen: 1, maxLen: 3, score: 108, // 36 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PINK_CIRCLE_SMALL_STRIPE: {
-        id: "pink_circle_small_stripe", name: "FastPopup",
-        color: "#ff85c0", shape: "circle", pattern: "stripe", size: 14,
-        speed: 1.2, rotationSpeed: 0.03, damage: 10,
-        tags: ["擬音"], minLen: 2, maxLen: 5, score: 54, // 36 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_CIRCLE_NORMAL: {
-        id: "pink_circle_normal", name: "Malware",
-        color: "#ff85c0", shape: "circle", pattern: null, size: 20,
-        speed: 0.6, rotationSpeed: 0.02, damage: 20,
-        tags: ["擬音"], minLen: 5, maxLen: 10, score: 54, // 45 * 1.0 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_CIRCLE_NORMAL_RING: {
-        id: "pink_circle_normal_ring", name: "PersistentMalware",
-        color: "#ff85c0", shape: "circle", pattern: "ring", size: 20,
-        speed: 0.8, rotationSpeed: 0.02, damage: 20,
-        tags: ["擬音"], minLen: 3, maxLen: 8, score: 162, // 54 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PINK_CIRCLE_NORMAL_STRIPE: {
-        id: "pink_circle_normal_stripe", name: "FastMalware",
-        color: "#ff85c0", shape: "circle", pattern: "stripe", size: 20,
-        speed: 1.2, rotationSpeed: 0.03, damage: 20, // 0.8 * 1.5, 0.02 * 1.5
-        tags: ["擬音"], minLen: 5, maxLen: 10, score: 81, // 54 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-
-    },
-    PINK_PINWHEEL_SMALL: {
-        id: "pink_pinwheel_small", name: "Worm",
-        color: "#ff85c0", shape: "pinwheel", pattern: null, size: 14,
-        speed: 0.9, rotationSpeed: 0.05, damage: 10,
-        tags: ["擬音"], minLen: 2, maxLen: 6, score: 54, // 45 * 1.5 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_PINWHEEL_SMALL_RING: {
-        id: "pink_pinwheel_small_ring", name: "EncryptedWorm",
-        color: "#ff85c0", shape: "pinwheel", pattern: "ring", size: 14,
-        speed: 1.2, rotationSpeed: 0.05, damage: 10,
-        tags: ["擬音"], minLen: 1, maxLen: 3, score: 162, // 54 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PINK_PINWHEEL_SMALL_STRIPE: {
-        id: "pink_pinwheel_small_stripe", name: "HyperWorm",
-        color: "#ff85c0", shape: "pinwheel", pattern: "stripe", size: 14,
-        speed: 1.8, rotationSpeed: 0.075, damage: 10,
-        tags: ["擬音"], minLen: 2, maxLen: 5, score: 81, // 54 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_SQUARE_SMALL: {
-        id: "pink_square_small", name: "SmallMalware",
-        color: "#ff85c0", shape: "square", pattern: null, size: 14,
-        speed: 0.3, rotationSpeed: 0.01, damage: 10,
-        tags: ["擬音"], minLen: 2, maxLen: 6, score: 25, // 45 * 0.7 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_SQUARE_SMALL_RING: {
-        id: "pink_square_small_ring", name: "EncryptedSmallMalware",
-        color: "#ff85c0", shape: "square", pattern: "ring", size: 14,
-        speed: 0.4, rotationSpeed: 0.01, damage: 10,
-        tags: ["擬音"], minLen: 1, maxLen: 3, score: 75, // 25 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PINK_SQUARE_SMALL_STRIPE: {
-        id: "pink_square_small_stripe", name: "FastSmallMalware",
-        color: "#ff85c0", shape: "square", pattern: "stripe", size: 14,
-        speed: 0.6, rotationSpeed: 0.015, damage: 10, // 0.4 * 1.5, 0.01 * 1.5
-        tags: ["擬音"], minLen: 2, maxLen: 5, score: 38, // 25 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_SQUARE_NORMAL: {
-        id: "pink_square_normal", name: "Static",
-        color: "#ff85c0", shape: "square", pattern: null, size: 20,
-        speed: 0.3, rotationSpeed: 0.01, damage: 20,
-        tags: ["擬音"], minLen: 5, maxLen: 10, score: 38, // 45 * 0.7 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_SQUARE_NORMAL_RING: {
-        id: "pink_square_normal_ring", name: "SecureStatic",
-        color: "#ff85c0", shape: "square", pattern: "ring", size: 20,
-        speed: 0.4, rotationSpeed: 0.01, damage: 20,
-        tags: ["擬音"], minLen: 3, maxLen: 8, score: 114, // 38 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PINK_SQUARE_NORMAL_STRIPE: {
-        id: "pink_square_normal_stripe", name: "FastStatic",
-        color: "#ff85c0", shape: "square", pattern: "stripe", size: 20,
-        speed: 0.6, rotationSpeed: 0.015, damage: 20,
-        tags: ["擬音"], minLen: 5, maxLen: 10, score: 57, // 38 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_PINWHEEL_NORMAL: {
-        id: "pink_pinwheel_normal", name: "Glitch",
-        color: "#ff85c0", shape: "pinwheel", pattern: null, size: 20,
-        speed: 0.9, rotationSpeed: 0.05, damage: 20,
-        tags: ["擬音"], minLen: 5, maxLen: 10, score: 81, // 45 * 1.5 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_PINWHEEL_NORMAL_RING: {
-        id: "pink_pinwheel_normal_ring", name: "SecureGlitch",
-        color: "#ff85c0", shape: "pinwheel", pattern: "ring", size: 20,
-        speed: 1.2, rotationSpeed: 0.05, damage: 20,
-        tags: ["擬音"], minLen: 3, maxLen: 8, score: 243, // 81 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PINK_PINWHEEL_NORMAL_STRIPE: {
-        id: "pink_pinwheel_normal_stripe", name: "HyperGlitch",
-        color: "#ff85c0", shape: "pinwheel", pattern: "stripe", size: 20,
-        speed: 1.8, rotationSpeed: 0.075, damage: 20,
-        tags: ["擬音"], minLen: 5, maxLen: 10, score: 122, // 81 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_SQUARE_LARGE: {
-        id: "pink_square_large", name: "GlitchServer",
-        color: "#ff85c0", shape: "square", pattern: null, size: 28,
-        speed: 0.4, rotationSpeed: 0.01, damage: 35,
-        tags: ["擬音"], minLen: 10, maxLen: 18, score: 63, // 45 * 0.7 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_PINWHEEL_LARGE: {
-        id: "pink_pinwheel_large", name: "LargeSpyware",
-        color: "#ff85c0", shape: "pinwheel", pattern: null, size: 28,
-        speed: 0.9, rotationSpeed: 0.05, damage: 35,
-        tags: ["擬音"], minLen: 10, maxLen: 18, score: 135, // 45 * 1.5 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_PINWHEEL_LARGE_RING: {
-        id: "pink_pinwheel_large_ring", name: "PersistentLargeSpyware",
-        color: "#ff85c0", shape: "pinwheel", pattern: "ring", size: 28,
-        speed: 1.2, rotationSpeed: 0.05, damage: 35,
-        tags: ["擬音"], minLen: 8, maxLen: 16, score: 405, // 135 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PINK_PINWHEEL_LARGE_STRIPE: {
-        id: "pink_pinwheel_large_stripe", name: "HyperSpyware",
-        color: "#ff85c0", shape: "pinwheel", pattern: "stripe", size: 28,
-        speed: 1.8, rotationSpeed: 0.075, damage: 35,
-        tags: ["擬音"], minLen: 10, maxLen: 18, score: 202, // 135 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_CIRCLE_LARGE: {
-        id: "pink_circle_large", name: "Miner",
-        color: "#ff85c0", shape: "circle", pattern: null, size: 28,
-        speed: 0.6, rotationSpeed: 0.02, damage: 35,
-        tags: ["擬音"], minLen: 10, maxLen: 18, score: 90, // 45 * 1.0 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    PINK_CIRCLE_LARGE_RING: {
-        id: "pink_circle_large_ring", name: "EncryptedMiner",
-        color: "#ff85c0", shape: "circle", pattern: "ring", size: 28,
-        speed: 0.8, rotationSpeed: 0.02, damage: 35,
-        tags: ["擬音"], minLen: 8, maxLen: 16, score: 270, // 90 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    PINK_CIRCLE_LARGE_STRIPE: {
-        id: "pink_circle_large_stripe", name: "FastMiner",
-        color: "#ff85c0", shape: "circle", pattern: "stripe", size: 28,
-        speed: 1.2, rotationSpeed: 0.03, damage: 35,
-        tags: ["擬音"], minLen: 10, maxLen: 18, score: 135, // 90 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-
-    // --- YELLOW: Proverb (ことわざ / Base 50) ---
-    YELLOW_CIRCLE_SMALL: {
-        id: "yellow_circle_small", name: "SmallTrojan",
-        color: "#fadb14", shape: "circle", pattern: null, size: 14,
-        speed: 0.6, rotationSpeed: 0.02, damage: 10,
-        tags: ["ことわざ"], minLen: 2, maxLen: 6, score: 40, // 50 * 1.0 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_CIRCLE_SMALL_RING: {
-        id: "yellow_circle_small_ring", name: "EncryptedTrojan",
-        color: "#fadb14", shape: "circle", pattern: "ring", size: 14,
-        speed: 0.8, rotationSpeed: 0.02, damage: 10,
-        tags: ["ことわざ"], minLen: 1, maxLen: 3, score: 120, // 40 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_CIRCLE_SMALL_STRIPE: {
-        id: "yellow_circle_small_stripe", name: "FastTrojan",
-        color: "#fadb14", shape: "circle", pattern: "stripe", size: 14,
-        speed: 1.2, rotationSpeed: 0.03, damage: 10, // 0.8 * 1.5, 0.02 * 1.5
-        tags: ["ことわざ"], minLen: 2, maxLen: 5, score: 60, // 40 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_SQUARE_SMALL: {
-        id: "yellow_square_small", name: "Branch",
-        color: "#fadb14", shape: "square", pattern: null, size: 14,
-        speed: 0.3, rotationSpeed: 0.01, damage: 10,
-        tags: ["ことわざ"], minLen: 2, maxLen: 6, score: 28, // 50 * 0.7 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_SQUARE_SMALL_RING: {
-        id: "yellow_square_small_ring", name: "SecureBranch",
-        color: "#fadb14", shape: "square", pattern: "ring", size: 14,
-        speed: 0.4, rotationSpeed: 0.01, damage: 10,
-        tags: ["ことわざ"], minLen: 1, maxLen: 3, score: 84, // 28 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_SQUARE_SMALL_STRIPE: {
-        id: "yellow_square_small_stripe", name: "FastBranch",
-        color: "#fadb14", shape: "square", pattern: "stripe", size: 14,
-        speed: 0.6, rotationSpeed: 0.015, damage: 10,
-        tags: ["ことわざ"], minLen: 2, maxLen: 5, score: 42, // 28 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_PINWHEEL_SMALL: {
-        id: "yellow_pinwheel_small", name: "Loop",
-        color: "#fadb14", shape: "pinwheel", pattern: null, size: 14,
-        speed: 0.9, rotationSpeed: 0.05, damage: 10,
-        tags: ["ことわざ"], minLen: 2, maxLen: 6, score: 60, // 50 * 1.5 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_PINWHEEL_SMALL_RING: {
-        id: "yellow_pinwheel_small_ring", name: "SecureLoop",
-        color: "#fadb14", shape: "pinwheel", pattern: "ring", size: 14,
-        speed: 1.2, rotationSpeed: 0.05, damage: 10,
-        tags: ["ことわざ"], minLen: 1, maxLen: 3, score: 180, // 60 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_PINWHEEL_SMALL_STRIPE: {
-        id: "yellow_pinwheel_small_stripe", name: "HyperLoop",
-        color: "#fadb14", shape: "pinwheel", pattern: "stripe", size: 14,
-        speed: 1.8, rotationSpeed: 0.075, damage: 10,
-        tags: ["ことわざ"], minLen: 2, maxLen: 5, score: 90, // 60 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_CIRCLE_NORMAL: {
-        id: "yellow_circle_normal", name: "Hash",
-        color: "#fadb14", shape: "circle", pattern: null, size: 20,
-        speed: 0.6, rotationSpeed: 0.02, damage: 20,
-        tags: ["ことわざ"], minLen: 5, maxLen: 10, score: 60, // 50 * 1.0 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_CIRCLE_NORMAL_RING: {
-        id: "yellow_circle_normal_ring", name: "SecureHash",
-        color: "#fadb14", shape: "circle", pattern: "ring", size: 20,
-        speed: 0.8, rotationSpeed: 0.02, damage: 20,
-        tags: ["ことわざ"], minLen: 3, maxLen: 8, score: 180, // 60 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_CIRCLE_NORMAL_STRIPE: {
-        id: "yellow_circle_normal_stripe", name: "FastHash",
-        color: "#fadb14", shape: "circle", pattern: "stripe", size: 20,
-        speed: 1.2, rotationSpeed: 0.03, damage: 20,
-        tags: ["ことわざ"], minLen: 5, maxLen: 10, score: 90, // 60 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_SQUARE_NORMAL: {
-        id: "yellow_square_normal", name: "Logic",
-        color: "#fadb14", shape: "square", pattern: null, size: 20,
-        speed: 0.3, rotationSpeed: 0.01, damage: 20,
-        tags: ["ことわざ"], minLen: 5, maxLen: 10, score: 42, // 50 * 0.7 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_SQUARE_NORMAL_RING: {
-        id: "yellow_square_normal_ring", name: "SecureLogic",
-        color: "#fadb14", shape: "square", pattern: "ring", size: 20,
-        speed: 0.4, rotationSpeed: 0.01, damage: 20,
-        tags: ["ことわざ"], minLen: 3, maxLen: 8, score: 126, // 42 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_SQUARE_NORMAL_STRIPE: {
-        id: "yellow_square_normal_stripe", name: "FastLogic",
-        color: "#fadb14", shape: "square", pattern: "stripe", size: 20,
-        speed: 0.6, rotationSpeed: 0.015, damage: 20,
-        tags: ["ことわざ"], minLen: 5, maxLen: 10, score: 63, // 42 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_PINWHEEL_LARGE: {
-        id: "yellow_pinwheel_large", name: "InfiniteLoop",
-        color: "#fadb14", shape: "pinwheel", pattern: null, size: 28,
-        speed: 0.9, rotationSpeed: 0.05, damage: 35,
-        tags: ["ことわざ"], minLen: 10, maxLen: 18, score: 150, // 50 * 1.5 * 2.0
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_PINWHEEL_LARGE_RING: {
-        id: "yellow_pinwheel_large_ring", name: "SecureInfiniteLoop",
-        color: "#fadb14", shape: "pinwheel", pattern: "ring", size: 28,
-        speed: 1.2, rotationSpeed: 0.05, damage: 35,
-        tags: ["ことわざ"], minLen: 8, maxLen: 16, score: 450, // 150 * 3
-        killSound: 5, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_PINWHEEL_LARGE_STRIPE: {
-        id: "yellow_pinwheel_large_stripe", name: "HyperInfiniteLoop",
-        color: "#fadb14", shape: "pinwheel", pattern: "stripe", size: 28,
-        speed: 1.8, rotationSpeed: 0.075, damage: 35,
-        tags: ["ことわざ"], minLen: 10, maxLen: 18, score: 225, // 150 * 1.5
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_CIRCLE_LARGE: {
-        id: "yellow_circle_large", name: "CryptoVault",
-        color: "#fadb14", shape: "circle", pattern: null, size: 28,
-        speed: 0.6, rotationSpeed: 0.02, damage: 35,
-        tags: ["ことわざ"], minLen: 10, maxLen: 18, score: 100, // 50 * 1.0 * 2.0
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_CIRCLE_LARGE_RING: {
-        id: "yellow_circle_large_ring", name: "AdvancedVault",
-        color: "#fadb14", shape: "circle", pattern: "ring", size: 28,
-        speed: 0.8, rotationSpeed: 0.02, damage: 35,
-        tags: ["ことわざ"], minLen: 8, maxLen: 16, score: 300, // 100 * 3
-        killSound: 5, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_CIRCLE_LARGE_STRIPE: {
-        id: "yellow_circle_large_stripe", name: "FastVault",
-        color: "#fadb14", shape: "circle", pattern: "stripe", size: 28,
-        speed: 1.2, rotationSpeed: 0.03, damage: 35,
-        tags: ["ことわざ"], minLen: 10, maxLen: 18, score: 150, // 100 * 1.5
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_PINWHEEL_NORMAL: {
-        id: "yellow_pinwheel_normal", name: "Encryption",
-        color: "#fadb14", shape: "pinwheel", pattern: null, size: 20,
-        speed: 0.9, rotationSpeed: 0.05, damage: 20,
-        tags: ["ことわざ"], minLen: 5, maxLen: 10, score: 90, // 50 * 1.5 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_PINWHEEL_NORMAL_RING: {
-        id: "yellow_pinwheel_normal_ring", name: "EncryptedEncryption",
-        color: "#fadb14", shape: "pinwheel", pattern: "ring", size: 20,
-        speed: 1.2, rotationSpeed: 0.05, damage: 20,
-        tags: ["ことわざ"], minLen: 3, maxLen: 8, score: 270, // 90 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_PINWHEEL_NORMAL_STRIPE: {
-        id: "yellow_pinwheel_normal_stripe", name: "FastEncryption",
-        color: "#fadb14", shape: "pinwheel", pattern: "stripe", size: 20,
-        speed: 1.8, rotationSpeed: 0.075, damage: 20, // 1.2 * 1.5, 0.05 * 1.5
-        tags: ["ことわざ"], minLen: 5, maxLen: 10, score: 135, // 90 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_SQUARE_LARGE: {
-        id: "yellow_square_large", name: "Trojan",
-        color: "#fadb14", shape: "square", pattern: null, size: 28,
-        speed: 0.4, rotationSpeed: 0.01, damage: 35,
-        tags: ["ことわざ"], minLen: 10, maxLen: 18, score: 70, // 50 * 0.7 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    YELLOW_SQUARE_LARGE_RING: {
-        id: "yellow_square_large_ring", name: "AdvancedTrojan",
-        color: "#fadb14", shape: "square", pattern: "ring", size: 28,
-        speed: 0.3, rotationSpeed: 0.01, damage: 35, 
-        tags: ["ことわざ"], minLen: 8, maxLen: 16, score: 210, // 70 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    YELLOW_SQUARE_LARGE_STRIPE: {
-        id: "yellow_square_large_stripe", name: "FastTrojan",
-        color: "#fadb14", shape: "square", pattern: "stripe", size: 28,
-        speed: 0.6, rotationSpeed: 0.015, damage: 35, // 0.4 * 1.5, 0.01 * 1.5
-        tags: ["ことわざ"], minLen: 10, maxLen: 18, score: 105, // 70 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-
-    // --- GREEN: Kutouten (句読点 / Base 55) ---
-    GREEN_CIRCLE_SMALL: {
-        id: "green_circle_small", name: "Pointer",
-        color: "#73d13d", shape: "circle", pattern: null, size: 14,
-        speed: 0.6, rotationSpeed: 0.02, damage: 10,
-        tags: ["句読点"], minLen: 2, maxLen: 6, score: 44, // 55 * 1.0 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_CIRCLE_SMALL_RING: {
-        id: "green_circle_small_ring", name: "HiddenPointer",
-        color: "#73d13d", shape: "circle", pattern: "ring", size: 14,
-        speed: 0.8, rotationSpeed: 0.02, damage: 10,
-        tags: ["句読点"], minLen: 1, maxLen: 3, score: 132, // 44 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GREEN_CIRCLE_SMALL_STRIPE: {
-        id: "green_circle_small_stripe", name: "FastPointer",
-        color: "#73d13d", shape: "circle", pattern: "stripe", size: 14,
-        speed: 1.2, rotationSpeed: 0.03, damage: 10,
-        tags: ["句読点"], minLen: 2, maxLen: 5, score: 66, // 44 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_CIRCLE_NORMAL: {
-        id: "green_circle_normal", name: "Payload",
-        color: "#73d13d", shape: "circle", pattern: null, size: 20,
-        speed: 0.8, rotationSpeed: 0.02, damage: 20,
-        tags: ["句読点"], minLen: 5, maxLen: 10, score: 66, // 55 * 1.0 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_CIRCLE_NORMAL_STRIPE: {
-        id: "green_circle_normal_stripe", name: "FastPayload",
-        color: "#73d13d", shape: "circle", pattern: "stripe", size: 20,
-        speed: 1.2, rotationSpeed: 0.03, damage: 20,
-        tags: ["句読点"], minLen: 5, maxLen: 10, score: 99, // 66 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_SQUARE_NORMAL: {
-        id: "green_square_normal", name: "GlobalVar",
-        color: "#73d13d", shape: "square", pattern: null, size: 20,
-        speed: 0.3, rotationSpeed: 0.01, damage: 20,
-        tags: ["句読点"], minLen: 5, maxLen: 10, score: 46, // 55 * 0.7 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_SQUARE_NORMAL_RING: {
-        id: "green_square_normal_ring", name: "SecureGlobal",
-        color: "#73d13d", shape: "square", pattern: "ring", size: 20,
-        speed: 0.4, rotationSpeed: 0.01, damage: 20,
-        tags: ["句読点"], minLen: 3, maxLen: 8, score: 138, // 46 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GREEN_SQUARE_NORMAL_STRIPE: {
-        id: "green_square_normal_stripe", name: "FastGlobal",
-        color: "#73d13d", shape: "square", pattern: "stripe", size: 20,
-        speed: 0.6, rotationSpeed: 0.015, damage: 20,
-        tags: ["句読点"], minLen: 5, maxLen: 10, score: 69, // 46 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_PINWHEEL_SMALL: {
-        id: "green_pinwheel_small", name: "Signal",
-        color: "#73d13d", shape: "pinwheel", pattern: null, size: 14,
-        speed: 0.9, rotationSpeed: 0.05, damage: 10,
-        tags: ["句読点"], minLen: 2, maxLen: 6, score: 66, // 55 * 1.5 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_PINWHEEL_SMALL_RING: {
-        id: "green_pinwheel_small_ring", name: "SecureSignal",
-        color: "#73d13d", shape: "pinwheel", pattern: "ring", size: 14,
-        speed: 1.2, rotationSpeed: 0.05, damage: 10,
-        tags: ["句読点"], minLen: 1, maxLen: 3, score: 198, // 66 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GREEN_PINWHEEL_SMALL_STRIPE: {
-        id: "green_pinwheel_small_stripe", name: "HyperSignal",
-        color: "#73d13d", shape: "pinwheel", pattern: "stripe", size: 14,
-        speed: 1.8, rotationSpeed: 0.075, damage: 10,
-        tags: ["句読点"], minLen: 2, maxLen: 5, score: 99, // 66 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_SQUARE_LARGE: {
-        id: "green_square_large", name: "Repository",
-        color: "#73d13d", shape: "square", pattern: null, size: 28,
-        speed: 0.4, rotationSpeed: 0.01, damage: 35,
-        tags: ["句読点"], minLen: 10, maxLen: 18, score: 77, // 55 * 0.7 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_PINWHEEL_NORMAL: {
-        id: "green_pinwheel_normal", name: "Exploit",
-        color: "#73d13d", shape: "pinwheel", pattern: null, size: 20,
-        speed: 0.9, rotationSpeed: 0.05, damage: 20,
-        tags: ["句読点"], minLen: 5, maxLen: 10, score: 99, // 55 * 1.5 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_PINWHEEL_NORMAL_STRIPE: {
-        id: "green_pinwheel_normal_stripe", name: "Ransomware",
-        color: "#73d13d", shape: "pinwheel", pattern: "stripe", size: 20,
-        speed: 1.8, rotationSpeed: 0.08, damage: 20, // 1.2 * 1.5
-        tags: ["句読点"], minLen: 5, maxLen: 10, score: 149, // 99 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_PINWHEEL_NORMAL_RING: {
-        id: "green_pinwheel_normal_ring", name: "PersistentExploit",
-        color: "#73d13d", shape: "pinwheel", pattern: "ring", size: 20,
-        speed: 1.2, rotationSpeed: 0.05, damage: 20,
-        tags: ["句読点"], minLen: 3, maxLen: 8, score: 297, // 99 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GREEN_PINWHEEL_LARGE: {
-        id: "green_pinwheel_large", name: "MassiveExploit",
-        color: "#73d13d", shape: "pinwheel", pattern: null, size: 28,
-        speed: 0.9, rotationSpeed: 0.05, damage: 35,
-        tags: ["句読点"], minLen: 10, maxLen: 18, score: 165, // 55 * 1.5 * 2.0
-        killSound: 5, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_PINWHEEL_LARGE_RING: {
-        id: "green_pinwheel_large_ring", name: "SecureMassiveExploit",
-        color: "#73d13d", shape: "pinwheel", pattern: "ring", size: 28,
-        speed: 1.2, rotationSpeed: 0.05, damage: 35,
-        tags: ["句読点"], minLen: 8, maxLen: 16, score: 495, // 165 * 3
-        killSound: 5, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GREEN_SQUARE_SMALL: {
-        id: "green_square_small", name: "SmallRansomware",
-        color: "#73d13d", shape: "square", pattern: null, size: 14,
-        speed: 0.4, rotationSpeed: 0.01, damage: 10,
-        tags: ["句読点"], minLen: 2, maxLen: 6, score: 31, // 55 * 0.7 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_CIRCLE_NORMAL_RING: {
-        id: "green_circle_normal_ring", name: "LockedPayload",
-        color: "#73d13d", shape: "circle", pattern: "ring", size: 20,
-        speed: 0.6, rotationSpeed: 0.02, damage: 20,
-        tags: ["句読点"], minLen: 3, maxLen: 8, score: 198, // (55 * 1.0 * 1.2) * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GREEN_SQUARE_SMALL_RING: {
-        id: "green_square_small_ring", name: "EncryptedSmallRansomware",
-        color: "#73d13d", shape: "square", pattern: "ring", size: 14,
-        speed: 0.3, rotationSpeed: 0.01, damage: 10,
-        tags: ["句読点"], minLen: 1, maxLen: 3, score: 93, // 31 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GREEN_SQUARE_SMALL_STRIPE: {
-        id: "green_square_small_stripe", name: "FastSmallRansomware",
-        color: "#73d13d", shape: "square", pattern: "stripe", size: 14,
-        speed: 0.6, rotationSpeed: 0.015, damage:10, // 0.4 * 1.5, 0.01 * 1.5
-        tags: ["句読点"], minLen: 2, maxLen: 5, score: 47, // 31 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_CIRCLE_LARGE: {
-        id: "green_circle_large", name: "LargeExploit",
-        color: "#73d13d", shape: "circle", pattern: null, size: 28,
-        speed: 0.6, rotationSpeed: 0.02, damage: 35,
-        tags: ["句読点"], minLen: 10, maxLen: 18, score: 110, // 55 * 1.0 * 2.0
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    GREEN_CIRCLE_LARGE_RING: {
-        id: "green_circle_large_ring", name: "PersistentLargeExploit",
-        color: "#73d13d", shape: "circle", pattern: "ring", size: 28,
-        speed: 0.8, rotationSpeed: 0.02, damage: 35,
-        tags: ["句読点"], minLen: 8, maxLen: 16, score: 330, // 110 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    GREEN_CIRCLE_LARGE_STRIPE: {
-        id: "green_circle_large_stripe", name: "FastLargeExploit",
-        color: "#73d13d", shape: "circle", pattern: "stripe", size: 28,
-        speed: 1.2, rotationSpeed: 0.03, damage: 35, // 0.8 * 1.5, 0.02 * 1.5
-        tags: ["句読点"], minLen: 10, maxLen: 18, score: 165, // 110 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-
-    // --- RED: Symbol (記号 / Base 60) ---
-    RED_PINWHEEL_LARGE: {
-        id: "red_pinwheel_large", name: "ZeroDay",
-        color: "#ff4d4f", shape: "pinwheel", pattern: null, size: 28,
-        speed: 0.9, rotationSpeed: 0.05, damage: 35,
-        tags: ["記号"], minLen: 10, maxLen: 18, score: 180, // 60 * 1.5 * 2.0 (RINGなしは維持)
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
-    },
-    RED_PINWHEEL_LARGE_RING: {
-        id: "red_pinwheel_large_ring", name: "StealthRootkit",
-        color: "#ff4d4f", shape: "pinwheel", pattern: "ring", size: 28,
-        speed: 1.2, rotationSpeed: 0.05, damage: 35,
-        tags: ["記号"], minLen: 8, maxLen: 16, score: 540, // 180 * 3
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    RED_PINWHEEL_LARGE_STRIPE: {
-        id: "red_pinwheel_large_stripe", name: "AdvancedVirus",
-        color: "#ff4d4f", shape: "pinwheel", pattern: "stripe", size: 28,
-        speed: 1.8, rotationSpeed: 0.075, damage: 35, // 1.2 * 1.5, 0.05 * 1.5
-        tags: ["記号"], minLen: 10, maxLen: 18, score: 270, // 180 * 1.5
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
-    },
-    RED_CIRCLE_SMALL: {
-        id: "red_circle_small", name: "SmallVirus",
-        color: "#ff4d4f", shape: "circle", pattern: null, size: 14,
-        speed: 0.8, rotationSpeed: 0.02, damage: 10,
-        tags: ["記号"], minLen: 2, maxLen: 6, score: 48, // 60 * 1.0 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_PINWHEEL_SMALL: {
-        id: "red_pinwheel_small", name: "ActiveVirus",
-        color: "#ff4d4f", shape: "pinwheel", pattern: null, size: 14,
-        speed: 0.9, rotationSpeed: 0.05, damage: 10,
-        tags: ["記号"], minLen: 2, maxLen: 6, score: 72, // 60 * 1.5 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_PINWHEEL_SMALL_RING: {
-        id: "red_pinwheel_small_ring", name: "SecureActiveVirus",
-        color: "#ff4d4f", shape: "pinwheel", pattern: "ring", size: 14,
-        speed: 1.2, rotationSpeed: 0.05, damage: 10,
-        tags: ["記号"], minLen: 1, maxLen: 3, score: 216, // 72 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    RED_CIRCLE_SMALL_RING: {
-        id: "red_circle_small_ring", name: "EncryptedSmallVirus",
-        color: "#ff4d4f", shape: "circle", pattern: "ring", size: 14,
-        speed: 0.6, rotationSpeed: 0.02, damage: 10,
-        tags: ["記号"], minLen: 1, maxLen: 3, score: 144, // 48 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    RED_CIRCLE_NORMAL: {
-        id: "red_circle_normal", name: "MutantVirus",
-        color: "#ff4d4f", shape: "circle", pattern: null, size: 20,
-        speed: 0.6, rotationSpeed: 0.02, damage: 20,
-        tags: ["記号"], minLen: 5, maxLen: 10, score: 72, // 60 * 1.0 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_CIRCLE_NORMAL_RING: {
-        id: "red_circle_normal_ring", name: "EncryptedMutant",
-        color: "#ff4d4f", shape: "circle", pattern: "ring", size: 20,
-        speed: 0.8, rotationSpeed: 0.02, damage: 20,
-        tags: ["記号"], minLen: 3, maxLen: 8, score: 216, // 72 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    RED_CIRCLE_NORMAL_STRIPE: {
-        id: "red_circle_normal_stripe", name: "FastMutant",
-        color: "#ff4d4f", shape: "circle", pattern: "stripe", size: 20,
-        speed: 1.2, rotationSpeed: 0.03, damage: 20,
-        tags: ["記号"], minLen: 5, maxLen: 10, score: 108, // 72 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_PINWHEEL_NORMAL: {
-        id: "red_pinwheel_normal", name: "Hijacker",
-        color: "#ff4d4f", shape: "pinwheel", pattern: null, size: 20,
-        speed: 0.9, rotationSpeed: 0.05, damage: 20,
-        tags: ["記号"], minLen: 5, maxLen: 10, score: 108, // 60 * 1.5 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_PINWHEEL_NORMAL_RING: {
-        id: "red_pinwheel_normal_ring", name: "PersistentHijacker",
-        color: "#ff4d4f", shape: "pinwheel", pattern: "ring", size: 20,
-        speed: 1.2, rotationSpeed: 0.05, damage: 20,
-        tags: ["記号"], minLen: 3, maxLen: 8, score: 324, // 108 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    RED_PINWHEEL_NORMAL_STRIPE: {
-        id: "red_pinwheel_normal_stripe", name: "HyperHijacker",
-        color: "#ff4d4f", shape: "pinwheel", pattern: "stripe", size: 20,
-        speed: 1.8, rotationSpeed: 0.075, damage: 20,
-        tags: ["記号"], minLen: 5, maxLen: 10, score: 162, // 108 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_SQUARE_LARGE: {
-        id: "red_square_large", name: "FatalError",
-        color: "#ff4d4f", shape: "square", pattern: null, size: 28,
-        speed: 0.3, rotationSpeed: 0.01, damage: 35,
-        tags: ["記号"], minLen: 10, maxLen: 18, score: 84, // 60 * 0.7 * 2.0
-        killSound: 5, killedEffect: "boss1", damageSound: 1
-    },
-    RED_SQUARE_LARGE_RING: {
-        id: "red_square_large_ring", name: "EncryptedFatal",
-        color: "#ff4d4f", shape: "square", pattern: "ring", size: 28,
-        speed: 0.4, rotationSpeed: 0.01, damage: 35,
-        tags: ["記号"], minLen: 8, maxLen: 16, score: 252, // 84 * 3
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    RED_SQUARE_LARGE_STRIPE: {
-        id: "red_square_large_stripe", name: "FastFatalError",
-        color: "#ff4d4f", shape: "square", pattern: "stripe", size: 28,
-        speed: 0.6, rotationSpeed: 0.015, damage: 35,
-        tags: ["記号"], minLen: 10, maxLen: 18, score: 126, // 84 * 1.5
-        killSound: 5, killedEffect: "boss1", damageSound: 1
-    },
-    RED_CIRCLE_SMALL_STRIPE: {
-        id: "red_circle_small_stripe", name: "FastSmallVirus",
-        color: "#ff4d4f", shape: "circle", pattern: "stripe", size: 14,
-        speed: 1.2, rotationSpeed: 0.03, damage: 10, // 0.8 * 1.5, 0.02 * 1.5
-        tags: ["記号"], minLen: 2, maxLen: 5, score: 72, // 48 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_CIRCLE_LARGE: {
-        id: "red_circle_large", name: "Trigger",
-        color: "#ff4d4f", shape: "circle", pattern: null, size: 28,
-        speed: 0.6, rotationSpeed: 0.02, damage: 35,
-        tags: ["記号"], minLen: 10, maxLen: 18, score: 120, // 60 * 1.0 * 2.0
-        killSound: 5, killedEffect: "boss1", damageSound: 1
-    },
-    RED_CIRCLE_LARGE_RING: {
-        id: "red_circle_large_ring", name: "EncryptedTrigger",
-        color: "#ff4d4f", shape: "circle", pattern: "ring", size: 28,
-        speed: 0.8, rotationSpeed: 0.02, damage: 35,
-        tags: ["記号"], minLen: 8, maxLen: 16, score: 360, // 120 * 3
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    RED_CIRCLE_LARGE_STRIPE: {
-        id: "red_circle_large_stripe", name: "FastTrigger",
-        color: "#ff4d4f", shape: "circle", pattern: "stripe", size: 28,
-        speed: 1.2, rotationSpeed: 0.03, damage: 35,
-        tags: ["記号"], minLen: 10, maxLen: 18, score: 180, // 120 * 1.5
-        killSound: 5, killedEffect: "boss1", damageSound: 1
-    },
-    RED_SQUARE_NORMAL: {
-        id: "red_square_normal", name: "Rootkit",
-        color: "#ff4d4f", shape: "square", pattern: null, size: 20,
-        speed: 0.3, rotationSpeed: 0.01, damage: 20,
-        tags: ["記号"], minLen: 5, maxLen: 10, score: 50, // 60 * 0.7 * 1.2
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_SQUARE_NORMAL_RING: {
-        id: "red_square_normal_ring", name: "EncryptedRootkit",
-        color: "#ff4d4f", shape: "square", pattern: "ring", size: 20,
-        speed: 0.4, rotationSpeed: 0.01, damage: 20,
-        tags: ["記号"], minLen: 3, maxLen: 8, score: 151, // 50 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
-    RED_SQUARE_NORMAL_STRIPE: {
-        id: "red_square_normal_stripe", name: "FastRootkit",
-        color: "#ff4d4f", shape: "square", pattern: "stripe", size: 20,
-        speed: 0.6, rotationSpeed: 0.015, damage: 20, // 0.4 * 1.5, 0.01 * 1.5
-        tags: ["記号"], minLen: 5, maxLen: 10, score: 75, // 50 * 1.5
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_SQUARE_SMALL: {
-        id: "red_square_small", name: "Panic",
-        color: "#ff4d4f", shape: "square", pattern: null, size: 14,
-        speed: 0.3, rotationSpeed: 0.01, damage: 10,
-        tags: ["記号"], minLen: 2, maxLen: 6, score: 34, // 60 * 0.7 * 0.8
-        killSound: 1, killedEffect: "enemy1", damageSound: 1
-    },
-    RED_SQUARE_SMALL_RING: {
-        id: "red_square_small_ring", name: "PersistentPanic",
-        color: "#ff4d4f", shape: "square", pattern: "ring", size: 14,
-        speed: 0.4, rotationSpeed: 0.01, damage: 10,
-        tags: ["記号"], minLen: 1, maxLen: 3, score: 102, // 34 * 3
-        killSound: 1, killedEffect: "enemy1", damageSound: 1,
-        hitCount: 2, knockback: 40
-    },
 
     // --- ボスシリーズ ---
 
     MID_BOSS_1: {
         id: "mid_boss_1", name: "中ボス 1: Sentinel",
-        color: "#597ef7", shape: "chip", pattern: "circuit", size: 35,
+        color: "#d0c4b7", shape: "octagon", pattern: "honeycomb", size: 35,
         speed: 0.4, rotationSpeed: 0.02, damage: 30,
         tags: ["", "促音"], minLen: 12, maxLen: 18, score: 500,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        killSound: 5, killedEffect: "boss2", damageSound: 1,
         hitCount: 3, knockback: 40
     },
 
@@ -2468,7 +1244,7 @@ export const EnemyTypes = {
         id: "mid_boss_2", name: "中ボス 2: Guardian",
         color: "#13c2c2", shape: "gate", pattern: "circuit", size: 35,
         speed: 0.5, rotationSpeed: 0.015, damage: 35,
-        tags: ["","句読点", "ことわざ"], minLen: 12, maxLen: 18, score: 800,
+        tags: ["", "句読点", "ことわざ"], minLen: 12, maxLen: 18, score: 800,
         killSound: 5, killedEffect: "boss1", damageSound: 1,
         hitCount: 4, knockback: 45,
         behaviors: [
@@ -2480,8 +1256,8 @@ export const EnemyTypes = {
         id: "mid_boss_3", name: "中ボス 3: Gatekeeper",
         color: "#fa8c16", shape: "relay", pattern: "circuit", size: 35,
         speed: 0.6, rotationSpeed: 0.02, damage: 42,
-        tags: ["", "英語"], minLen: 14, maxLen: 20, score: 1200,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        tags: ["", "英語"], minLen: 14, maxLen: 20, score: 1200, killedEffect: "enemy2",
+        killSound: 5, damageSound: 1,
         hitCount: 5, knockback: 45,
         behaviors:[
             { type: "attack", interval: 25, preDelay: 10, tags: ["","英語"], minLen: 3, maxLen: 6, damage: 20 },
@@ -2504,8 +1280,8 @@ export const EnemyTypes = {
         id: "mid_boss_4", name: "中ボス 4: Breaker",
         color: "#a0d911", shape: "glitch_tri", pattern: "circuit", size: 40,
         speed: 0.6, rotationSpeed: 0.03, damage: 45,
-        tags: ["", "促音", "擬音", "記号"], minLen: 14, maxLen: 20, score: 1400,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        tags: ["", "促音", "擬音", "記号"], minLen: 14, maxLen: 20, score: 1400, killedEffect: "enemy2",
+        killSound: 5, damageSound: 1,
         hitCount: 5, knockback: 45,
         behaviors: [
             { type: "attack", interval: 15, preDelay: 7, tags: ["","英語"], minLen: 5, maxLen: 8, damage: 40 },
@@ -2516,8 +1292,8 @@ export const EnemyTypes = {
         id: "mid_boss_5", name: "中ボス 5: Void",
         color: "#2f54eb", shape: "shard", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.06, damage: 60,
-        tags: ["","ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2000,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        tags: ["", "ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2000, killedEffect: "enemy2",
+        killSound: 5, damageSound: 1,
         hitCount: 5, knockback: 55,
         behaviors: [
             { type: "spawn", interval: 12, preDelay: 1.5, spawnType: ["gray_circle_small","gray_circle_normal"], count: 2 },
@@ -2528,8 +1304,8 @@ export const EnemyTypes = {
         id: "mid_boss_6", name: "中ボス 6: Ghost",
         color: "#bfbfbf", shape: "array", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.01, damage: 70,
-        tags: ["","擬音", "記号"], minLen: 15, maxLen: 22, score: 2200,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        tags: ["", "擬音", "記号"], minLen: 15, maxLen: 22, score: 2200, killedEffect: "enemy2",
+        killSound: 5, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
             { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.5, damage: 20, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } }
@@ -2553,8 +1329,8 @@ export const EnemyTypes = {
         id: "mid_boss_7", name: "中ボス 5: Void",
         color: "#2f54eb", shape: "shard", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.06, damage: 60,
-        tags: ["","ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2200,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        tags: ["", "ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2200, killedEffect: "enemy2",
+        killSound: 5, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
             { type: "spawn", interval: 10, preDelay: 1.5, spawnType: ["gray_circle_small","gray_circle_normal"], count: 2 },
@@ -2566,8 +1342,8 @@ export const EnemyTypes = {
         id: "mid_boss_8", name: "中ボス 6: Ghost",
         color: "#bfbfbf", shape: "array", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.01, damage: 70,
-        tags: ["","擬音", "記号"], minLen: 15, maxLen: 22, score: 2400,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        tags: ["", "擬音", "記号"], minLen: 15, maxLen: 22, score: 2400, killedEffect: "enemy2",
+        killSound: 5, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
             { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.5, damage: 30, size: 10, shape: "arrow", color: "#bfbfbf", charType: "number" } },
@@ -2579,8 +1355,8 @@ export const EnemyTypes = {
         id: "mid_boss_9", name: "中ボス 6: Ghost",
         color: "#bfbfbf", shape: "array", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.01, damage: 70,
-        tags: ["","擬音", "記号", "英語"], minLen: 15, maxLen: 22, score: 2600,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        tags: ["", "擬音", "記号", "英語"], minLen: 15, maxLen: 22, score: 2600, killedEffect: "enemy2",
+        killSound: 5, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
             { type: "shoot", interval: 10, preDelay: 1.0, bullet: { count: 10, speed: 1.5, damage: 35, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } },
@@ -2607,10 +1383,10 @@ export const EnemyTypes = {
 
     LAST_BOSS: {
         id: "last_boss", name: "ラスボス: Singularity",
-        color: "#000000", shape: "omega", pattern: "circuit", size: 40,
+        color: "#000000", shape: "knot5", pattern: "honeycomb", size: 40,
         speed: 0.1, rotationSpeed: 0.08, damage: 99,
-        tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 30, maxLen: 100, score: 10000,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 30, maxLen: 100, score: 10000, killedEffect: "boss2",
+        killSound: 5, damageSound: 1,
         hitCount: 10, knockback: 30,
         behaviors: [
             { type: "spawn", interval: 10, preDelay: 1.5, spawnType: "gray_circle_normal", count: 1 },
@@ -2622,8 +1398,7 @@ export const EnemyTypes = {
             { type: "attack", interval: 45, preDelay: 12, tags: ["","英語","句読点"], minLen: 8, maxLen: 12, damage: 200 },
         ]
     }
-};
-
+})
 
 // =================================
 // アイテム

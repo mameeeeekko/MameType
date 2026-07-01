@@ -170,10 +170,17 @@ function setupStatsModal(options = {}) {
   if (modalBox) {
     // 横幅をさらに広げる
     modalBox.style.maxWidth = "1200px";
+    // コンテンツが切れないように、モーダルの最小高さを設定
+    modalBox.style.minHeight = "720px";
   }
 
   if (modalQuest) {
     modalQuest.style.justifyContent = "center";
+    // コンテンツが画面を超える場合にスクロールできるようにし、
+    // 常に上端から表示されるようにする
+    modalQuest.style.overflowY = "auto";
+    modalQuest.style.alignItems = "flex-start";
+    modalQuest.style.paddingTop = "2rem";
   }
 
   //詳細ステータス分岐
@@ -303,11 +310,6 @@ function renderQuestStatsModal() {
   const r = s.questRecord || {};
   const totalStars = getTotalStars();
 
-  // メインコンテンツエリアのスタイル
-  const mainContent = document.getElementById("questMainContent");
-  if (mainContent) {
-    mainContent.style.cssText = "display: flex; justify-content: center; align-items: flex-start; gap: 20px; width: 100%;";
-  }
   const maxStars = getAvailableMaxStars();
   const starsPercent = Math.floor(totalStars / maxStars * 100);
   const exp = Number(s.exp) || 0;
@@ -326,12 +328,12 @@ function renderQuestStatsModal() {
 
   if (left) {
     left.innerHTML = `
-      <div class="quest-stats-section">STATUS</div>
+      <div class="quest-bottom-title quest-stats-section">STATUS</div>
 
-        <div class="quest-stats-row"><span>Lv</span><span>${s.level}</span></div>
-        <div class="quest-stats-row"><span>HP</span><span>${s.maxHp} ${skillStats.maxHp ? `<span class="stat-plus">(+${skillStats.maxHp})</span>` : ''}</span></div>
-        <div class="quest-stats-row"><span>DEF</span><span>${s.defense} ${skillStats.defense ? `<span class="stat-plus">(+${skillStats.defense})</span>` : ''}</span></div>
-        <div class="quest-stats-row"><span>EXP</span><span>${exp} / ${nextExp}</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">Lv</span><span>${s.level}</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">HP</span><span>${s.maxHp} ${skillStats.maxHp ? `<span class="stat-plus">(+${skillStats.maxHp})</span>` : ''}</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">DEF</span><span>${s.defense} ${skillStats.defense ? `<span class="stat-plus">(+${skillStats.defense})</span>` : ''}</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">EXP</span><span>${exp} / ${nextExp}</span></div>
 
         <div class="quest-exp-wrap">
           <div class="quest-exp-bar-bg">
@@ -339,7 +341,7 @@ function renderQuestStatsModal() {
           </div>
         </div>
 
-      <div class="quest-stats-section">SKILL BONUS</div>
+      <div class="quest-bottom-title quest-stats-section">SKILL BONUS</div>
 
         <div class="quest-skill-row">
           <span>Chain増加</span>
@@ -367,40 +369,54 @@ function renderQuestStatsModal() {
 
         <div class="quest-skill-row">
           <span>MaxHP</span>
-          <span class="skill-plain-val">+${skillStats.maxHp || 0}</span>
+          ${renderQuestStatBarForValue(skillStats.maxHp, 'addition')}
+          <span>+${skillStats.maxHp || 0}</span>
         </div>
 
         <div class="quest-skill-row">
           <span>DEF</span>
-          <span class="skill-plain-val">+${skillStats.defense || 0}</span>
+          ${renderQuestStatBarForValue(skillStats.defense, 'addition')}
+          <span>+${skillStats.defense || 0}</span>
         </div>
 
         <div class="quest-skill-row">
           <span>EXP</span>
-          <span class="skill-plain-val">x${(skillStats.expMultiplier || 1).toFixed(2)}</span>
+          ${renderQuestStatBarForValue(skillStats.expMultiplier, 'multiplier')}
+          <span>x${(skillStats.expMultiplier || 1).toFixed(2)}</span>
         </div>
 
         <div class="quest-skill-row">
           <span>ITEM SPAWN</span>
-          <span class="skill-plain-val">x${(skillStats.itemSpawnMultiplier || 1).toFixed(2)}</span>
+          ${renderQuestStatBarForValue(skillStats.itemSpawnMultiplier, 'multiplier_special')}
+          <span>x${(skillStats.itemSpawnMultiplier || 1).toFixed(2)}</span>
         </div>
 
         <div class="quest-skill-row">
           <span>GUARD</span>
-          <span class="skill-plain-val">${((skillStats.damageNegateChance || 0) * 100).toFixed(0)}%</span>
+          ${renderQuestStatBarForValue(skillStats.damageNegateChance, 'percentage')}
+          <span>${((skillStats.damageNegateChance || 0) * 100).toFixed(0)}%</span>
+        </div>
+
+        <div class="quest-skill-row">
+          <span>COOLDOWN</span>
+          ${renderQuestStatBar(skillStats.cooldownSpeed, 'multiplier_special')}
+          <span>x${skillStats.cooldownSpeed.toFixed(2)}</span>
         </div>
 
         <div class="quest-skill-row">
           <span>REVIVE</span>
-          <span class="skill-plain-val">${((skillStats.reviveChance || 0) * 100).toFixed(0)}%</span>
+          ${renderQuestStatBarForValue(skillStats.reviveChance, 'percentage')}
+          <span>${((skillStats.reviveChance || 0) * 100).toFixed(0)}%</span>
         </div>
 
-      <div class="quest-stats-section">INPUT</div>
-        <div class="quest-stats-row"><span>Avg.KPM</span><span>${(r.avgKpm || 0).toFixed(1)}</span></div>
-        <div class="quest-stats-row"><span>Max KPM</span><span>${r.maxKpm || 0}</span></div>
-        <div class="quest-stats-row"><span>Accuracy</span><span>${(r.avgAccuracy || 0).toFixed(1)}%</span></div>
-        <div class="quest-stats-row"><span>Max Combo</span><span>${r.maxCombo || 0}</span></div>
-        <div class="quest-stats-row"><span>Max Chain</span><span>${r.maxChain || 0}</span></div>
+
+
+      <div class="quest-bottom-title quest-stats-section">INPUT</div>
+        <div class="quest-stats-row"><span class="quest-stats-label">Avg.KPM</span><span>${(r.avgKpm || 0).toFixed(1)}</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">Max KPM</span><span>${r.maxKpm || 0}</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">Accuracy</span><span>${(r.avgAccuracy || 0).toFixed(1)}%</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">Max Combo</span><span>${r.maxCombo || 0}</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">Max Chain</span><span>${r.maxChain || 0}</span></div>
     `;
   }
 
@@ -420,12 +436,11 @@ function renderQuestStatsModal() {
     const r = s.questRecord || {};
 
     // スクロール可能にするためのスタイルを適用
-    const logContainerStyle = `max-height: 250px; overflow-y: auto; padding-right: 10px;`;
+    const logContainerStyle = ``; // このスタイルはカード個別に適用するため、ここでは不要
     // 2つのカードを均等に並べるためのスタイル
     const gridContainerStyle = `display: grid; grid-template-columns: 1fr 1fr; gap: 10px;`;
-    // カード内のコンテンツをスクロールさせるためのスタイル
-    const cardContentStyle = `max-height: 220px; overflow-y: auto; padding-right: 10px; margin-top: 8px;`;
-
+    const cardStyle = `height: 160px; display: flex; flex-direction: column;`;
+    const cardContentStyle = `flex-grow: 1; overflow-y: auto; margin-top: 8px; padding-right: 10px; min-height: 0;`;
 
     bottom.innerHTML = `
   
@@ -460,308 +475,15 @@ function renderQuestStatsModal() {
           ・旧 RECORD + ACTIVITY を統合
           ・プレイヤーの現在状態 + 行動統計
         ====================================================== -->
-       <div class="quest-tab-content active" id="tab-status">
-
-          <!-- ======================================================
-            STATUS GRID WRAP
-            ・RECORD + ACTIVITY を横2列で並べる
-          ====================================================== -->
-          <div class="quest-status-grid">
-            <div style="${logContainerStyle}">
-            <!-- ======================================================
-              RECORD（完全版復元）
-              ・戦績 / 進行 / 総合実績
-            ====================================================== -->
-            <div class="quest-bottom-grid">
-
-              <div class="quest-bottom-card">
-
-                <div class="quest-bottom-title">RECORD</div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">CLEAR</span>
-                  <span class="quest-bottom-value">${getClearedStageCount()}</span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">BEST SCORE</span>
-                  <span class="quest-bottom-value gold">${(r.maxGScore || 0).toLocaleString()}</span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">★</span>
-                  <span class="quest-bottom-value gold">
-                    ${totalStars} / ${maxStars} (${starsPercent}%)
-                  </span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">PLAY</span>
-                  <span class="quest-bottom-value">${r.totalPlays || 0}</span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">KILL</span>
-                  <span class="quest-bottom-value">${r.totalKills || 0}</span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">ITEM</span>
-                  <span class="quest-bottom-value">
-                    ${itemPickupTotal}
-                  </span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">TIME</span>
-                  <span class="quest-bottom-value">
-                    ${formatPlayTime(r.totalPlayTime || 0)}
-                  </span>
-                </div>
-      
-                <!-- ★追加：総入力量 -->
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">TYPED</span>
-                  <span class="quest-bottom-value">
-                    ${r.totalTyped || 0}
-                  </span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">MISS</span>
-                  <span class="quest-bottom-value">
-                    ${r.totalMiss || 0}
-                  </span>
-                </div>
-
-              </div>
-
-              <!-- ======================================================
-                ACTIVITY（継続ログ）
-              ====================================================== -->
-              <div class="quest-bottom-card">
-
-                <div class="quest-bottom-title">ACTIVITY</div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">TODAY</span>
-                  <span class="quest-bottom-value">
-                    ${r.days?.todayCount || 0}
-                  </span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">BEST / DAY</span>
-                  <span class="quest-bottom-value">
-                    ${r.days?.maxPerDay || 0}
-                  </span>
-                </div>
-
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">STREAK</span>
-                  <span class="quest-bottom-value gold">
-                    ${r.days?.streak || 0}
-                  </span>
-                </div>
-
-                <!-- ★追加：ユニーク日数 -->
-                <div class="quest-bottom-row">
-                  <span class="quest-bottom-label">ACTIVE DAYS</span>
-                  <span class="quest-bottom-value">
-                    ${r.days?.unique || 0}
-                  </span>
-                </div>
-
-              </div>
-
-            </div>
-            </div>
-          </div>
-
+       <div class="quest-tab-content-wrapper">
+        <div class="quest-tab-content" id="tab-status" style="display: block;">
+          ${renderStatusTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal)}
         </div>
-
-        <!-- ======================================================
-          PROGRESSION TAB
-          ・ステージ / ノードの進行履歴
-          ・成長・解放系データ
-        ====================================================== -->
-        <div class="quest-tab-content" id="tab-progression">
-          <div style="${logContainerStyle}">
-          <div class="quest-status-grid">
-            <div style="${gridContainerStyle}">
-
-            <div class="quest-bottom-grid">
-              <!-- ===== STAGE LOG ===== -->
-              <div class="quest-bottom-card">
-                <div class="quest-bottom-title">STAGE LOG</div>
-                <div style="${cardContentStyle}">
-
-                ${
-                  Object.entries(r.stageAttemptCount || {})
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(([id, count]) => {
-
-                      // =========================
-                      // ★正しい検索（nodes配列から探す）
-                      // =========================
-                      const node = findQuestNode(id);
-
-                      const name = node?.name || id;
-
-                      const stage = node?.stage || "-";
-
-                      return `
-                        <div class="quest-bottom-row">
-
-                          <span class="quest-bottom-label">
-                            ${id} (${name})
-                          </span>
-
-                          <span class="quest-bottom-value">
-                            ${count}
-                          </span>
-
-                        </div>
-                      `;
-                    })
-                    .join("")
-                }
-                </div>
-              </div>
-
-              <!-- ===== NODE LOG ===== -->
-              <div class="quest-bottom-card">
-                <div class="quest-bottom-title">SKILL NODE LOG</div>
-                <div style="${cardContentStyle}">
-                ${
-                  Object.entries(r.skillNodeAttemptCount || {})
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(([id, count]) => `
-                      <div class="quest-bottom-row">
-                        <span class="quest-bottom-label">
-                          ${id}
-                        </span>
-                        <span class="quest-bottom-value">
-                          ${count}
-                        </span>
-                      </div>
-                    `).join("")
-                }
-                </div>
-              </div>
-          </div>
-          </div>
+        <div class="quest-tab-content" id="tab-progression" style="display: none;">
+          ${renderProgressionTabContent(r, gridContainerStyle, cardStyle, cardContentStyle)}
         </div>
-
-        <!-- ======================================================
-          SKILL TAB
-          ・スキル使用履歴 + 戦闘スタイル
-        ====================================================== -->
-        <div class="quest-tab-content" id="tab-skill">
-          <div style="${logContainerStyle}">
-          <div class="quest-status-grid">
-            <div style="${gridContainerStyle}">
-            
-            <div class="quest-bottom-grid">
-
-              <!-- ===== SKILL USE HISTORY ===== -->
-              <div class="quest-bottom-card">
-                <div class="quest-bottom-title">SKILL USES</div>
-                <div style="${cardContentStyle}">
-
-                ${
-                  Object.entries(r.activeSkillUseCount || {})
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 5)
-                    .map(([id, count]) => {
-
-                      const skill = ACTIVE_SKILLS[id];
-                      const name = skill?.name || id;
-                      const icon = skill?.icon || "";
-
-                      const isImage =
-                        typeof icon === "string" &&
-                        (icon.includes("/") ||
-                        icon.endsWith(".png") ||
-                        icon.endsWith(".jpg") ||
-                        icon.endsWith(".jpeg") ||
-                        icon.endsWith(".webp"));
-
-                      const iconHtml = isImage
-                        ? `<img src="${icon}" class="quest-skill-bottom-icon">`
-                        : `<span>${icon}</span>`;
-
-                      return `
-                        <div class="quest-bottom-row">
-
-                          <span class="quest-bottom-label">
-                            ${iconHtml}
-                            ${name}
-                          </span>
-
-                          <span class="quest-bottom-value">
-                            ${count}
-                          </span>
-
-                        </div>
-                      `;
-                    }).join("")
-                }
-                </div>
-              </div>
-
-              <!-- ===== AUTO PASSIVE SKILL ===== -->
-              <div class="quest-bottom-card">
-                <div class="quest-bottom-title">AUTO PASSIVE SKILLS</div>
-                <div style="${cardContentStyle}">
-                ${
-                    unlockedNodes
-                    .map(nodeId => SKILL_TREE[nodeId])
-                    .filter(node => node?.skillId)
-
-                    // active除外
-                    .filter(node => !ACTIVE_SKILLS[node.skillId])
-
-                    .map(node => getSkillById(node.skillId))
-
-                    // 非装備のみ
-                    .filter(skill => skill?.equipable === false)
-                    .map(skill => {
-
-                      const name = skill?.name || "UNKNOWN";
-                      const icon = skill?.icon || "";
-
-                      const isImage =
-                        typeof icon === "string" &&
-                        (
-                          icon.includes("/") ||
-                          icon.endsWith(".png") ||
-                          icon.endsWith(".jpg") ||
-                          icon.endsWith(".jpeg") ||
-                          icon.endsWith(".webp")
-                        );
-
-                      const iconHtml = isImage
-                        ? `<img src="${icon}" class="quest-skill-bottom-icon">`
-                        : `<span>${icon}</span>`;
-
-                      return `
-                        <div class="quest-bottom-row">
-
-                          <span class="quest-bottom-label">
-                            ${iconHtml}
-                            ${name}
-                          </span>
-
-                        </div>
-                      `;
-                    }).join("")
-                  }
-                </div>
-              </div>
-            </div>
+        <div class="quest-tab-content" id="tab-skill" style="display: none;">
+          ${renderSkillTabContent(r, gridContainerStyle, cardStyle, cardContentStyle, unlockedNodes)}
         </div>
       </div>
     `;
@@ -777,10 +499,17 @@ function renderQuestEquipmentSkills() {
 
   const equipped = calcQuestSkillStats().equipped || [];
 
+  // コンテナをクリア
   el.innerHTML = "";
 
+  el.insertAdjacentHTML('beforeend', `
+    <div class="quest-bottom-title" style="margin-bottom: 8px;">
+      PASSIVE SKILL
+    </div>
+  `);
+
   if (equipped.length === 0) {
-    el.innerHTML = `<div class="skill-empty">NO EQUIP</div>`;
+    el.innerHTML += `<div class="skill-empty">NO EQUIP</div>`;
     return;
   }
 
@@ -796,8 +525,8 @@ function renderQuestEquipmentSkills() {
         <img src="${images[skill.icon]?.src || ""}" class="skill-icon">
       </div>
       <div class="skill-main">
-        <div class="skill-name">◆ ${skill.name}</div>
-        <div class="skill-desc">${skill.desc ?? ""}</div>
+        <div class="skill-name" style="color: #fff;">${skill.name}</div>
+        <div class="skill-desc" style="color: #fff;">${skill.desc ?? ""}</div>
       </div>
     `;
 
@@ -805,29 +534,6 @@ function renderQuestEquipmentSkills() {
   });
 }
 
-function initQuestTabs() {
-
-  document.querySelectorAll(".quest-tab").forEach(btn => {
-
-    btn.onclick = () => {
-
-      // 全タブボタン解除
-      document.querySelectorAll(".quest-tab")
-        .forEach(b => b.classList.remove("active"));
-
-      // 全コンテンツ非表示
-      document.querySelectorAll(".quest-tab-content")
-        .forEach(c => c.classList.remove("active"));
-
-      // 選択状態
-      btn.classList.add("active");
-
-      document
-        .getElementById("tab-" + btn.dataset.tab)
-        .classList.add("active");
-    };
-  });
-}
 
 function renderQuestActiveSkills() {
   const el = document.getElementById("questActiveSkills");
@@ -841,10 +547,17 @@ function renderQuestActiveSkills() {
   // 最大ストック
   const maxStock = stats.activeSkillStockMax || 1;
 
+  // コンテナをクリア
   el.innerHTML = "";
 
+  el.insertAdjacentHTML('beforeend', `
+    <div class="quest-bottom-title" style="margin-bottom: 8px;">
+      ACTIVE SKILL
+    </div>
+  `);
+
   if (equipped.length === 0) {
-    el.innerHTML = `<div class="skill-empty">NO EQUIP</div>`;
+    el.innerHTML += `<div class="skill-empty">NO EQUIP</div>`;
     return;
   }
 
@@ -863,11 +576,9 @@ function renderQuestActiveSkills() {
       </div>
 
       <div class="skill-main">
-        <div class="skill-name active-name">
-          ◆ ${skill.name}
-        </div>
+        <div class="skill-name active-name" style="color: #fff;">${skill.name}</div>
 
-        <div class="skill-desc">
+        <div class="skill-desc" style="color: #fff;">
           ${skill.desc ?? ""}
         </div>
       </div>
@@ -1204,7 +915,11 @@ function calcQuestSkillStats() {
     knockbackBonus: 1,
     maxHp: 0,
     defense: 0,
-    expMultiplier: 1
+    expMultiplier: 1,
+    itemSpawnMultiplier: 1,
+    damageNegateChance: 0,
+    reviveChance: 0,
+    cooldownSpeed: 1.0,
   };
 
   equipped.forEach(id => {
@@ -1243,17 +958,70 @@ function renderQuestStatBar(value, inverse = false) {
   const width = Math.min(Math.abs(delta) * scale, 50);
   const left = delta >= 0 ? 50 : 50 - width;
   const dir = delta >= 0 ? "up" : "down";
+  const borderRadiusStyle = dir === 'up'
+    ? 'border-radius: 0 999px 999px 0;'
+    : 'border-radius: 999px 0 0 999px;';
 
   return `
     <div class="quest-skill-bar">
       <div class="quest-skill-bar-center"></div>
       <div class="quest-skill-bar-fill ${dir}"
-           style="left:${left}%; width:${width}%;">
+           style="left:${left}%; width:${width}%; ${borderRadiusStyle}">
       </div>
     </div>
   `;
 }
 
+/**
+ * スキルボーナスの種類に応じた汎用的なスタッツバーをレンダリングする
+ * @param {number} value - 現在の数値
+ * @param {'addition' | 'multiplier' | 'multiplier_special' | 'percentage'} type - 値の種類
+ * @returns {string} - バーのHTML文字列
+ */
+function renderQuestStatBarForValue(value = 0, type = 'addition') {
+  let delta = 0;
+  let maxDelta = 1; // デフォルトの最大値
+
+  switch (type) {
+    case 'addition':
+      // 例: MaxHP +50 -> delta: 50, maxDelta: 100 (仮)
+      delta = value;
+      maxDelta = 100; // HPやDEFの最大ボーナス値（仮）
+      break;
+    case 'multiplier':
+      // 例: EXP x1.5 -> delta: 0.5, maxDelta: 2.0 (x3.0が最大)
+      delta = value - 1.0;
+      maxDelta = 2.0;
+      break;
+    case 'multiplier_special':
+      // 例: ITEM SPAWN x0.5 -> delta: -0.5, maxDelta: 1.0 (x0 or x2.0が最大)
+      delta = value;
+      maxDelta = 2.0;
+      break;
+    case 'percentage':
+      // 例: GUARD 20% -> delta: 0.2, maxDelta: 1.0 (100%が最大)
+      delta = value;
+      maxDelta = 1.0;
+      break;
+  }
+
+  const scale = 50 / Math.max(0.0001, maxDelta);
+  const width = Math.min(Math.abs(delta) * scale, 50);
+  const left = delta >= 0 ? 50 : 50 - width;
+  const dir = delta >= 0 ? "up" : "down";
+  const borderRadiusStyle = dir === 'up'
+    ? 'border-radius: 0 999px 999px 0;'
+    : 'border-radius: 999px 0 0 999px;';
+
+  return `
+    <div class="quest-skill-bar">
+      <div class="quest-skill-bar-center"></div>
+      <div class="quest-skill-bar-fill ${dir}"
+           style="left:${left}%; width:${width}%; ${borderRadiusStyle}">
+      </div>
+    </div>
+  `;
+}
 
 //==============================================================
 //デイリーステータス詳細
@@ -1345,7 +1113,7 @@ function renderStatsModal(sArg) {
         <div class="daily-stats-row sub"><span>タイムアタック</span><span>${AttackNum || 0}</span></div>
         <div class="daily-stats-row sub"><span>長文</span><span>${LongNum || 0}</span></div>
         <div class="daily-stats-row sub"><span>エネミー</span><span>${EnemyNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>ミス練習</span><span>${nMissNum || 0}</span></div>
+        <div class="daily-stats-row sub"><span>ミス練習</span><span>${MissNum || 0}</span></div>
         <div class="daily-stats-row sub"><span>最多プレイ回数／日</span><span>${s.days?.maxPerDay || 0}</span></div>
         <div class="daily-stats-row sub"><span>今日のプレイ回数</span><span>${s.days?.todayCount || 0}</span></div>
       </div>
@@ -1394,4 +1162,136 @@ function findQuestNode(id) {
   }
 
   return null;
+}
+
+function initQuestTabs() {
+  const tabs = document.querySelectorAll(".quest-tab");
+  const contents = document.querySelectorAll(".quest-tab-content");
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      // Deactivate all tabs and contents
+      tabs.forEach(t => t.classList.remove("active"));
+      contents.forEach(c => c.style.display = "none");
+
+      // Activate the clicked tab and corresponding content
+      tab.classList.add("active");
+      const contentId = "tab-" + tab.dataset.tab;
+      const activeContent = document.getElementById(contentId);
+      if (activeContent) {
+        activeContent.style.display = "block";
+      }
+    });
+  });
+}
+
+function renderStatusTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal) {
+  const starsPercent = maxStars > 0 ? Math.floor(totalStars / maxStars * 100) : 0;
+  return `
+    <div class="quest-bottom-grid">
+      <div class="quest-bottom-card" style="${cardStyle}">
+        <div class="quest-bottom-title">RECORD</div>
+        <div style="${cardContentStyle}">
+          <div class="quest-bottom-row"><span class="quest-bottom-label">CLEAR</span><span class="quest-bottom-value">${getClearedStageCount()}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">BEST SCORE</span><span class="quest-bottom-value gold">${(r.maxGScore || 0).toLocaleString()}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">★</span><span class="quest-bottom-value gold">${totalStars} / ${maxStars} (${starsPercent}%)</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">PLAY</span><span class="quest-bottom-value">${r.totalPlays || 0}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">KILL</span><span class="quest-bottom-value">${r.totalKills || 0}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">ITEM</span><span class="quest-bottom-value">${itemPickupTotal}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">TIME</span><span class="quest-bottom-value">${formatPlayTime(r.totalPlayTime || 0)}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">TYPED</span><span class="quest-bottom-value">${r.totalTyped || 0}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">MISS</span><span class="quest-bottom-value">${r.totalMiss || 0}</span></div>
+        </div>
+      </div>
+      <div class="quest-bottom-card" style="${cardStyle}">
+        <div class="quest-bottom-title">ACTIVITY</div>
+        <div style="${cardContentStyle}">
+          <div class="quest-bottom-row"><span class="quest-bottom-label">TODAY</span><span class="quest-bottom-value">${r.days?.todayCount || 0}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">BEST / DAY</span><span class="quest-bottom-value">${r.days?.maxPerDay || 0}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">STREAK</span><span class="quest-bottom-value gold">${r.days?.streak || 0}</span></div>
+          <div class="quest-bottom-row"><span class="quest-bottom-label">ACTIVE DAYS</span><span class="quest-bottom-value">${r.days?.unique || 0}</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderProgressionTabContent(r, gridContainerStyle, cardStyle, cardContentStyle) {
+  return `
+    <div class="quest-bottom-grid" style="${gridContainerStyle}">
+      <div class="quest-bottom-card" style="${cardStyle}">
+        <div class="quest-bottom-title">STAGE LOG</div>
+        <div style="${cardContentStyle}">
+          ${Object.entries(r.stageAttemptCount || {}).sort((a, b) => b[1] - a[1]).map(([id, count]) => {
+            const node = findQuestNode(id);
+            const name = node?.name || id;
+            return `<div class="quest-bottom-row"><span class="quest-bottom-label">${id} (${name})</span><span class="quest-bottom-value">${count}</span></div>`;
+          }).join("")}
+        </div>
+      </div>
+      <div class="quest-bottom-card" style="${cardStyle}">
+        <div class="quest-bottom-title">SKILL NODE LOG</div>
+        <div style="${cardContentStyle}">
+          ${Object.entries(r.skillNodeAttemptCount || {}).sort((a, b) => b[1] - a[1]).map(([id, count]) => `
+            <div class="quest-bottom-row"><span class="quest-bottom-label">${id}</span><span class="quest-bottom-value">${count}</span></div>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSkillTabContent(r, gridContainerStyle, cardStyle, cardContentStyle, unlockedNodes) {
+  return `
+    <div class="quest-bottom-grid" style="${gridContainerStyle}">
+      <div class="quest-bottom-card" style="${cardStyle}">
+        <div class="quest-bottom-title">SKILL USES</div>
+        <div style="${cardContentStyle}">
+          ${Object.entries(r.activeSkillUseCount || {}).sort((a, b) => b[1] - a[1]).map(([id, count]) => {
+            const skill = ACTIVE_SKILLS[id];
+            const name = skill?.name || id;
+            const icon = skill?.icon || "";
+            const isImage = typeof icon === "string" && (icon.includes("/") || icon.endsWith(".png") || icon.endsWith(".jpg") || icon.endsWith(".jpeg") || icon.endsWith(".webp"));
+            const iconHtml = isImage ? `<img src="${icon}" class="quest-skill-bottom-icon">` : `<span>${icon}</span>`;
+            return `
+              <div class="quest-bottom-row">
+                <span class="quest-bottom-label" style="display:flex; align-items:center; gap: 6px;">
+                  ${iconHtml}<span>${name}</span>
+                </span>
+                <span class="quest-bottom-value">${count}</span>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+      <div class="quest-bottom-card" style="${cardStyle}">
+        <div class="quest-bottom-title">AUTO PASSIVE SKILLS</div>
+        <div style="${cardContentStyle}">
+          ${unlockedNodes
+            .map(nodeId => SKILL_TREE[nodeId])
+            .filter(node => node?.skillId)
+            .filter(node => !ACTIVE_SKILLS[node.skillId])
+            .map(node => getSkillById(node.skillId))
+            .filter(skill => skill?.equipable === false)
+            .map(skill => {
+              const name = skill?.name || "UNKNOWN";
+              const desc = skill?.desc || "";
+              const iconSrc = images[skill.icon]?.src || "";
+
+              return `
+                <div class="skill-item" style="background: rgba(0,255,255,0.02); border-color: rgba(0,255,255,0.08); margin-bottom: 4px;">
+                  <div class="skill-icon-wrap" style="width: 28px; height: 28px;">
+                    <img src="${iconSrc}" class="skill-icon" style="width: 22px; height: 22px;">
+                  </div>
+                  <div class="skill-main">
+                    <div class="skill-name" style="color: #fff; font-size: 12px;">${name}</div>
+                    <div class="skill-desc" style="color: #ccc; font-size: 10px;">${desc}</div>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+        </div>
+      </div>
+    </div>
+  `;
 }

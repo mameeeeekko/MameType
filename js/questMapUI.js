@@ -293,11 +293,13 @@ export function renderQuestMapUI(){
             const rewardEl = document.createElement("span");
             rewardEl.className = "map-reward-inline";
 
-            if (node.reward.type === "slot") {
-                rewardEl.textContent = "+";
-            } else {
-                rewardEl.textContent = "●";
-            }
+            // if (node.reward.type === "slot") {
+            //     rewardEl.textContent = "+";
+            // } else {
+            //     rewardEl.textContent = "●";
+            // }
+            
+            rewardEl.textContent = "●";
 
             // ★クリア済みで薄く
             // if (isCleared(node.id)) {
@@ -445,19 +447,29 @@ export function renderQuestMapUI(){
                 
                 // ミッションと敵バリエーションの追加
                 if (stage.missionName) {
-                    tooltipLines.push(`<b>【 ${stage.missionName} 】</b>`);
+                    tooltipLines.push(`<span class="tooltip-mission-title">${stage.missionName}</span>`);
                     tooltipLines.push(`<span style="font-size:0.9em; color:#ddd;">${stage.missionDescription || ""}</span>`);
                     tooltipLines.push("");
                 }
                 if (stage.enemyVariationDescription) {
-                    tooltipLines.push(`<span style="color:#e1e1e1;">■ エネミー構成</span>`);
+                    tooltipLines.push('<span class="tooltip-title">[エネミー構成]</span>');
                     tooltipLines.push(stage.enemyVariationDescription);
                     tooltipLines.push("");
                 }
 
-                tooltipLines.push("■ 終了条件", ...endText, "", "■ クリア条件", ...clearText, "", "■ ★条件", ...starText);
+                tooltipLines.push(
+                    '<span class="tooltip-title">[終了条件]</span>',
+                    ...endText,
+                    "",
+                    '<span class="tooltip-title">[クリア条件]</span>',
+                    ...clearText,
+                    "",
+                    '<span class="tooltip-title">[★条件]</span>',
+                    ...starText
+                );
+
                 if (rewardText.length) {
-                    tooltipLines.push("", "■ 報酬", ...rewardText);
+                    tooltipLines.push("", '<span class="tooltip-title">[報酬]</span>', ...rewardText);
                 }
 
                 showQuestTooltip(tooltipLines, el);
@@ -500,6 +512,21 @@ export function renderQuestMapUI(){
         wrapper.appendChild(el);
         wrapper.appendChild(label);
         nodeLayer.appendChild(wrapper);
+
+        // =========================
+        // ▼ ラベルの色付け（状態クラス付与の後に行う）
+        // =========================
+        // 中ボスまたはボスの場合、オレンジ色にする
+        if (isMidBoss || isEndNode) {
+            label.style.color = "#ffc15d"; // オレンジ
+            label.style.textShadow = "0 0 8px rgba(255, 184, 77, 0.6)";
+        }
+        
+        // ロックされている場合は、全ての色設定をリセットしてCSSのスタイルを優先する
+        if (!canEnter) {
+            label.style.color = ""; 
+            label.style.textShadow = "";
+        }
     });
     renderQuestSideMenu(container);
     renderWorldSelector(container);
@@ -724,12 +751,14 @@ export function openQuestMenuModal(type = "difficulty") {
                 // 整形して表示（不足する値は '-' で表示）
                 desc.innerHTML = `
                     <div style="font-weight:700; margin-bottom:6px;">${diff.name} の設定</div>
-                    <div>■ 敵関連</div>
-                    <div>・敵出現頻度 (spawnRate): ${e.spawnRate ?? '-' } 倍</div>
+                    <br>
+                    <div>[敵関連]</div>
+                    <div>・敵出現間隔 (spawnRate): ${e.spawnRate ?? '-' } 倍</div>
                     <div>・敵速度 (enemySpeed): ${e.enemySpeed ?? '-' } 倍</div>
                     <div>・敵ダメージ倍率 (damageMultiplier): ${e.damageMultiplier ?? '-' } 倍</div>
                     <div>・チェイン減衰 (chainDecay): ${e.chainDecay ?? '-' } 倍</div>
-                    <div style="margin-top:8px">■ スコア関連</div>
+                    <br>
+                    <div style="margin-top:8px">[スコア関連]</div>
                     <div>・スコア倍率 (scoreMultiplier): ${e.scoreMultiplier ?? '-' } 倍</div>
                     <div>・クリアボーナス: +${Math.round((sb.clearBonus ?? 0)*100)}%</div>
                     <div>・ノーミスボーナス: +${Math.round((sb.noMissBonus ?? 0)*100)}%</div>
@@ -834,7 +863,8 @@ export function openQuestMenuModal(type = "difficulty") {
                     expMultiplier: 1,
                     itemSpawnMultiplier: 1,
                     damageNegateChance: 0,
-                    reviveChance: 0
+                    reviveChance: 0,
+                    cooldownSpeed: 1.0,
                 };
 
                 nextEquipped.forEach(id => {
@@ -858,114 +888,67 @@ export function openQuestMenuModal(type = "difficulty") {
                     const next = calcPreview(nextEquipped);
 
                     html = `
-                        ${buildStatRow("Chain増加", current.chainRate, next.chainRate)}
-                        ${buildStatRow("Chain減衰", current.chainDecayRate, next.chainDecayRate, true)}
-                        ${buildStatRow("Chainボーナス補正", current.chainBonus, next.chainBonus)}
-                        ${buildStatRow("ノックバック", current.knockbackBonus, next.knockbackBonus)}
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">Max HP</div>
-                            <div class="skill-stat-current">${current.maxHp}</div>
-                            <div class="skill-stat-value">${next.maxHp !== current.maxHp ? `<span class="stat-up">(+${next.maxHp - current.maxHp})</span>` : ''}</div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">DEF</div>
-                            <div class="skill-stat-current">${current.defense}</div>
-                            <div class="skill-stat-value">${next.defense !== current.defense ? `<span class="stat-up">(+${next.defense - current.defense})</span>` : ''}</div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">EXP倍率</div>
-                            <div class="skill-stat-current">x${current.expMultiplier.toFixed(2)}</div>
-                            <div class="skill-stat-value">${next.expMultiplier !== current.expMultiplier ? `<span class="stat-up">(x${next.expMultiplier.toFixed(2)})</span>` : ''}</div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">アイテム出現率</div>
-                            <div class="skill-stat-current">x${current.itemSpawnMultiplier.toFixed(2)}</div>
-                            <div class="skill-stat-value">${next.itemSpawnMultiplier !== current.itemSpawnMultiplier ? `<span class="stat-up">(x${next.itemSpawnMultiplier.toFixed(2)})</span>` : ''}</div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">ダメージ無効化率</div>
-                            <div class="skill-stat-current">${(current.damageNegateChance * 100).toFixed(0)}%</div>
-                            <div class="skill-stat-value">${next.damageNegateChance !== current.damageNegateChance ? `<span class="stat-up">(${(next.damageNegateChance * 100).toFixed(0)}%)</span>` : ''}</div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">REVIVE</div>
-                            <div class="skill-stat-current">${(current.reviveChance * 100).toFixed(0)}%</div>
-                            <div class="skill-stat-value">${next.reviveChance !== current.reviveChance ? `<span class="stat-up">(${(next.reviveChance * 100).toFixed(0)}%)</span>` : ''}</div>
-                        </div>
+                        ${buildStatRow("Chain増加", current.chainRate, next.chainRate, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("Chain減衰", current.chainDecayRate, next.chainDecayRate, true, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("Chainボーナス", current.chainBonus, next.chainBonus, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("ノックバック", current.knockbackBonus, next.knockbackBonus, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("Max HP", current.maxHp, next.maxHp, false, 0, { format: v => `${v > 0 ? '+' : ''}${v.toFixed(0)}`, diffFormat: v => `${v > 0 ? '+' : ''}${v.toFixed(0)}` }, 200)}
+                        ${buildStatRow("DEF", current.defense, next.defense, false, 0, { format: v => `${v > 0 ? '+' : ''}${v.toFixed(0)}`, diffFormat: v => `${v > 0 ? '+' : ''}${v.toFixed(0)}` }, 50)}
+                        ${buildStatRow("EXP倍率", current.expMultiplier, next.expMultiplier, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("アイテム出現率", current.itemSpawnMultiplier, next.itemSpawnMultiplier, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 2.0)}
+                        ${buildStatRow("ダメージ無効化率", current.damageNegateChance, next.damageNegateChance, false, 0, { format: v => `${(v * 100).toFixed(0)}%`, diffFormat: v => `${(v * 100).toFixed(0)}%` }, 1.0)}
+                        ${buildStatRow("クールダウン速度", current.cooldownSpeed, next.cooldownSpeed, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 2.0)}
+                        ${buildStatRow("REVIVE", current.reviveChance, next.reviveChance, false, 0, { format: v => `${(v * 100).toFixed(0)}%`, diffFormat: v => `${(v * 100).toFixed(0)}%` }, 1.0)}
                     `;
                 } else {
                     html = `
-                        ${buildStatRow("Chain増加", current.chainRate)}
-                        ${buildStatRow("Chain減衰", current.chainDecayRate, null, true)}
-                        ${buildStatRow("Chainボーナス補正", current.chainBonus)}
-                        ${buildStatRow("ノックバック", current.knockbackBonus)}
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">Max HP</div>
-                            <div class="skill-stat-current">${current.maxHp}</div>
-                            <div class="skill-stat-value"></div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">DEF</div>
-                            <div class="skill-stat-current">${current.defense}</div>
-                            <div class="skill-stat-value"></div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">EXP倍率</div>
-                            <div class="skill-stat-current">x${current.expMultiplier.toFixed(2)}</div>
-                            <div class="skill-stat-value"></div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">アイテム出現率</div>
-                            <div class="skill-stat-current">x${current.itemSpawnMultiplier.toFixed(2)}</div>
-                            <div class="skill-stat-value"></div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">ダメージ無効化率</div>
-                            <div class="skill-stat-current">${(current.damageNegateChance * 100).toFixed(0)}%</div>
-                            <div class="skill-stat-value"></div>
-                        </div>
-                        <div class="skill-stat-row">
-                            <div class="skill-stat-name">REVIVE</div>
-                            <div class="skill-stat-current">${(current.reviveChance * 100).toFixed(0)}%</div>
-                            <div class="skill-stat-value"></div>
-                        </div>
+                        ${buildStatRow("Chain増加", current.chainRate, null, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("Chain減衰", current.chainDecayRate, null, true, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("Chainボーナス", current.chainBonus, null, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("ノックバック", current.knockbackBonus, null, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("Max HP", current.maxHp, null, false, 0, { format: v => `${v > 0 ? '+' : ''}${v.toFixed(0)}` }, 200)}
+                        ${buildStatRow("DEF", current.defense, null, false, 0, { format: v => `${v > 0 ? '+' : ''}${v.toFixed(0)}` }, 50)}
+                        ${buildStatRow("EXP倍率", current.expMultiplier, null, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 3.0)}
+                        ${buildStatRow("アイテム出現率", current.itemSpawnMultiplier, null, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 2.0)}
+                        ${buildStatRow("ダメージ無効化率", current.damageNegateChance, null, false, 0, { format: v => `${(v * 100).toFixed(0)}%` }, 1.0)}
+                        ${buildStatRow("クールダウン速度", current.cooldownSpeed, null, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 2.0)}
+                        ${buildStatRow("REVIVE", current.reviveChance, null, false, 0, { format: v => `${(v * 100).toFixed(0)}%` }, 1.0)}
                     `;
                 }
 
                 statBox.innerHTML = html;
             }
             
-            function buildStatRow(name, current, next = null, inverse = false) {
+            function buildStatRow(name, current, next = null, inverse = false, base = 1.0, formatOptions = {}, maxValue = 3.0) {
+                const { format = v => v.toFixed(2), diffFormat = v => v.toFixed(2) } = formatOptions;
+
                 const diffText = next !== null
-                    ? formatDiffOnly(current, next, inverse)
+                    ? formatDiffOnly(current, next, inverse, diffFormat)
                     : "";
 
                 return `
                     <div class="skill-stat-row">
                         <div class="skill-stat-name">${name}</div>
-                        <div class="skill-stat-current">${current.toFixed(2)}</div>
-                        ${renderBar(current, next, inverse)}
+                        <div class="skill-stat-current">${format(current)}</div>
+                        ${renderBar(current, next, inverse, base, maxValue)}
                         <div class="skill-stat-value">${diffText}</div>
                     </div>
                 `;
             }
 
-            function renderBar(value, nextValue = null, inverse = false) {
-                const base = 1.0;
-
+            function renderBar(value, nextValue = null, inverse = false, base = 1.0, maxValue = 3.0) {
+                // 基準値が1.0の倍率系パラメータと、0の加算系パラメータを両方扱えるようにする
                 const currentDelta = inverse ? base - value : value - base;
                 const nextDelta = nextValue !== null
                     ? (inverse ? base - nextValue : nextValue - base)
                     : null;
 
                 // 最大±0.5を100%として表示（必要なら調整）
-                            // HUD と同様に表示上限を基準の3倍 (x3) に合わせる
-                            const maxMultiplier = 3;
-                            const maxDelta = Math.max(0.0001, maxMultiplier - base);
-                            const scale = 50 / maxDelta; // delta * scale がパーセンテージ幅にマッピングされる
+                const maxDelta = Math.max(0.0001, maxValue - base);
+                const scale = 50 / maxDelta; // delta * scale がパーセンテージ幅にマッピングされる
 
-                            const currentWidth = Math.min(Math.abs(currentDelta) * scale, 50);
-                            const nextWidth = nextDelta !== null ? Math.min(Math.abs(nextDelta - currentDelta) * scale, 50) : 0;
+                const currentWidth = Math.min(Math.abs(currentDelta) * scale, 50);
+                const nextWidth = nextDelta !== null ? Math.min(Math.abs(nextDelta - currentDelta) * scale, 50) : 0;
 
                 const currentDir = currentDelta >= 0 ? "up" : "down";
                 const nextDir =
@@ -1001,17 +984,18 @@ export function openQuestMenuModal(type = "difficulty") {
                 `;
             }
 
-            function formatDiffOnly(a, b, inverse = false) {
+            function formatDiffOnly(a, b, inverse = false, diffFormatter) {
                 const rawDiff = b - a;
                 if (rawDiff === 0) return "";
 
                 // 強さ判定だけ反転
                 const effectiveDiff = inverse ? -rawDiff : rawDiff;
 
-                const sign = rawDiff > 0 ? "+" : "";
+                const formattedDiff = diffFormatter(rawDiff);
+                const sign = rawDiff > 0 && !formattedDiff.startsWith('+') ? "+" : "";
                 const colorClass = effectiveDiff > 0 ? "stat-up" : "stat-down";
 
-                return `<span class="${colorClass}">(${sign}${rawDiff.toFixed(2)})</span>`;
+                return `<span class="${colorClass}">(${sign}${formattedDiff})</span>`;
             }
 
             renderStats(null);
@@ -1074,40 +1058,44 @@ export function openQuestMenuModal(type = "difficulty") {
             
             //active skill 装備
             function renderActiveEquip() {
-                activeEquipBox.innerHTML = "<h3>ACTIVE</h3>";
-
-                const grid = document.createElement("div");
-                grid.className = "equip-grid";
+                activeEquipBox.innerHTML = `<h3>ACTIVE</h3>`;
 
                 const eq = getEquippedActiveSkills();
                 const MAX = 1;
+                const skillId = eq[0];
+                const skill = skillId ? getSkillById(skillId) : null;
 
-                for (let i = 0; i < MAX; i++) {
-                    const slot = document.createElement("div");
-                    slot.className = "equip-slot";
+                const container = document.createElement("div");
+                container.className = "active-skill-container";
 
-                    const skillId = eq[i];
+                // アイコンスロット
+                const slot = document.createElement("div");
+                slot.className = "equip-slot";
 
-                    if (skillId) {
-                        const skill = getSkillById(skillId);
-
-                        slot.innerHTML = `
-                            <img src="${images[skill.icon]?.src || ""}" class="equip-slot-icon">
-                        `;
-
-                        slot.onclick = () => {
-                            unequipActiveSkill(skillId);
-                            refresh();
-                        };
-
-                        slot.onmousemove = (e) => showSkillTooltip(skill, e);
-                        slot.onmouseleave = hideQuestTooltip;
-                    }
-
-                    grid.appendChild(slot);
+                if (skill) {
+                    slot.innerHTML = `<img src="${images[skill.icon]?.src || ""}" class="equip-slot-icon">`;
+                    slot.onclick = () => {
+                        unequipActiveSkill(skillId);
+                        refresh();
+                    };
+                    slot.onmousemove = (e) => showSkillTooltip(skill, e);
+                    slot.onmouseleave = hideQuestTooltip;
                 }
+                container.appendChild(slot);
 
-                activeEquipBox.appendChild(grid);
+                // 説明文
+                const descContainer = document.createElement("div");
+                descContainer.className = "active-skill-desc-container";
+                if (skill) {
+                    descContainer.innerHTML = `
+                        <div class="skill-name">${skill.name}</div>
+                        <div class="skill-desc">${skill.desc ?? ""}</div>
+                        ${skill.cooldown ? `<div class="skill-cooldown">cooldown: ${skill.cooldown}sec</div>` : ""}
+                    `;
+                }
+                container.appendChild(descContainer);
+
+                activeEquipBox.appendChild(container);
             }
 
             // =========================
@@ -1115,53 +1103,95 @@ export function openQuestMenuModal(type = "difficulty") {
             // =========================
             const list = document.createElement("div");
             list.className = "skill-list";
+            const autoSkillBox = document.createElement("div");
+            autoSkillBox.className = "skill-equip"; // スタイルを統一
+            autoSkillBox.classList.add("auto-skill-box"); // 新しいクラスを追加
 
-            function renderList() {
+            function renderList(currentTab = 'passive') {
 
-                // ★リセット
+                // --- リセット ---
                 list.innerHTML = "";
 
-                // =========================
-                // ▼ セクション作成
-                // =========================
-                //passive skill equip
-                const activeSection = document.createElement("div");
-                activeSection.className = "skill-section";
+                // --- タブUIの構築 ---
+                const tabButtons = document.createElement('div');
+                tabButtons.className = 'skill-tabs';
 
-                const activeTitle = document.createElement("h3");
-                activeTitle.textContent = "PASSIVE";
+                const tabContents = document.createElement('div');
+                tabContents.className = 'skill-tab-contents';
 
-                const activeList = document.createElement("div");
-                activeList.className = "skill-grid";
+                list.appendChild(tabButtons);
+                list.appendChild(tabContents);
 
-                activeSection.appendChild(activeTitle);
-                activeSection.appendChild(activeList);
+                // --- 各タブとコンテンツエリアの作成 ---
+                const passiveTab = document.createElement('button');
+                passiveTab.className = 'skill-tab-btn';
+                passiveTab.textContent = 'PASSIVE';
+                tabButtons.appendChild(passiveTab);
 
-                //passive skill no equip
-                const passiveSection = document.createElement("div");
-                passiveSection.className = "skill-section";
+                // datasetを追加
+                passiveTab.dataset.tab = 'passive';
 
-                const passiveTitle = document.createElement("h3");
-                passiveTitle.textContent = "AUTO";
+                const activeTab = document.createElement('button');
+                activeTab.className = 'skill-tab-btn';
+                activeTab.textContent = 'ACTIVE';
+                tabButtons.appendChild(activeTab);
 
+                const passiveContent = document.createElement('div');
+                passiveContent.className = 'skill-tab-content';
+                const passiveGrid = document.createElement('div');
+                passiveGrid.className = 'skill-grid';
+                passiveContent.appendChild(passiveGrid);
+                tabContents.appendChild(passiveContent);
+
+                const activeContent = document.createElement('div');
+                activeContent.className = 'skill-tab-content';
+                const activeGrid = document.createElement('div');
+                activeGrid.className = 'skill-grid';
+                activeContent.appendChild(activeGrid);
+                tabContents.appendChild(activeContent);
+
+                // datasetを追加
+                activeTab.dataset.tab = 'active';
+
+                // --- タブ切り替えロジック ---
+                function switchTab(tabName) {
+                    if (tabName === 'passive') {
+                        passiveTab.classList.add('active');
+                        activeTab.classList.remove('active');
+                        passiveContent.classList.add('active');
+                        activeContent.classList.remove('active');
+                    } else {
+                        passiveTab.classList.remove('active');
+                        activeTab.classList.add('active');
+                        passiveContent.classList.remove('active');
+                        activeContent.classList.add('active');
+                    }
+                }
+
+                passiveTab.onclick = () => {
+                    switchTab('passive');
+                };
+                activeTab.onclick = () => {
+                    switchTab('active');
+                };
+
+                // ★ 初期表示時にタブを選択
+                switchTab(currentTab);
+
+                // AUTOスキル（装備不要）
+                autoSkillBox.innerHTML = '<h3>AUTO</h3>';
                 const passiveList = document.createElement("div");
                 passiveList.className = "skill-grid";
 
-                passiveSection.appendChild(passiveTitle);
-                passiveSection.appendChild(passiveList);
+                // --- スキルアイテムの振り分け ---
+                const stats = getPlayerStats();
+                const unlockedNodes = devOverride.unlockAllSkills
+                    ? Object.keys(SKILL_TREE)
+                    : (stats.skillTreeProgress?.unlockedNodes || ["START"]);
 
-                // active skill equip
-                const activeSkillSection = document.createElement("div");
-                activeSkillSection.className = "skill-section";
+                const equippedPassive = getEquipped();
+                const equippedActive = getEquippedActiveSkills();
 
-                const activeSkillTitle = document.createElement("h3");
-                activeSkillTitle.textContent = "ACTIVE";
-
-                const activeSkillList = document.createElement("div");
-                activeSkillList.className = "skill-grid";
-
-                activeSkillSection.appendChild(activeSkillTitle);
-                activeSkillSection.appendChild(activeSkillList);
  
                 //処理
                 unlockedNodes.forEach(nodeId => {
@@ -1187,8 +1217,7 @@ export function openQuestMenuModal(type = "difficulty") {
                             <div class="skill-grid-name">${skill.name}</div>
                         `;
 
-                        const eq = getEquippedActiveSkills();
-                        const isEquipped = eq.includes(node.skillId);
+                        const isEquipped = equippedActive.includes(node.skillId);
 
                         if (isEquipped) {
                             item.classList.add("equipped");
@@ -1206,7 +1235,7 @@ export function openQuestMenuModal(type = "difficulty") {
                         item.onmousemove = (e) => showSkillTooltip(skill, e);
                         item.onmouseleave = hideQuestTooltip;
 
-                        activeSkillList.appendChild(item);
+                        activeGrid.appendChild(item);
                         return;
                     }
 
@@ -1215,22 +1244,19 @@ export function openQuestMenuModal(type = "difficulty") {
                     // =========================
                     if (skill.equipable === false) {
 
-                        const item = document.createElement("div");
-                        item.className = "skill-grid-item passive";
+                        const slot = document.createElement("div");
+                        slot.className = "equip-slot auto-skill"; // equip-slotクラスを適用し、専用クラスも追加
 
-                        item.innerHTML = `
-                            <div class="skill-grid-icon-wrap">
-                                <img src="${images[skill.icon]?.src || ""}" class="skill-grid-icon">
-                            </div>
-                            <div class="skill-grid-name">${skill.name}</div>
+                        slot.innerHTML = `
+                            <img src="${images[skill.icon]?.src || ""}" class="equip-slot-icon">
                         `;
 
-                        item.style.cursor = "default";
+                        slot.style.cursor = "default";
 
-                        item.onmousemove = (e) => showSkillTooltip(skill, e);
-                        item.onmouseleave = hideQuestTooltip;
+                        slot.onmousemove = (e) => showSkillTooltip(skill, e);
+                        slot.onmouseleave = hideQuestTooltip;
 
-                        passiveList.appendChild(item);
+                        passiveList.appendChild(slot);
                         return;
                     }
 
@@ -1247,8 +1273,7 @@ export function openQuestMenuModal(type = "difficulty") {
                         <div class="skill-grid-name">${skill.name}</div>
                     `;
 
-                    const eq = getEquipped();
-                    const isEquipped = eq.includes(node.skillId);
+                    const isEquipped = equippedPassive.includes(node.skillId);
 
                     if (isEquipped) {
                         item.classList.add("equipped");
@@ -1273,7 +1298,7 @@ export function openQuestMenuModal(type = "difficulty") {
                             equipSkill(node.skillId);
                         }
 
-                        refresh();
+                        refresh(getActiveTab());
                     };
 
                     item.onmousemove = (e) => showSkillTooltip(skill, e);
@@ -1297,25 +1322,27 @@ export function openQuestMenuModal(type = "difficulty") {
                         hideQuestTooltip();
                     };
 
-                    activeList.appendChild(item);
+                    passiveGrid.appendChild(item);
                 });
 
-                // =========================
-                // ▼ 追加
-                // =========================
-                list.appendChild(activeSection);
-                list.appendChild(activeSkillSection);
-                list.appendChild(passiveSection);
+                autoSkillBox.appendChild(passiveList);
             }
 
             // =========================
             // 再描画
             // =========================
-            function refresh() {
+            function refresh(currentTab) {
                 renderEquip();
                 renderActiveEquip();
-                renderList();
+                renderList(currentTab || getActiveTab());
                 renderStats();
+            }
+
+            // 現在アクティブなタブを取得するヘルパー
+            function getActiveTab() {
+                const activeBtn = content.querySelector('.skill-tab-btn.active');
+                // アクティブなタブが見つからない場合は 'passive' をデフォルトとする
+                return activeBtn ? activeBtn.dataset.tab : 'passive';
             }
 
             // 初期描画
@@ -1323,61 +1350,73 @@ export function openQuestMenuModal(type = "difficulty") {
             renderActiveEquip();
             renderList();
 
-            wrapper.appendChild(statBox);
-
             // =========================
-            // skillslot表示
+            // レイアウト構成
             // =========================
-            const slotInfo = document.createElement("div");
-            slotInfo.className = "skill-slot-info compact"; 
+            const leftColumn = document.createElement("div");
+            leftColumn.className = "skill-left-column";
 
-            const totalSlots = getSkillSlotMax();
-            const levelSlots = stats.slotHistory?.totalGained || 0;
-            const stageSlots = stats.slotHistory?.rewardGained || 0;
-            const skillSlots = stats.slotHistory?.skillTreeGained || 0;
+            const rightColumn = document.createElement("div");
+            rightColumn.className = "skill-right-column";
 
-            const totalStocks = getActiveSkillStockMax();
-            const levelStocks = stats.stockHistory?.totalGained || 0;
-            const stageStocks = stats.stockHistory?.rewardGained || 0;
-            const skillStocks = stats.stockHistory?.skillTreeGained || 0;
+            // 左カラムに要素を追加
+            leftColumn.appendChild(statBox);
 
-            slotInfo.innerHTML = `
-                <div class="slot-row">
+             // skillslot表示
+             const slotInfo = document.createElement("div");
+             slotInfo.className = "skill-slot-info compact"; 
+ 
+             const totalSlots = getSkillSlotMax();
+             const levelSlots = stats.slotHistory?.totalGained || 0;
+             const stageSlots = stats.slotHistory?.rewardGained || 0;
+             const skillSlots = stats.slotHistory?.skillTreeGained || 0;
+ 
+             const totalStocks = getActiveSkillStockMax();
+             const levelStocks = stats.stockHistory?.totalGained || 0;
+             const stageStocks = stats.stockHistory?.rewardGained || 0;
+             const skillStocks = stats.stockHistory?.skillTreeGained || 0;
+ 
+             slotInfo.innerHTML = `
+                 <div class="slot-row">
+ 
+                    <div class="slot-card">
+                        <div class="slot-title-group">
+                            <span class="slot-title">P.Skill Slots</span>
+                            <span class="slot-title-detail">（Lv/Stage/Skill）</span>
+                        </div>
+                        <div class="slot-value-group">
+                            <span class="slot-total">${totalSlots}</span>
+                            <span class="slot-breakdown">${levelSlots} / ${stageSlots} / ${skillSlots}</span>
+                        </div>
+                    </div>
 
                     <div class="slot-card">
-                    <div class="slot-line">
-                        <span class="slot-title">P.Skill Slots（Lv/Stage/Skill）</span>
-                        <span class="slot-total">${totalSlots}</span>
-                        <span class="slot-breakdown">
-                        (${levelSlots} / ${stageSlots} / ${skillSlots})
-                        </span>
+                        <div class="slot-title-group">
+                            <span class="slot-title">A.Skill Stocks</span>
+                            <span class="slot-title-detail">（Lv/Stage/Skill）</span>
+                        </div>
+                        <div class="slot-value-group">
+                            <span class="slot-total">${totalStocks}</span>
+                            <span class="slot-breakdown">${levelStocks} / ${stageStocks} / ${skillStocks}</span>
+                        </div>
                     </div>
-                    </div>
-
-                    <div class="slot-card">
-                    <div class="slot-line">
-                        <span class="slot-title">A.Skill Stocks（Lv/Stage/Skill）</span>
-                        <span class="slot-total">${totalStocks}</span>
-                        <span class="slot-breakdown">
-                        (${levelStocks} / ${stageStocks} / ${skillStocks})
-                        </span>
-                    </div>
-                    </div>
-
-                </div>
-                `;
-
-            wrapper.appendChild(slotInfo);
+ 
+                 </div>
+                 `;
+            leftColumn.appendChild(slotInfo);
   
             const equipArea = document.createElement("div");
             equipArea.className = "skill-equip-area";
-
             equipArea.appendChild(activeEquipBox);
             equipArea.appendChild(equipBox);
+            leftColumn.appendChild(equipArea);
+            leftColumn.appendChild(autoSkillBox);
 
-            wrapper.appendChild(equipArea);
-            wrapper.appendChild(list);
+            // 右カラムにスキル一覧を追加
+            rightColumn.appendChild(list);
 
+            wrapper.appendChild(leftColumn);
+            wrapper.appendChild(rightColumn);
             content.appendChild(wrapper);
         }
     };
@@ -1451,9 +1490,15 @@ function showSkillTooltip(skill, event) {
     tooltipEl = document.createElement("div");
     tooltipEl.className = "quest-tooltip";
 
+    // スキルのクールダウン時間を表示するHTMLを生成
+    const cooldownHTML = skill.cooldown
+        ? `<div class="skill-tooltip-cooldown">cooldown: ${skill.cooldown}sec</div>`
+        : "";
+
     tooltipEl.innerHTML = `
-        <b>${skill.name}</b><br>
-        ${skill.desc ?? ""}
+        <b>${skill.name}</b>
+        <div style="margin-top: 5px;">${skill.desc ?? ""}</div>
+        ${cooldownHTML}
     `;
 
     document.body.appendChild(tooltipEl);

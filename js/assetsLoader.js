@@ -100,22 +100,51 @@ export async function loadAssets(onProgress) {
     { type: "img", name: "map_red", src: "./assets/pic/map_field_red.png" },
 
     // 音源
-    { type: "sound", name: "bgm1", src: "./assets/sound/bgm1.mp3" },
-    { type: "sound", name: "bgm2", src: "./assets/sound/bgm2.mp3" },
-    { type: "sound", name: "bgm3", src: "./assets/sound/bgm3.mp3" },
-    { type: "sound", name: "kill1", src: "./assets/sound/kill1.mp3" },
-    { type: "sound", name: "kill2", src: "./assets/sound/kill2.mp3" },
-    { type: "sound", name: "kill3", src: "./assets/sound/kill3.mp3" },
-    { type: "sound", name: "killLaser", src: "./assets/sound/killLaser.mp3" },
-    { type: "sound", name: "kill5", src: "./assets/sound/kill5.mp3" },
-    { type: "sound", name: "killBullet", src: "./assets/sound/killBullet.mp3" },
-    { type: "sound", name: "killItem", src: "./assets/sound/killItem.mp3" },
-    { type: "sound", name: "damage1", src: "./assets/sound/damage1.mp3" },
-    { type: "sound", name: "bgm_enemy1", src: "./assets/sound/bgm_enemy1.mp3" },
-    { type: "sound", name: "bgm_enemy2", src: "./assets/sound/bgm_enemy2.mp3" },
-    { type: "sound", name: "bgm_enemy3", src: "./assets/sound/bgm_enemy3.mp3" },
-    { type: "sound", name: "bgm_normal1", src: "./assets/sound/bgm_normal1.mp3" },
-    { type: "sound", name: "error1", src: "./assets/sound/error1.mp3" },
+    // SE
+    { type: "sound", name: "kill1", src: "./assets/sound/se/kill1.mp3", composer: "", title: "" },
+    { type: "sound", name: "kill2", src: "./assets/sound/se/kill2.mp3", composer: "", title: "" },
+    { type: "sound", name: "kill3", src: "./assets/sound/se/kill3.mp3", composer: "", title: "" },
+    { type: "sound", name: "killLaser", src: "./assets/sound/se/killLaser.mp3", composer: "", title: "" },
+    { type: "sound", name: "kill5", src: "./assets/sound/se/kill5.mp3", composer: "", title: "" },
+    { type: "sound", name: "killBullet", src: "./assets/sound/se/killBullet.mp3", composer: "", title: "" },
+    { type: "sound", name: "killItem", src: "./assets/sound/se/killItem.mp3", composer: "", title: "" },
+    { type: "sound", name: "damage1", src: "./assets/sound/se/damage1.mp3", composer: "", title: "" },
+    { type: "sound", name: "error1", src: "./assets/sound/se/error1.mp3", composer: "", title: "" },
+
+    { type: "sound", name: "freeze", src: "./assets/sound/se/freeze.mp3", composer: "", title: "" },
+    { type: "sound", name: "edgeknockback", src: "./assets/sound/se/edgeknockback.mp3", composer: "", title: "" },
+    { type: "sound", name: "guard", src: "./assets/sound/se/guard.mp3", composer: "", title: "" },
+    { type: "sound", name: "heal1", src: "./assets/sound/se/heal1.mp3", composer: "", title: "" },
+    { type: "sound", name: "heal2", src: "./assets/sound/se/heal2.mp3", composer: "", title: "" },
+    { type: "sound", name: "heal3", src: "./assets/sound/se/heal3.mp3", composer: "", title: "" },
+
+
+
+
+    // BGM
+    { type: "sound", name: "bgm1", src: "./assets/sound/bgm/bgm1.mp3", composer: "", title: "" },
+    { type: "sound", name: "bgm2", src: "./assets/sound/bgm/bgm2.mp3", composer: "", title: "" },
+    { type: "sound", name: "bgm3", src: "./assets/sound/bgm/bgm3.mp3", composer: "", title: "" },
+    { type: "sound", name: "bgm_enemy1", src: "./assets/sound/bgm/bgm_enemy1.mp3", composer: "", title: "" },
+    { type: "sound", name: "bgm_enemy2", src: "./assets/sound/bgm/bgm_enemy2.mp3", composer: "", title: "" },
+    { type: "sound", name: "bgm_enemy3", src: "./assets/sound/bgm/bgm_enemy3.mp3", composer: "", title: "" },
+    { type: "sound", name: "bgm_normal1", src: "./assets/sound/bgm/bgm_normal1.mp3", composer: "", title: "" },
+    { type: "sound", name: "bgm_dream", src: "./assets/sound/bgm/dream.mp3", composer: "RYU ITO", title: "Dream" },
+    { type: "sound", name: "bgm_cracker", src: "./assets/sound/bgm/cracker.mp3", composer: "RYU ITO", title: "Cracker" },
+    { type: "sound", name: "bgm_yakanhikou", src: "./assets/sound/bgm/yakanhikou.mp3", composer: "もえるごみ", title: "夜間飛行" },
+    { type: "sound", name: "bgm_harunosuisou", src: "./assets/sound/bgm/harunosuisou.mp3", composer: "もえるごみ", title: "はるの水槽" },
+    { type: "sound", name: "bgm_boss1", src: "./assets/sound/bgm/edm_club_music.mp3", composer: "LudeSoundX", title: "EDM Club Music" },
+    { type: "sound", name: "bgm_boss2", src: "./assets/sound/bgm/the_fight_left_in_us.mp3", composer: "Psychronic", title: "The Fight Left In Us" },
+    { type: "sound", name: "bgm_aquarium", src: "./assets/sound/bgm/aquarium.mp3", composer: "もえるごみ", title: "Aquarium" },
+    { type: "sound", name: "bgm_bpm150", src: "./assets/sound/bgm/bpm150.mp3", composer: "もえるごみ", title: "bmp150" },
+    { type: "sound", name: "bgm_memories", src: "./assets/sound/bgm/sounds_of_memories.mp3", composer: "crusadope", title: "sound of memories" },
+    { type: "sound", name: "bgm_gameover", src: "./assets/sound/bgm/gameover.mp3", composer: "もえるごみ", title: "GAME OVER" },
+    { type: "sound", name: "bgm_yellow", src: "./assets/sound/bgm/yellow.mp3", composer: "もえるごみ", title: "yellow" },
+    { type: "sound", name: "bgm_sept", src: "./assets/sound/bgm/sept.mp3", composer: "もえるごみ", title: "Sept." },
+    { type: "sound", name: "bgm_rainy", src: "./assets/sound/bgm/rainy.mp3", composer: "もえるごみ", title: "rainy" },
+    { type: "sound", name: "bgm_swim", src: "./assets/sound/bgm/swim.mp3", composer: "もえるごみ", title: "swim" },
+    { type: "sound", name: "bgm_reika", src: "./assets/sound/bgm/reika.mp3", composer: "もえるごみ", title: "冷夏" },
+    { type: "sound", name: "bgm_soranaka", src: "./assets/sound/bgm/soranaka.mp3", composer: "もえるごみ", title: "Soranaka" },
   ];
 
   let loaded = 0;
@@ -130,7 +159,7 @@ export async function loadAssets(onProgress) {
     if (a.type === "img") {
       await loadImage(a.name, a.src);
     } else if (a.type === "sound") {
-      await loadSound(a.name, a.src);
+      await loadSound(a);
     }
 
     loaded++;

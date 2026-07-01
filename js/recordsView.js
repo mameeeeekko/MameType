@@ -114,6 +114,12 @@ export function showRecordsView(initialMode = GameModes.NORMAL) {
   // 初期描画
   renderSummary(records);
   renderRanking(records);
+
+  // ★ グラフコンテナの親にスクロールバークラスを適用
+  const graphContainerParent = document.getElementById("recordsGraphContainer");
+  if (graphContainerParent) {
+    graphContainerParent.classList.add("custom-scrollbar");
+  }
   renderHistory(records);
   renderBestEScoreGraph(records);
 
@@ -223,11 +229,12 @@ function renderRanking(records) {
       r.accuracy + "%"
     ]);
   } else if (mode === "enemy_mode") {
-    columns = ["順位", "日時", "gScore", "gRank", "撃破数", "最大コンボ", "最大チェイン", "KPM", "正確率"];
+    columns = ["順位", "日時", "gScore", "eScore", "eRank", "撃破数", "最大コンボ", "最大チェイン", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
       `<div class="rank-cell">${getNewBadgeHtml(r, new Date(r.date).getTime() === latestTimestamp)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
       r.gScore,
+      r.skillScore ?? 0,
       r.gRank ?? "_",
       r.defeatedCount ?? 0,
       r.maxCombo ?? 0,
@@ -259,6 +266,7 @@ function renderRanking(records) {
     wrapper.style.maxHeight = "420px";
     wrapper.style.overflowY = "auto";
     wrapper.style.border = "1px solid rgba(88, 166, 255, 0.2)";
+    wrapper.classList.add("custom-scrollbar"); // スクロールバー用のクラスを追加
     wrapper.style.borderRadius = "12px";
   }
 
@@ -313,7 +321,7 @@ function renderHistory(records) {
 });
 
   } else if (mode === "enemy_mode") {
-  columns = ["日時", "gScore", "gRank", "撃破数", "最大コンボ", "最大チェイン", "KPM", "正確率", "ミス", "保護"];
+  columns = ["日時", "gScore", "eScore", "eRank", "撃破数", "最大コンボ", "最大チェイン", "KPM", "正確率", "ミス", "保護"];
 
   rows = visible.map(r => {
     const mode = r.mode;
@@ -324,6 +332,7 @@ function renderHistory(records) {
     return [
       new Date(r.date).toLocaleString(),
       r.gScore,
+      r.skillScore ?? 0,
       r.gRank ?? "-",
       r.defeatedCount ?? 0,
       r.maxCombo ?? 0,
@@ -392,6 +401,10 @@ rows.forEach((rowData, rowIndex) => {
     });
     container.appendChild(moreBtn);
   }
+
+  // 履歴テーブルがスクロールする場合に備えてクラスを追加
+  const tableWrapper = container.querySelector("table")?.parentElement;
+  if (tableWrapper) tableWrapper.classList.add("custom-scrollbar");
 }
 
 
@@ -465,6 +478,9 @@ function renderBestEScoreGraph(records) {
   const container = document.getElementById("bestScoreGraph");
   if (!container) return;
 
+  // ★グラフコンテナにカスタムスクロールバークラスを追加
+  container.classList.add("custom-scrollbar");
+
   const MAX_POINTS = 50;
   const sliced = timeline.slice(-MAX_POINTS);
   renderTimelineGraph(container, sliced, mode);
@@ -512,6 +528,9 @@ function renderTimelineGraph(container, timeline, mode) {
   }
 
   container.innerHTML = "";
+
+  // グラフがコンテナをはみ出した場合に横スクロールできるようにする
+  container.style.overflowX = "auto";
 
   const points = timeline.map(p => ({
     t: p.date.getTime(),

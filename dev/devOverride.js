@@ -7,6 +7,7 @@
 export const devOverride = {
     stage: {},
     enemy: {},
+    skill: {},
     player: {},
     gameState: {},
     exp: {

@@ -57,6 +57,7 @@ let settingsDiv, gameDiv, resultDiv, recordsDiv;
 let questMapScreen, questSaveMenuDiv, skillTreeDiv;
 let hintDiv;
 let onlineRankingDiv;
+let bgmInfoDisplay; // Add this to cacheDOM
 
 let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn, onlineRankingBtn;
 let startMenuBackBtn, freeStartMenuBackBtn, questStartMenuBackBtn;
@@ -114,6 +115,7 @@ function cacheDOM() {
   skillTreeDiv = document.getElementById("skillTree");
   hintDiv = document.getElementById("skillUnlockHint");
   onlineRankingDiv = document.getElementById("onlineRankingScreen");
+  bgmInfoDisplay = document.getElementById("bgmInfoDisplay"); // Cache the new element
 
   startMenuBtn = document.getElementById("startMenuBtn");
   questMenuBtn = document.getElementById("questMenuBtn");
@@ -343,46 +345,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("versionLabel").textContent = `v${APP_VERSION}`;
 
+  bindModeStartEvents();
+  bindResultEvents();
+  bindMenuBackEvents();
+  // ★設定を読み込む（UI描画より先に）
+  loadSettings();
+  loadFreeModeConfig();
+
+  // ★UI初期化
   createDifficultySelector(
     "standardDifficultyButtons",
     "standardDifficultyInfo",
-    "free",
+    "free-standard",
     "standard"
   );
 
   createDifficultySelector(
     "timeAttackDifficultyButtons",
     "timeAttackDifficultyInfo",
-    "free",
+    "free-timeattack",
     "timeattack"
   );
 
   createDifficultySelector(
     "enemyDifficultyButtons",
     "enemyDifficultyInfo",
-    "free",
+    "free-enemy",
     "enemy"
   );
 
-  initKeybinds();
-  initAchievementsUI();
-  // ゲーム画面描画準備
-  Game.initRenderer();
+  initKeybinds(); // キーバインドUI初期化
+  initAchievementsUI(); // 実績UI初期化
+  Game.initRenderer(); // ゲーム画面描画準備
 
+  // ★UIイベント紐付け
   bindMenuEvents();
-  bindGameMenuEvents();
-  bindModeSwitchEvents();
   bindModeStartEvents();
   bindResultEvents();
-  bindMenuBackEvents();
+  bindGameMenuEvents();
+  bindModeSwitchEvents();
   initFreeModeConfigUI();
-
   bindKeyEvents();
-
   initSettingsUI();
   initHudControls(); 
-
-  loadSettings();
 
   // =====================================================
   // プレイヤーネーム処理
@@ -598,7 +603,9 @@ function renderQuestSlots() {
     // =========================
     div.querySelector(".save")?.addEventListener("click", () => {
 
-      if (!confirm("上書き保存しますか？")) return;
+      if (!confirm(
+        `現在のデータを SLOT ${i + 1} にセーブしますか？\n`
+      )) return;
 
       saveQuestSlot(i);
       renderQuestSlots();
@@ -609,6 +616,11 @@ function renderQuestSlots() {
     // =========================
     div.querySelector(".load")?.addEventListener("click", () => {
 
+      if (!confirm(
+        `SLOT ${i + 1} のデータをロードしますか？\n` +
+        "現在の進行状況はロードしたデータで上書きされます。"
+      )) return;
+
       if (!loadQuestSlot(i)) {
         alert("データがありません");
         return;
@@ -616,10 +628,7 @@ function renderQuestSlots() {
 
       reloadQuestProgress();
       reloadQuestPlayerStats();
-
       updateHud(null, { isQuestMode: true });
-
-      autoSaveQuest();
 
       showQuestMap();
 
@@ -680,6 +689,9 @@ function createDifficultySelector(
       setCurrentDifficulty(d.id, scope);
 
       updateInfo(d);
+
+      // 難易度変更を保存
+      saveFreeModeConfig();
     });
 
     container.appendChild(btn);
@@ -819,10 +831,12 @@ function saveFreeModeConfig() {
     lastModeId: currentFreeModeId,
     lastEnemyPattern: currentEnemyPattern,
     standard: {
+      difficulty: getCurrentDifficulty("free-standard").id,
       genre: document.getElementById("standardGenreSelect")?.value || "all",
-      count: parseInt(document.getElementById("stdCountSlider")?.value) || 20
+      count: parseInt(document.getElementById("stdCountSlider")?.value) || 20,
     },
     timeAttack: {
+      difficulty: getCurrentDifficulty("free-timeattack").id,
       genre: document.getElementById("timeAttackGenreSelect")?.value || "all",
       time: parseInt(document.getElementById("taTimeSlider")?.value) || 60
     },
@@ -830,6 +844,7 @@ function saveFreeModeConfig() {
       genre: document.getElementById("longGenreSelect")?.value || "all"
     },
     enemy: {
+      difficulty: getCurrentDifficulty("free-enemy").id,
       pattern: document.querySelector("#configEnemy .pattern-btn.active")?.dataset.pattern || "time",
       time: parseInt(document.getElementById("enemyTimeSlider")?.value) || 60,
       count: parseInt(document.getElementById("enemyCountSlider")?.value) || 30,
@@ -853,6 +868,10 @@ function loadFreeModeConfig() {
     if (config.lastModeId) currentFreeModeId = config.lastModeId;
     if (config.lastEnemyPattern) currentEnemyPattern = config.lastEnemyPattern;
 
+    if (config.standard?.difficulty) {
+      setCurrentDifficulty(config.standard.difficulty, "free-standard");
+    }
+
     if (config.standard?.count) {
       const el = document.getElementById("stdCountSlider");
       if (el) { el.value = config.standard.count; updateConfigSliderLabel("stdCountSlider", el.value); }
@@ -860,6 +879,10 @@ function loadFreeModeConfig() {
     if (config.standard?.genre){
       const el = document.getElementById("standardGenreSelect");
       if (el) el.value = config.standard.genre;
+    }
+
+    if (config.timeAttack?.difficulty) {
+      setCurrentDifficulty(config.timeAttack.difficulty, "free-timeattack");
     }
 
     if (config.timeAttack?.time) {
@@ -876,6 +899,10 @@ function loadFreeModeConfig() {
       if (el) el.value = config.long.genre;
     }
     if (config.enemy) {
+      if (config.enemy.difficulty) {
+        setCurrentDifficulty(config.enemy.difficulty, "free-enemy");
+      }
+
       if (config.enemy.time) {
         const el = document.getElementById("enemyTimeSlider");
         if (el) { el.value = config.enemy.time; updateConfigSliderLabel("enemyTimeSlider", el.value); }
@@ -987,8 +1014,8 @@ function startFreeEnemyMode() {
   startEnemyMode({
     mode: GameModes.ENEMY_MODE,
     isFreeMode: true,
-    difficulty: getCurrentDifficulty().id,
-    stage: "DAILY", // フリーモードのベースステージ
+    difficulty: getCurrentDifficulty("free-enemy").id,
+    stage: "FREE", // フリーモードのベースステージ
     level: selectedLv,
     customConditions: customConditions,
     enemyTable: enemyTable // Tierと属性セットから生成したテーブルをトップレベルで渡す
@@ -1052,12 +1079,13 @@ function initFreeModeConfigUI() {
     hideAllScreens();
 
     gameState.isFreeMode = true;
+    updateGameUIVisibility(GameModes.NORMAL.id); // UI表示を更新
     gameState.isQuestMode = false;
 
     Game.doCountdown({
       mode: GameModes.NORMAL,
       isFreeMode: true,
-      difficulty: getCurrentDifficulty().id,
+      difficulty: getCurrentDifficulty("free-standard").id,
       custom: { questionLimit: count, tags: tags}
     });
   });
@@ -1079,12 +1107,13 @@ function initFreeModeConfigUI() {
     hideAllScreens();
 
     gameState.isFreeMode = true;
+    updateGameUIVisibility(GameModes.TIME_ATTACK.id); // UI表示を更新
     gameState.isQuestMode = false;
 
     Game.doCountdown({
       mode: GameModes.TIME_ATTACK,
       isFreeMode: true,
-      difficulty: getCurrentDifficulty().id,
+      difficulty: getCurrentDifficulty("free-timeattack").id,
       custom: { limitSec: time , tags: tags}
     });
   });
@@ -1104,6 +1133,7 @@ function initFreeModeConfigUI() {
     hideAllScreens();
 
     gameState.isFreeMode = true;
+    updateGameUIVisibility(GameModes.LONG_TEXT.id); // UI表示を更新
     gameState.isQuestMode = false;
 
     Game.doCountdown({
@@ -1122,8 +1152,6 @@ function initFreeModeConfigUI() {
     configEnemy.appendChild(enemyStartBtn);
   }
 
-  // 保存された設定を読み込む
-  loadFreeModeConfig();
 }
 
 /**
@@ -1194,6 +1222,31 @@ function switchFreeModeConfig(modeId) {
   }
 
   saveFreeModeConfig(); // 選択状態が変わるたびに保存
+}
+
+/**
+ * ゲームモードに応じてゲーム画面のUI要素の表示/非表示を切り替える
+ * @param {string} modeId - GameModesのID (e.g., 'time_attack', 'normal')
+ */
+function updateGameUIVisibility(modeId) {
+  const speedContainer = document.getElementById("speed-container");
+  const speedLabel = document.getElementById("speed-label");
+  const timeBarContainer = document.getElementById("time-bar-container");
+
+  // タイムアタックモードの場合
+  if (modeId === GameModes.TIME_ATTACK.id) {
+    if (speedContainer) speedContainer.style.display = "flex";
+    if (speedLabel) speedLabel.style.display = "block";
+    if (timeBarContainer) timeBarContainer.style.display = "block";
+  } 
+  // その他のモードの場合
+  else {
+    // デフォルトでは速度バーは表示、タイムバーは非表示
+    if (speedContainer) speedContainer.style.display = "flex";
+    if (speedLabel) speedLabel.style.display = "block";
+    if (timeBarContainer) timeBarContainer.style.display = "none";
+  }
+  // TODO: 今後、モードごとにさらに詳細な表示制御が必要な場合はここに追加
 }
 
 // =====================================================
@@ -1405,16 +1458,19 @@ function bindModeStartEvents() {
 
   startBtn?.addEventListener("click", () => {
     hideAllScreens();
+    updateGameUIVisibility(GameModes.NORMAL.id); // UI表示を更新
     Game.doCountdown({ mode: GameModes.NORMAL, isFreeMode: false, difficulty: "normal" });
   });
 
   timeAttackBtn?.addEventListener("click", () => {
     hideAllScreens();
+    updateGameUIVisibility(GameModes.TIME_ATTACK.id); // UI表示を更新
     Game.doCountdown({ mode: GameModes.TIME_ATTACK, isFreeMode: false, difficulty: "normal" });
   });
 
   longTextBtn?.addEventListener("click", () => {
     hideAllScreens();
+    updateGameUIVisibility(GameModes.LONG_TEXT.id); // UI表示を更新
     Game.doCountdown({ mode: GameModes.LONG_TEXT, isFreeMode: false, difficulty: null });
   });
 
@@ -1482,13 +1538,13 @@ function bindResultEvents() {
     showQuestMap();
   });
 
-  resultOpenRecordsBtn?.addEventListener("click", () => {
-    // 現在のゲームモードを一時的に保存
-    const lastPlayedMode = Game.getLastGameMode();
+  resultOpenRecordsBtn?.addEventListener("click", (e) => {
+    // ボタンのdatasetからモードIDを取得
+    const modeId = e.currentTarget.dataset.modeId;
     Game.fullResetGame();
     Game.backToMenu();
     hideAllScreens();
-    showRecordsView(lastPlayedMode ?? GameModes.NORMAL);
+    showRecordsView(modeId ?? GameModes.NORMAL.id);
   });
 }
 

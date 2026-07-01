@@ -568,8 +568,11 @@ export function autoSaveQuest() {
 // 🔹手動セーブ（スロット指定）
 // ================================
 export function saveQuestSlot(slotIndex) {
+  // ★ 先にオートセーブを実行し、最新の状態を確実にする
+  autoSaveQuest();
+
   const slots = loadQuestSlots(); // 既存データ取得
-  const data = getQuestSnapshot(); // 現在の進行
+  const data = JSON.parse(localStorage.getItem(QUEST_AUTO_KEY) || "{}"); // ★オートセーブから読み込む
 
   const stats = data.playerStats || {};
   const progress = data.progress || {};

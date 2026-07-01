@@ -1,5 +1,5 @@
 import { SKILL_TREE, startSkillMode, getUnlockText, getChallengeText, getRequirementText, checkSkillRequirements } from "./skillTree.js";
-import { getSkillById } from "./questSkills.js";
+import { getSkillById, ACTIVE_SKILLS } from "./questSkills.js";
 import { applySkillNodeEffect, getPlayerStats } from "./questPlayerStats.js";
 import { closeQuestModal, openQuestMenuModal } from "./questMapUI.js";
 import { backToMenu, exitSkillMode } from "./gameCore.js";
@@ -50,10 +50,12 @@ const NODE_POS = {
     REVIVE_2: {x: 240, y: -70},
     REVIVE_3: {x: 320, y: -70},
 
-
     INVINCIBLE_SHORT: {x: 160, y: 70},
     INVINCIBLE_MEDIUM: {x: 240, y: 70},
     INVINCIBLE_LONG: {x: 320, y: 70},
+
+    // Cooldown
+    COOLDOWN_SPEED_3: { x: 400, y: 140 },
 
     // 上（攻撃系）
     
@@ -72,6 +74,9 @@ const NODE_POS = {
     KILL_RANDOM: { x: -80, y: -210 },
     KILL_NEAREST_H: { x: -160, y: -210 },
     KILL_ALL: {x: -80, y: -420},
+
+    // Cooldown
+    COOLDOWN_SPEED_2: { x: -240, y: -210 },
 
    // 下 （補助系）
 
@@ -97,6 +102,8 @@ const NODE_POS = {
     EXP_UP_2: { x: -160, y: 350 },
     EXP_UP_3: { x: 0, y: 420 },
     
+    // Cooldown
+    COOLDOWN_SPEED_1: { x: -240, y: 350 },
 };
 
 export function renderSkillTreeUI(container){
@@ -270,10 +277,12 @@ export function renderSkillTreeUI(container){
         let canUnlock = false;
 
         if (!isUnlocked) {
-            const parent = findParent(node.id);
+            const parents = findParents(node.id); // 複数の親を取得
 
-            if (parent && unlocked.includes(parent.id)) {
-                canUnlock = true;
+            // 親がいないノードは解放不可（STARTノードを除く）
+            if (parents.length > 0) {
+                // 全ての親が解放されているかチェック (AND条件)
+                canUnlock = parents.every(p => unlocked.includes(p.id)); // AND条件
             }
         }
 
@@ -300,10 +309,28 @@ export function renderSkillTreeUI(container){
                 return;
             }
 
-            ctx.fillStyle = "#fff";
+            const isActiveSkill = !!ACTIVE_SKILLS[node.skillId];
+
+            ctx.fillStyle = isActiveSkill
+                ? "#ffdbd6"   // アクティブスキル
+                : "#ffffff";  // パッシブスキル
+
             ctx.font = "10px sans-serif";
             ctx.textAlign = "center";
             ctx.fillText(skill.name, x, y + 28);
+
+            // ラベル影
+            ctx.shadowColor = "rgba(0,0,0,0.8)";
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 1;
+
+            ctx.fillText(skill.name, x, y + 28);
+
+            // 他の描画に影が残らないよう戻す
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
         }
 
         // クリック判定用
@@ -477,7 +504,7 @@ export function renderSkillTreeUI(container){
                 requirementText
                 ? `
                     <div class="unlock">
-                        <div class="label">-挑戦条件-</div>
+                        <div class="label requirement-onmouse-label">[挑戦条件]</div>
                         <div class="value">${requirementText}</div>
                     </div>
                 `
@@ -488,7 +515,7 @@ export function renderSkillTreeUI(container){
                 challengeText
                 ? `
                     <div class="challenge">
-                        <div class="label">-挑戦内容-</div>
+                        <div class="label challenge-onmouse-label">[挑戦内容]</div>
                         <div class="value">${challengeText}</div>
                     </div>
                 `
@@ -508,7 +535,7 @@ export function renderSkillTreeUI(container){
                 unlockText
                 ? `
                     <div class="unlock">
-                        <div class="label">-解放条件-</div>
+                        <div class="label unlock-onmouse-label">[解放条件]</div>
                         <div class="value">${unlockText}</div>
                     </div>
                 `
@@ -526,6 +553,14 @@ export function renderSkillTreeUI(container){
 // =========================
 // 親ノード取得
 // =========================
+// 複数の親を配列で返す (AND条件用)
+export function findParents(id) {
+    return Object.values(SKILL_TREE).filter(n =>
+        n.children && n.children.includes(id)
+    );
+}
+
+// 最初に見つかった親を1つ返す (OR条件用)
 export function findParent(id) {
     return Object.values(SKILL_TREE).find(n =>
         n.children && n.children.includes(id)
@@ -579,7 +614,7 @@ export function showSkillIntro(node, onStart, onCancel) {
 
       <div class="intro-section">
         <img class="skill-icon-img" src="${images[skill.icon]?.src || ""}" />
-        <div>${skill?.name || "-"}</div>
+        <div class="skill-intro-name">${skill?.name || "-"}</div>
         <div>${skill?.desc || ""}</div>
       </div>
 
@@ -587,7 +622,7 @@ export function showSkillIntro(node, onStart, onCancel) {
         challengeText
         ? `
         <div class="intro-section">
-          <h3>[ 挑戦内容 ]</h3>
+          <h3 class="challenge-title">[ 挑戦内容 ]</h3>
           <div>${challengeText}</div>
         </div>
         `
@@ -607,7 +642,7 @@ export function showSkillIntro(node, onStart, onCancel) {
         unlockText
         ? `
         <div class="intro-section">
-          <h3>[ 解放条件 ]</h3>
+          <h3 class="unlock-title">[ 解放条件 ]</h3>
           <div>${unlockText}</div>
         </div>
         `
