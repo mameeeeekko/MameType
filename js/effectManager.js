@@ -1,6 +1,6 @@
 // effectManager.js
 // ===========================================
-// 低遅延オーディオ管理
+// 低遅延オーディオ管理 & エフェクト管理
 // ===========================================
 let audioCtx = null;
 let masterGain = null;
@@ -15,6 +15,7 @@ export let missGain = null; // Exported
 export let laserEffects = [];
 import { gameState } from "./gameCore.js";
 const loopingSounds = {};
+export let comboTierUpEffects = [];
 const playerDamageEffects = [];
 const playerNegateEffects = [];
 let buffers = {};
@@ -30,31 +31,45 @@ const volumes = {
     miss: 0.5
 };
 
+/**
+ * スライダーの値（0.0～1.0）を音量倍率に変換する
+ * 0.5 を基準(1.0倍)とし、1.0で2.0倍、0.0で0倍になるように調整
+ * @param {number} value - スライダーの値
+ * @returns {number} - 計算後の音量倍率
+ */
+function sliderValueToMultiplier(value) {
+    if (value <= 0.5) {
+        return value * 2;
+    } else {
+        return 1.0 + (value - 0.5) * 2;
+    }
+}
+
 export function setBgmVolume(v) {
     volumes.bgm = v;
     if (bgmGain && audioCtx) {
-        bgmGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+        bgmGain.gain.setTargetAtTime(sliderValueToMultiplier(v), audioCtx.currentTime, 0.01);
     }
 }
 
 export function setSeVolume(v) {
     volumes.se = v;
     if (seGain && audioCtx) {
-        seGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+        seGain.gain.setTargetAtTime(sliderValueToMultiplier(v), audioCtx.currentTime, 0.01);
     }
 }
 
 export function setTypeVolume(v) {
     volumes.type = v;
     if (typeGain && audioCtx) {
-        typeGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+        typeGain.gain.setTargetAtTime(sliderValueToMultiplier(v), audioCtx.currentTime, 0.01);
     }
 }
 
 export function setMissVolume(v) {
     volumes.miss = v;
     if (missGain && audioCtx) {
-        missGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+        missGain.gain.setTargetAtTime(sliderValueToMultiplier(v), audioCtx.currentTime, 0.01);
     }
 }
 
@@ -132,6 +147,7 @@ export async function loadSound(asset) {
     soundMeta[asset.name] = {
         title: asset.title || "-",
         composer: asset.composer || "-",
+        volume: asset.volume ?? 1.0,
     };
 }
 
@@ -157,7 +173,7 @@ export async function initAudio() {
 // ===========================================
 // 効果音
 // ===========================================
-export function playTone(freq, duration, type="sine", volume=0.4, targetGainNode=null){ // targetGainNode is now the actual node
+export function playTone(freq, duration, type="sine", volume=1.0, targetGainNode=null){ // targetGainNode is now the actual node
     // ガード
     if(!isFinite(freq)) return;
     if(!isFinite(duration)) return;
@@ -195,7 +211,7 @@ export function playTone(freq, duration, type="sine", volume=0.4, targetGainNode
     };
 }
 
-function playNoise(duration = 0.1, volume = 0.3, target = null) {
+function playNoise(duration = 0.1, volume = 1.0, target = null) {
     const ctx = getAudioContext();
 
     if (ctx.state !== "running") {
@@ -232,7 +248,7 @@ function playNoise(duration = 0.1, volume = 0.3, target = null) {
 // SEを流す関数
 export function playSE(
     name,
-    volume = 0.5,
+    volume = 1.0, // デフォルトを1.0に変更
     playbackRate = 1, //再生速度
     startOffset = 0,  //開始位置sec
     duration = null   //再生時間sec
@@ -247,7 +263,9 @@ export function playSE(
     source.playbackRate.value = playbackRate;
 
     const gain = ctx.createGain();
-    gain.gain.value = volume;
+    // メタデータから個別の音量を取得し、引数のvolumeと掛け合わせる
+    const individualVolume = soundMeta[name]?.volume ?? 1.0;
+    gain.gain.value = volume * individualVolume;
 
     source.connect(gain).connect(seGain);
 
@@ -267,8 +285,8 @@ export function playTypeSound() {
     playTone(
         freq,
         0.06,
-        "triangle",
-        0.35,
+        "triangle", // 変更なし
+        1.0,
         typeGain
     );
 
@@ -277,7 +295,7 @@ export function playTypeSound() {
         freq * 2,
         0.03,
         "sine",
-        0.08,
+        0.15, // 0.1 -> 0.15 に変更
         typeGain
     );
 
@@ -299,7 +317,7 @@ export function playTypeSound() {
 
 export function playMissSound() {
     getAudioContext();
-    playNoise(0.08, 0.25, missGain);
+    playNoise(0.08, 1.0, missGain); // 0.25 -> 0.35 に変更
 }
 
 /**
@@ -310,7 +328,7 @@ export function playMissSound() {
 export function playTestSound(key, settings) {
     switch (key) {
         case 'bgm':
-            if (settings.bgm) playTone(330, 0.2, 'sine', 0.5, bgmGain);
+            if (settings.bgm) playTone(330, 0.2, 'sine', 1.0, bgmGain);
             break;
         case 'type':
             if (settings.type) playTypeSound();
@@ -319,34 +337,34 @@ export function playTestSound(key, settings) {
             if (settings.miss) playMissSound();
             break;
         case 'se':
-            if (settings.soundeffect) playTone(440, 0.1, 'sine', 0.5, seGain);
+            if (settings.soundeffect) playTone(440, 0.1, 'sine', 1.0, seGain);
             break;
     }
 }
 
 export function playEnemyKillSound(type=1){
     if(type===1){
-        playSE("kill1",0.35);
+        playSE("kill1"); // 音量指定を削除
 
         setTimeout(()=>{
-            playSE("kill1",0.12);
+            playSE("kill1", 1.0);
         },80);
     }
-    if(type===2) playSE("kill2",0.5);
-    if(type===3) playSE("kill3",0.5);
-    if(type===4) playSE("killLaser",0.5);
-    if(type===5) playSE("kill5",0.5);
-    if(type===6) playSE("killBullet",0.5,1,0,1);
-    if(type===7) playSE("killItem",0.5,1,0,1);
+    if(type===2) playSE("kill2");
+    if(type===3) playSE("kill3");
+    if(type===4) playSE("killLaser");
+    if(type===5) playSE("kill5");
+    if(type===6) playSE("killBullet", 1, 1, 0, 1);
+    if(type===7) playSE("killItem", 1, 1, 0, 1);
 }
 
 
 export function playDamageSound(){
-    playSE("damage1",0.5);
+    playSE("damage1");
 }
 
 export function playErrorSound(){
-    playSE("error1",0.5, 1, 0, 1);
+    playSE("error1", 1, 1, 0, 1);
 }
 
 export function playPhaseWarningSound() {
@@ -356,7 +374,7 @@ export function playPhaseWarningSound() {
         392,
         0.25,
         "triangle",
-        0.25
+        0.5
     );
 
     // C5
@@ -365,9 +383,9 @@ export function playPhaseWarningSound() {
             523,
             0.30,
             "triangle",
-            0.25
+            0.5
         );
-    }, 250);
+    }, 400);
 
     // G5
     setTimeout(() => {
@@ -375,14 +393,26 @@ export function playPhaseWarningSound() {
             784,
             1.2,
             "sine",
-            0.35
+            0.8
         );
-    }, 600);
+    }, 800);
 }
+// ===========================================
+// コンボティアアップサウンド
+// ===========================================
+export function playComboTierUpSound(tier, isMax) {
+    if (isMax) {
+        playSE("combo_tier_max", 1.2);
+    } else {
+        playSE("combo_tier1", 1.0);
+    }
+}
+
+
 // ===========================================
 // ループ再生
 // ===========================================
-export function playLoopSE(name, volume = 0.5) {
+export function playLoopSE(name, volume = 1.0) {
     if (loopingSounds[name]) return; // すでに再生中なら何もしない
 
     const ctx = getAudioContext();
@@ -415,7 +445,7 @@ export function stopLoopSE(name) {
 // BGM
 // ===========================================
 
-export function playBGM(name="bgm1", volume=0.4){
+export function playBGM(name="bgm1", volume=1.0){
 
     const ctx = getAudioContext();
 
@@ -432,14 +462,16 @@ export function playBGM(name="bgm1", volume=0.4){
     // gameStateに現在のBGM情報を保存
     if (gameState) {
         gameState.currentBgmInfo = soundMeta[name] || null;
-    }
+    }    
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
 
     const gain = ctx.createGain();
-    gain.gain.value = volume;
+    // メタデータから個別の音量を取得し、引数のvolumeと掛け合わせる
+    const individualVolume = soundMeta[name]?.volume ?? 1.0;
+    gain.gain.value = volume * individualVolume;
 
     source.connect(gain).connect(bgmGain);
 
@@ -2172,42 +2204,71 @@ export function renderFreezeAura(
 // ===============================
 // Chain Burst Effects
 // ===============================
-export let chainBurstEffects = [];
+export let chainBreakEffects = [];
 
-export function spawnChainBurstEffect(x, y){
-    chainBurstEffects.push({
+export function playChainBreakSound() {
+    playSE("chain_break", 0.7);
+}
+
+export function spawnChainBreakEffect(x, y) {
+    // 破片パーティクルを生成
+    for (let i = 0; i < 30; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 6;
+        chainBreakEffects.push({
+            type: "particle",
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 30 + Math.random() * 20,
+            maxLife: 30 + Math.random() * 20,
+            size: 2 + Math.random() * 4,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.2
+        });
+    }
+    // 中央の閃光
+    chainBreakEffects.push({
+        type: "flash",
         x,
         y,
-        radius: 20,
-        life: 30
+        life: 15,
+        maxLife: 15,
+        radius: 0,
+        maxRadius: 100
     });
 }
 
-export function renderChainBurstEffects(ctx){
-
-    for(let i = chainBurstEffects.length - 1; i >= 0; i--){
-
-        const e = chainBurstEffects[i];
-
+export function renderChainBreakEffects(ctx) {
+    for (let i = chainBreakEffects.length - 1; i >= 0; i--) {
+        const e = chainBreakEffects[i];
         e.life--;
-        e.radius += 4;
 
-        const alpha = e.life / 30;
+        if (e.life <= 0) {
+            chainBreakEffects.splice(i, 1);
+            continue;
+        }
 
-        ctx.save();
+        const t = e.life / e.maxLife;
 
-        ctx.globalAlpha = alpha;
-        ctx.strokeStyle = "#FFD700";
-        ctx.lineWidth = 5;
-
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.restore();
-
-        if(e.life <= 0){
-            chainBurstEffects.splice(i,1);
+        if (e.type === "particle") {
+            e.x += e.vx;
+            e.y += e.vy;
+            e.rotation += e.rotationSpeed;
+            ctx.save();
+            ctx.globalAlpha = t;
+            ctx.fillStyle = `rgba(255, ${100 + 100 * (1 - t)}, ${100 + 100 * (1 - t)}, ${t})`; // 白 -> 赤
+            ctx.translate(e.x, e.y);
+            ctx.rotate(e.rotation);
+            ctx.fillRect(-e.size / 2, -e.size / 2, e.size, e.size);
+            ctx.restore();
+        } else if (e.type === "flash") {
+            const radius = e.maxRadius * Math.sin((1 - t) * Math.PI * 0.5);
+            ctx.fillStyle = `rgba(255, 255, 255, ${t * 0.8})`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, radius, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 }
@@ -2313,6 +2374,84 @@ export function renderDamagePopups(ctx) {
 
         if (p.life <= 0) {
             damagePopups.splice(i, 1);
+        }
+    }
+}
+
+// ===============================
+// コンボティアアップエフェクト
+// ===============================
+export function spawnComboTierUpEffect(x, y, tier, isMax) {
+    if (isMax) {
+        comboTierUpEffects.push({
+            type: "max",
+            x, // x座標を保存
+            y, // y座標を保存
+            life: 60,
+            maxLife: 60,
+        });
+    } else {
+        comboTierUpEffects.push({
+            type: "tier_up",
+            x,
+            y,
+            radius: 0,
+            maxRadius: 80 + tier * 20,
+            life: 40,
+            maxLife: 40,
+        });
+    }
+}
+
+export function renderComboTierUpEffects(ctx) {
+    for (let i = comboTierUpEffects.length - 1; i >= 0; i--) {
+        const e = comboTierUpEffects[i];
+        e.life--;
+
+        if (e.life <= 0) {
+            comboTierUpEffects.splice(i, 1);
+            continue;
+        }
+
+        const t = e.life / e.maxLife;
+
+        if (e.type === "tier_up") {
+            // 波紋エフェクト（広がって収束）
+            const progress = 1 - t;
+            const radius = e.maxRadius * Math.sin(progress * Math.PI);
+            const alpha = Math.sin(progress * Math.PI);
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = "#ffd700";
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#ffd700";
+
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        } else if (e.type === "max") {
+            // MAXエフェクト（軽量版）
+            // 複数の円を重ねて広がる演出
+            const maxRings = 4;
+            for (let j = 0; j < maxRings; j++) {
+                const progress = (1 - t) + (j / maxRings) * 0.2;
+                if (progress > 1) continue;
+
+                const radius = ctx.canvas.width * 0.8 * Math.sin(progress * Math.PI * 0.5);
+                const alpha = Math.sin(progress * Math.PI) * 0.5;
+
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.strokeStyle = `rgba(255, 220, 100, ${alpha})`;
+                ctx.lineWidth = 10 + j * 5;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
         }
     }
 }
@@ -2486,8 +2625,8 @@ export function playEffectSound(
     else if (category === "heal") {
         if (source === "skill") {
             if (level === "large") playSE("heal3", 0.5);
-            else if (level === "medium") playSE("heal2", 0.5);
-            else playSE("heal1", 0.5);
+            else if (level === "medium") playSE("heal2");
+            else playSE("heal1");
         } else {
             playTone(620, 0.18, "triangle", 0.28);
             setTimeout(() => {
@@ -2498,9 +2637,9 @@ export function playEffectSound(
 
     // freeze
     else if (category === "freeze") {
-        if (source === "skill") {
-            playSE("freeze", 0.5);
-        } else {
+        if (source === "skill") { // 音量指定を削除
+            playSE("freeze");
+        } else { // こちらは変更なし
             playNoise(0.06, 0.15);
             setTimeout(() => {
                 playTone(180, 0.08, "square", 0.15);
@@ -2511,7 +2650,7 @@ export function playEffectSound(
     // knockback
     else if (category === "knockback") {
         if (source === "skill") {
-            playSE("edgeknockback", 0.5);
+            playSE("edgeknockback");
         }
     }
 
@@ -3559,9 +3698,10 @@ export function clearAllEffects() {
 
     hitEffects.length = 0;
 
-    chainBurstEffects.length = 0;
+    chainBreakEffects.length = 0;
 
     scorePopups.length = 0;
+    comboTierUpEffects.length = 0;
     damagePopups.length = 0;
 
     itemSkillEffects.length = 0;
@@ -3584,5 +3724,6 @@ export function areAllEffectsDone() {
            shotEffects.length === 0 &&
            hitEffects.length === 0 &&
            knockbackEffects.length === 0 &&
-           chainBurstEffects.length === 0;
+           chainBreakEffects.length === 0 &&
+           comboTierUpEffects.length === 0;
 }

@@ -422,9 +422,9 @@ function levelUp() {
     }
 
     //skill slot ,activeSkill stock増加
-    if (playerStats.level === 2) { playerStats.bonusSkillSlot++; slotIncrease++; playerStats.bonusActiveSkillStockMax++; stockIncrease++; }//test
+
     if (playerStats.level === 15) { playerStats.bonusSkillSlot++; slotIncrease++; }
-    if (playerStats.level === 30) { playerStats.bonusActiveSkillStockMax++; stockIncrease++;}
+    //if (playerStats.level === 30) { playerStats.bonusActiveSkillStockMax++; stockIncrease++;}
     if (playerStats.level === 35) { playerStats.bonusSkillSlot++; slotIncrease++; }
     if (playerStats.level === 70) { playerStats.bonusSkillSlot++; slotIncrease++; }
     return {slotIncrease, stockIncrease}; 

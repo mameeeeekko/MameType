@@ -329,22 +329,26 @@
         <div class="sound-setting-row">
           <label><input type="checkbox" id="bgmToggle"><span>BGM</span></label>
           <input type="range" id="bgmVolSlider" min="0" max="1" step="0.01" value="0.5">
-          <span id="bgmVolumeValue" class="sound-value">50%</span> 
+          <span id="bgmVolumeValue" class="sound-value">50%</span>
+          <button id="resetBgmVolumeBtn" class="reset-btn">R</button>
         </div>
         <div class="sound-setting-row">
           <label><input type="checkbox" id="typeSoundToggle"><span>タイプ</span></label>
           <input type="range" id="typeVolSlider" min="0" max="1" step="0.01" value="0.5">
-          <span id="typeVolumeValue" class="sound-value">50%</span> 
+          <span id="typeVolumeValue" class="sound-value">50%</span>
+          <button id="resetTypeVolumeBtn" class="reset-btn">R</button>
         </div>
         <div class="sound-setting-row">
           <label><input type="checkbox" id="missSoundToggle"><span>ミス</span></label>
           <input type="range" id="missVolSlider" min="0" max="1" step="0.01" value="0.5">
-          <span id="missVolumeValue" class="sound-value">50%</span> 
+          <span id="missVolumeValue" class="sound-value">50%</span>
+          <button id="resetMissVolumeBtn" class="reset-btn">R</button>
         </div>
         <div class="sound-setting-row">
           <label><input type="checkbox" id="SEToggle"><span>SE</span></label>
           <input type="range" id="seVolSlider" min="0" max="1" step="0.01" value="0.5">
-          <span id="seVolumeValue" class="sound-value">50%</span> 
+          <span id="seVolumeValue" class="sound-value">50%</span>
+          <button id="resetSeVolumeBtn" class="reset-btn">R</button>
         </div>
       </fieldset>
 
@@ -403,7 +407,7 @@
       <fieldset>
         <legend>ROMAJI</legend>
         <div class="config-row">
-          <label>末尾の「ん」を入力する方式</label>
+          <label>末尾の「ん」の入力</label>
             <div class="romaji-keybind-controls">
               <select id="finalNMode">
                 <option value="nn">nn</option>

@@ -59,7 +59,7 @@ const SHAPE_PROPS = {
 };
 
 const SIZE_PROPS = {
-    LARGE:  { name: "Large",  size: 28, damage: 60, minLen: 9, maxLen: 17, scoreMultiplier: 2.0, killSound: 5, killedEffect: "boss1" },
+    LARGE:  { name: "Large",  size: 28, damage: 60, minLen: 9, maxLen: 17, scoreMultiplier: 2.0, killSound: 5, killedEffect: "enemy2" },
     NORMAL: { name: "Normal", size: 20, damage: 30, minLen: 5,  maxLen: 10, scoreMultiplier: 1.2, killSound: 1, killedEffect: "enemy1" },
     SMALL:  { name: "Small",  size: 14, damage: 15, minLen: 2,  maxLen: 4,  scoreMultiplier: 0.8, killSound: 1, killedEffect: "enemy1" },
 };
@@ -1168,8 +1168,15 @@ knockback       : 問題クリア時ノックバック量
 speed           : 移動速度
 score           : 撃破スコア
 killSound       : 撃破SE番号
+                        if(type===1) playSE("kill1",0.35);
+                        if(type===2) playSE("kill2",0.5);
+                        if(type===3) playSE("kill3",0.5);
+                        if(type===4) playSE("killLaser",0.5);
+                        if(type===5) playSE("kill5",0.5);
+                        if(type===6) playSE("killBullet",0.5,1,0,1);
+                        if(type===7) playSE("killItem",0.5,1,0,1);
 damageSound     : 接触SE番号
-killedEffect    : 撃破エフェクトID enemy1, enemy2, midboss1,boss1, bullet
+killedEffect    : 撃破エフェクトID enemy1, enemy2, midboss1,boss1,boss2 bullet
 shape           : 形状ID
 pattern         : 模様ID
 
@@ -1236,16 +1243,16 @@ Object.assign(EnemyTypes, {
         color: "#d0c4b7", shape: "octagon", pattern: "honeycomb", size: 35,
         speed: 0.4, rotationSpeed: 0.02, damage: 30,
         tags: ["", "促音"], minLen: 12, maxLen: 18, score: 500,
-        killSound: 5, killedEffect: "boss2", damageSound: 1,
+        killSound: 3, killedEffect: "midboss1", damageSound: 1,
         hitCount: 3, knockback: 40
     },
 
     MID_BOSS_2: {
         id: "mid_boss_2", name: "中ボス 2: Guardian",
-        color: "#13c2c2", shape: "gate", pattern: "circuit", size: 35,
+        color: "#13c2c2", shape: "clover", pattern: "circuit", size: 35,
         speed: 0.5, rotationSpeed: 0.015, damage: 35,
         tags: ["", "句読点", "ことわざ"], minLen: 12, maxLen: 18, score: 800,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        killSound: 3, killedEffect: "midboss1", damageSound: 1,
         hitCount: 4, knockback: 45,
         behaviors: [
             { type: "spawn", interval: 20, preDelay: 2, spawnType: "gray_circle_small", count: 1 },
@@ -1256,8 +1263,8 @@ Object.assign(EnemyTypes, {
         id: "mid_boss_3", name: "中ボス 3: Gatekeeper",
         color: "#fa8c16", shape: "relay", pattern: "circuit", size: 35,
         speed: 0.6, rotationSpeed: 0.02, damage: 42,
-        tags: ["", "英語"], minLen: 14, maxLen: 20, score: 1200, killedEffect: "enemy2",
-        killSound: 5, damageSound: 1,
+        tags: ["", "英語"], minLen: 14, maxLen: 20, score: 1200, killedEffect: "midboss1",
+        killSound: 3, damageSound: 1,
         hitCount: 5, knockback: 45,
         behaviors:[
             { type: "attack", interval: 25, preDelay: 10, tags: ["","英語"], minLen: 3, maxLen: 6, damage: 20 },
@@ -1266,10 +1273,10 @@ Object.assign(EnemyTypes, {
 
     BOSS_1: {
         id: "boss_1", name: "ボス 1: Overlord",
-        color: "#eb2f96", shape: "pulsar", pattern: "circuit", size: 40,
+        color: "#eb2f96", shape: "chip", pattern: "circuit", size: 40,
         speed: 0.2, rotationSpeed: 0.04, damage: 40,
         tags: ["", "英語", "擬音"], minLen: 12, maxLen: 18, score: 1500,
-        killSound: 6, killedEffect: "boss1", damageSound: 1,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
         hitCount: 3, knockback: 30,
         behaviors: [
             { type: "shoot", interval: 5, preDelay: 1.0, bullet: { count: 5, speed: 1.0, damage: 15, size: 12, shape: "arrow", color: "#eb2f96", charType: "alphabet" } }
@@ -1278,10 +1285,10 @@ Object.assign(EnemyTypes, {
 
     MID_BOSS_4: {
         id: "mid_boss_4", name: "中ボス 4: Breaker",
-        color: "#a0d911", shape: "glitch_tri", pattern: "circuit", size: 40,
+        color: "#a0d911", shape: "star", pattern: "circuit", size: 40,
         speed: 0.6, rotationSpeed: 0.03, damage: 45,
-        tags: ["", "促音", "擬音", "記号"], minLen: 14, maxLen: 20, score: 1400, killedEffect: "enemy2",
-        killSound: 5, damageSound: 1,
+        tags: ["", "促音", "擬音", "記号"], minLen: 14, maxLen: 20, score: 1400, killedEffect: "midboss1",
+        killSound: 3, damageSound: 1,
         hitCount: 5, knockback: 45,
         behaviors: [
             { type: "attack", interval: 15, preDelay: 7, tags: ["","英語"], minLen: 5, maxLen: 8, damage: 40 },
@@ -1290,10 +1297,10 @@ Object.assign(EnemyTypes, {
 
     MID_BOSS_5: {
         id: "mid_boss_5", name: "中ボス 5: Void",
-        color: "#2f54eb", shape: "shard", pattern: "circuit", size: 40,
+        color: "#2f54eb", shape: "gear", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.06, damage: 60,
-        tags: ["", "ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2000, killedEffect: "enemy2",
-        killSound: 5, damageSound: 1,
+        tags: ["", "ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2000, killedEffect: "midboss1",
+        killSound: 3, damageSound: 1,
         hitCount: 5, knockback: 55,
         behaviors: [
             { type: "spawn", interval: 12, preDelay: 1.5, spawnType: ["gray_circle_small","gray_circle_normal"], count: 2 },
@@ -1302,10 +1309,10 @@ Object.assign(EnemyTypes, {
 
     MID_BOSS_6: {
         id: "mid_boss_6", name: "中ボス 6: Ghost",
-        color: "#bfbfbf", shape: "array", pattern: "circuit", size: 40,
+        color: "#bfbfbf", shape: "nova", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.01, damage: 70,
-        tags: ["", "擬音", "記号"], minLen: 15, maxLen: 22, score: 2200, killedEffect: "enemy2",
-        killSound: 5, damageSound: 1,
+        tags: ["", "擬音", "記号"], minLen: 15, maxLen: 22, score: 2200, killedEffect: "midboss1",
+        killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
             { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.5, damage: 20, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } }
@@ -1327,10 +1334,10 @@ Object.assign(EnemyTypes, {
 
     MID_BOSS_7: {
         id: "mid_boss_7", name: "中ボス 5: Void",
-        color: "#2f54eb", shape: "shard", pattern: "circuit", size: 40,
+        color: "#2f54eb", shape: "virus", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.06, damage: 60,
-        tags: ["", "ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2200, killedEffect: "enemy2",
-        killSound: 5, damageSound: 1,
+        tags: ["", "ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2200, killedEffect: "midboss1",
+        killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
             { type: "spawn", interval: 10, preDelay: 1.5, spawnType: ["gray_circle_small","gray_circle_normal"], count: 2 },
@@ -1340,10 +1347,10 @@ Object.assign(EnemyTypes, {
 
     MID_BOSS_8: {
         id: "mid_boss_8", name: "中ボス 6: Ghost",
-        color: "#bfbfbf", shape: "array", pattern: "circuit", size: 40,
+        color: "#bfbfbf", shape: "diamond", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.01, damage: 70,
-        tags: ["", "擬音", "記号"], minLen: 15, maxLen: 22, score: 2400, killedEffect: "enemy2",
-        killSound: 5, damageSound: 1,
+        tags: ["", "擬音", "記号"], minLen: 15, maxLen: 22, score: 2400, killedEffect: "midboss1",
+        killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
             { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.5, damage: 30, size: 10, shape: "arrow", color: "#bfbfbf", charType: "number" } },
@@ -1353,10 +1360,10 @@ Object.assign(EnemyTypes, {
 
     MID_BOSS_9: {
         id: "mid_boss_9", name: "中ボス 6: Ghost",
-        color: "#bfbfbf", shape: "array", pattern: "circuit", size: 40,
+        color: "#bfbfbf", shape: "mobius", pattern: "circuit", size: 40,
         speed: 0.9, rotationSpeed: 0.01, damage: 70,
-        tags: ["", "擬音", "記号", "英語"], minLen: 15, maxLen: 22, score: 2600, killedEffect: "enemy2",
-        killSound: 5, damageSound: 1,
+        tags: ["", "擬音", "記号", "英語"], minLen: 15, maxLen: 22, score: 2600, killedEffect: "midboss1",
+        killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
             { type: "shoot", interval: 10, preDelay: 1.0, bullet: { count: 10, speed: 1.5, damage: 35, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } },
@@ -1367,10 +1374,10 @@ Object.assign(EnemyTypes, {
 
     BOSS_3: {
         id: "boss_3", name: "ボス 3: The Admin",
-        color: "#cf1322", shape: "terminal", pattern: "circuit", size: 40,
+        color: "#cf1322", shape: "omega", pattern: "circuit", size: 40,
         speed: 0.1, rotationSpeed: 0.02, damage: 60,
         tags: ["", "英語", "記号", "句読点", "ことわざ"], minLen: 15, maxLen: 25, score: 5000,
-        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        killSound: 5, killedEffect: "boss2", damageSound: 1,
         hitCount: 7, knockback: 30,
         behaviors: [
             { type: "spawn", interval: 16, preDelay: 1.5, spawnType: ["gray_circle_small","gray_circle_normal"], count: 2 },

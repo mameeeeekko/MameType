@@ -3,7 +3,8 @@
 import { getDisplayFullRoma, getDisplayRomaForEnemy } from "./typingLogic.js";
 import { getDifficulty } from "./difficulties.js";
 import { getNow } from "./gameCore.js";
-import { getChainMultiplier } from "./enemyCore.js"
+import { getChainMultiplier } from "./enemyCore.js";
+import { spawnComboTierUpEffect, playComboTierUpSound } from "./effectManager.js";
 import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, } from "./questPlayerStats.js";
 import { ACTIVE_SKILLS } from "./questSkills.js";
 import { getItemDescription } from "./enemy.js";
@@ -2004,10 +2005,37 @@ export function updateComboTierBar(stats) {
             flashBlock.classList.add(
                 "flash"
             );
+
+            // Tier上昇時のエフェクト（MAXではない）
+            const isNowOverdrive = combo >= OVERDRIVE_COMBO;
+            if (!isNowOverdrive) {
+                const tierWrapperRect = tierWrapper.getBoundingClientRect();
+                const canvasRect = document.getElementById("enemyModeCanvas").getBoundingClientRect();
+                const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
+                const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
+                spawnComboTierUpEffect(centerX, centerY, currentTier, false);
+                playComboTierUpSound(currentTier, false);
+            }
         }
     }
 
+    // =====================
+    // MAX到達時の演出（prevComboTierとは別に判定）
+    // =====================
+    const wasOverdrive = stats.prevCombo < OVERDRIVE_COMBO;
+
+    if (wasOverdrive && isOverdrive) {
+        const tierWrapperRect = tierWrapper.getBoundingClientRect();
+        const canvasRect = document.getElementById("enemyModeCanvas").getBoundingClientRect();
+        const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
+        const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
+        const lastTier = COMBO_TIERS.length - 1; // 最後のティア
+        spawnComboTierUpEffect(centerX, centerY, lastTier, true);
+        playComboTierUpSound(lastTier, true);
+    }
+
     prevComboTier = currentTier;
+    stats.prevCombo = combo; // 現在のコンボ数を保存
 }
 
 // ===============================

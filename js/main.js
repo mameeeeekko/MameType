@@ -79,6 +79,7 @@ let settingsBtn, settingsBackBtn;
 let bgmToggle, typeSoundToggle, missSoundToggle;
 let flashToggle, SEToggle, soundToggle, soundIcon;
 let bgmVolSlider, typeVolSlider, missVolSlider, seVolSlider;
+let resetBgmVolumeBtn, resetSeVolumeBtn, resetTypeVolumeBtn, resetMissVolumeBtn;
 
 let mapBackBtn;
 
@@ -166,6 +167,12 @@ function cacheDOM() {
   typeVolSlider = document.getElementById("typeVolSlider");
   missVolSlider = document.getElementById("missVolSlider");
   seVolSlider = document.getElementById("seVolSlider");
+
+  // 音量リセットボタン
+  resetBgmVolumeBtn = document.getElementById("resetBgmVolumeBtn");
+  resetSeVolumeBtn = document.getElementById("resetSeVolumeBtn");
+  resetTypeVolumeBtn = document.getElementById("resetTypeVolumeBtn");
+  resetMissVolumeBtn = document.getElementById("resetMissVolumeBtn");
 
   mapBackBtn = document.getElementById("mapBackBtn");
 
@@ -745,6 +752,25 @@ function initSettingsUI() {
     });
   });
 
+  // 音量リセットボタンのイベント
+  const resetVolume = (slider, volumeKey) => {
+    const defaultValue = 0.5;
+    slider.value = defaultValue;
+    Game.setSoundVolume(volumeKey, defaultValue);
+    saveSettings();
+    const valDisplay = document.getElementById(`${volumeKey}VolumeValue`);
+    if (valDisplay) {
+      valDisplay.textContent = `${Math.round(defaultValue * 100)}%`;
+    }
+    Game.playTestSound(volumeKey);
+  };
+
+  resetBgmVolumeBtn?.addEventListener("click", () => resetVolume(bgmVolSlider, 'bgm'));
+  resetSeVolumeBtn?.addEventListener("click", () => resetVolume(seVolSlider, 'se'));
+  resetTypeVolumeBtn?.addEventListener("click", () => resetVolume(typeVolSlider, 'type'));
+  resetMissVolumeBtn?.addEventListener("click", () => resetVolume(missVolSlider, 'miss'));
+
+
   if (soundToggle && soundIcon) {
     soundToggle.addEventListener("change", () => {
       Game.setSoundEnabled(soundToggle.checked);
@@ -758,6 +784,11 @@ function initSettingsUI() {
   // 末尾「ん」入力方式設定
   const finalNModeEl = document.getElementById("finalNMode");
   if (finalNModeEl) {
+    // 親要素にスタイル用のクラスを追加
+    if (finalNModeEl.parentElement && finalNModeEl.parentElement.classList.contains('setting-item')) {
+      finalNModeEl.parentElement.classList.add('setting-item-select');
+    }
+
     // 初期値読み込み（localStorageに保存されていればそれを使う）
     try {
       const stored = localStorage.getItem("final_n_mode");

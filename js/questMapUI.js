@@ -1,4 +1,4 @@
-//questMapUI.js
+        //questMapUI.js
 
 import { QUEST_MAP } from "./questMap.js";
 import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId } from "./questProgress.js";
@@ -143,6 +143,8 @@ export function renderQuestMapUI(){
     // ノードに入れるか判定
     // =========================
     function canEnterNode(node, world) {
+
+        if (window.QUEST_MAP_ADMIN_SHOW_ALL) return true;
 
         // どのノードからも指されていないノードは、そのワールドの開始点とみなす
         const allNexts = new Set(world.nodes.flatMap(n => n.next || []));
@@ -536,7 +538,9 @@ export function renderQuestMapUI(){
 // ワールド切り替え（中央上部）
 // ====================================
 function renderWorldSelector(container) {
-    const unlocked = getUnlockedWorlds();
+    const unlocked = window.QUEST_MAP_ADMIN_SHOW_ALL
+        ? Object.keys(QUEST_MAP)
+        : getUnlockedWorlds();
     const currentId = getSelectedWorldId();
     const currentIndex = unlocked.indexOf(currentId);
 

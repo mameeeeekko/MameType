@@ -376,8 +376,8 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   await initAudio();
   if (getSoundEnabled() && getSoundSettings().bgm) {
     // モード設定からBGM IDを取得。なければデフォルトを再生
-    const bgmId = config.mode?.bgm || "bgm_normal1";
-    playBGM(bgmId, 0.5);
+    const bgmId = config.mode?.bgm || "bgm_rainy";
+    playBGM(bgmId, 1.0);
   }
   gameState.startTime = getNow(); // BGM表示のために開始時間をセット
 

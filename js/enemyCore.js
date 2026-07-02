@@ -4,9 +4,9 @@ import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,
     showGameMessage,renderSystemMessage,  updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI} from "./enemyRenderer.js";
 import { setupCanvasDPR } from "./canvasUtil.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone,
-    renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBurstEffect, playLoopSE, stopLoopSE,
-    renderChainBurstEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
+import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
+    renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBreakEffect, playLoopSE, stopLoopSE,
+    renderChainBreakEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
     renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, spawnItemSkillEffect,
     renderItemSkillEffects, clearAllEffects, playErrorSound, playPhaseWarningSound,
     renderLaserEffects, renderPlayerDamageEffects, spawnLaserEffect, spawnHitWave,
@@ -17,7 +17,7 @@ import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
 import { handleKey, resetCandidates, fullResetInput } from "./inputCore.js";
 import { handleGlobalSoundToggle } from "./main.js";
 import { gameState, setGameActive, renderState, setLastWasEnemyMode, getSoundSettings, getSoundEnabled, resetGameState, setPaused, getPaused, getNow, getERank } from "./gameCore.js";
-import { GameModes } from "./gameModes.js";
+import { GameModes, QUEST_MAP } from "./gameModes.js";
 import { addRankingEntry } from "./storage.js";
 import { ENEMY_MODE_CONFIG, STAGES, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
 import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats, 
@@ -154,7 +154,8 @@ function chainBurst(){
     const pos = getChainBarCenter();
   
     // 演出
-     spawnChainBurstEffect(pos.x, pos.y);
+    spawnChainBreakEffect(pos.x, pos.y);
+    playChainBreakSound();
    
     stats.chainCount = 0;
 
@@ -427,9 +428,8 @@ function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // 背景描画（クエストノードの設定を優先し、なければステージの設定を使用）
-    const bgSource = gameState.currentQuestNode || gameState.stage;
-    if (bgSource) {
-        renderQuestBackground(ctx, bgSource);
+    if (gameState.enemyStats.activeBgImage) {
+        renderQuestBackground(ctx, { bgImage: gameState.enemyStats.activeBgImage });
     }
 
     // ===============================
@@ -621,6 +621,8 @@ function gameLoop(timestamp) {
     renderHitParticles(ctx);
     renderKnockbackEffects(ctx);
   
+    renderChainBreakEffects(ctx);
+    renderComboTierUpEffects(ctx);
     renderScorePopups(ctx);
     renderDamagePopups(ctx);
 
@@ -941,7 +943,6 @@ function gameLoop(timestamp) {
       }
     }
 
-    renderChainBurstEffects(ctx);
     loopId = requestAnimationFrame(gameLoop);
 }
 
@@ -978,12 +979,31 @@ function transitionToNextPhase(now) {
     playPhaseWarningSound();
 
     // BGMの切り替え判定
-    const nodeBgm = gameState.currentQuestNode?.bgm;
-    const nextBgm = nextPhase.bgm || nodeBgm || stage.bgm || "bgm_enemy1";
-    if (nextBgm !== stats.activeBgm) {
-        stats.activeBgm = nextBgm;
+    let resolvedBgm = "bgm_swim";
+    let resolvedBgImage = gameState.enemyStats.activeBgImage || "battle_blue";
+
+    if (gameState.isQuestMode && gameState.currentQuestNode) {
+        const node = gameState.currentQuestNode;
+        const worldId = Object.keys(QUEST_MAP).find(w => QUEST_MAP[w].nodes.some(n => n.id === node.id));
+        const world = QUEST_MAP[worldId];
+        if (world && world.defaults) {
+            const stageType = node.stage.includes("BOSS") ? "boss" : node.stage.includes("MID_") ? "mid_boss" : "normal";
+            resolvedBgm = world.defaults.bgm?.[stageType] || "bgm_swim";
+            resolvedBgImage = world.defaults.bgImage?.[stageType] || "battle_blue";
+        }
+    }
+    // フェーズ固有BGM > ノード固有BGM > ワールドデフォルト > フォールバック
+    resolvedBgm = nextPhase.bgm || gameState.currentQuestNode?.bgm || resolvedBgm;
+    resolvedBgImage = nextPhase.bgImage || gameState.currentQuestNode?.bgImage || resolvedBgImage;
+
+    // ★ 背景画像も更新
+    stats.activeBgImage = resolvedBgImage;
+
+    if (resolvedBgm !== stats.activeBgm) {
+        stats.activeBgm = resolvedBgm;
         if (getSoundEnabled() && getSoundSettings().bgm) {
-            playBGM(nextBgm, 0.2);
+            gameState.startTime = getNow(); // BGM表示タイマーをリセット
+            playBGM(resolvedBgm, 1.0);
         }
     }
 
@@ -1783,6 +1803,7 @@ export async function startEnemyMode(config = {}) {
         endTime: 0,          // 終了時間
         maxCombo: 0,         // 最大コンボ
         currentCombo: 0,     // 現在のコンボ
+        prevCombo: 0,        // 1フレーム前のコンボ数
         defeatedCount: 0,    // 倒した敵の数
         processedCount: 0,   // 倒した or 消えた 敵の合計(object)
         objectiveSpawned: 0,  
@@ -1852,9 +1873,40 @@ export async function startEnemyMode(config = {}) {
         gameState.activeSkillStock = 0; // ストックを0にして使用不可にする
     }
 
-    const nodeBgm = gameState.currentQuestNode?.bgm;
-    const initialBgm = currentPhase.bgm || nodeBgm || stage.bgm || "bgm_enemy1";
-    gameState.enemyStats.activeBgm = initialBgm;
+     // BGMと背景画像の解決ロジック
+    let resolvedBgm = "bgm_swim";
+    let resolvedBgImage = "battle_blue";
+
+    // 優先順位: ノード固有設定 > ワールドデフォルト > フェーズ/ステージ設定 > グローバルフォールバック
+    if (config.isQuestMode && gameState.currentQuestNode) {
+        const node = gameState.currentQuestNode;
+        const worldId = Object.keys(QUEST_MAP).find(w => QUEST_MAP[w].nodes.some(n => n.id === node.id));
+        const world = QUEST_MAP[worldId];
+
+        // 1. ワールドのデフォルト設定をベースにする
+        if (world && world.defaults) {
+            const stageType = node.stage.includes("BOSS") ? "boss" : node.stage.includes("MID_") ? "mid_boss" : "normal";
+            resolvedBgm = world.defaults.bgm?.[stageType] || "bgm_swim";
+            resolvedBgImage = world.defaults.bgImage?.[stageType] || "battle_blue";
+        }
+
+        // 2. ノード固有設定があれば最優先で上書き
+        if (node.bgm) resolvedBgm = node.bgm;
+        if (node.bgImage) resolvedBgImage = node.bgImage;
+    }
+
+    // 3. 上記で設定されていない場合のみ、ステージ/フェーズ設定をフォールバックとして使用
+    if (resolvedBgm === "bgm_swim" && currentPhase.bgm) resolvedBgm = currentPhase.bgm;
+    if (currentPhase.bgImage) {
+        // resolvedBgImage が初期値のままの場合のみ、ステージ設定で上書き
+        if (resolvedBgImage === "battle_blue") {
+            resolvedBgImage = currentPhase.bgImage;
+        }
+    }
+    
+    gameState.enemyStats.activeBgm = resolvedBgm;
+    // ★ gameStateに背景画像を保存
+    gameState.enemyStats.activeBgImage = resolvedBgImage;
 
     //スキルと描画を state.player に統一
     gameState.player = player;
@@ -1913,7 +1965,7 @@ export async function startEnemyMode(config = {}) {
     
     await initAudio();   // ← 音読み込み
     if (getSoundEnabled() && getSoundSettings().bgm) {
-        playBGM(initialBgm, 0.2);
+        playBGM(resolvedBgm, 1.0);
         gameState.startTime = getNow(); // BGM表示のために開始時間をセット
     }
 
@@ -2013,6 +2065,14 @@ function ensureEnemySoundToggle() {
         toggle.onclick = (e) => {
             e.stopPropagation();
             handleGlobalSoundToggle();
+        };
+        // ホバーエフェクト
+        toggle.onmouseenter = () => {
+            toggle.style.transform = 'scale(1.1)';
+            toggle.style.transition = 'transform 0.2s ease';
+        };
+        toggle.onmouseleave = () => {
+            toggle.style.transform = 'scale(1.0)';
         };
         container.appendChild(toggle);
     }
