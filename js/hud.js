@@ -138,6 +138,15 @@ function updateHudSoundBtn() {
       e.stopPropagation();
       handleGlobalSoundToggle();
     };
+    // ホバーエフェクト
+    const btn = soundCtrl.querySelector(".sound-toggle-btn");
+    if (btn) {
+        btn.onmouseenter = () => {
+            btn.style.transform = 'scale(1.1)';
+            btn.style.transition = 'transform 0.2s ease';
+        };
+        btn.onmouseleave = () => btn.style.transform = 'scale(1.0)';
+    }
     hud.appendChild(soundCtrl);
   }
 

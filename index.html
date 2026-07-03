@@ -62,7 +62,7 @@
   <button id="questStartBtn">CONTINUE</button>
   <button id="questSaveBtn">SAVE／LOAD</button>
   <button id="questStartBtnFromBeginning">NEW GAME</button>
-  <button id="questStartMenuBackBtn">MENU</button>
+  <button id="questStartMenuBackBtn">BACK</button>
 
 </div>
 <!-- =====================================================
@@ -88,7 +88,7 @@
   <button id="timeAttackBtn">TIME ATTACK</button>
   <button id="longTextBtn">LONG TEXT</button>
   <button id="enemyModeBtn">ENEMY</button>
-  <button id="startMenuBackBtn">MENU</button>
+  <button id="startMenuBackBtn">BACK</button>
 
 </div>
 
@@ -102,7 +102,7 @@
   <button id="freeTimeAttackBtn">TIME ATTACK</button>
   <button id="freeLongTextBtn">LONG TEXT</button>
   <button id="freeEnemyModeBtn">ENEMY</button>
-  <button id="freeStartMenuBackBtn">MENU</button>
+  <button id="freeStartMenuBackBtn">BACK</button>
 
   <!-- フリーモード詳細設定コンテナ -->
   <div id="freeModeConfig" class="free-config-container" style="display: none;">
@@ -329,22 +329,26 @@
         <div class="sound-setting-row">
           <label><input type="checkbox" id="bgmToggle"><span>BGM</span></label>
           <input type="range" id="bgmVolSlider" min="0" max="1" step="0.01" value="0.5">
-          <span id="bgmVolumeValue" class="sound-value">50%</span> 
+          <span id="bgmVolumeValue" class="sound-value">50%</span>
+          <button id="resetBgmVolumeBtn" class="reset-btn">R</button>
         </div>
         <div class="sound-setting-row">
           <label><input type="checkbox" id="typeSoundToggle"><span>タイプ</span></label>
           <input type="range" id="typeVolSlider" min="0" max="1" step="0.01" value="0.5">
-          <span id="typeVolumeValue" class="sound-value">50%</span> 
+          <span id="typeVolumeValue" class="sound-value">50%</span>
+          <button id="resetTypeVolumeBtn" class="reset-btn">R</button>
         </div>
         <div class="sound-setting-row">
           <label><input type="checkbox" id="missSoundToggle"><span>ミス</span></label>
           <input type="range" id="missVolSlider" min="0" max="1" step="0.01" value="0.5">
-          <span id="missVolumeValue" class="sound-value">50%</span> 
+          <span id="missVolumeValue" class="sound-value">50%</span>
+          <button id="resetMissVolumeBtn" class="reset-btn">R</button>
         </div>
         <div class="sound-setting-row">
           <label><input type="checkbox" id="SEToggle"><span>SE</span></label>
           <input type="range" id="seVolSlider" min="0" max="1" step="0.01" value="0.5">
-          <span id="seVolumeValue" class="sound-value">50%</span> 
+          <span id="seVolumeValue" class="sound-value">50%</span>
+          <button id="resetSeVolumeBtn" class="reset-btn">R</button>
         </div>
       </fieldset>
 
@@ -403,7 +407,7 @@
       <fieldset>
         <legend>ROMAJI</legend>
         <div class="config-row">
-          <label>末尾の「ん」を入力する方式</label>
+          <label>末尾の「ん」の入力</label>
             <div class="romaji-keybind-controls">
               <select id="finalNMode">
                 <option value="nn">nn</option>
@@ -471,7 +475,7 @@
 
         <div id="records-buttons">
           <button id="resetRecordsBtn">RESET</button>
-          <button id="recordsBackBtn">MENU</button>
+          <button id="recordsBackBtn">BACK</button>
         </div>
       </div>
 
@@ -486,7 +490,7 @@
 <div id="onlineRankingScreen" class="ranking-screen hidden">
   <h2>ONLINE RANKING</h2>
 
-  <div class="ranking-tabs">
+  <div id="onlineRankingModeButtons" class="ranking-tabs">
     <button class="ranking-tab active" data-mode="normal">STANDARD</button>
     <button class="ranking-tab" data-mode="time_attack">TIME ATTACK</button>
     <button class="ranking-tab" data-mode="long_text">LONG TEXT</button>
@@ -495,7 +499,7 @@
 
   <div id="rankingList"></div>
 
-  <button id="rankingBackBtn">MENU</button>
+  <button id="rankingBackBtn">BACK</button>
 </div>
 
 
@@ -814,13 +818,13 @@
     <div id="resultStats"></div>
     <div id="onlineRanking"></div>
     <div class="result-actions">
-      <button id="playAgainBtn" class="result-btn">RETRY</button>
-      <button id="retryMissedBtn" class="result-btn secondary">RETRY MISTAKES</button>
-      <button id="resultToStartMenuBtn" class="result-btn secondary">SELECT GAMES</button>
+      <button id="playAgainBtn" class="result-btn">PLAY AGAIN</button>
+      <button id="retryMissedBtn" class="result-btn secondary">RETRY MISTAKES(M)</button>
+      <button id="resultToStartMenuBtn" class="result-btn secondary">SELECT MODES</button>
       <button id="resultToQuestMenuBtn" class="result-btn secondary">QUEST MENU</button>
-      <button id="questBackBtn" class="result-btn secondary">QUEST MAP</button> 
+      <button id="questBackBtn" class="result-btn secondary">BACK</button> 
       <button id="resultOpenRecordsBtn" class="result-btn secondary">RECORDS</button>
-      <button id="resultBackBtn" class="result-btn secondary">MENU</button>
+      <button id="resultBackBtn" class="result-btn secondary">BACK TO MENU</button>
     </div>
   </div>
 </div>

@@ -79,6 +79,7 @@ let settingsBtn, settingsBackBtn;
 let bgmToggle, typeSoundToggle, missSoundToggle;
 let flashToggle, SEToggle, soundToggle, soundIcon;
 let bgmVolSlider, typeVolSlider, missVolSlider, seVolSlider;
+let resetBgmVolumeBtn, resetSeVolumeBtn, resetTypeVolumeBtn, resetMissVolumeBtn;
 
 let mapBackBtn;
 
@@ -166,6 +167,12 @@ function cacheDOM() {
   typeVolSlider = document.getElementById("typeVolSlider");
   missVolSlider = document.getElementById("missVolSlider");
   seVolSlider = document.getElementById("seVolSlider");
+
+  // 音量リセットボタン
+  resetBgmVolumeBtn = document.getElementById("resetBgmVolumeBtn");
+  resetSeVolumeBtn = document.getElementById("resetSeVolumeBtn");
+  resetTypeVolumeBtn = document.getElementById("resetTypeVolumeBtn");
+  resetMissVolumeBtn = document.getElementById("resetMissVolumeBtn");
 
   mapBackBtn = document.getElementById("mapBackBtn");
 
@@ -745,6 +752,25 @@ function initSettingsUI() {
     });
   });
 
+  // 音量リセットボタンのイベント
+  const resetVolume = (slider, volumeKey) => {
+    const defaultValue = 0.5;
+    slider.value = defaultValue;
+    Game.setSoundVolume(volumeKey, defaultValue);
+    saveSettings();
+    const valDisplay = document.getElementById(`${volumeKey}VolumeValue`);
+    if (valDisplay) {
+      valDisplay.textContent = `${Math.round(defaultValue * 100)}%`;
+    }
+    Game.playTestSound(volumeKey);
+  };
+
+  resetBgmVolumeBtn?.addEventListener("click", () => resetVolume(bgmVolSlider, 'bgm'));
+  resetSeVolumeBtn?.addEventListener("click", () => resetVolume(seVolSlider, 'se'));
+  resetTypeVolumeBtn?.addEventListener("click", () => resetVolume(typeVolSlider, 'type'));
+  resetMissVolumeBtn?.addEventListener("click", () => resetVolume(missVolSlider, 'miss'));
+
+
   if (soundToggle && soundIcon) {
     soundToggle.addEventListener("change", () => {
       Game.setSoundEnabled(soundToggle.checked);
@@ -758,6 +784,11 @@ function initSettingsUI() {
   // 末尾「ん」入力方式設定
   const finalNModeEl = document.getElementById("finalNMode");
   if (finalNModeEl) {
+    // 親要素にスタイル用のクラスを追加
+    if (finalNModeEl.parentElement && finalNModeEl.parentElement.classList.contains('setting-item')) {
+      finalNModeEl.parentElement.classList.add('setting-item-select');
+    }
+
     // 初期値読み込み（localStorageに保存されていればそれを使う）
     try {
       const stored = localStorage.getItem("final_n_mode");
@@ -1613,12 +1644,10 @@ function handleResultKey(e) {
   const key = e.key.toLowerCase(); // ここだけ残す（UI用）
 
   switch (key) {
-    case "a":
-    case "enter":
-    case " ":
+    case "p":
       playAgainBtn?.click();
       break;
-    case "m":
+    case "m": //
       // クエスト、スキルモード、長文モード、エネミーモードではミス練習リトライを無効化
       if (gameState.currentQuestNode || 
           gameState.currentChallenge?.isSkillMode || 
@@ -1629,21 +1658,21 @@ function handleResultKey(e) {
       retryBtn?.click();
       }
       break;
-    case "s":
+    case "s": // select menu
       if (gameState.currentQuestNode || gameState.currentChallenge?.isSkillMode) {
         break;
       } else {
         resultToStartMenuBtn?.click();
       }  
       break;
-    case "b":
+    case "b": // back to menu
       if (gameState.currentQuestNode || gameState.currentChallenge?.isSkillMode) {
         questBackBtn?.click();
       } else {
         resultBackBtn?.click();
       }
       break;
-    case "r":
+    case "r": // records
       if (gameState.currentQuestNode || gameState.currentChallenge?.isSkillMode) {
         break;
       } else {
@@ -1812,58 +1841,27 @@ function handleMenuKey(e) {
 
   const key = e.key.toLowerCase();
 
-  if (settingsDiv.style.display !== "none") {
-    if (key === "b" || key === "escape") {
-      e.preventDefault();
-      settingsBackBtn?.click();
-    }
-    return true;
-  }
-
-  if (recordsDiv.style.display !== "none") {
-    if (key === "b" || key === "escape") {
-      e.preventDefault();
-      recordsBackBtn?.click();
-    }
-    return true;
-  }
-
-  if (onlineRankingDiv.style.display !== "none") {
-    if (key === "b" || key === "escape") {
-      e.preventDefault();
-      rankingBackBtn?.click();
-    }
-    return true;
-  }
-
-  if (menuDiv.style.display !== "none") {
-    switch (key) {
-      case "h": startMenuBtn?.click(); break;
-      case "f": freeModeBtn?.click(); break;
-      case "r": recordsMenuBtn?.click(); break;
-      case "s": settingsBtn?.click(); break;
-    }
-    return true;
-  }
-
-  if (startMenuDiv.style.display !== "none") {
-    switch (key) {
-      case "k": startBtn?.click(); break;
-      case "t": timeAttackBtn?.click(); break;
-      case "l": longTextBtn?.click(); break;
-      case "b": startMenuBackBtn?.click(); break;
-      case "f": switchToFreeBtn?.click(); break;
-    }
-    return true;
-  }
-
-  if (freeStartMenuDiv.style.display !== "none") {
-    switch (key) {
-      case "k": freeStartBtn?.click(); break;
-      case "t": freeTimeAttackBtn?.click(); break;
-      case "l": freeLongTextBtn?.click(); break;
-      case "b": freeStartMenuBackBtn?.click(); break;
-      case "n": switchToNormalBtn?.click(); break;
+  // クエストモードの難易度選択モーダルが開いている場合、難易度選択のショートカットキーを処理する
+  const questModal = document.getElementById("questModal");
+  if (questModal && questModal.style.display !== "none") {
+    const titleEl = questModal.querySelector(".quest-modal-title");
+    if (titleEl && titleEl.textContent === "DIFFICULTY") {
+      const btnContainer = questModal.querySelector(".quest-difficulty-list");
+      if (btnContainer) {
+        let btn;
+        switch (key) {
+          case "e": // EASY
+            btn = btnContainer.querySelector("button:nth-child(1)");
+            break;
+          case "n": // NORMAL
+            btn = btnContainer.querySelector("button:nth-child(2)");
+            break;
+          case "h": // HARD
+            btn = btnContainer.querySelector("button:nth-child(3)");
+            break;
+        }
+        btn?.click();
+      }
     }
     return true;
   }
@@ -1874,6 +1872,228 @@ function handleMenuKey(e) {
     if (key === "b") {
       modal.classList.add("hidden");
       return true;
+    }
+  }
+
+  // アチーブメントモーダルが開いている場合、閉じるショートカットキーを処理する
+  const achModal = document.getElementById("achModal");
+  if (achModal && achModal.style.display !== "none") {
+    if (key === "b" || key === "escape") {
+      e.preventDefault();
+      document.getElementById("achClose")?.click();
+      return true; // モーダルを閉じたので処理を終了
+    }
+  }
+
+  // 通常ステータスモーダル
+  const statsModal = document.getElementById("playerStatsModal");
+  if (statsModal && statsModal.style.display !== "none") {
+    if (key === "b" || key === "escape") {
+      e.preventDefault();
+      document.getElementById("statsClose")?.click();
+      return true; // モーダルを閉じたので処理を終了
+    }
+  }
+
+  // クエストステータスモーダル
+  const questStatsModal = document.getElementById("questStatsModal");
+  if (questStatsModal && questStatsModal.style.display !== "none") {
+    if (key === "b" || key === "escape") {
+      e.preventDefault();
+      document.getElementById("statsCloseQuest")?.click();
+      return true; // モーダルを閉じたので処理を終了
+    }
+  }
+
+  if (settingsDiv.style.display !== "none") {
+    if (key === "b" || key === "escape") {
+      e.preventDefault();
+      settingsBackBtn?.click();
+    }
+    return true;
+  }
+
+  if (onlineRankingDiv.style.display !== "none") {
+    if (key === "b" || key === "escape") {
+      e.preventDefault();
+      rankingBackBtn?.click();
+      return true;
+    }
+
+    // タブ切り替え
+    const onlineRankingModeButtons = document.getElementById("onlineRankingModeButtons");
+    if (onlineRankingModeButtons && !e.ctrlKey && !e.metaKey) { //修飾キーのチェックを追加
+        let targetButton = null;
+        switch (key) {
+            case "s": // Standard(Normal)
+                targetButton = onlineRankingModeButtons.querySelector('button[data-mode="normal"]');
+                break;
+            case "t": // Time Attack
+                targetButton = onlineRankingModeButtons.querySelector('button[data-mode="time_attack"]');
+                break;
+            case "l": // Long Text
+                targetButton = onlineRankingModeButtons.querySelector('button[data-mode="long_text"]');
+                break;
+            case "e": // Enemy Mode
+                targetButton = onlineRankingModeButtons.querySelector('button[data-mode="enemy_mode"]');
+                break;
+        }
+        if (targetButton) {
+            targetButton.click();
+            e.preventDefault();
+        }
+    }
+    return true;
+  }
+
+  if (recordsDiv.style.display !== "none") {
+    if (key === "b" || key === "escape") {
+      e.preventDefault();
+      recordsBackBtn?.click();
+      return true;
+    }
+
+    // タブ切り替え
+    const recordsModeButtons = document.getElementById("recordsModeButtons");
+    if (recordsModeButtons && !e.ctrlKey && !e.metaKey) { // Ctrl/Cmd + R (リロード) を除外
+        let targetButton = null;
+        switch (key) {
+            case "s": // Standard(Normal)
+                targetButton = recordsModeButtons.querySelector('button[data-mode="normal"]');
+                break;
+            case "t": // Time Attack
+                targetButton = recordsModeButtons.querySelector('button[data-mode="time_attack"]');
+                break;
+            case "l": // Long Text
+                targetButton = recordsModeButtons.querySelector('button[data-mode="long_text"]');
+                break;
+            case "e": // Enemy Mode
+                targetButton = recordsModeButtons.querySelector('button[data-mode="enemy_mode"]');
+                break;
+        }
+        if (targetButton) {
+            targetButton.click();
+            e.preventDefault();
+        }
+    }
+    return true;
+  }
+
+  if (menuDiv.style.display !== "none") {
+    // メインメニュー
+    switch (key) {
+      case "h": startMenuBtn?.click(); break;
+      case "d": startMenuBtn?.click(); break; // Daily
+      case "q": questMenuBtn?.click(); break; // Quest
+      case "f": freeModeBtn?.click(); break;
+      case "r": recordsMenuBtn?.click(); break;
+      case "o": onlineRankingBtn?.click(); break; // Online
+      case "s": settingsBtn?.click(); break;
+      case "a": // Achievements
+        document.getElementById("hudAchievementsBtn")?.click();
+        break;
+      case "i": // Info/Stats
+        document.getElementById("hudDetailBtn")?.click();
+        break;
+    }
+    return true;
+  }
+
+  if (startMenuDiv.style.display !== "none") {
+    // デイリーモードメニュー
+    switch (key) {
+      case "k": startBtn?.click(); break;
+      case "s": startBtn?.click(); break; // Standard
+      case "t": timeAttackBtn?.click(); break;
+      case "l": longTextBtn?.click(); break;
+      case "e": enemyModeBtn?.click(); break; // Enemy
+      case "b": startMenuBackBtn?.click(); break;
+      case "f": switchToFreeBtn?.click(); break;
+      case "a": // Achievements
+        document.getElementById("hudAchievementsBtn")?.click();
+        break;
+      case "i": // Info/Stats
+        document.getElementById("hudDetailBtn")?.click();
+        break;
+    }
+    return true;
+  }
+
+  if (freeStartMenuDiv.style.display !== "none") {
+    // フリーモードメニュー
+    switch (key) {
+      case "k": freeStartBtn?.click(); break;
+      case "s": freeStartBtn?.click(); break; // Standard
+      case "t": freeTimeAttackBtn?.click(); break;
+      case "l": freeLongTextBtn?.click(); break;
+      case "e": freeEnemyModeBtn?.click(); break; // Enemy
+      case "b": freeStartMenuBackBtn?.click(); break;
+      case "n": switchToNormalBtn?.click(); break;
+      case "a": // Achievements
+        document.getElementById("hudAchievementsBtn")?.click();
+        break;
+      case "i": // Info/Stats
+        document.getElementById("hudDetailBtn")?.click();
+        break;
+    }
+    return true;
+  }
+
+  if (questMenuDiv.style.display !== "none") {
+    // クエストモードメニュー
+    switch (key) {
+      case "c": // Continue
+        questStartBtn?.click();
+        break;
+      case "s": // Save/Load
+        questSaveBtn?.click();
+        break;
+      case "n": // New Game
+        questStartBtnFromBeginning?.click();
+        break;
+      case "b": questStartMenuBackBtn?.click(); break;
+      case "a": // Achievements
+        document.getElementById("hudAchievementsBtn")?.click();
+        break;
+      case "i": // Info/Stats
+        document.getElementById("hudDetailBtn")?.click();
+        break;
+    }
+    return true;
+  }
+
+  if (questMapScreen.style.display !== "none") {
+    // クエストマップ画面
+    const sideMenu = document.getElementById("questSideMenu");
+    if (sideMenu) {
+      let btn;
+      switch (key) {
+        case "d": // Difficulty
+          btn = sideMenu.querySelector("button:nth-child(1)");
+          break;
+        case "t": // skill Tree
+          btn = sideMenu.querySelector("button:nth-child(2)");
+          break;
+        case "s": // Skill
+          btn = sideMenu.querySelector("button:nth-child(3)");
+          break;
+        case "p": // status
+          btn = sideMenu.querySelector("button:nth-child(4)");
+          break;
+        case "l": // save/load
+          btn = sideMenu.querySelector("button:nth-child(5)");
+          break;
+        case "e": // Back
+          btn = sideMenu.querySelector("button:nth-child(6)");
+          break;
+        case "a": // Achievements
+          document.getElementById("hudAchievementsBtn")?.click();
+          break;
+        case "i": // Info/Stats
+          document.getElementById("hudDetailBtn")?.click();
+          break;
+      }
+      btn?.click();
     }
   }
 

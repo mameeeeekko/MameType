@@ -1,5 +1,6 @@
 // gameModes.js
 import { getDifficulty } from "./difficulties.js";
+import { QUEST_MAP } from "./questMap.js"; export { QUEST_MAP };
 
 // 難易度==========================================
 function filterByDifficulty(targets, difficultyId) {
@@ -100,7 +101,7 @@ export const GameModes = {
   TIME_ATTACK: {
     id: "time_attack",
     name: "タイムトライアル",
-    bgm: "bgm_cracker",
+    bgm: "bgm_gameover",
 
     LIMIT_SEC: 15,
 
@@ -189,6 +190,7 @@ LONG_TEXT: {
   MISS_PRACTICE: {
     id: "miss_practice",
     name: "間違い練習モード",
+    bgm: "bgm_yellow",
 
     onStart(state) {},
 

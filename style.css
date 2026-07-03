@@ -1197,6 +1197,8 @@ button {
 .romaji-keybind-controls {
   display: inline-flex;
   gap: 10px;
+  margin-left:30px;
+  margin-top: 5px;
 }
 
 .config-row input[type="range"] {
@@ -1785,6 +1787,23 @@ button {
   box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important; /* Shadow */
 }
 
+/* 音量リセットボタンのスタイル */
+.reset-btn {
+  flex-shrink: 0; /* 縮まないようにする */
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  line-height: 22px; /* 中央揃え */
+  text-align: center;
+  border-radius: 50% !important; /* 円形にする */
+  background: rgba(139, 148, 158, 0.2) !important;
+  border: 1px solid rgba(139, 148, 158, 0.4) !important;
+  color: #8b949e !important;
+  font-weight: bold;
+}
+
 /* keybind */
 /* フィールドセット全体を中央寄せ */
 .keybind-fieldset {
@@ -1831,6 +1850,12 @@ button {
   border-radius: 4px; /* Rounded corners for select */
 }
 
+/* 例: main.css など、スタイルシートに追加 */
+.setting-item.setting-item-select > select {
+  margin-left: 12px; /* 左側に余白を追加 */
+}
+
+
 .romaji-keybind-controls select {
   font-size: 14px;
   padding: 2px 4px;
@@ -1841,7 +1866,7 @@ button {
   border-radius: 4px; /* Rounded corners for select */
 }
 .config-row {
-  margin-right: 12px;
+  margin-right: 16px;
 }
 
 /* 保存ボタンも中央 */
@@ -1935,9 +1960,8 @@ button {
 }
 
 #records-header h2 {
-  font-size: 2.6rem;
+  font-size: 2.2rem;
   font-weight: 900;
-  font-style: italic;
   color: #668ebc; /* サイバーブルー */
   text-shadow: 0 0 10px rgba(95, 153, 219, 0.633); /* サイバーブルーのシャドウ */
   margin-bottom: 15px;
@@ -4992,12 +5016,6 @@ button {
     padding-bottom: 6px;
 }
 
-/* AUTOスキルをPASSIVE装備欄と同じグリッドレイアウトにする */
-.skill-equip .skill-grid {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
 /* slot grid */
 .equip-grid {
     display: flex;
