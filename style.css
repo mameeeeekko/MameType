@@ -24,7 +24,7 @@ body::before {
   background: 
     linear-gradient(rgba(18, 25, 33, 0.6), rgba(5, 8, 10, 0.7)),
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 2px); /* スキャンライン */
-  z-index: -2;
+  /* z-index: -2; */ /* → 画面階層セクションへ移動 */
 }
 
 /* ヘックスパターン背景 */
@@ -34,7 +34,7 @@ body::after {
   inset: 0;
   background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iMTA0IiB2aWV3Qm94PSIwIDAgNjAgMTA0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik02MCA5NEwzMCAxMDQgMCA5NFY2NEwzMCA1NEw2MCA2NFY5NFpNMzAgNDRMMCAzNFY0TDMwIDBMMTYwIDRMNjAgMzRWMzRaIiBmaWxsPSJub25lIiBzdHJva2U9IiMxNDI4MzUiIHN0cm9rZS13aWR0aD0iMC41Ii8+PC9zdmc+');
   opacity: 0.3;
-  z-index: -1;
+  /* z-index: -1; */ /* → 画面階層セクションへ移動 */
   mask-image: radial-gradient(circle at center, black, transparent 80%);
 }
 
@@ -58,31 +58,53 @@ button {
 /* =====================================================
    画面階層
    ===================================================== */
-#mapCanvas { z-index: 0; }
-#mapNodes  { z-index: 1; }
-#mapBackBtn { z-index: 10; }
-.quest-side-menu { z-index: 20; }
-#enemyModeContainer  { z-index: 1000; }
-.game-modal   { z-index: 8000; }
-#time-bar { z-index: 9000; }
-#TimeLeft { z-index: 9100; }
-.result-modal { z-index: 9500; }
-#enemyResult  { z-index: 9500; }
+/* --- 背景 --- */
+body::before              { z-index: -2; }    /* 背景: スキャンライン */
+body::after               { z-index: -1; }    /* 背景: ヘックスパターン */
+#menuBackground           { z-index: -1; }    /* 背景: メニュー画面の背景画像 */
 
-.quest-modal { z-index:10000; }
-.quest-modal-box { z-index: 10001; }
+/* --- ゲーム要素 (クエストマップなど) --- */
+#mapCanvas                { z-index: 0; }     /* クエストマップ: 背景Canvas */
+#time-circle              { z-index: 0; }     /* ゲーム画面: 時間サークル(リング) */
+#time-circle::before      { z-index: 0; }     /* ゲーム画面: 時間サークル(内側) */
+#mapNodes                 { z-index: 1; }     /* クエストマップ: ノード群 */
+#time-circle .label, 
+#time-circle .count       { z-index: 2; }     /* ゲーム画面: 時間サークル(テキスト) */
+#history th               { z-index: 5; }     /* 記録画面: 履歴テーブルヘッダー */
+#mapBackBtn               { z-index: 10; }    /* クエストマップ: 戻るボタン */
+#records th               { z-index: 10; }    /* 記録画面: テーブルヘッダー */
+.quest-side-menu          { z-index: 20; }    /* クエストマップ: サイドメニュー */
+#statsCloseQuest          { z-index: 20; }    /* クエストステータス: 閉じるボタン */
 
-#playerHud    { z-index: 10500; }
-#skillUnlockHint { z-index: 10500; }
-.modal        { z-index: 10600; }
-.stats-modal  { z-index: 10600; }
-.quest-stats-modal { z-index: 10600; }
-.ach-modal-content { z-index: 10600; }
-#endIntro { z-index: 10800; }
-#countdown    { z-index: 11000; }
-.pause-overlay { z-index: 11000; }
-#loadingScreen { z-index: 12000; }
-.ach-popup-container { z-index: 13000; } 
+/* --- UIコンテナ (メニュー、ゲームモードなど) --- */
+#menu                     { z-index: 500; }   /* メインメニュー画面 */
+#bootScreen               { z-index: 1000; }  /* 起動画面 (Click to Start) */
+#enemyModeContainer       { z-index: 1000; }  /* エネミーモード: 全体コンテナ */
+.enemy-sound-toggle       { z-index: 1100; }  /* エネミーモード: サウンドトグル */
+
+/* --- ゲーム中モーダル / UI --- */
+.game-modal               { z-index: 8000; }  /* ゲーム画面: モーダル背景 */
+#time-bar                 { z-index: 9000; }  /* ゲーム画面: タイムバー */
+#timeLeft                 { z-index: 9100; }  /* ゲーム画面: 残り時間テキスト */
+.result-modal             { z-index: 9500; }  /* 結果画面: モーダル背景 */
+#enemyResult              { z-index: 9500; }  /* エネミーモード: 結果画面 */
+.end-intro, #endIntro     { z-index: 9999; }  /* 結果画面: 表示前イントロ */
+
+/* --- 上位モーダル (クエスト、設定など) --- */
+.quest-modal              { z-index: 10000; } /* クエストマップ: モーダル背景 */
+.quest-modal-box          { z-index: 10001; } /* クエストマップ: モーダル本体 */
+.save-modal               { z-index: 10010; } /* クエスト: セーブモーダル */
+#playerHud                { z-index: 10500; } /* プレイヤーHUD */
+#skillUnlockHint          { z-index: 10500; } /* スキルアンロックヒント */
+.free-config-container    { z-index: 10550; } /* フリーモード: 詳細設定画面 */
+#records                  { z-index: 10550; } /* 記録画面 */
+.modal, .stats-modal, .quest-stats-modal, .ach-modal-content, #settings { z-index: 10600; } /* 汎用モーダル (ステータス, 勲章, 設定) */
+
+/* --- 最前面系 (カウントダウン、ローディングなど) --- */
+#countdown                { z-index: 11000; } /* ゲーム開始: カウントダウン */
+.pause-overlay            { z-index: 11000; } /* ポーズ画面 */
+#loadingScreen            { z-index: 12000; } /* ローディング画面 */
+.ach-popup-container      { z-index: 13000; } /* 勲章獲得ポップアップ */
 
 /* =====================================================
    画面レイアウト切替（メニュー / ゲーム / 統計）
@@ -113,8 +135,8 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #333; /* 例: 暗めの背景色 */
-    z-index: 1000; /* 他の要素より前面に表示 */
+    background-color: #333;
+    /* z-index: 1000; */ /* → 画面階層セクションへ移動 */
 
     /* Flexbox を使って子要素を中央に配置 */
     display: flex;
@@ -140,7 +162,7 @@ button {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 11000;
+  /* z-index: 11000; */ /* → 画面階層セクションへ移動 */
 
   font-size: 12rem; /* さらに大きく、シンプルに */
   font-weight: 900;
@@ -219,7 +241,7 @@ button {
 #menu {
   position: fixed;
   inset: 0;
-  z-index: 500;
+  /* z-index: 500; */ /* → 画面階層セクションへ移動 */
 }
 
 #startMenu, #freeStartMenu, #questMenu, .menu-inner {
@@ -341,7 +363,7 @@ button {
 
   opacity: 0.45;
   filter: brightness(1.2);
-  z-index: -1;
+  /* z-index: -1; */ /* → 画面階層セクションへ移動 */
   pointer-events: none;
 }
 
@@ -422,7 +444,7 @@ button {
 
   transition: opacity 0.4s ease;
 
-  z-index: 9999;
+  /* z-index: 9999; */ /* → 画面階層セクションへ移動 */
 }
 
 /* 表示状態 */
@@ -467,7 +489,7 @@ button {
   color: white;
   letter-spacing: 2px;
 
-  z-index: 9999;
+  /* z-index: 9999; */ /* → 画面階層セクションへ移動 */
 }
 
 /* =====================================================
@@ -648,6 +670,29 @@ button {
     justify-content: center;
     gap: 10px;
     margin-top: 15px;
+}
+
+/* ボタン群 */
+.result-btn {
+  margin: 4px;
+  padding: 8px 15px;
+  clip-path: none; /* 多角形を解除 */
+  background: rgba(88, 166, 255, 0.1); /* Blueish background */
+  border: 1px solid rgba(88, 166, 255, 0.4); /* Blue border */
+  border-radius: 8px; /* More rounded corners */
+  color: #f0f6fc; /* Light text */
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3); /* Subtle shadow */
+}
+
+.result-btn:hover {
+  background: rgba(88, 166, 255, 0.2); /* Lighter blue on hover */
+  color: #fff; /* White text on hover */
+  border-color: #58a6ff; /* Brighter border on hover */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Stronger shadow on hover */
 }
 
 
@@ -982,7 +1027,7 @@ button {
     rgba(88, 166, 255, 0.1) 0deg
   );
 
-  z-index: 0;
+  /* z-index: 0; */ /* → 画面階層セクションへ移動 */
 }
 
 /* ===== 空洞（ドーナツの内側） ===== */
@@ -992,14 +1037,14 @@ button {
   inset: 6px;
   background: #0d1117;
   border-radius: 50%;
-  z-index: 0;
+  /* z-index: 0; */ /* → 画面階層セクションへ移動 */
 }
 
 /* ===== テキスト共通 ===== */
 #time-circle .label,
 #time-circle .count {
   position: relative;
-  z-index: 2;
+  /* z-index: 2; */ /* → 画面階層セクションへ移動 */
   color: #f0f6fc;
 }
 
@@ -1089,7 +1134,7 @@ button {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  z-index: 10650;
+  /* z-index: 10550; */ /* → 画面階層セクションへ移動 */
   width: 500px;
   margin-top: 0;
   padding: 24px;
@@ -1589,8 +1634,8 @@ button {
   width: 95%;
   max-width: 900px; /* Wider to match stats-window */
   max-height: 80vh; /* Shorter to match stats-window */
-  overflow-y: auto;
-  z-index: 10600;
+  overflow-y: auto; 
+  /* z-index: 10600; */ /* → 画面階層セクションへ移動 */
   margin: 0;
   padding: 20px 25px; /* More padding */
 
@@ -1929,7 +1974,7 @@ button {
   position: fixed;
   inset: 0;
   overflow-y: auto;
-  z-index: 10550;
+  /* z-index: 10550; */ /* → 画面階層セクションへ移動 */
   font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
   color: #d1d5db;
   background: #05080a; /* bodyの背景色に合わせる */
@@ -2142,7 +2187,7 @@ button {
 #history th {
   position: sticky; /* スクロールしてもヘッダーを固定 */
   top: 0; /* 上部に固定 */
-  z-index: 5; /* 他の要素より手前に */
+  /* z-index: 5; */ /* → 画面階層セクションへ移動 */
   background: #0d1117; /* 背景を不透明にして透過を防止 */
 } 
 
@@ -2161,7 +2206,7 @@ button {
 #records th {
   position: sticky;
   top: 0;
-  z-index: 10;
+  /* z-index: 10; */ /* → 画面階層セクションへ移動 */
   background: #11151c; /* 完全に不透明な色を指定して内容が透けないようにする */
   color: #f0f6fc; /* 明るいテキスト */
   padding: 8px;
@@ -2732,7 +2777,7 @@ button {
   position: absolute;
   top: 8px;
   right: 12px;
-  z-index: 1100; /* Canvasより前面 */
+  /* z-index: 1100; */ /* → 画面階層セクションへ移動 */
   padding: 2px 6px;
   font-size: 10px;
   gap: 4px;
@@ -2860,7 +2905,7 @@ button {
   position: absolute;
   top: 4px;
   right: 10px;
-  z-index: 20;
+  /* z-index: 20; */ /* → 画面階層セクションへ移動 */
 
   border: none;
   background: transparent;
@@ -3507,7 +3552,7 @@ button {
 
 #questCoreCanvas {
   position: relative;
-  z-index: 10;
+  /* z-index: 10; */ /* → 画面階層セクションへ移動 */
   pointer-events: auto;
 }
 
@@ -4325,7 +4370,7 @@ button {
   background: rgba(0,0,0,0.85);
   color: white;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: 14px; 
   border-radius: 6px;
   pointer-events: none;
   z-index: 21000;
@@ -4349,7 +4394,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  /* z-index: 9999; */ /* → 画面階層セクションへ移動 */
 }
 
 .stage-intro-box {
@@ -4553,7 +4598,7 @@ button {
     align-items:center;
     justify-content:center;
 
-    z-index:100;
+    /* z-index: 100; */ /* → 画面階層セクションへ移動 */
 
     font-size:18px;
     line-height:1;
@@ -4704,7 +4749,7 @@ button {
     border-radius: 40px;
     border: 1px solid rgba(88, 166, 255, 0.3);
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(88, 166, 255, 0.1);
-    z-index: 100;
+    /* z-index: 100; */ /* → 画面階層セクションへ移動 */
     pointer-events: auto;
 }
 
@@ -5169,7 +5214,7 @@ button {
   color: #fff;
   padding: 12px 14px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 13px; 
   pointer-events: none;
   display: none;
   z-index: 21000;
@@ -5653,7 +5698,7 @@ button {
   justify-content: center;
   align-items: center;
 
-  z-index: 999;
+  /* z-index: 999; */ /* → 画面階層セクションへ移動 */
 }
 
 .save-modal.hidden {
@@ -5771,7 +5816,7 @@ button {
   padding: 10px;
   font-size: 12px;
   border-radius: 8px;
-  z-index: 99999;
+  /* z-index: 99999; */ /* → 画面階層セクションへ移動 */
   box-sizing: border-box;
 }
 
@@ -5782,8 +5827,8 @@ button {
   background: rgba(255,255,255,0.08);
   border-radius: 6px;
   margin-bottom: 8px;
-  position: relative;
-  z-index: 2;
+  position: relative; 
+  /* z-index: 2; */ /* → 画面階層セクションへ移動 */
 }
 
 .devPanelHeader:active {
@@ -5860,7 +5905,7 @@ button {
   justify-content: center;
   align-items: center;
   padding: 30px;
-  z-index: 999999; /* 何よりも前面に */
+  /* z-index: 999999; */ /* 何よりも前面に */
   text-align: center;
 }
 
@@ -5893,7 +5938,7 @@ button {
   justify-content: center;
   align-items: center;
   padding: 30px;
-  z-index: 999999; /* 何よりも前面に */
+  /* z-index: 999999; */ /* 何よりも前面に */
   text-align: center;
 }
 

@@ -18,7 +18,10 @@ export function resetResultButtons(mode, options = {}) {
 
   ids.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = "inline-block";
+    if (el) {
+      el.style.display = "inline-block";
+      el.classList.add("result-btn"); // ボタンのスタイルを統一
+    }
   });
 
   const isEnemy = mode === "enemy_mode";
@@ -42,7 +45,7 @@ export function resetResultButtons(mode, options = {}) {
   // ボタンコンテナを取得して横並びクラスを適用
   const btnContainer = document.querySelector(".result-buttons");
   if (btnContainer) {
-    btnContainer.classList.add("horizontal");
+    btnContainer.classList.add("menu-btn-container");
   }
 }
 

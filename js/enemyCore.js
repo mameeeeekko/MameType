@@ -1506,6 +1506,47 @@ export function handleEnemyKey(e) {
     // 候補更新（成功時のみ）
     candidateEnemies = nextCandidates;
 
+    // =============================================================
+    // ★修正：単語完成時の即時撃破処理（候補更新後に移動）
+    // =============================================================
+    // 現在の候補の中から、入力バッファと完全に一致するものを探す
+    const completedEnemy = candidateEnemies.find(enemy => {
+        if (!enemy || enemy.isDead) return false;
+        const targetRoma = (enemy.baseRomaji || "").toLowerCase()
+            .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-").replaceAll("「", "[").replaceAll("」", "]").replaceAll("　", " ");
+        return targetRoma === typedBuffer;
+    });
+
+    // 短い単語が完成した場合（例: 'neko'）、長い単語（'nekonoshippo'）も候補に残っていても、ここで短い方を優先して処理する
+    if (completedEnemy) {
+        // 敵を即座に撃破
+        const isKilled = completedEnemy.onWordComplete(player, gameState, enemies);
+        if (isKilled) {
+            killEnemy(completedEnemy, gameState);
+        }
+
+        candidateEnemies.forEach(enemy => {
+            if (enemy && enemy !== completedEnemy) {
+                resetEnemyInput(enemy);
+            }
+        });
+
+        // 状態をリセットして次の入力に備える
+        if (isKilled) {
+            // 完全に撃破した場合：全リセット
+            typedBuffer = "";
+            candidateEnemies = [];
+            resetCandidates();
+        } else {
+            // 複数ヒットでまだ生存している場合：
+            candidateEnemies = []; // 他の候補はクリア
+            completedEnemy.typed = ""; // ★重要：複数ヒット敵自身の入力バッファもクリア
+            typedBuffer = "";      // グローバル入力バッファもクリア
+        }
+
+        return; // このキー入力での処理はここで完了（重要）
+    }
+
     // 候補敵更新
     candidateEnemies.forEach(enemy => {
         enemy.typed = typedBuffer;

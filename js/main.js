@@ -2195,16 +2195,16 @@ function showSaveMessage(text) {
 
     // スタイル（簡易トースト）
     el.style.position = "fixed";
-    el.style.bottom = "30px";
+    el.style.top = "50%";
     el.style.left = "50%";
-    el.style.transform = "translateX(-50%)";
+    el.style.transform = "translate(-50%, -50%)";
     el.style.background = "rgba(0,0,0,0.8)";
     el.style.color = "#fff";
     el.style.padding = "10px 20px";
     el.style.borderRadius = "8px";
     el.style.fontSize = "14px";
-    el.style.zIndex = "9999";
-    el.style.transition = "opacity 0.3s";
+    el.style.zIndex = "10700";
+    el.style.transition = "opacity 0.3s, background-color 0.3s";
 
     document.body.appendChild(el);
   }
