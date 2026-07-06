@@ -33,6 +33,7 @@ import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
+import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed } from "./dialogue.js";
 import { loadAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
 import { clearQuestStageCache, refreshStages, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
@@ -79,6 +80,7 @@ let settingsBtn, settingsBackBtn;
 let bgmToggle, typeSoundToggle, missSoundToggle;
 let flashToggle, SEToggle, soundToggle, soundIcon;
 let bgmVolSlider, typeVolSlider, missVolSlider, seVolSlider;
+let dialogueSpeedSlider;
 let resetBgmVolumeBtn, resetSeVolumeBtn, resetTypeVolumeBtn, resetMissVolumeBtn;
 
 let mapBackBtn;
@@ -167,6 +169,7 @@ function cacheDOM() {
   typeVolSlider = document.getElementById("typeVolSlider");
   missVolSlider = document.getElementById("missVolSlider");
   seVolSlider = document.getElementById("seVolSlider");
+  dialogueSpeedSlider = document.getElementById("dialogueSpeedSlider");
 
   // 音量リセットボタン
   resetBgmVolumeBtn = document.getElementById("resetBgmVolumeBtn");
@@ -262,7 +265,7 @@ function updateAllSoundToggleUI(enabled) {
   document.querySelectorAll(".global-sound-toggle-txt").forEach(span => span.textContent = text);
 }
 
-function showMenuBackground(imageKeyOrVisible) {
+export function showMenuBackground(imageKeyOrVisible) {
   if (!menuBackground) return;
   if (imageKeyOrVisible === false) {
     menuBackground.style.display = "none";
@@ -337,6 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await new Promise(r => setTimeout(r, 500));
 
       hideLoading();
+      // メインメニューを表示
       showMainMenu();
     };
 
@@ -751,6 +755,20 @@ function initSettingsUI() {
       Game.playTestSound(key); // ★ ここにテストサウンド再生を追加
     });
   });
+
+  // 会話速度スライダー
+  dialogueSpeedSlider?.addEventListener("input", e => {
+    const level = parseInt(e.target.value, 10);
+    setDialogueSpeed(level);
+    saveSettings();
+    // 数値表示を更新
+    const valDisplay = document.getElementById("dialogueSpeedValue");
+    if (valDisplay) {
+      const labels = ["Slowest", "Slow", "Normal", "Fast", "Fastest"];
+      valDisplay.textContent = labels[level] || "Normal";
+    }
+  });
+
 
   // 音量リセットボタンのイベント
   const resetVolume = (slider, volumeKey) => {
@@ -1292,6 +1310,8 @@ export function hideAllScreens() {
 
 function showMainMenu() {
   hideAllScreens();
+  updateHud(null, { isQuestMode: false }); // HUDを通常モードに戻す
+  closeDialogue(); // ★会話モーダルを閉じる
   if (menuDiv) menuDiv.style.display = "block";
 
   showMenuBackground("title_menu");
@@ -1302,6 +1322,7 @@ function showMainMenu() {
 }
 function showQuestMenu() {
   hideAllScreens();
+  closeDialogue(); // ★会話モーダルを閉じる
   if (questMenuDiv) questMenuDiv.style.display = "block";
 
   renderQuestSlots(); // ★これ追加
@@ -1363,13 +1384,10 @@ function bindMenuEvents() {
     openOnlineRanking();
   });
 
+  // 「戻る」ボタンは、すべてshowMainMenuを呼び出すように統一する
   startMenuBackBtn?.addEventListener("click", showMainMenu);
   freeStartMenuBackBtn?.addEventListener("click", showMainMenu);
-
-  questStartMenuBackBtn?.addEventListener("click", () => {
-    updateHud(null, { isQuestMode: false });
-    showMainMenu();
-  });
+  questStartMenuBackBtn?.addEventListener("click", showMainMenu);
 
   questSaveBtn?.addEventListener("click", () => {
     questSaveMenuDiv.classList.remove("hidden");
@@ -1430,41 +1448,43 @@ function bindModeStartEvents() {
   });
   
   questStartBtnFromBeginning?.addEventListener("click", async () => {
-   //データがない場合は警告を出さないようにするため
-   const auto = JSON.parse(localStorage.getItem("quest_auto_save"));
-   const hasSave =
-      auto &&
-      auto.progress &&
-      auto.progress.cleared &&
-      auto.progress.cleared.length > 0; 
-
-    if (hasSave) {
-      const ok = confirm(
-        "⚠️ オートセーブデータが削除されます。\nこの操作は元に戻せません。\n本当に最初から開始しますか？"
-      );
-      if (!ok) return;
-    }
-
-    // ロード画面を表示
-    showLoadingScreen();
-    setLoadingText("Creating New World...");
-
-    // 少しだけ待機（演出として）
-    await new Promise(r => setTimeout(r, 800));
-
-    // ステージ情報の再生成
-    refreshStages();
-    
-    // 進行状況の初期化
-    startQuestFromBeginning();
-    resetQuestAll();
-    reloadQuestProgress();
-    reloadQuestPlayerStats();
-    updateHud(null, { isQuestMode: true });
-
-    // 画面切り替え
-    hideLoading();
-    showQuestMap();
+      //データがない場合は警告を出さないようにするため
+      const auto = JSON.parse(localStorage.getItem("quest_auto_save"));
+      const hasSave =
+          auto &&
+          auto.progress &&
+          auto.progress.cleared &&
+          auto.progress.cleared.length > 0;
+  
+      if (hasSave) {
+          const ok = confirm(
+              "⚠️ オートセーブデータが削除されます。\nこの操作は元に戻せません。\n本当に最初から開始しますか？"
+          );
+          if (!ok) return;
+      }
+  
+        // ★プロローグを再生（新規開始時は常に再生する）
+        await new Promise(resolve => {
+          startDialogue("prologue", () => {
+            try { localStorage.setItem("prologue_played", "true"); } catch (e) {}
+            resolve(); // ダイアログが閉じたらPromiseを解決
+          });
+        });
+  
+      // ロード画面を表示
+      showLoadingScreen();
+      setLoadingText("Creating New World...");
+      await new Promise(r => setTimeout(r, 800));
+  
+      // 進行状況の初期化
+      resetQuestAll();
+      reloadQuestProgress();
+      reloadQuestPlayerStats();
+      updateHud(null, { isQuestMode: true });
+  
+      // 画面切り替え
+      hideLoading();
+      showQuestMap();
   });
 
   enemyModeBtn?.addEventListener("click", () => {
@@ -1602,6 +1622,7 @@ function bindMenuBackEvents() {
 
 //クエストサイドメニューの戻るボタン用
 export function backToQuestMenu() {
+  closeDialogue(); // ★会話モーダルを閉じる
   showQuestMenu();
 }
 
@@ -1841,6 +1862,22 @@ function handleMenuKey(e) {
 
   const key = e.key.toLowerCase();
 
+  // ★会話・ログモーダルが表示されている場合のキー処理
+  if (isDialogueVisible()) {
+    // ログ画面の閉じるボタンが表示されているかチェック
+    const closeBtn = document.getElementById('dialogueCloseBtn');
+    const isLogView = closeBtn && closeBtn.style.display === 'block';
+
+    // ログ画面が表示されていて、'b'または'Escape'が押されたら閉じる
+    if (isLogView && (key === 'b' || key === 'escape')) {
+        e.preventDefault();
+        closeDialogue();
+        return true; // イベントを処理したのでここで終了
+    }
+    // 会話再生中は他のメニューキーを無効化
+    return true;
+  }
+  
   // クエストモードの難易度選択モーダルが開いている場合、難易度選択のショートカットキーを処理する
   const questModal = document.getElementById("questModal");
   if (questModal && questModal.style.display !== "none") {
@@ -1863,6 +1900,7 @@ function handleMenuKey(e) {
         btn?.click();
       }
     }
+    // 会話再生中は他のメニューキーを無効化（ESCキーの処理はdialogue.jsに移行）
     return true;
   }
 
@@ -2074,17 +2112,20 @@ function handleMenuKey(e) {
         case "t": // skill Tree
           btn = sideMenu.querySelector("button:nth-child(2)");
           break;
-        case "s": // Skill
+        case "e": // equip Skill
           btn = sideMenu.querySelector("button:nth-child(3)");
           break;
         case "p": // status
           btn = sideMenu.querySelector("button:nth-child(4)");
           break;
-        case "l": // save/load
+        case "l": // log
           btn = sideMenu.querySelector("button:nth-child(5)");
-          break;
-        case "e": // Back
+          break; 
+        case "s": // save/load
           btn = sideMenu.querySelector("button:nth-child(6)");
+          break;
+        case "b": // Back
+          btn = sideMenu.querySelector("button:nth-child(7)");
           break;
         case "a": // Achievements
           document.getElementById("hudAchievementsBtn")?.click();
@@ -2128,6 +2169,18 @@ function applySoundSettingsToUI() {
     seVolSlider.value = vols.se;
     document.getElementById("seVolumeValue").textContent = `${Math.round(vols.se * 100)}%`;
   }
+  // 会話速度
+  if (dialogueSpeedSlider) {
+    const settings = JSON.parse(localStorage.getItem("typing_game_settings") || "{}");
+    const speedLevel = settings.dialogueSpeed !== undefined ? settings.dialogueSpeed : 3; // デフォルトはFast
+    dialogueSpeedSlider.value = speedLevel;
+    setDialogueSpeed(speedLevel);
+    const valDisplay = document.getElementById("dialogueSpeedValue");
+    if (valDisplay) {
+      const labels = ["Slowest", "Slow", "Normal", "Fast", "Fastest"];
+      valDisplay.textContent = labels[speedLevel] || "Normal";
+    }
+  }
 
   if (soundToggle && soundIcon) {
     soundToggle.checked = Game.getSoundEnabled();
@@ -2139,7 +2192,8 @@ function saveSettings() {
   localStorage.setItem("typing_game_settings", JSON.stringify({
     soundEnabled: Game.getSoundEnabled(),
     soundSettings: Game.getSoundSettings(),
-    soundVolumes: Game.getSoundVolumes()
+    soundVolumes: Game.getSoundVolumes(),
+    dialogueSpeed: dialogueSpeedSlider ? parseInt(dialogueSpeedSlider.value, 10) : 3,
   }));
 }
 
@@ -2158,6 +2212,9 @@ function loadSettings() {
       Object.entries(settings.soundVolumes).forEach(([key, value]) => {
         Game.setSoundVolume(key, value);
       });
+    }
+    if (settings.dialogueSpeed !== undefined) {
+      setDialogueSpeed(settings.dialogueSpeed);
     }
     applySoundSettingsToUI();
   } catch (err) {

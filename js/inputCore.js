@@ -46,12 +46,23 @@ export function getCandidatesForKana(text, pos) {
   // ん
   if (isN(kana)) {
     const nextKana = getKana(text, pos + kana.length);
+    const prevKana = pos > 0 ? getKana(text, pos - 1) : null;
+    // 次の文字が母音(あいうえお)またはヤ行(やゆよ)の場合、'nn'が必須
+    const nextRequiresNn = nextKana && /^[aiueoy]/.test(getRomajiCandidates(nextKana)[0] || '');
+
     try {
       const mode = localStorage.getItem('final_n_mode') || 'nn';
-      if (!nextKana) {
-        return mode === 'n' ? ["n"] : ["nn"];
+
+      // 1. 単語の末尾、または直前が長音符の場合
+      if (!nextKana || prevKana === 'ー') {
+        return mode === 'n' ? ['n'] : ['nn', 'xn'];
       }
-      return isNaRow(nextKana) ? (mode === 'n' ? ["n","nn"] : ["nn","n"]) : ["n"];
+      // 2. 次が「な行」
+      if (isNaRow(nextKana)) {
+        return mode === 'n' ? ['n', 'nn', 'xn'] : ['nn', 'xn', 'n'];
+      }
+      // 3. 次が母音・ヤ行、または「ん」が続く場合
+      return (nextRequiresNn || isN(nextKana)) ? ['nn', 'xn', 'n'] : ['n', 'nn', 'xn'];
     } catch (e) {
       return isNaRow(nextKana) ? ["n","nn"] : ["n"];
     }
@@ -215,9 +226,10 @@ function resetCombo() {
     // ==============================
     if (isN(kana)) {
       const nextKana = getKana(state.text, state.pos + kana.length);
+      const prevKana = state.pos > 0 ? getKana(state.text, state.pos - 1) : null;
 
-      // 文末の場合 → n を1回で確定
-      if (!nextKana) {
+      // 文末、長音符の後、または記号が続く場合 → n を1回で確定
+      if (!nextKana || prevKana === 'ー' || isSymbol(nextKana)) {
         // 既に typed が 'n' の場合、2回目の 'n' で 'nn' を確定させる
         if (state.typed === "n" && key === "n") {
           state.inputedRomaji += "nn";
@@ -270,12 +282,6 @@ function resetCombo() {
       // すでに typed が "n" の場合
       if (state.typed === "n") {
 
-        // 母音は無効
-        if (/^[aiueo]$/.test(key)) {
-          if (!silent) handleMiss();
-          return { success: false, isMiss: true, charCount: 0 };
-        }
-
         // nn → 確定
         if (key === "n") {
           state.inputedRomaji += "nn";
@@ -290,14 +296,33 @@ function resetCombo() {
           return { success: true, isMiss: false, charCount: 2, isComplete: true };
         }
 
+        // 母音または'y'が来た場合
+        if (/^[aiueoy]$/.test(key)) {
+          // 'n' + 母音/y の組み合わせが次の文字の候補にあるか (例: nya)
+          const nextCandidates = getRomajiCandidates(nextKana);
+          const canContinue = nextCandidates.some(c => c.startsWith('n' + key));
+
+          if (canContinue) {
+            // nya, nyo などの処理
+            state.typed += key;
+            if (!silent) { updateRender(); }
+            return { success: true, isMiss: false, charCount: 0 };
+          }
+          // 継続できない母音が来た場合 (例: an + a) は、下の「確定して次へ」ロジックで処理される
+        }
+
         // =========================
         // ① 継続できるか？
         // =========================
-        const nextCandidates = getRomajiCandidates(nextKana);
-
-        const canContinue = nextCandidates.some(c =>
-          c.startsWith("n" + key)
-        );
+        // この時点では、n + 子音の組み合わせ (例: n + k) を想定
+        // ただし、次の文字が「な行」の場合、n + n も継続とみなす必要がある
+        const nextCandidates = getRomajiCandidates(nextKana) || [];
+        const canContinue =
+          // n + y は上で処理済み
+          // n + n (次の文字が「な」行)
+          (key === 'n' && isNaRow(nextKana)) ||
+          // n + 子音
+          nextCandidates.some(c => c.startsWith("n" + key));
 
         if (canContinue) {
           // nya, nni など
@@ -310,11 +335,12 @@ function resetCombo() {
         // ② 確定して次に行けるか？
         // =========================
         const nextNextCandidates = getRomajiCandidates(nextKana);
-
+        // 押されたキーが子音で、かつ次の文字の候補の先頭と一致するか
         const canStartNext =
-          /^[kstnhmyrwgjdbzp]$/.test(key) &&
+          /^[a-z]$/.test(key) && // 全てのアルファベットを対象に
           nextNextCandidates.some(c => c.startsWith(key));
 
+        // 'n'を「ん」として確定し、押されたキーを次の文字の入力として引き継ぐ
         if (canStartNext) {
 
           // ん確定
@@ -350,6 +376,45 @@ function resetCombo() {
       }
     }
     
+    // ==============================
+    // 「っ」の特殊処理
+    // ==============================
+    if (isSmallTsu(kana)) {
+        const nextTyped = state.typed + key;
+        const match = candidates.some(r => r.startsWith(nextTyped));
+
+        if (!match) {
+            if (!silent) handleMiss();
+            return { success: false, isMiss: true, charCount: 0 };
+        }
+
+        state.typed = nextTyped;
+
+        const complete = candidates.some(r => r === state.typed);
+
+        if (complete) {
+            state.inputedRomaji += state.typed;
+            const confirmedCharCount = state.typed.length;
+            if (!silent) onCorrectType(confirmedCharCount);
+
+            const nextKana = getKana(state.text, state.pos + kana.length);
+            state.pos += kana.length;
+
+            // 子音重ね（tta など）のときだけ次の文字をスキップ
+            if (state.typed.length > 1 && state.typed !== "ltu" && state.typed !== "xtu") {
+                if (nextKana) state.pos += nextKana.length;
+            }
+
+            state.typed = "";
+            resetCandidates();
+            if (!silent) { updateRender(); updateGameEnd(); }
+            return { success: true, isMiss: false, charCount: confirmedCharCount, isComplete: true };
+        } else {
+            if (!silent) { updateRender(); }
+            return { success: true, isMiss: false, charCount: 0 };
+        }
+    }
+
     // ==============================
     // 通常の入力処理
     // ==============================

@@ -5,7 +5,7 @@ import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedW
 import { startEnemyMode, endEnemyMode } from "./enemyCore.js";
 import { gameState } from "./gameCore.js";
 import * as Game from "./gameCore.js";
-import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
+import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty, getDifficultyDescription } from "./difficulties.js";
 import { backToQuestMenu, backToQuestMap } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
@@ -21,8 +21,10 @@ import {
     getActiveSkillStockMax,
 } from "./questPlayerStats.js";
 import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } from "./enemyModeConfig.js";
+import { startDialogue, DIALOGUE_DATA, isDialogueVisible, showLog } from "./dialogue.js";
 import { devOverride } from "../dev/devOverride.js";
 import { images } from "./assetsLoader.js";
+import { hideAllScreens, showMenuBackground } from "./main.js";
 
 
 export function renderQuestMapUI(){
@@ -480,34 +482,51 @@ export function renderQuestMapUI(){
             el.onmouseleave = hideQuestTooltip;
 
             el.onclick = ()=>{
+                // ★★★ 画面遷移の開始時に、他の全画面を非表示にする
+                hideAllScreens();
+                showMenuBackground(false);
+
                 const diff = getCurrentDifficulty("quest");
                 // DEV対応
                 const actualStage = devOverride.stage.current || node.stage;
                 const stageData = getStageConfig(actualStage);
                 const skillTreeDiv = document.getElementById("skill-tree");
+                gameState.currentQuestNode = node;
 
-                showStageIntro(
+                const startCombat = () => {
+                  startEnemyMode({
+                    stage: actualStage,
+                    difficulty: typeof diff === "string" ? diff : diff.id,
+                    isQuestMode: true,
+                  });
+                };
+
+                const showIntro = () => {
+                  showStageIntro(
                     stageData,
                     node,
+                    startCombat, // Introが終わったら戦闘開始
                     () => {
-                        startEnemyMode({
-                            // DEV対応
-                            stage: actualStage,
-                            difficulty: typeof diff === "string" ? diff : diff.id,
-                            isQuestMode: true}
-                        );
-                    },
-                    () => {
-                        if (skillTreeDiv) skillTreeDiv.style.display = "none";
-                        endEnemyMode();
-                        gameState.typed = "";
-                        Game.fullResetGame();
-                        backToQuestMap();
-                    },
+                      if (skillTreeDiv) skillTreeDiv.style.display = "none";
+                      backToQuestMap();
+                    }
+                  );
+                };
 
-                );
+                // 会話IDを生成
+                const dialogueId = `${node.id}_start`;
 
-                gameState.currentQuestNode = node;
+                // DIALOGUE_DATAが存在し、かつ該当IDの会話データがあるかチェック
+                if (
+                  typeof DIALOGUE_DATA !== "undefined" &&
+                  DIALOGUE_DATA[dialogueId]
+                ) {
+                  // 会話がある場合： 会話 → イントロ → 戦闘
+                  startDialogue(dialogueId, showIntro);
+                } else {
+                  // 会話がない場合： イントロ → 戦闘
+                  showIntro();
+                }
             };
         }
 
@@ -615,10 +634,11 @@ function renderQuestSideMenu(container){
 
     menu.appendChild(createBtn("DIFFICULTY", () => openQuestMenuModal("difficulty")));
     menu.appendChild(createBtn("SKILL TREE (T)", () => openQuestMenuModal("skillTree")));
-    menu.appendChild(createBtn("SKILL", () => openQuestMenuModal("skill")));
+    menu.appendChild(createBtn("EQUIP SKILLS", () => openQuestMenuModal("skill")));
     menu.appendChild(createBtn("STATUS (I)", () => document.getElementById("hudDetailBtn").click()));
-    menu.appendChild(createBtn("SAVE / LOAD (L)", () => document.getElementById("questSaveBtn").click()));
-    menu.appendChild(createBtn("EXIT", () => backToQuestMenu()));
+    menu.appendChild(createBtn("LOG", () => showLog()));
+    menu.appendChild(createBtn("SAVE / LOAD", () => document.getElementById("questSaveBtn").click()));
+    menu.appendChild(createBtn("BACK", () => backToQuestMenu()));
 
     container.appendChild(menu);
 }
@@ -1625,7 +1645,7 @@ function showStageIntro(stage, node, onStart, onCancel) {
     if (key === "Enter" || key === " ") {
         e.preventDefault();  
         document.removeEventListener("keydown", start);
-        overlay.remove();
+        overlay.remove(); // ★ onStart() の前に overlay を削除
         onStart();
         return;
     }
@@ -1633,6 +1653,9 @@ function showStageIntro(stage, node, onStart, onCancel) {
     // キャンセル
     if (key === "Escape" || key.toLowerCase() === "b") {
         e.preventDefault();  
+        // ★会話モーダル表示中はキャンセルを無効化
+        if (isDialogueVisible()) return;
+
         document.removeEventListener("keydown", start);
         overlay.remove();
         onCancel && onCancel();

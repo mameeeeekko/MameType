@@ -358,7 +358,7 @@ export function getRequirementText(requirements) {
                 return "条件不明";
         }
 
-    }).join(" / ");
+    }).join("<br>");
 }
 
 // =====================================================

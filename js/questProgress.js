@@ -6,7 +6,8 @@ const DEFAULT_PROGRESS = {
     unlocked: ["W1_Q1"],
     cleared: [],
     unlockedWorlds: ["WORLD1"],
-    selectedWorldId: "WORLD1"
+    selectedWorldId: "WORLD1",
+    playedDialogues: {} // ★ ADDED: Track played dialogues
 };
 
 let progress = load();
@@ -28,7 +29,8 @@ export function reloadQuestProgress() {
     unlocked: data.unlocked ?? ["W1_Q1"],
     cleared: data.cleared ?? [],
     unlockedWorlds: data.unlockedWorlds ?? ["WORLD1"],
-    selectedWorldId: data.selectedWorldId ?? "WORLD1"
+    selectedWorldId: data.selectedWorldId ?? "WORLD1",
+    playedDialogues: data.playedDialogues || {} // ★ ADDED: Ensure playedDialogues is loaded
   };// ←これが重要
   return progress;
 }
@@ -61,8 +63,24 @@ export function markCleared(id, nextList, nextWorldId = null){
     save();
 }
 
-export function isCleared(id){
+// dialogue.js から参照するために export する
+// ★ enemyCore.js からも参照するために export
+export function isCleared(id) {
     return progress.cleared.includes(id);
+}
+
+// ★ ADDED: Mark a dialogue as played
+export function markDialoguePlayed(dialogueId) {
+    if (!progress.playedDialogues) {
+        progress.playedDialogues = {};
+    }
+    progress.playedDialogues[dialogueId] = true;
+    save();
+}
+
+// ★ ADDED: Check if a dialogue has been played
+export function hasDialogueBeenPlayed(dialogueId) {
+    return progress.playedDialogues && progress.playedDialogues[dialogueId] === true;
 }
 
 function save(){
@@ -72,11 +90,12 @@ function save(){
 }
 
 export function resetQuestAll() {
-
+    // ★ localStorage.clear() をやめ、クエスト関連のキーのみを削除するように変更
     localStorage.removeItem("questPlayerStats");
     localStorage.removeItem("questProgress");
     localStorage.removeItem("quest_auto_save");
-    localStorage.removeItem("questStars"); 
+    localStorage.removeItem("questStars");
+    localStorage.removeItem("QuestStages_Cache"); // ステージキャッシュもクリア
 
     const freshStats = {
         level: 1,
@@ -116,8 +135,9 @@ export function resetQuestAll() {
     localStorage.setItem("questProgress", JSON.stringify({
         unlocked: ["W1_Q1"],
         cleared: [],
-        unlockedWorlds: ["WORLD1"],
-        selectedWorldId: "WORLD1"
+        unlockedWorlds: ["WORLD1"], // Ensure default properties are present for old saves
+        selectedWorldId: "WORLD1",
+        playedDialogues: {} // ★ ADDED: Reset played dialogues
     }));
 
     localStorage.setItem("quest_auto_save", JSON.stringify({

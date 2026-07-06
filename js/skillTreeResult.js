@@ -143,29 +143,26 @@ export function handleSkillModeResult(nodeId) {
             <div class="block-content">
                 ${
                     skill
-                        ? `
-                        <div class="skill-result-header" style="display: flex; justify-content: center; align-items: center; margin-bottom: 5px;">
-                            <div class="skill-result-icon">
-                                <img src="${images[skill.icon]?.src || ""}" alt="${skill.name}">
+                        ? `<div class="skill-item equipped" style="margin: 0 auto; max-width: 300px; cursor: default;">
+                            <div class="skill-icon-wrap">
+                                <img src="${images[skill.icon]?.src || ""}" class="skill-icon" alt="${skill.name}">
                             </div>
-
-                            <div class="skill-name">
-                                ${skill.name}
-
-                                ${
-                                    isNewUnlock
-                                        ? `<span class="new-badge">NEW</span>`
-                                        : isUnlockedNow
-                                            ? `<span class="owned-badge">取得済み</span>`
-                                            : ""
-                                }
+                            <div class="skill-main">
+                                <div class="skill-name" style="color: #fff;">
+                                    ${skill.name}
+                                    ${
+                                        isNewUnlock
+                                            ? `<span class="new-badge">NEW</span>`
+                                            : isUnlockedNow
+                                                ? `<span class="owned-badge">取得済み</span>`
+                                                : ""
+                                    }
+                                </div>
+                                <div class="skill-desc" style="color: #fff;">
+                                    ${skill.desc}
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="skill-desc">
-                            ${skill.desc}
-                        </div>
-                        `
+                        </div>`
                         : `<div class="no-skill">なし</div>`
                 }
             </div>
@@ -289,6 +286,7 @@ export function handleSkillModeResult(nodeId) {
         retryBtn.onclick = () => {
             if (isClear) return;
             document.removeEventListener("keydown", result._keyHandler);
+            closeDialogue();
             result.style.display = "none";
             // グローバル状態がリセットされる前にキャプチャした nodeId を使用する
             startSkillMode(challenge, nodeId);
@@ -297,7 +295,8 @@ export function handleSkillModeResult(nodeId) {
         backBtn.onclick = () => {
             document.removeEventListener("keydown", result._keyHandler);
             result.style.display = "none";
-            backToMenu();
+            backToMenu(); // gameStateをリセットするために呼び出す
+            // backToMenu(); // メインメニューに戻ってしまうため削除
             showQuestMap();
 
             setTimeout(() => {

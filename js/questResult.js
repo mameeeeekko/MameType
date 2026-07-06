@@ -2,6 +2,7 @@
 
 import { gameState, setGameActive, fullResetGame } from "./gameCore.js";
 import { updateHud } from "./hud.js";
+import { closeDialogue } from "./dialogue.js";
 import { backToQuestMap } from "./main.js";
 import { restartEnemyMode } from "./enemyCore.js";
 
@@ -361,6 +362,7 @@ export function showQuestResult(stats) {
         container.style.display = "none";
         fullResetGame();
         gameState.typed = "";
+        closeDialogue(); // Close dialogue modal
         const modal = document.querySelector(".game-modal");
         if (modal) modal.style.display = "none";
         backToQuestMap();

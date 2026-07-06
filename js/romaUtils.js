@@ -95,7 +95,7 @@ export function toHalfWidthAlpha(str){
 }
 
 
-export function getKana(text,pos){
+export function getKana(text, pos){
   if (pos >= text.length) return null;
 
   const two = text.slice(pos, pos + 2);
@@ -108,7 +108,7 @@ export function getKana(text,pos){
 // ----------------------
 // ローマ字候補取得
 // ----------------------
-export function getRomajiCandidates(kana){
+export function getRomajiCandidates(kana, prevKana = null, nextKana = null){
 
   if(!kana) return [];  // ← 追加（最重要）
 
@@ -117,19 +117,26 @@ export function getRomajiCandidates(kana){
 
   // テーブルにあればそれを返す（数字や括弧もここを通るようになる）
   if(ROMA_TABLE[normalizedKana]) {
-    // 特殊処理: 末尾 'ん' の入力方式をユーザー設定で優先する
-    if (normalizedKana === 'ん' || kana === 'ん') {
+    // 特殊処理: 'ん' の入力方式を文脈に応じて決定する
+    if (normalizedKana === 'ん') {
       const candidates = [...ROMA_TABLE[normalizedKana]];
       try {
         const mode = localStorage.getItem('final_n_mode') || 'nn';
         if (mode === 'n') {
           // 'n' を先頭に移動
           const idx = candidates.indexOf('n');
-          if (idx > 0) candidates.splice(0, 0, ...candidates.splice(idx, 1));
+          // 文末、長音符の後、または記号が続く「ん」の場合のみ 'n' を優先
+          if ((!nextKana || prevKana === 'ー' || isSymbol(nextKana)) && idx > -1) {
+            candidates.splice(idx, 1);
+            candidates.unshift('n');
+          }
         } else {
           // デフォルトは 'nn' を優先
           const idx = candidates.indexOf('nn');
-          if (idx > 0) candidates.splice(0, 0, ...candidates.splice(idx, 1));
+          if (idx > -1) {
+            candidates.splice(idx, 1);
+            candidates.unshift('nn');
+          }
         }
       } catch (e) {
         // localStorage 取得エラーでも通常の配列を返す
@@ -154,9 +161,12 @@ export function getRomajiCandidates(kana){
 export function getSokuonCandidates(nextKana){
   const nextRoma = getRomajiCandidates(nextKana);
   const set = new Set();
-  for(const r of nextRoma){ 
-    if(r.length>0) set.add(r[0]+r); 
-  }
+  // 次の文字が記号でない場合のみ、子音を重ねる候補を追加
+  if (nextKana && !isSymbol(nextKana)) {
+    for(const r of nextRoma){ 
+      if(r.length>0) set.add(r[0]+r); 
+    }
+  }  
   set.add("ltu"); 
   set.add("xtu");
   return [...set];

@@ -493,13 +493,20 @@ export function renderSkillTreeUI(container){
             .map(tag => `<span class="skill-tag">${tag}</span>`)
             .join("");
 
-        tooltip.innerHTML = `
-            <div class="title">
-                <img class="skill-icon-img" src="${images[skill.icon]?.src || ""}" />
-                <span>${skill.name}</span>
+        const skillCardHTML = `
+            <div class="skill-item equipped" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px; border-radius: 6px; box-shadow: none; cursor: default; margin-bottom: 10px;">
+                <div class="skill-icon-wrap">
+                    <img src="${images[skill.icon]?.src || ""}" class="skill-icon" alt="${skill.name}">
+                </div>
+                <div class="skill-main" style="text-align: left; margin-left: 12px;">
+                    <div class="skill-name" style="color: #fff;">${skill.name}</div>
+                    <div class="skill-desc" style="color: #fff;">${skill.desc}</div>
+                </div>
             </div>
-            <div class="desc">${skill.desc}</div>
+        `;
 
+        tooltip.innerHTML = `
+            ${skillCardHTML}
             ${
                 requirementText
                 ? `

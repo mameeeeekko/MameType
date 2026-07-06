@@ -27,12 +27,13 @@ import { getCurrentDifficulty, getDifficulty } from "./difficulties.js";
 import { getPlayerStats, updatePlayerStats } from "./playerStats.js";
 import { markCleared, setStar  } from "./questProgress.js";
 import { STAR_EVALUATORS } from "./starEvaluator.js";
-import { submitScore } from "../online/submitScore.js";
+import { submitScore } from "../online/submitScore.js"; 
 import { RANKING_VERSION } from "../js/version.js";
 import { loadKeybinds } from "./keybinds.js";
 import { devOverride, applyOverride } from "../dev/devOverride.js";
 import { activateSkill, ACTIVE_SKILLS } from "./questSkills.js";
 
+import { closeDialogue, startDialogue, DIALOGUE_DATA } from "./dialogue.js";
 let currentStage = "STAGE1";
 let loopId = null;
 let currentEnemyDifficulty = null;
@@ -917,40 +918,59 @@ function gameLoop(timestamp) {
             // エフェクト完了を待ってから結果表示
             const checkEffectsDone = async () => {
                 if (areAllEffectsDone()) {
-                const rankingResult = await endEnemyMode();
+                    const rankingResult = await endEnemyMode();
 
-                const isFailed = gameState.enemyStats.failed;
-                let introText = isFailed
-                    ? "FAILED"
-                    : "MISSION COMPLETE";
-
-                // エンドレス用の演出テキスト
-                if (isEndless) introText = "FINISH";
-
-                showEnemyEndIntro(introText, () => {
+                    const isFailed = gameState.enemyStats.failed;
+                    let introText = isFailed
+                        ? "FAILED"
+                        : "MISSION COMPLETE";
+        
+                    // エンドレス用の演出テキスト
+                    if (isEndless) introText = "FINISH";
+        
+                    // クエストモードの場合の分岐
                     if (lastEnemyConfig?.isQuestMode) {
-                        showQuestResult(gameState.questStats);
+                        const node = gameState.currentQuestNode;
+                        const endDialogueId = `${node.id}_end`;
+        
+                        // クエストクリア後、かつ終了会話が存在する場合
+                        if (!isFailed && DIALOGUE_DATA[endDialogueId]) {
+                            // ★先に会話を開始し、会話終了後にリザルト表示のイントロを再生する
+                            startDialogue(endDialogueId, () => {
+                                showEnemyEndIntro(introText, () => {
+                                    showQuestResult(gameState.questStats);
+                                });
+                            });
+                        } else {
+                            // クエストモードの場合、会話がない場合
+                            showEnemyEndIntro(introText, () => {
+                                showQuestResult(gameState.questStats);
+                            });
+                        }
                     } else {
-                        showEnemyResult({
-                            isNewRecord: rankingResult?.isNewRecord ?? false,
-                            isRankIn: rankingResult?.isRankIn ?? false,
-                            rankPos: rankingResult?.rankPos ?? null
+                        // クエストモード以外の場合（デイリー・フリーモード）
+                        showEnemyEndIntro(introText, () => {
+                            showEnemyResult({
+                                isNewRecord: rankingResult?.isNewRecord ?? false,
+                                isRankIn: rankingResult?.isRankIn ?? false,
+                                rankPos: rankingResult?.rankPos ?? null
+                            });
                         });
                     }
-                });
-            } else {
-                // まだエフェクトが残っていれば、次のフレームで再チェック
-                requestAnimationFrame(checkEffectsDone);
-            }
-        };
+                } else {
+                    // まだエフェクトが残っていれば、次のフレームで再チェック
+                    requestAnimationFrame(checkEffectsDone);
+                }
+            };
 
-        // 最初のチェックを開始
-        checkEffectsDone();
-      }
+            // 最初のチェックを開始
+            checkEffectsDone();
+        }
     }
 
     loopId = requestAnimationFrame(gameLoop);
 }
+
 
 // ===============================
 // フェーズ遷移処理
@@ -1665,6 +1685,9 @@ function isEnemyVisible(enemy) {
 }
 
 export async function startEnemyMode(config = {}) {
+
+    // ★ ゲーム開始時に会話モーダルを強制的に閉じる
+    closeDialogue();
 
     const map = document.getElementById("questMapScreen");
     if (map) map.style.display = "none";

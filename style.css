@@ -88,12 +88,13 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 #timeLeft                 { z-index: 9100; }  /* ゲーム画面: 残り時間テキスト */
 .result-modal             { z-index: 9500; }  /* 結果画面: モーダル背景 */
 #enemyResult              { z-index: 9500; }  /* エネミーモード: 結果画面 */
-.end-intro, #endIntro     { z-index: 9999; }  /* 結果画面: 表示前イントロ */
 
 /* --- 上位モーダル (クエスト、設定など) --- */
 .quest-modal              { z-index: 10000; } /* クエストマップ: モーダル背景 */
 .quest-modal-box          { z-index: 10001; } /* クエストマップ: モーダル本体 */
 .save-modal               { z-index: 10010; } /* クエスト: セーブモーダル */
+.end-intro, #endIntro     { z-index: 10400; }  /* 結果画面: 表示前イントロ */
+.stage-intro              { z-index: 10400; } /* クエスト開始イントロ */
 #playerHud                { z-index: 10500; } /* プレイヤーHUD */
 #skillUnlockHint          { z-index: 10500; } /* スキルアンロックヒント */
 .free-config-container    { z-index: 10550; } /* フリーモード: 詳細設定画面 */
@@ -105,6 +106,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .pause-overlay            { z-index: 11000; } /* ポーズ画面 */
 #loadingScreen            { z-index: 12000; } /* ローディング画面 */
 .ach-popup-container      { z-index: 13000; } /* 勲章獲得ポップアップ */
+#devPanel                 { z-index: 20000; } /* 開発者パネル */
 
 /* =====================================================
    画面レイアウト切替（メニュー / ゲーム / 統計）
@@ -4392,7 +4394,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   inset: 0;
   background: rgba(0,0,0,0.9);
   display: flex;
-  align-items: center;
+  align-items: center; 
   justify-content: center;
   /* z-index: 9999; */ /* → 画面階層セクションへ移動 */
 }

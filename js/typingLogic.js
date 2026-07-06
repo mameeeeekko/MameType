@@ -64,7 +64,9 @@ export function getDisplayFullRoma({ text, pos, typed, inputedRomaji }) {
     }
 
     // 通常かな
-    const candidates = getRomajiCandidates(kana);
+    const prevKana = i > 0 ? getKana(text, i - 1) : null;
+    const nextKana = getKana(text, i + kana.length);
+    const candidates = getRomajiCandidates(kana, prevKana, nextKana);
 
     let sel =
       typed

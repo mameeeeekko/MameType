@@ -360,11 +360,21 @@
           ミスタイプ時に画面フラッシュ
         </label>
       </fieldset>
+
+      <!-- UI設定 -->
+      <fieldset>
+        <legend>DIALOGUE</legend>
+        <div class="sound-setting-row">
+          <label><span>会話速度</span></label>
+          <input type="range" id="dialogueSpeedSlider" min="0" max="4" step="1" value="3">
+          <span id="dialogueSpeedValue" class="sound-value">Fast</span>
+        </div>
+      </fieldset>
     </div>
 
     <div class="settings-column">
-      <!-- キー設定 -->
-      <fieldset class="keybind-fieldset">
+      <!-- UI設定 -->
+      <fieldset>
         <legend>KEY</legend>
         <div class="keybind-row">
           <div class="keybind-labels">
@@ -381,6 +391,19 @@
           </div>
         </div>
         <button id="saveKeybindBtn">Save Keybinds</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>ROMAJI</legend>
+        <div class="config-row">
+          <label>末尾の「ん」の入力</label>
+            <div class="romaji-keybind-controls">
+              <select id="finalNMode">
+                <option value="nn">nn</option>
+                <option value="n">n</option>
+              </select>
+            </div>
+        </div>
       </fieldset>
 
       <!-- デイリーのバックアップ！ -->
@@ -404,18 +427,6 @@
         <input type="file" id="importQuestFile" accept=".json" style="display:none">
       </fieldset>
 
-      <fieldset>
-        <legend>ROMAJI</legend>
-        <div class="config-row">
-          <label>末尾の「ん」の入力</label>
-            <div class="romaji-keybind-controls">
-              <select id="finalNMode">
-                <option value="nn">nn</option>
-                <option value="n">n</option>
-              </select>
-            </div>
-        </div>
-      </fieldset>
     </div>
   </div>
 
@@ -1023,6 +1034,11 @@
   </div>
 
 </div>
+
+<!-- ===================================================== -->
+<!-- 🔹モーダル専用コンテナ -->
+<!-- ===================================================== -->
+<div id="modal-container"></div>
 
 <!-- =====================================================
   メインスクリプト

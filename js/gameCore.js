@@ -15,6 +15,7 @@ import {
   setLongTextMode, setUIMode, resetRendererState,
   initTimeBar, setTimeLeft, setSolvedCount
 } from './renderer.js';
+import { closeDialogue } from './dialogue.js';
 import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, playTestSound as playTestSoundEffect } from "./effectManager.js";
 import { GameModes} from "./gameModes.js";
 import { updatePlayerStats, getPlayerStats} from "./playerStats.js";
@@ -370,6 +371,8 @@ export function loadText(index) {
 export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false}) {
 
   fullResetGame();
+  // ゲーム開始時に、残っている会話ウィンドウを確実に閉じる
+  try { closeDialogue(); } catch(e) { /* noop if dialogue module unavailable */ }
 
   setLastWasEnemyMode(false);
 
@@ -892,8 +895,6 @@ function updateTimeAttack() {
 // =====================================================
 export function backToMenu(){
   stopBGM(); 
-  gameState.startTime = 0;
-  gameState.currentBgmInfo = null;
   isGameActive=false;
   isFinishing = false;
   gameState.isEnding = false;
@@ -901,10 +902,6 @@ export function backToMenu(){
   stopTimeCircle();
   // モーダル閉じる
   const modal = document.getElementById("gameModal");
-  if(modal) modal.style.display="none";
-
-  // ★ UIモードを通常に戻す（重要）
-  setLongTextMode(false);
 
   // 中断したモードに合わせて適切なメニューカテゴリを表示する
   // ※ showCategory, showQuestMenu はグローバルまたは他で定義されている前提
