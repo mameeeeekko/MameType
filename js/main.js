@@ -15,8 +15,6 @@ import {
   loadQuestSlots,
   saveQuestSlot,
   loadQuestSlot,
-  startQuestFromBeginning,
-  autoSaveQuest,
   exportQuestData,
   importQuestData
 } from "./storage.js";
@@ -26,9 +24,9 @@ import { GameModes } from "./gameModes.js";
 import { getPlayerStats } from "./playerStats.js";
 import { updateHud, initAchievementsUI } from "./hud.js";
 import { handleKey } from './inputCore.js';
-import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode } from './enemyCore.js';
-import { renderQuestMapUI, openQuestMenuModal } from "./questMapUI.js";
-import { reloadQuestProgress, resetQuestAll } from "./questProgress.js";
+import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, showHud } from './enemyCore.js';
+import { renderQuestMapUI, openQuestMenuModal, closeQuestModal } from "./questMapUI.js";
+import { reloadQuestProgress, resetQuestAll, markTrueEndingSeen, hasSeenTrueEnding } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
@@ -36,14 +34,15 @@ import { APP_VERSION } from "./version.js";
 import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed } from "./dialogue.js";
 import { loadAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
-import { clearQuestStageCache, refreshStages, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
+import { clearQuestStageCache, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
   DIFFICULTIES,
   getCurrentDifficulty,
   setCurrentDifficulty,
-  getDifficultyDescription
+  getDifficultyDescription,
 } from "./difficulties.js";
+import { playBGM, stopBGM } from "./effectManager.js";
 
 
 
@@ -60,7 +59,7 @@ let hintDiv;
 let onlineRankingDiv;
 let bgmInfoDisplay; // Add this to cacheDOM
 
-let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn, onlineRankingBtn;
+let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn, onlineRankingBtn, endingBtn;
 let startMenuBackBtn, freeStartMenuBackBtn, questStartMenuBackBtn;
 let saveToQuestMenuBackBtn, questSaveBtn;
 
@@ -99,6 +98,7 @@ let enemyIntervalSlider, enemyImmediateToggle;
 let currentFreeModeId = 'Standard'; // フリーモードの選択状態を保持する変数
 let currentEnemyPattern = 'time'; // エネミーモード内のパターン選択状態
 
+let isStaffRollShowing = false; // スタッフロール表示中フラグ
 
 function cacheDOM() {
   bootScreen = document.getElementById("bootScreen");
@@ -641,8 +641,9 @@ function renderQuestSlots() {
       reloadQuestPlayerStats();
       updateHud(null, { isQuestMode: true });
 
-      showQuestMap();
-
+      // ★ロード後はマップではなく、一度クエストメニューを表示する
+      // これにより、更新されたオートセーブを元にContinueボタンが正しく表示される
+      showQuestMenu();
       questSaveMenuDiv.classList.add("hidden");
     });
 
@@ -1298,6 +1299,7 @@ function updateGameUIVisibility(modeId) {
   // TODO: 今後、モードごとにさらに詳細な表示制御が必要な場合はここに追加
 }
 
+
 // =====================================================
 // 画面表示制御ユーティリティ
 // =====================================================
@@ -1316,7 +1318,6 @@ function showMainMenu() {
 
   showMenuBackground("title_menu");
   updateHud(); // メインメニューが表示されたタイミングでHUDのデータを同期
-  // メインメニューが表示されたタイミングでHUDを表示する
   const hud = document.getElementById("playerHud");
   if (hud) hud.style.display = "block";
 }
@@ -1324,6 +1325,17 @@ function showQuestMenu() {
   hideAllScreens();
   closeDialogue(); // ★会話モーダルを閉じる
   if (questMenuDiv) questMenuDiv.style.display = "block";
+
+  // オートセーブデータの有無をチェック
+  const auto = JSON.parse(localStorage.getItem("quest_auto_save"));
+  const hasSave =
+    auto &&
+    auto.progress &&
+    auto.progress.cleared &&
+    auto.progress.cleared.length > 0;
+
+  // セーブデータがない場合は「Continue」ボタンを非表示にする
+  if (questStartBtn) questStartBtn.style.display = hasSave ? "block" : "none";
 
   renderQuestSlots(); // ★これ追加
   showMenuBackground("quest_menu"); //クエストメニュー画面
@@ -1430,6 +1442,178 @@ function bindGameMenuEvents() {
   });
 }
 
+// =====================================================
+// エンディング演出
+// =====================================================
+
+/**
+ * スタッフロール用のCSSを動的に読み込みます。
+ * @returns {Promise<void>}
+ */
+function loadStaffRollCSS() {
+    return new Promise((resolve) => {
+        if (document.getElementById('staff-roll-css')) {
+            resolve();
+            return;
+        }
+        const link = document.createElement('link');
+        link.id = 'staff-roll-css';
+        link.rel = 'stylesheet';
+        link.href = './js/staffRoll.css'; // CSSファイルのパス
+        link.onload = () => resolve();
+        link.onerror = () => {
+            console.error("Failed to load staffRoll.css");
+            resolve(); // エラーでも処理を続行
+        };
+        document.head.appendChild(link);
+    });
+}
+
+/**
+ * 画面を暗転させます。
+ * @param {number} duration - 暗転にかかる時間 (ms)
+ * @returns {Promise<void>}
+ */
+function fadeToBlack(duration = 1500) {
+    return new Promise(resolve => {
+        const blackout = document.createElement('div');
+        blackout.className = 'true-ending-blackout';
+        document.body.appendChild(blackout);
+
+        requestAnimationFrame(() => {
+            blackout.style.opacity = '1';
+        });
+
+        setTimeout(() => {
+            resolve(blackout); // 暗転用divを後で消せるように返す
+        }, duration);
+    });
+}
+
+/**
+ * 画面にメッセージを表示します。
+ * @param {string} text - 表示するテキスト
+ * @param {number} duration - 表示時間 (ms)
+ * @returns {Promise<void>}
+ */
+function showMessage(text, duration = 2000) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'true-ending-message-overlay';
+        const p = document.createElement('p');
+        p.textContent = text;
+        overlay.appendChild(p);
+        document.body.appendChild(overlay);
+
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+        });
+
+        setTimeout(() => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                resolve();
+            }, 1500);
+        }, duration);
+    });
+}
+
+/**
+ * スタッフロールを開始します。
+ */
+function showStaffRoll(onComplete) {
+    isStaffRollShowing = true; // ★表示開始
+
+    const canSkip = hasSeenTrueEnding();
+
+    // クリックとポインター表示に対応
+    const staffRollHTML = `
+        <div class="staff-roll-overlay">
+            ${canSkip ? '<div class="staff-roll-skip" style="position: fixed; bottom: 20px; right: 20px; color: white; font-family: monospace; z-index: 10001; opacity: 0.7; cursor: pointer;">skip &gt;&gt;&gt;</div>' : ''}
+            <div class="staff-roll-content">
+                <div class="staff-roll-line"><span class="role-center">STAFF</span></div>
+                <div class="staff-roll-line"><span class="role">Direction / Design / Programming</span><span class="name">MameSamurai</span></div>
+                <div class="staff-roll-line"><span class="role">Music</span><span class="name">DOVA-SYNDROME</span></div>
+                <div class="staff-roll-line"><span class="role">Sound Effect</span><span class="name">OtoLogic</span></div>
+                <div class="staff-roll-line"><span class="role-center" style="margin-top: 4em;">Special Thanks</span></div>
+                <div class="staff-roll-line"><span class="role-center">All Players</span></div>
+                <div class="staff-roll-line" style="margin-top: 6em; justify-content: center;"><span class="role-center">Thank you for playing!</span></div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', staffRollHTML);
+
+    const overlay = document.querySelector('.staff-roll-overlay');
+    const skipButton = canSkip ? document.querySelector('.staff-roll-skip') : null;
+    let skipHandler = null;
+
+    const endRoll = () => {
+        if (!overlay) return;
+        clearTimeout(rollTimer);
+        // イベントリスナーを安全に解除
+        if (skipHandler) document.removeEventListener('keydown', skipHandler);
+        if (skipButton) skipButton.removeEventListener('click', endRoll);
+
+        overlay.classList.add('fade-out');
+        setTimeout(() => {
+            overlay.remove();
+            isStaffRollShowing = false; // ★表示終了
+            if (onComplete) onComplete();
+        }, 1500);
+    };
+
+    const rollTimer = setTimeout(endRoll, 30000); // 30秒でロール終了
+
+    if (canSkip && skipButton) {
+        // Sキーでのスキップ
+        skipHandler = (e) => {
+            if (e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                endRoll();
+            }
+        };
+        document.addEventListener('keydown', skipHandler);
+
+        // クリックでのスキップ
+        skipButton.addEventListener('click', endRoll);
+    }
+}
+
+/**
+ * 真エンディングシーケンスを開始します。
+ */
+export async function startTrueEndingSequence(onCompleteCallback) {
+    // HUDを非表示にする
+    showHud(false);
+
+    // 1. CSSの読み込みを試みる
+    await loadStaffRollCSS();
+
+    // 2. 画面を暗転させる
+    const blackout = await fadeToBlack();
+    playBGM("bgm_hosikuzu"); // BGM再生開始
+    await new Promise(r => setTimeout(r, 2000));
+
+    // 3. メッセージを表示する
+    await showMessage("Thank you for playing.");
+
+    // 4. スタッフロールのHTMLを表示する
+    await showStaffRoll(() => {
+        stopBGM(); // BGM停止
+        if (onCompleteCallback) onCompleteCallback();
+    });
+    // 5. エンディングを見たことを記録する
+    markTrueEndingSeen();
+
+    if (blackout) blackout.remove();
+}
+
+// =============================================================================================================
+
+
+
+
 function bindModeSwitchEvents() {
 
   switchToFreeBtn?.addEventListener("click", () => {
@@ -1442,6 +1626,15 @@ function bindModeSwitchEvents() {
 }
 
 function bindModeStartEvents() {
+
+  // イベントリスナーの重複登録を防ぐため、要素をクローンして置き換える
+  questStartBtn = questStartBtn.replaceWith(questStartBtn.cloneNode(true)) || questStartBtn;
+  questStartBtn = document.getElementById("questStartBtn");
+
+  questStartBtnFromBeginning = questStartBtnFromBeginning.replaceWith(questStartBtnFromBeginning.cloneNode(true)) || questStartBtnFromBeginning;
+  questStartBtnFromBeginning = document.getElementById("questStartBtnFromBeginning");
+
+
 
   questStartBtn?.addEventListener("click", () => {
     showQuestMap();
@@ -1463,14 +1656,6 @@ function bindModeStartEvents() {
           if (!ok) return;
       }
   
-        // ★プロローグを再生（新規開始時は常に再生する）
-        await new Promise(resolve => {
-          startDialogue("prologue", () => {
-            try { localStorage.setItem("prologue_played", "true"); } catch (e) {}
-            resolve(); // ダイアログが閉じたらPromiseを解決
-          });
-        });
-  
       // ロード画面を表示
       showLoadingScreen();
       setLoadingText("Creating New World...");
@@ -1478,6 +1663,15 @@ function bindModeStartEvents() {
   
       // 進行状況の初期化
       resetQuestAll();
+      // ★ MODIFIED: resetQuestAll の後にプロローグを再生するように移動
+      // これにより、プロローグ再生済みのフラグがリセットされなくなります。
+      await new Promise(resolve => {
+        closeQuestModal();
+        startDialogue("prologue", () => {
+          resolve(); // ダイアログが閉じたらPromiseを解決
+        });
+      });
+
       reloadQuestProgress();
       reloadQuestPlayerStats();
       updateHud(null, { isQuestMode: true });
@@ -1580,7 +1774,7 @@ function bindResultEvents() {
     showQuestMenu();
   });
 
-  questBackBtn?.addEventListener("click", () => {
+   questBackBtn?.addEventListener("click", () => {
     //if (gameState.enemyMode) endEnemyMode();
     Game.fullResetGame();
     gameState.typed = "";
@@ -1859,6 +2053,9 @@ function handleGameKey(e) {
 }
 
 function handleMenuKey(e) {
+  // スタッフロール表示中はメニューキーを無効化
+  if (isStaffRollShowing) return true;
+
 
   const key = e.key.toLowerCase();
 
@@ -2112,13 +2309,13 @@ function handleMenuKey(e) {
         case "t": // skill Tree
           btn = sideMenu.querySelector("button:nth-child(2)");
           break;
-        case "e": // equip Skill
+        case "e": // equip Skill (or "SKILL")
           btn = sideMenu.querySelector("button:nth-child(3)");
           break;
-        case "p": // status
+        case "p": // status (was "i")
           btn = sideMenu.querySelector("button:nth-child(4)");
           break;
-        case "l": // log
+        case "l": // log (new)
           btn = sideMenu.querySelector("button:nth-child(5)");
           break; 
         case "s": // save/load

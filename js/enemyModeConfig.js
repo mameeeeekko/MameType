@@ -1478,6 +1478,40 @@ export const STAGES = {
     star: { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
   },
 
+    // Worldend ボス(LastBoss)
+  LAST_BOSS: {
+    phases: [
+      {
+        name: "end of the world",
+        spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
+        enemyTable: getTierEnemies("T8", ENEMY_TIER_ENGLISH_HEAVY),
+        phaseConditions: { killCount: 30 }
+      },
+      {
+        name: "end of the world 2",
+        spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
+        enemyTable: getTierEnemies("T9", ENEMY_TIER_BALANCED),
+        phaseConditions: {timerMs: 65000}
+      },
+      {
+        name: "end of the world 3",
+        spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
+        enemyTable: getTierEnemies("T9", ENEMY_TIER_BALANCED),
+        phaseConditions: { killCount: 35 }
+      },
+      {
+        name: "THE LAST",
+        bgm: "bgm_boss2",
+        spawn: { interval: 1000, limit: 1, maxAlive: 1 },
+        enemyTable: [{ type: "LAST_BOSS", weight: 100, pos: { x: 830, y: 150 } }],
+        phaseConditions: { killCount: 1 }
+      }
+    ],
+    endConditions: { hpZero: true },
+    clearConditions: { survive: true },
+    star: { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
+  },
+
 // ========================================================
 // test
 // =========================================================

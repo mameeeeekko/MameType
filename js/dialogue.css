@@ -150,6 +150,7 @@
     color: #8b949e;
     margin-bottom: 5px;
     font-size: 14px;
+    text-align: left; /* キャラクター名を左寄せに */
 }
 
 .message-text {
@@ -159,6 +160,7 @@
     color: #c9d1d9;
     line-height: 1.6;
     font-size: 15px;
+    text-align: left; /* メッセージ本文を左寄せに */
 }
 
 .dialogue-controls {

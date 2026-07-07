@@ -1,9 +1,9 @@
 // dialogue.js
 
-import { getClearedStageCount, isCleared, markDialoguePlayed, hasDialogueBeenPlayed } from './questProgress.js'; // ★ MODIFIED: Import new functions
+import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed } from './questProgress.js'; // ★ MODIFIED: Import new functions
 import { DIALOGUE_DATA } from './dialogueData.js';
 import { QUEST_MAP } from './questMap.js';
-import { showQuestMap } from './main.js';
+import { showQuestMap, startTrueEndingSequence  } from './main.js';
 
 let dialogueModal = null;
 let logPanel = null;
@@ -164,7 +164,13 @@ function renderChapterLog() {
     if (!logChaptersContainer) return;
     logChaptersContainer.innerHTML = '';
 
+    // ★ MODIFIED: Include prologue if it has been played
     const clearedDialogueIds = Object.keys(DIALOGUE_DATA).filter(id => {
+        // プロローグとエンディングは特別扱い
+        if (id === 'prologue' || id === 'true_ending_dialogue') {
+            return hasDialogueBeenPlayed(id);
+        }
+        // それ以外の会話はクエストクリアを条件とする
         const questId = id.replace(/_start$|_end$/, '');
         return isCleared(questId);
     });
@@ -215,13 +221,24 @@ function renderChapterLog() {
         chapterDiv.className = 'log-chapter';
         chapterDiv.dataset.dialogueId = dialogueId;
 
-        const questId = dialogueId.replace(/_start$|_end$/, '');
-        const stageName = getStageName(questId);
-        const eventType = dialogueId.endsWith('_start') ? '開始時' : dialogueId.endsWith('_end') ? '終了時' : '';
+        let stageName;
+        let eventType;
+
+        if (dialogueId === 'prologue') {
+            stageName = "プロローグ";
+            eventType = "";
+        } else if (dialogueId === 'true_ending_dialogue') {
+            stageName = "エピローグ";
+            eventType = "";
+        } else {
+            const questId = dialogueId.replace(/_start$|_end$/, '');
+            stageName = getStageName(questId);
+            eventType = dialogueId.endsWith('_start') ? '開始時' : dialogueId.endsWith('_end') ? '終了時' : '';
+        }
 
         chapterDiv.innerHTML = `
             <div class="log-chapter-title">${dialogue.title}</div>
-            <div class="log-chapter-status">${stageName} - ${eventType}</div>
+            <div class="log-chapter-status">${stageName}${eventType ? ` - ${eventType}` : ''}</div>
         `;
 
         chapterDiv.addEventListener('click', () => {
@@ -232,6 +249,21 @@ function renderChapterLog() {
 
         logChaptersContainer.appendChild(chapterDiv);
     });
+
+    // ★エンディング再生ボタンの追加
+    if (isCleared("WEND_LastBoss")) {
+        const endingBtn = document.createElement('div');
+        endingBtn.className = 'log-chapter ending-playback'; // 専用のスタイルを当てる
+        endingBtn.innerHTML = `
+            <div class="log-chapter-title">ENDING</div>
+            <div class="log-chapter-status">エンディングを再生します</div>
+        `;
+        endingBtn.onclick = () => {
+            closeDialogue(); // ログモーダルを閉じる
+            startTrueEndingSequence(showLog); // エンディングを開始し、終了後にログ画面を再表示
+        };
+        logChaptersContainer.appendChild(endingBtn);
+    }
 }
 
 function typeMessage(element, text, onFinished) {
@@ -461,6 +493,14 @@ export function startDialogue(dialogueId, onComplete) {
             e.preventDefault();
             advanceDialogue();
         }
+        // 's'キーでスキップ
+        if (e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            // skipButtonが存在し、かつ表示されている場合のみクリックする
+            if (skipButton && skipButton.style.display !== 'none') {
+                skipButton.click();
+            }
+        }
         // ESCキーで会話を中断してマップに戻る
         if (e.key === 'Escape') {
             e.preventDefault();
@@ -548,16 +588,7 @@ function loadDialogueCSS() {
     document.head.appendChild(link);
 }
 
-function injectDialogueStyles() {
-    if (document.getElementById('dialogue-inline-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'dialogue-inline-styles';
-    style.textContent = `.message-text { text-align: left; }`;
-    document.head.appendChild(style);
-}
-
 loadDialogueCSS();
-injectDialogueStyles();
 
 // DIALOGUE_DATAを再エクスポートして、questMapUI.jsから参照できるようにする
 export { DIALOGUE_DATA }

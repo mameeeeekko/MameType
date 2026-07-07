@@ -635,10 +635,10 @@ function renderQuestSideMenu(container){
     menu.appendChild(createBtn("DIFFICULTY", () => openQuestMenuModal("difficulty")));
     menu.appendChild(createBtn("SKILL TREE (T)", () => openQuestMenuModal("skillTree")));
     menu.appendChild(createBtn("EQUIP SKILLS", () => openQuestMenuModal("skill")));
-    menu.appendChild(createBtn("STATUS (I)", () => document.getElementById("hudDetailBtn").click()));
-    menu.appendChild(createBtn("LOG", () => showLog()));
-    menu.appendChild(createBtn("SAVE / LOAD", () => document.getElementById("questSaveBtn").click()));
-    menu.appendChild(createBtn("BACK", () => backToQuestMenu()));
+    menu.appendChild(createBtn("STATUS (P)", () => document.getElementById("hudDetailBtn").click()));
+    menu.appendChild(createBtn("LOG (L)", () => showLog()));
+    menu.appendChild(createBtn("SAVE / LOAD (S)", () => document.getElementById("questSaveBtn").click()));
+    menu.appendChild(createBtn("EXIT", () => backToQuestMenu()));
 
     container.appendChild(menu);
 }

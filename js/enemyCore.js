@@ -2372,6 +2372,12 @@ export async function endEnemyMode() {
         if (!stats.failed && node) {
             markCleared(node.id, node.next, node.nextWorld);
 
+            // ★ 最終ボス撃破後、エンディングフラグを立てる
+            if (node.stage === "LAST_BOSS") {
+                gameState.isTrueEnding = true;
+                console.log("TRUE ENDING FLAG SET");
+            }
+
             // ★ステージ報酬（slot + stock）
             if (
                 (node.reward?.type === "slot" || node.reward?.type === "activeStock") &&

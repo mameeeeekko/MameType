@@ -7,7 +7,7 @@ const DEFAULT_PROGRESS = {
     cleared: [],
     unlockedWorlds: ["WORLD1"],
     selectedWorldId: "WORLD1",
-    playedDialogues: {} // ★ ADDED: Track played dialogues
+    hasSeenTrueEnding: false,
 };
 
 let progress = load();
@@ -30,7 +30,7 @@ export function reloadQuestProgress() {
     cleared: data.cleared ?? [],
     unlockedWorlds: data.unlockedWorlds ?? ["WORLD1"],
     selectedWorldId: data.selectedWorldId ?? "WORLD1",
-    playedDialogues: data.playedDialogues || {} // ★ ADDED: Ensure playedDialogues is loaded
+    hasSeenTrueEnding: data.hasSeenTrueEnding || false,
   };// ←これが重要
   return progress;
 }
@@ -71,16 +71,32 @@ export function isCleared(id) {
 
 // ★ ADDED: Mark a dialogue as played
 export function markDialoguePlayed(dialogueId) {
-    if (!progress.playedDialogues) {
-        progress.playedDialogues = {};
-    }
-    progress.playedDialogues[dialogueId] = true;
+    // この機能は現在使用されていないため、将来の拡張のためにコメントアウトしておきます。
+    // if (!progress.playedDialogues) {
+    //     progress.playedDialogues = {};
+    // }
+    // progress.playedDialogues[dialogueId] = true;
     save();
 }
 
 // ★ ADDED: Check if a dialogue has been played
 export function hasDialogueBeenPlayed(dialogueId) {
-    return progress.playedDialogues && progress.playedDialogues[dialogueId] === true;
+    // この機能は現在使用されていないため、常にfalseを返します。
+    // return progress.playedDialogues && progress.playedDialogues[dialogueId] === true;
+    return false;
+}
+
+// ★ ADDED: Mark true ending as seen
+export function markTrueEndingSeen() {
+    if (progress) {
+        progress.hasSeenTrueEnding = true;
+    }
+    save();
+}
+// ★ ADDED: Check if true ending has been seen
+export function hasSeenTrueEnding() {
+    // progress.hasSeenTrueEnding が undefined の場合も考慮して false を返す
+    return !!progress.hasSeenTrueEnding;
 }
 
 function save(){
@@ -137,8 +153,7 @@ export function resetQuestAll() {
         cleared: [],
         unlockedWorlds: ["WORLD1"], // Ensure default properties are present for old saves
         selectedWorldId: "WORLD1",
-        playedDialogues: {} // ★ ADDED: Reset played dialogues
-    }));
+    hasSeenTrueEnding: false,  }));
 
     localStorage.setItem("quest_auto_save", JSON.stringify({
         progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1" },

@@ -2,8 +2,8 @@
 
 import { gameState, setGameActive, fullResetGame } from "./gameCore.js";
 import { updateHud } from "./hud.js";
-import { closeDialogue } from "./dialogue.js";
-import { backToQuestMap } from "./main.js";
+import { closeDialogue, startDialogue, showLog } from "./dialogue.js";
+import { backToQuestMap, startTrueEndingSequence } from "./main.js";
 import { restartEnemyMode } from "./enemyCore.js";
 
 export function showEnemyEndIntro(text, onFinish) {
@@ -360,11 +360,22 @@ export function showQuestResult(stats) {
     backBtn.onclick = () => {
         document.removeEventListener("keydown", container._keyHandler);
         container.style.display = "none";
+
+        if (gameState.isTrueEnding) {
+            gameState.isTrueEnding = false;
+            startDialogue("true_ending_dialogue", () => {
+                startTrueEndingSequence(backToQuestMap);
+            });
+            return;
+        }
+
         fullResetGame();
         gameState.typed = "";
-        closeDialogue(); // Close dialogue modal
+        closeDialogue();
+
         const modal = document.querySelector(".game-modal");
         if (modal) modal.style.display = "none";
+
         backToQuestMap();
     };
 

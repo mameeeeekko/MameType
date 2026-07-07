@@ -895,6 +895,7 @@ function updateTimeAttack() {
 // =====================================================
 export function backToMenu(){
   stopBGM(); 
+  gameState.startTime = 0; //曲情報表示リセット
   isGameActive=false;
   isFinishing = false;
   gameState.isEnding = false;
@@ -902,6 +903,9 @@ export function backToMenu(){
   stopTimeCircle();
   // モーダル閉じる
   const modal = document.getElementById("gameModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
 
   // 中断したモードに合わせて適切なメニューカテゴリを表示する
   // ※ showCategory, showQuestMenu はグローバルまたは他で定義されている前提

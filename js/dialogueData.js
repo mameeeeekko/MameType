@@ -94,6 +94,58 @@ export const DIALOGUE_DATA = {
                 text: "了解。システムのコアへ進むためにも、ここは突破する。"
             }
         ]
-    }
+    },
+
+        //【サンプル3】lastboss前の会話
+    "WEND_LastBoss_start": {
+        title: "最終決戦",
+        messages: [
+            {
+                character: "ナビ",
+                // icon: "./assets/pic/navi_icon.png",
+                text: "ラスボス\nラスボス前の会話です。"
+            },
+            {
+                character: "オペレーター",
+                // icon: "./assets/pic/player_icon.png",
+                text: "了解。システムのコアへ進むためにも、ここは突破する。"
+            }
+        ]
+    },
+
+    "WEND_LastBoss_end": {
+        title: "the end",
+        messages: [
+            {
+                character: "ナビ",
+                // icon: "./assets/pic/navi_icon.png",
+                text: "おわり"
+            },
+            {
+                character: "オペレーター",
+                // icon: "./assets/pic/player_icon.png",
+                text: "おわた"
+            }
+        ]
+    },
+
+
+    "true_ending_dialogue": {
+        title: "エピローグ",
+        messages: [
+            {
+                character: "ナビ",
+                text: "やりましたね、オペレーター。\n全ての汚染が浄化されました。"
+            },
+            {
+                character: "オペレーター",
+                text: "ああ。これでこの世界も平和になるだろう。"
+            },
+            {
+                character: "ナビ",
+                text: "あなたのタイピングが、この世界を救ったのです。\n本当に、ありがとうございました。"
+            }
+        ]
+    },
     // 他の会話データをここに追加
 };

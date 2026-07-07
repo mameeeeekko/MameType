@@ -219,7 +219,27 @@ export const QUEST_MAP = {
             { id: "W3_Q88", name: "最後の抵抗", stage: "STAGE88", next: ["W3_Q89"], pos: { x: 705, y: 570 } },
             { id: "W3_Q89", name: "管理者", stage: "STAGE89", next: ["W3_MiniBoss_9"], pos: { x: 600, y: 475 } },
             { id: "W3_MiniBoss_9", name: "Ghost", stage: "W3_MID_BOSS_9", next: ["W3_BOSS"], pos: { x: 680, y: 450 } },
-            { id: "W3_BOSS", name: "The Admin", stage: "W3_WORLD_BOSS", next: [], nextWorld: null, pos: { x: 705, y: 475 } }
+            { id: "W3_BOSS", name: "The Admin", stage: "W3_WORLD_BOSS", next: [], nextWorld: "WORLDEND", pos: { x: 705, y: 475 } }
         ]
     },
+
+    WORLDEND: {
+        name: "終焉の地",
+        bgImage: "map_red",
+        defaults: {
+            bgm: {
+                normal: "bgm_harunosuisou",
+                mid_boss: "bgm_rojiura",
+                boss: "bgm_yamiyo"
+            },
+            bgImage: {
+                normal: "battle_gray",
+                mid_boss: "battle_gray",
+                boss: "battle_gray"
+            }
+        },
+        nodes: [
+            { id: "WEND_LastBoss", name: "The Void", stage: "LAST_BOSS", next: [], pos: { x: 705, y: 150 } }
+        ]
+    }    
 };

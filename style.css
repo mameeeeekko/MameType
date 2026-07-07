@@ -77,6 +77,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 #statsCloseQuest          { z-index: 20; }    /* クエストステータス: 閉じるボタン */
 
 /* --- UIコンテナ (メニュー、ゲームモードなど) --- */
+.world-selector           { z-index: 100; }   /* クエストマップ: ワールドセレクター */
 #menu                     { z-index: 500; }   /* メインメニュー画面 */
 #bootScreen               { z-index: 1000; }  /* 起動画面 (Click to Start) */
 #enemyModeContainer       { z-index: 1000; }  /* エネミーモード: 全体コンテナ */
@@ -5953,4 +5954,213 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 #mobileWarning p {
   line-height: 1.6;
   font-size: 14px;
+}
+
+/* =====================================================
+   スタッフロール
+   ===================================================== */
+.staff-roll-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  overflow: hidden;
+  z-index: 30000;
+  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  opacity: 1;
+  transition: opacity 1.5s ease-out;
+}
+
+.staff-roll-overlay.fade-out {
+  opacity: 0;
+}
+
+.staff-roll-content {
+  width: 80%;
+  max-width: 600px;
+  text-align: center;
+  animation: scrollUp 30s linear forwards;
+  transform: translateY(100%);
+}
+
+@keyframes scrollUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(-120%);
+  }
+}
+
+.staff-roll-line {
+  margin-bottom: 2.5em;
+  font-size: 18px;
+  line-height: 1.5;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.staff-roll-line .role {
+  color: #aaa;
+  text-align: left;
+}
+
+.staff-roll-line .name {
+  font-weight: bold;
+  text-align: right;
+}
+
+.staff-roll-line .role-center {
+  width: 100%;
+  text-align: center;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+
+
+/* =====================================================
+   スタッフロール
+   ===================================================== */
+.staff-roll-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  overflow: hidden;
+  z-index: 30000;
+  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  opacity: 1;
+  transition: opacity 1.5s ease-out;
+}
+
+.staff-roll-overlay.fade-out {
+  opacity: 0;
+}
+
+.staff-roll-content {
+  width: 80%;
+  max-width: 600px;
+  text-align: center;
+  animation: scrollUp 30s linear forwards;
+  transform: translateY(100%);
+}
+
+@keyframes scrollUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(-120%);
+  }
+}
+
+.staff-roll-line {
+  margin-bottom: 2.5em;
+  font-size: 18px;
+  line-height: 1.5;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.staff-roll-line .role {
+  color: #aaa;
+  text-align: left;
+}
+
+.staff-roll-line .name {
+  font-weight: bold;
+  text-align: right;
+}
+
+.staff-roll-line .role-center {
+  width: 100%;
+  text-align: center;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+/* =====================================================
+   エンドロール
+   ===================================================== */
+.ending-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  overflow: hidden;
+  z-index: 29000; /* スタッフロールより手前 */
+  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  opacity: 1;
+  transition: opacity 1.5s ease-out;
+}
+
+.ending-overlay.fade-out {
+  opacity: 0;
+}
+
+.ending-content {
+  width: 80%;
+  max-width: 700px;
+  text-align: center;
+  animation: scrollUpEnding 25s linear forwards;
+  transform: translateY(100%);
+}
+
+@keyframes scrollUpEnding {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(-110%);
+  }
+}
+
+.ending-content p {
+  font-size: 24px;
+  line-height: 2;
+  margin-bottom: 1.5em;
+  color: #e0e0e0;
+}
+
+/* =====================================================
+   真エンディング演出
+   ===================================================== */
+.true-ending-blackout {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 28000; /* エンドロールより手前 */
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+}
+
+.true-ending-message-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  z-index: 28500; /* 暗転より手前 */
+  opacity: 0;
+  transition: opacity 1.5s ease-out;
+}
+
+.true-ending-message-overlay p {
+  color: #fff;
+  font-size: 22px;
+  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  letter-spacing: 1.5px;
 }

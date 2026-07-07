@@ -659,6 +659,9 @@ function applyQuestData(data) {
   // stars が存在しない場合（古いセーブデータなど）は空のオブジェクトをセットして確実にリセットする
   localStorage.setItem("questStars", JSON.stringify(data.stars || {}));
 
+  // ★重要：ロードしたデータをオートセーブにも反映させる
+  localStorage.setItem(QUEST_AUTO_KEY, JSON.stringify(data));
+
   return true;
 }
 
