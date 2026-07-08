@@ -1467,7 +1467,7 @@ export const STAGES = {
       },
       {
         name: "THE ADMIN",
-        bgm: "bgm_boss2",
+        bgm: "bgm_boss1",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "BOSS_3", weight: 100, pos: { x: 830, y: 150 } }],
         phaseConditions: { killCount: 1 }

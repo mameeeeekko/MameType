@@ -101,6 +101,8 @@ export async function loadAssets(onProgress) {
 
     // 音源
     // SE
+    { type: "sound", name: "select", src: "./assets/sound/se/select.mp3", composer: "", title: "", volume: 1.0 },
+
     { type: "sound", name: "kill1", src: "./assets/sound/se/kill1.mp3", composer: "", title: "", volume: 1.0 },
     { type: "sound", name: "kill2", src: "./assets/sound/se/kill2.mp3", composer: "", title: "", volume: 1.0 },
     { type: "sound", name: "kill3", src: "./assets/sound/se/kill3.mp3", composer: "", title: "", volume: 1.0 },

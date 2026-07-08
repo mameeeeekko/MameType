@@ -6164,3 +6164,51 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
   letter-spacing: 1.5px;
 }
+
+/* =====================================================
+   更新通知UI
+   ===================================================== */
+
+.update-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #2a2a2a;
+  color: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.update-notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.update-notification p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.update-notification button {
+  background-color: #377dff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.update-notification button:hover {
+  background-color: #5c9bff;
+}

@@ -42,7 +42,7 @@ import {
   setCurrentDifficulty,
   getDifficultyDescription,
 } from "./difficulties.js";
-import { playBGM, stopBGM } from "./effectManager.js";
+import { playBGM, stopBGM, playSE } from "./effectManager.js";
 
 
 
@@ -528,6 +528,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
+// =====================================================
+// Service Worker 更新通知処理
+// =====================================================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./service-worker.js').then(registration => {
+    console.log('Service Worker registered with scope:', registration.scope);
+
+    // 更新が見つかった場合
+    registration.onupdatefound = () => {
+      const installingWorker = registration.installing;
+      if (installingWorker) {
+        installingWorker.onstatechange = () => {
+          // 新しいワーカーがインストールされ、待機状態になった
+          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            console.log('New content is available and will be used when all tabs for this scope are closed. Or click update button.');
+            showUpdateNotification(registration);
+          }
+        };
+      }
+    };
+  }).catch(error => {
+    console.error('Service Worker registration failed:', error);
+  });
+}
+
+function showUpdateNotification(registration) {
+  const notification = document.getElementById('update-notification');
+  const updateButton = document.getElementById('update-now-btn');
+
+  if (!notification || !updateButton) return;
+
+  notification.style.display = 'flex';
+  setTimeout(() => notification.classList.add('show'), 10);
+
+  updateButton.onclick = () => {
+    registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    });
+  };
+}
+
 // ================================
 // 🔹クエストスロットUI描画
 // ================================
@@ -717,14 +759,17 @@ function createDifficultySelector(
 // =====================================================
 function initSettingsUI() {
 
-  settingsBtn?.addEventListener("click", () => {
+  settingsBtn?.addEventListener("click", (e) => {
+    playSE("select");
     hideAllScreens();
     if (settingsDiv) settingsDiv.style.display = "block";
     applySoundSettingsToUI();
     applyKeybindsToUI();
   });
 
-  settingsBackBtn?.addEventListener("click", showMainMenu);
+  settingsBackBtn?.addEventListener("click", (e) => {
+    showMainMenu();
+  });
 
   [
     [bgmToggle, 'bgm'],
@@ -1379,34 +1424,39 @@ export function showGameScreen() {
 function bindMenuEvents() {
 
   questMenuBtn?.addEventListener("click", () => {
+    playSE("select");
     updateHud(null, { isQuestMode: true });
     showQuestMenu();
   });
 
-  startMenuBtn?.addEventListener("click", showStartMenu);
-  freeModeBtn?.addEventListener("click", showFreeStartMenu);
+  startMenuBtn?.addEventListener("click", () => { playSE("select"); showStartMenu(); });
+  freeModeBtn?.addEventListener("click", () => { playSE("select"); showFreeStartMenu(); });
 
   recordsMenuBtn?.addEventListener("click", () => {
+    playSE("select");
     hideAllScreens();
     showRecordsView(Game.getLastGameMode?.() ?? GameModes.NORMAL);
   });
 
   onlineRankingBtn?.addEventListener("click", () => {
+    playSE("select");
     hideAllScreens();
     openOnlineRanking();
   });
 
   // 「戻る」ボタンは、すべてshowMainMenuを呼び出すように統一する
-  startMenuBackBtn?.addEventListener("click", showMainMenu);
-  freeStartMenuBackBtn?.addEventListener("click", showMainMenu);
-  questStartMenuBackBtn?.addEventListener("click", showMainMenu);
+  startMenuBackBtn?.addEventListener("click", () => { playSE("select"); showMainMenu(); });
+  freeStartMenuBackBtn?.addEventListener("click", () => { playSE("select"); showMainMenu(); });
+  questStartMenuBackBtn?.addEventListener("click", () => { playSE("select"); showMainMenu(); });
 
   questSaveBtn?.addEventListener("click", () => {
+    playSE("select");
     questSaveMenuDiv.classList.remove("hidden");
     renderQuestSlots();
   });
 
   saveToQuestMenuBackBtn?.addEventListener("click", () => {
+    playSE("select");
     questSaveMenuDiv.classList.add("hidden");
   });
 }

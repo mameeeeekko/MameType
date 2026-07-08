@@ -1,7 +1,7 @@
 import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEMENTS } from "./playerStats.js";
 import { savePlayerStats } from "./storage.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
-import { getClearedStageCount, getTotalStars, getAvailableMaxStars } from "./questProgress.js";
+import { getClearedStageCount, getTotalStars, getAvailableMaxStars, hasSeenTrueEnding } from "./questProgress.js";
 import { PASSIVE_SKILLS, ACTIVE_SKILLS, getSkillById } from "./questSkills.js";
 import { QUEST_MAP } from "./questMap.js";
 import { SKILL_TREE } from "./skillTree.js";
@@ -266,7 +266,10 @@ function updateQuestHud() {
   ? Math.floor((totalStars / maxStars) * 100)
   : 0;
 
-  if (clearEl) clearEl.textContent = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%)`;
+  if (clearEl) {
+    const crown = hasSeenTrueEnding() ? ' C' : '';
+    clearEl.textContent = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%) 　 ${crown}`;
+  }
 }
 
 function updateNormalHud(stats) {

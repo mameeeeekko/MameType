@@ -382,7 +382,7 @@ export class Enemy {
         // UI侵入防止
         const uiTop = getUISafeTop();
         if(this.y < uiTop){
-            this.y = Math.max(this.y, uiTop);
+            this.y = uiTop;
         }
 
         return !this.isDead;
