@@ -1,6 +1,8 @@
 // onlineRankingRenderer.js
 
 import { getRanking } from "./getRanking.js";
+import { getPlayerId, isOnlineEnabled } from "../online/playerProfile.js";
+import { loadRecords } from "../js/storage.js";
 
 let currentMode = "normal";
 let currentOffset = 0;
@@ -24,6 +26,7 @@ export async function openOnlineRanking() {
 
 async function renderRanking(reset = false) {
   const list = document.getElementById("rankingList");
+  const myRankEl = document.getElementById("myOnlineRank");
   if (!list) return;
 
   try {
@@ -33,6 +36,9 @@ async function renderRanking(reset = false) {
       currentOffset + PAGE_SIZE - 1
     );
 
+    // ★ 自分の順位を計算して表示
+    await renderMyRank(myRankEl, ranking, currentMode);
+
     if (!ranking || ranking.length === 0) {
         list.innerHTML = "<p>No ranking data</p>";
         hasMore = false;
@@ -40,12 +46,17 @@ async function renderRanking(reset = false) {
     }
 
 
+
     if (ranking.length < PAGE_SIZE) {
         hasMore = false;
     }
 
-    const html = ranking.map((row, i) => `
-      <div class="rank-row">
+    const myPlayerId = getPlayerId();
+    const html = ranking.map((row, i) => {
+      const isMyRank = row.player_id === myPlayerId;
+      const myRankClass = isMyRank ? 'my-rank' : '';
+      return `
+      <div class="rank-row ${myRankClass}">
         <span>${currentOffset + i + 1}</span>
         <span>${row.player_name}</span>
         <span>
@@ -56,7 +67,7 @@ async function renderRanking(reset = false) {
             }
         </span>
       </div>
-    `).join("");
+    `}).join("");
 
     if (reset) {
       list.innerHTML = html;
@@ -71,6 +82,32 @@ async function renderRanking(reset = false) {
 
 }
 
+/**
+ * ★ 自分の現在の順位を計算して表示する
+ * @param {HTMLElement} el - 表示先の要素
+ * @param {Array} onlineRanking - オンラインランキングのデータ
+ * @param {string} mode - 現在のゲームモード
+ */
+async function renderMyRank(el, onlineRanking, mode) {
+  if (!el) return;
+
+  if (!isOnlineEnabled()) {
+    el.innerHTML = "オンラインランキングは無効です";
+    return;
+  }
+
+  // 3. オンラインランキングから自分のplayerIDを探して順位を特定
+  const myPlayerId = getPlayerId();
+  const rankIndex = onlineRanking.findIndex(r => r.player_id === myPlayerId);
+  const rank = rankIndex !== -1 ? rankIndex + 1 : -1;
+
+  if (rank === -1) {
+    el.innerHTML = "RANK: <span class='my-rank-position'>ランク外</span>";
+  } else {
+    el.innerHTML = `RANK: <span class="my-rank-position">${rank}位</span>`;
+  }
+
+}
 
 function bindRankingEvents() {
     // タブ切替

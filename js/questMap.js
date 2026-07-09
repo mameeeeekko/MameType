@@ -133,9 +133,9 @@ export const QUEST_MAP = {
                 boss: "bgm_flashback"
             },
             bgImage: {
-                normal: "battle_green",
-                mid_boss: "battle_green",
-                boss: "battle_green"
+                normal: "battle_purple",
+                mid_boss: "battle_purple",
+                boss: "battle_purple"
             }
         },
         nodes: [
@@ -183,9 +183,9 @@ export const QUEST_MAP = {
                 boss: "bgm_yamiyo"
             },
             bgImage: {
-                normal: "battle_gray",
-                mid_boss: "battle_gray",
-                boss: "battle_gray"
+                normal: "battle_red",
+                mid_boss: "battle_red",
+                boss: "battle_red"
             }
         },
         nodes: [
@@ -225,7 +225,7 @@ export const QUEST_MAP = {
 
     WORLDEND: {
         name: "終焉の地",
-        bgImage: "map_red",
+        bgImage: "map_gray",
         defaults: {
             bgm: {
                 normal: "bgm_harunosuisou",

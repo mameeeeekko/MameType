@@ -1,7 +1,8 @@
 import { supabase } from "./supabase.js";
 import {
   isOnlineEnabled,
-  getPlayerName
+  getPlayerName,
+  getPlayerId // ★ インポート
 } from "./playerProfile.js";
 
 export async function submitScore(scoreData) {
@@ -34,14 +35,29 @@ export async function submitScore(scoreData) {
   // ================================
   // insert
   // ================================
-  const { data, error } = await supabase
-    .from("scores")
-    .insert([scoreData]);
+  // ★ RPC（データベース関数）を呼び出すように変更
+  const { data, error } = await supabase.rpc("upsert_score", {
+    new_id: scoreData.id,
+    new_player_id: getPlayerId(), // ★ 永続的なプレイヤーIDを送信
+    new_player_name: scoreData.player_name,
+    new_score: scoreData.score,
+    new_kpm: scoreData.kpm,
+    new_solvedcount: scoreData.solvedCount,
+    new_accuracy: scoreData.accuracy,
+    new_mode: scoreData.mode,
+    new_ranking_version: scoreData.ranking_version,
+  });
 
   if (error) {
-    console.error("Score insert error:", error);
+    // ★ エラーメッセージをRPC用に修正
+    console.error("Score upsert RPC error:", error);
     return { success: false, error };
   }
 
-  return { success: true, data };
+  // ★ RPCからの返り値(data)が更新されたかどうかを示す boolean になる
+  return {
+    success: true,
+    data,
+    onlineUpdated: data === true
+  };
 }

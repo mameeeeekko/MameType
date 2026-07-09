@@ -1423,7 +1423,6 @@ export const STAGES = {
         name: "Core Defense System",
         spawn: { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
         enemyTable: getTierEnemies("T6", ENEMY_TIER_BALANCED),
-        phaseConditions: { killCount: 25 }
       },
       {
         name: "Core Defense System 2",

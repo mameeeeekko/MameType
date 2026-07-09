@@ -71,7 +71,8 @@ export function showResult({
   isNewRecord = false,
   isRankIn = false,
   rankPos = null,
-  isFreeMode = false
+  isFreeMode = false,
+  onlineUpdated = false // ★ フラグを受け取る
 }) {
 
   resetResultButtons(mode, { missedCount: totalMistake });
@@ -145,6 +146,11 @@ export function showResult({
   </div>
 
   <div id="onlineRanking" class="result-online-ranking"></div>
+
+    <div class="result-badges">
+    ${(onlineUpdated && mode !== "miss_practice") ? `<div class="r-badge online-update">ONLINE RECORD UPDATED</div>` : ""}
+  </div>
+
   `;
   html += `</div>`; // .result-container-centered の閉じ
 
@@ -167,7 +173,7 @@ export function showResult({
       return;
     }
 
-    if (!isFreeMode) {
+    if (!isFreeMode && mode !== "miss_practice") {
       renderOnlineRanking(eScore, solvedCount, mode);
     } else {
       if (onlineRankingEl) onlineRankingEl.innerHTML = "";

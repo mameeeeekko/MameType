@@ -129,23 +129,16 @@ export function showRecordsView(initialMode = GameModes.NORMAL) {
   document.getElementById("result").style.display = "none";
   document.getElementById("records").style.display = "block";
 
-  // リセットボタン
+  // タイトルのスタイル調整
+  const title = document.querySelector("#records .menu-title");
+  if (title) {
+    title.style.fontSize = "20px";
+  }
+
+  // リセットボタンを非表示にする
   const resetBtn = document.getElementById("resetRecordsBtn");
   if (resetBtn) {
-    resetBtn.onclick = () => {
-      const ok = confirm("本当にすべての記録を削除しますか？\nこの操作は元に戻せません。");
-      if (!ok) return;
-
-      clearRecords();
-      clearRanking();
-      resetHistoryVisible();
-
-      const records = loadRecords();
-      renderSummary(records);
-      renderRanking(records);
-      renderHistory(records);
-      renderBestEScoreGraph(records);
-    };
+    resetBtn.style.display = "none";
   }
 }
 
@@ -203,7 +196,13 @@ function renderRanking(records) {
   let sorted;
   if (mode === "time_attack") {
     sorted = [...filtered]
-      .sort((a, b) => (b.solvedCount ?? 0) - (a.solvedCount ?? 0))
+      .sort((a, b) => {
+        const solvedDiff = (b.solvedCount ?? 0) - (a.solvedCount ?? 0);
+        if (solvedDiff !== 0) {
+          return solvedDiff;
+        }
+        return (b.eScore ?? 0) - (a.eScore ?? 0);
+      })
       .slice(0, MAX_RANKING);
   } else if (mode === "enemy_mode") {
     sorted = [...filtered]
@@ -391,12 +390,12 @@ rows.forEach((rowData, rowIndex) => {
   // 「もっと見る」ボタン
   if (historyVisibleCount < sorted.length) {
     const moreBtn = document.createElement("button");
-    moreBtn.textContent = "過去の分を見る";
+    moreBtn.textContent = "more";
     moreBtn.className = "records-more-btn"; // スタイルをCSSで制御しやすくするため
     moreBtn.style.display = "block";
     moreBtn.style.margin = "10px auto";
     moreBtn.addEventListener("click", () => {
-      historyVisibleCount += 20;
+      historyVisibleCount = sorted.length;
       renderHistory(records);
     });
     container.appendChild(moreBtn);

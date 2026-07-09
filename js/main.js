@@ -28,7 +28,7 @@ import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, showHud
 import { renderQuestMapUI, openQuestMenuModal, closeQuestModal } from "./questMapUI.js";
 import { reloadQuestProgress, resetQuestAll, markTrueEndingSeen, hasSeenTrueEnding } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
-import { getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled } from "../online/playerProfile.js";
+import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
 import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed } from "./dialogue.js";
@@ -88,7 +88,7 @@ let switchToFreeBtn, switchToNormalBtn;
 
 let resetQuestBtn;
 
-let playerNameInput, savePlayerNameBtn;
+let playerNameInput, savePlayerNameBtn, playerIdDisplay, copyPlayerIdBtn, importPlayerIdBtn;
 
 let onlineRankingToggle;
 
@@ -185,6 +185,10 @@ function cacheDOM() {
   resetQuestBtn = document.getElementById("resetQuestBtn");
 
   playerNameInput = document.getElementById("playerNameInput");
+  playerIdDisplay = document.getElementById("playerIdDisplay");
+  copyPlayerIdBtn = document.getElementById("copyPlayerIdBtn");
+  importPlayerIdBtn = document.getElementById("importPlayerIdBtn");
+
   savePlayerNameBtn = document.getElementById("savePlayerNameBtn");
 
   onlineRankingToggle = document.getElementById("onlineRankingToggle");
@@ -431,6 +435,35 @@ document.addEventListener("DOMContentLoaded", () => {
     setPlayerName(name);
     alert("保存しました");
   });
+
+  // Player IDのコピー
+  copyPlayerIdBtn?.addEventListener("click", () => {
+    const playerId = getPlayerId();
+    if (playerId) {
+      navigator.clipboard.writeText(playerId).then(() => {
+        alert("Player IDをクリップボードにコピーしました。");
+      }).catch(err => {
+        alert("コピーに失敗しました。");
+        console.error('Failed to copy Player ID: ', err);
+      });
+    }
+  });
+
+  // Player IDのインポート
+  importPlayerIdBtn?.addEventListener("click", () => {
+    const newPlayerId = prompt("バックアップしたPlayer IDをここに貼り付けてください。");
+    if (newPlayerId && newPlayerId.trim() !== "") {
+      if (confirm(`Player IDを「${newPlayerId.trim()}」に変更しますか？\nこの操作は元に戻せません。`)) {
+        setPlayerId(newPlayerId.trim());
+        // UIを更新
+        if (playerIdDisplay) playerIdDisplay.textContent = newPlayerId.trim();
+        alert("Player IDを更新しました。");
+      }
+    } else if (newPlayerId !== null) { // キャンセルではなく空文字が入力された場合
+      alert("Player IDが入力されていません。");
+    }
+  });
+
 
   // -----------------------------
   // プレイヤー統計 / ゲーム記録 ボタン
@@ -765,6 +798,11 @@ function initSettingsUI() {
     if (settingsDiv) settingsDiv.style.display = "block";
     applySoundSettingsToUI();
     applyKeybindsToUI();
+
+    // Player IDを表示
+    if (playerIdDisplay) {
+      playerIdDisplay.textContent = getPlayerId() || "（IDがありません）";
+    }
   });
 
   settingsBackBtn?.addEventListener("click", (e) => {
@@ -1652,6 +1690,7 @@ export async function startTrueEndingSequence(onCompleteCallback) {
     await showStaffRoll(() => {
         stopBGM(); // BGM停止
         if (onCompleteCallback) onCompleteCallback();
+        showHud(true); // ★ HUDを再表示
     });
     // 5. エンディングを見たことを記録する
     markTrueEndingSeen();
@@ -1789,6 +1828,10 @@ function bindResultEvents() {
     if (modal) modal.style.display = "none";
     if (resultDiv) resultDiv.style.display = "none";
 
+     // ★ UI表示を更新（スピードバーなどが正しく表示されるようにするため）
+    const lastModeId = Game.getLastGameMode()?.id || GameModes.NORMAL.id;
+    updateGameUIVisibility(lastModeId);
+
     if (wasLastGameEnemyMode()) {
       // フリーモードのエネミーモードの場合、UIの設定（Tier等）を反映し直して開始する
       if (gameState.isFreeMode) {
@@ -1802,6 +1845,10 @@ function bindResultEvents() {
   });
 
   retryBtn?.addEventListener("click", () => {
+    // ★ UI表示をミス練習モード用に更新
+    // これを呼ばないと、タイムアタック後などにスピードバーが非表示になる問題を解決
+    updateGameUIVisibility(GameModes.MISS_PRACTICE.id);
+
     if (resultDiv) resultDiv.style.display = "none";
     Game.retryMissed();
     retryBtn.style.display = "none";
@@ -2162,7 +2209,7 @@ function handleMenuKey(e) {
 
   // アチーブメントモーダルが開いている場合、閉じるショートカットキーを処理する
   const achModal = document.getElementById("achModal");
-  if (achModal && achModal.style.display !== "none") {
+  if (achModal && window.getComputedStyle(achModal).display !== "none") {
     if (key === "b" || key === "escape") {
       e.preventDefault();
       document.getElementById("achClose")?.click();
@@ -2172,7 +2219,7 @@ function handleMenuKey(e) {
 
   // 通常ステータスモーダル
   const statsModal = document.getElementById("playerStatsModal");
-  if (statsModal && statsModal.style.display !== "none") {
+  if (statsModal && window.getComputedStyle(statsModal).display !== "none") {
     if (key === "b" || key === "escape") {
       e.preventDefault();
       document.getElementById("statsClose")?.click();
@@ -2182,7 +2229,7 @@ function handleMenuKey(e) {
 
   // クエストステータスモーダル
   const questStatsModal = document.getElementById("questStatsModal");
-  if (questStatsModal && questStatsModal.style.display !== "none") {
+  if (questStatsModal && window.getComputedStyle(questStatsModal).display !== "none") {
     if (key === "b" || key === "escape") {
       e.preventDefault();
       document.getElementById("statsCloseQuest")?.click();

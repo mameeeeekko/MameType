@@ -9,7 +9,8 @@ import { renderOnlineRanking } from "../online/getRanking.js";
 export function showEnemyResult({
     isNewRecord = false,
     isRankIn = false,
-    rankPos = null
+    rankPos = null,
+    onlineUpdated = false
 } = {}) {
    
     const stats = gameState.enemyStats ?? {}; // ←必ず stats を定義
@@ -148,7 +149,10 @@ export function showEnemyResult({
                     ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
                 </div>
 
-                <div id="onlineRanking" class="result-online-ranking"></div>
+                <div class="online-ranking-container">
+                    <div id="onlineRanking" class="result-online-ranking"></div>
+                    ${onlineUpdated ? `<div class="r-badge online-update">ONLINE RECORD UPDATED</div>` : ""}
+                </div>
             </div>
         `;
         playCalcAnimation();

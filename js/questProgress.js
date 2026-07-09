@@ -8,14 +8,20 @@ const DEFAULT_PROGRESS = {
     unlockedWorlds: ["WORLD1"],
     selectedWorldId: "WORLD1",
     hasSeenTrueEnding: false,
+    playedDialogues: {}, // 会話再生履歴
 };
 
 let progress = load();
 
 function load(){
     const data = localStorage.getItem("questProgress");
-    if(!data) return {...DEFAULT_PROGRESS};
-    return JSON.parse(data);
+    if (!data) return { ...DEFAULT_PROGRESS };
+    const parsed = JSON.parse(data);
+    // playedDialoguesプロパティがない古いセーブデータのための後方互換性
+    if (!parsed.playedDialogues) {
+        parsed.playedDialogues = {};
+    }
+    return { ...DEFAULT_PROGRESS, ...parsed };
 }
 
 export function reloadQuestProgress() {
@@ -30,13 +36,20 @@ export function reloadQuestProgress() {
     cleared: data.cleared ?? [],
     unlockedWorlds: data.unlockedWorlds ?? ["WORLD1"],
     selectedWorldId: data.selectedWorldId ?? "WORLD1",
+    playedDialogues: data.playedDialogues ?? {},
     hasSeenTrueEnding: data.hasSeenTrueEnding || false,
   };// ←これが重要
   return progress;
 }
 
-export function getClearedStageCount() {
+export function getClearedStageCount(returnAsArray = false) {
   const progress = reloadQuestProgress();
+
+  // 引数がtrueの場合、クリア済みIDの配列を返す
+  if (returnAsArray) {
+    return progress?.cleared || [];
+  }
+  // デフォルトではクリア数を返す
   return progress?.cleared?.length || 0;
 }
 
@@ -71,19 +84,16 @@ export function isCleared(id) {
 
 // ★ ADDED: Mark a dialogue as played
 export function markDialoguePlayed(dialogueId) {
-    // この機能は現在使用されていないため、将来の拡張のためにコメントアウトしておきます。
-    // if (!progress.playedDialogues) {
-    //     progress.playedDialogues = {};
-    // }
-    // progress.playedDialogues[dialogueId] = true;
+    if (!progress.playedDialogues) {
+        progress.playedDialogues = {};
+    }
+    progress.playedDialogues[dialogueId] = true;
     save();
 }
 
 // ★ ADDED: Check if a dialogue has been played
 export function hasDialogueBeenPlayed(dialogueId) {
-    // この機能は現在使用されていないため、常にfalseを返します。
-    // return progress.playedDialogues && progress.playedDialogues[dialogueId] === true;
-    return false;
+    return progress.playedDialogues && progress.playedDialogues[dialogueId] === true;
 }
 
 // ★ ADDED: Mark true ending as seen
@@ -151,12 +161,14 @@ export function resetQuestAll() {
     localStorage.setItem("questProgress", JSON.stringify({
         unlocked: ["W1_Q1"],
         cleared: [],
-        unlockedWorlds: ["WORLD1"], // Ensure default properties are present for old saves
+        unlockedWorlds: ["WORLD1"],
         selectedWorldId: "WORLD1",
-    hasSeenTrueEnding: false,  }));
+        hasSeenTrueEnding: false,
+        playedDialogues: {}, // ★ playedDialoguesを初期化
+    }));
 
     localStorage.setItem("quest_auto_save", JSON.stringify({
-        progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1" },
+        progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1", playedDialogues: {}, hasSeenTrueEnding: false },
         playerStats: freshStats,
         stars: {} // ★オートセーブに星データを含める
     }));

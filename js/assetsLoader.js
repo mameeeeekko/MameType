@@ -91,6 +91,8 @@ export async function loadAssets(onProgress) {
 
     // クエストバトル背景
     { type: "img", name: "battle_blue", src: "./assets/pic/battle_field_blue.png" },
+    { type: "img", name: "battle_purple", src: "./assets/pic/battle_field_purple.png" },
+    { type: "img", name: "battle_red", src: "./assets/pic/battle_field_red.png" },
     { type: "img", name: "battle_green", src: "./assets/pic/battle_field_green.png" },
     { type: "img", name: "battle_gray", src: "./assets/pic/battle_field_gray.png" },
 
@@ -98,6 +100,7 @@ export async function loadAssets(onProgress) {
     { type: "img", name: "map_blue", src: "./assets/pic/map_field_blue.png" },
     { type: "img", name: "map_purple", src: "./assets/pic/map_field_purple.png" },
     { type: "img", name: "map_red", src: "./assets/pic/map_field_red.png" },
+    { type: "img", name: "map_gray", src: "./assets/pic/map_field_gray.png" },
 
     // 音源
     // SE

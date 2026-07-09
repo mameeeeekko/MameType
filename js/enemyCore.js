@@ -924,10 +924,13 @@ function gameLoop(timestamp) {
                     let introText = isFailed
                         ? "FAILED"
                         : "MISSION COMPLETE";
-        
+
                     // エンドレス用の演出テキスト
                     if (isEndless) introText = "FINISH";
-        
+
+                    // ★ rankingResultがnullでないことを確認してから、オンライン更新フラグを取得
+                    const onlineUpdated = rankingResult?.submitResult?.onlineUpdated ?? false;
+
                     // クエストモードの場合の分岐
                     if (lastEnemyConfig?.isQuestMode) {
                         const node = gameState.currentQuestNode;
@@ -953,7 +956,8 @@ function gameLoop(timestamp) {
                             showEnemyResult({
                                 isNewRecord: rankingResult?.isNewRecord ?? false,
                                 isRankIn: rankingResult?.isRankIn ?? false,
-                                rankPos: rankingResult?.rankPos ?? null
+                                rankPos: rankingResult?.rankPos ?? null,
+                                onlineUpdated: onlineUpdated // ★ フラグを渡す
                             });
                         });
                     }
@@ -2566,7 +2570,8 @@ export async function endEnemyMode() {
                     totalPlayTime: (stats.endTime - stats.startTime)/1000,
                     kpm: stats.gKpm,
 
-                    // enemy専用
+                    // enemy専用 + ノーダメージフラグ
+                    noDamage: !stats.tookDamage,
                     eScore: stats.gScore,
                     defeatedCount: stats.defeatedCount,
                     maxChain: stats.maxChainCount,
@@ -2586,6 +2591,8 @@ export async function endEnemyMode() {
         }
 
         const rankingResult = addRankingEntry(record);
+        // ★ addRankingEntryから返されたレコードオブジェクトからIDを取得
+        const recordId = rankingResult.record?.id;
 
         // ===============================
         // オンライン送信
@@ -2593,7 +2600,8 @@ export async function endEnemyMode() {
         let submitResult = null;
 
         try {
-            submitResult = await submitScore({
+            // ★ submitScoreに渡すオブジェクトを修正
+            const scoreData = {
                 player_name: localStorage.getItem("playerName") || "NO NAME",
                 mode: `enemy_mode`,
                 score: stats.gScore,
@@ -2601,7 +2609,9 @@ export async function endEnemyMode() {
                 accuracy: Number(stats.accuracy.toFixed(1)),
                 kpm: stats.gKpm,
                 ranking_version: RANKING_VERSION,
-            });
+                id: recordId // ★ recordId を含める
+            };
+            submitResult = await submitScore(scoreData);
         } catch (err) {
             console.error("Enemy online submit failed:", err);
         }

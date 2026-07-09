@@ -15,27 +15,30 @@ function formatDateOnly(dateStr){
   return dateStr.slice(0,10);
 }
 
+// ==========================================================
+// 勲章のUI
+// ==========================================================
 export function initAchievementsUI() {
   const btn = document.getElementById("hudAchievementsBtn");
   const modal = document.getElementById("achModal");
   const list = document.getElementById("achList");
-  const close = document.getElementById("achClose");
 
-  if (!btn || !modal || !list || !close) return;
-
-  btn.onclick = () => {
-    renderAchievements(list);
-    modal.style.display = "flex";
-  };
-
-  close.onclick = () => {
-    const fresh = getPlayerStats();
-    markAchievementsSeen(fresh);   // ★既読化
-    modal.style.display = "none";
-  };
+  // 閉じるボタンは動的に生成されるため、ここでの取得は不要
+  if (!btn || !modal || !list) return;
 
   modal.onclick = e => {
-    if (e.target === modal) modal.style.display = "none";
+    // モーダルの背景、または動的に生成された閉じるボタンがクリックされたら閉じる
+    if (e.target === modal || e.target.closest(".achClose")) {
+      const fresh = getPlayerStats();
+      markAchievementsSeen(fresh); // ★既読化
+      modal.style.display = "none";
+    }
+  };
+
+  // 勲章ボタンのクリックイベント
+  btn.onclick = () => {
+    renderAchievements(list); // 描画
+    modal.style.display = "flex"; // 表示
   };
 }
 
@@ -50,18 +53,20 @@ function renderAchievements(container) {
       !stats.seenAchievements.includes(a.id);
 
     return `
-      <div class="ach-item ${unlocked ? "unlocked" : ""}">
+      <div class="ach-item ${unlocked ? "unlocked" : ""}" title="${a.desc}">
         ${isNew ? `<div class="ach-new">NEW</div>` : ""}
-        <div>🏅</div>
-        <div style="font-size:11px">${a.name}</div>
+        <div class="ach-icon">🏆</div>
+        <div class="ach-name">${a.name}</div>
         <div class="ach-desc">${a.desc}</div>
       </div>
     `;
   }).join("");
 
+  // 実績リストのコンテナをクリアし、ヘッダーとグリッドを再構築
   container.innerHTML = `
     <div class="daily-stats-section">
       勲章 ${(stats.achievements?.length || 0)}/${ACHIEVEMENTS.length}
+      <button id="achClose" class="achClose">×</button>
     </div>
     <div class="ach-grid">${html}</div>
   `;

@@ -96,10 +96,15 @@ const DYNAMIC_ASSETS = [
   // 背景画像
   "./assets/pic/battle_field_green.png",
   "./assets/pic/battle_field_gray.png",
+  "./assets/pic/battle_field_blue.png",
+  "./assets/pic/battle_field_red.png",
+  "./assets/pic/battle_field_purple.png",
   "./assets/pic/map_field_blue.png",
   "./assets/pic/map_field_purple.png",
   "./assets/pic/map_field_red.png",
+  "./assets/pic/map_field_gray.png",
   // SE
+  "./assets/sound/se/select.mp3",
   "./assets/sound/se/kill1.mp3",
   "./assets/sound/se/kill2.mp3",
   "./assets/sound/se/kill3.mp3",
@@ -119,6 +124,7 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/se/combo_tier_max.mp3",
   "./assets/sound/se/chain_break.mp3",
   // BGM
+  "./assets/sound/bgm/rojiura.mp3",
   "./assets/sound/bgm/flashback.mp3",
   "./assets/sound/bgm/yamiyonikakeru.mp3",
   "./assets/sound/bgm/hosikuzumitaininagareteku.mp3",

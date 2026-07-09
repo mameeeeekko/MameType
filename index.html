@@ -317,9 +317,27 @@
           <input type="checkbox" id="onlineRankingToggle">
           オンラインランキングに参加する
         </label>
-        <div class="player-name-box">
-          <input type="text" id="playerNameInput" maxlength="12" placeholder="プレイヤー名">
-          <button id="savePlayerNameBtn">保存</button>
+        <div class="setting-row">
+          <div class="setting-item-title">Player Name</div>
+          <div class="player-name-box">
+            <input type="text" id="playerNameInput" maxlength="12" placeholder="プレイヤー名">
+            <button id="savePlayerNameBtn">保存</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-item-title">Player ID</div>
+          <div class="player-id-box">
+            <div id="playerIdDisplay" class="player-id-display" title="Your unique Player ID"></div>
+            <button id="copyPlayerIdBtn" title="Copy Player ID">COPY</button>
+            <button id="importPlayerIdBtn" title="Import Player ID">IMPORT</button>
+          </div>
+        </div>
+        <div class="setting-description">
+          Player IDはオンラインランキングの記録を識別するためのあなた固有のIDです。
+          <br>
+          PCの買い替えやブラウザのデータを消去した際に、このIDをIMPORTすることで記録を引き継ぐことができます。
+          <br>
+          大切なIDですので、COPYしてテキストファイルなどに保存・バックアップしておくことを強く推奨します。
         </div>
       </fieldset>
 
@@ -361,15 +379,6 @@
         </label>
       </fieldset>
 
-      <!-- UI設定 -->
-      <fieldset>
-        <legend>DIALOGUE</legend>
-        <div class="sound-setting-row">
-          <label><span>会話速度</span></label>
-          <input type="range" id="dialogueSpeedSlider" min="0" max="4" step="1" value="3">
-          <span id="dialogueSpeedValue" class="sound-value">Fast</span>
-        </div>
-      </fieldset>
     </div>
 
     <div class="settings-column">
@@ -403,6 +412,16 @@
                 <option value="n">n</option>
               </select>
             </div>
+        </div>
+      </fieldset>
+
+      <!-- UI設定 -->
+      <fieldset>
+        <legend>DIALOGUE</legend>
+        <div class="sound-setting-row">
+          <label><span>会話速度</span></label>
+          <input type="range" id="dialogueSpeedSlider" min="0" max="4" step="1" value="3">
+          <span id="dialogueSpeedValue" class="sound-value">Fast</span>
         </div>
       </fieldset>
 
@@ -508,6 +527,9 @@
     <button class="ranking-tab" data-mode="enemy_mode">ENEMY</button>
   </div>
 
+  <!-- 自分の順位表示エリア -->
+  <div id="myOnlineRank" class="my-online-rank"></div>
+
   <div id="rankingList"></div>
 
   <button id="rankingBackBtn">BACK</button>
@@ -594,7 +616,7 @@
 
   <!-- ボタンは共通 -->
   <div class="hud-buttons">
-    <div id="hudAchievementsBtn" title="勲章">🏅</div>
+    <div id="hudAchievementsBtn" title="勲章">🏆</div>
     <button id="hudDetailBtn" class="hud-detail-btn">≡</button>
   </div>
 
@@ -662,7 +684,6 @@
     <div class="ach-modal-content">
       <div class="ach-title">勲章</div>
       <div id="achList"></div>
-      <button id="achClose">BACK</button>
     </div>
 </div>
 <!-- =====================================================

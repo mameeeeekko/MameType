@@ -1,6 +1,10 @@
 // playerStats.js
 
 import { loadPlayerStats, savePlayerStats } from "./storage.js";
+import { getClearedStageCount } from "./questProgress.js";
+import { QUEST_MAP } from "./questMap.js";
+import { getPlayerStats as getQuestPlayerStats } from "./questPlayerStats.js";
+import { SKILL_TREE } from "./skillTree.js";
 
 // ================================
 // デフォルト
@@ -21,7 +25,8 @@ const defaultStats = {
     maxSpeed: 0,       // これまでの最高KPM
     maxSpeedDate: null, //最高KPMを出した日
     avgSpeed: 0,       // 平均KPM（総Typed ÷ 総時間 ×60）
-    avgAccuracy: 0,    // 平均正確率（Typed ÷ (Typed+Miss)）
+    avgAccuracy: 0,    // 平均正確率
+    noMissClears: 0,   // ★ノーミスクリア回数
     modes: {}          // モード別回数（mode名 → 回数）
   },
   
@@ -45,6 +50,7 @@ const defaultStats = {
     totalKills: 0,     // 倒した敵総
     maxChain: 0,
     maxCombo: 0,
+    noDamageClears: 0, // ★ノーダメージクリア回数
   },
 
   // ========================
@@ -102,6 +108,7 @@ export function getPlayerStats() {
       avgSpeed: 0,
       avgAccuracy: 0,
       modes: {}
+    // noMissClears は後方互換性のため、なければ0として扱う
     };
   }
 
@@ -161,6 +168,7 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   const totalTime = result.totalTime ?? 0;       // 通常モードのプレイ時間（秒）
   const totalTypeTime = result.totalTypeTime ?? 0;  // エネミーモードのタイピング時間（秒）
   const totalPlayTime = result.totalPlayTime ?? 0;  // エネミーモードのプレイ時間（秒）
+  const noDamage = result.noDamage ?? false;     // ★ノーダメージフラグ
   const kpm = !isFree ? result.kpm ?? 0 : null;  // 通常のみKPM
   const eScore = !isFree ? (result.eScore ?? 0) : null;
   const chain = result.maxChain ?? 0;
@@ -224,6 +232,11 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
     if (combo > e.maxCombo) {
       e.maxCombo = combo;
     }
+    
+    // ★ノーダメージクリア回数
+    if (noDamage) {
+      e.noDamageClears = (e.noDamageClears || 0) + 1;
+    }
 
     // 平均
     const totalAllEnemy = e.totalTyped + e.totalMiss; // 全入力数
@@ -231,11 +244,17 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
     e.avgAccuracy = totalAllEnemy > 0 ? (e.totalTyped / totalAllEnemy) * 100 : 0; // 平均正確率
 
         // カテゴリ・モード別
+    // カテゴリ・モード別
     if (!e.modes) e.modes = {};
       e.modes[mode] = (e.modes[mode] || 0) + 1;
+    // ★フリーモードとデイリーを区別
+    const enemyModeKey = isFree ? 'free_enemy' : 'daily_enemy';
+    e.modes[enemyModeKey] = (e.modes[enemyModeKey] || 0) + 1;
 
     // console.log("mode:", mode, "isEnemy:", isEnemy);
     // console.log("modes before:", e.modes);
+    // 従来の 'enemy_mode' は合計値として保持（後方互換性のため）
+    e.modes['enemy_mode'] = (e.modes['enemy_mode'] || 0) + 1;
   }
 
   // ========================
@@ -258,6 +277,11 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
     const totalAll = stats.regular.totalTyped + stats.regular.totalMiss; // 全入力数
     stats.regular.avgSpeed = stats.regular.totalGameTime > 0 ? (stats.regular.totalTyped / stats.regular.totalGameTime) * 60 : 0; // 平均KPM
     stats.regular.avgAccuracy = totalAll > 0 ? (stats.regular.totalTyped / totalAll) * 100 : 0; // 平均正確率
+
+    // ★ノーミスクリア回数
+    if (totalMistake === 0) {
+      stats.regular.noMissClears = (stats.regular.noMissClears || 0) + 1;
+    }
 
     // カテゴリ・モード別
     if (mode) {
@@ -408,7 +432,7 @@ export function formatPlayTime(seconds) {
 // ================================
 // 勲章判定
 // ================================
-function updateAchievements(stats) {
+export function updateAchievements(stats) {
   // ===== 配列保証 =====
   if (!Array.isArray(stats.achievements)) stats.achievements = [];
   if (!Array.isArray(stats.seenAchievements)) stats.seenAchievements = [];
@@ -441,6 +465,14 @@ function updateAchievements(stats) {
   // ===== 速度 =====
   if (stats.regular?.maxSpeed >= 300) unlock("speed_300");
 
+  // ★新しい実績判定を追加
+  if (stats.regular?.maxSpeed >= 400) unlock("kpm_400");
+  if (stats.regular?.maxSpeed >= 500) unlock("kpm_500");
+  if (stats.regular?.noMissClears >= 10) unlock("no_miss_10");
+
+  // ===== クエスト & エネミーモード =====
+  updateQuestAndEnemyAchievements(stats, unlock);
+
   return unlockedNow; // 勲章お知らせ用
 }
 
@@ -461,3 +493,127 @@ export const ACHIEVEMENTS = [
   { id: "streak_30", name: "継続の鬼", desc: "30日連続プレイ" }, // ★追加
   { id: "speed_300", name: "高速域", desc: "300KPM到達" }
 ];
+
+/**
+ * クエストモードとエネミーモードに関連する実績を判定・更新する
+ * @param {object} stats - プレイヤー統計オブジェクト
+ * @param {function} unlock - 実績をアンロックする関数
+ */
+function updateQuestAndEnemyAchievements(stats, unlock) {
+  // エネミーモードのプレイ回数
+  if (stats.enemyMode?.totalPlays >= 10) unlock("enemy_play_10");
+  // エネミーモードの総撃破数
+  if (stats.enemyMode?.totalKills >= 1000) unlock("enemy_kill_1000");
+
+  // ★新しい実績判定を追加
+  if (stats.enemyMode?.maxGScore >= 100000) unlock("gscore_100k");
+  if (stats.enemyMode?.maxChain >= 100) unlock("max_chain_100");
+  if (stats.enemyMode?.maxCombo >= 200) unlock("enemy_combo_200");
+  if (stats.enemyMode?.modes?.daily_enemy >= 30) unlock("play_daily_enemy_30");
+
+
+  if (stats.enemyMode?.noDamageClears >= 1) unlock("no_damage_clear_enemy");
+
+  // ★総プレイ時間
+  const totalPlayTime = (stats.regular?.totalGameTime || 0) + 
+                        (stats.freeMode?.totalTime || 0) + 
+                        (stats.enemyMode?.totalPlayTime || 0);
+  if (totalPlayTime >= 36000) unlock("play_time_10h"); // 10時間
+  if (totalPlayTime >= 180000) unlock("play_time_50h"); // 50時間
+
+
+  // ★日数系
+  if (stats.days?.unique >= 30) unlock("days_30");
+  if (stats.days?.maxStreak >= 14) unlock("max_streak_14");
+
+  // ★通常モードのプレイ回数
+  const nModes = stats.regular?.modes || {};
+  if (nModes["proverb"] >= 50) unlock("play_proverb_50");
+  if (nModes["english"] >= 50) unlock("play_english_50");
+
+
+  // クエストモードのクリア回数
+  const clearedQuests = getClearedStageCount();
+  if (clearedQuests >= 10) unlock("quest_clear_10");
+  if (clearedQuests >= 50) unlock("quest_clear_50");
+
+  try {
+    const questStats = getQuestPlayerStats();
+    // クエストモードのプレイヤーレベル
+    if (questStats.level >= 10) unlock("quest_level_10");
+    if (questStats.level >= 50) unlock("quest_level_50");
+
+    // スキルツリーのアンロック数
+    const unlockedSkills = questStats.skillTreeProgress?.unlockedNodes?.length || 0;
+    if (unlockedSkills >= 10) unlock("skill_unlock_10");
+
+    // ★全クエストクリア
+    const totalQuests = Object.values(QUEST_MAP).flatMap(world => world.nodes).length;
+    if (clearedQuests >= totalQuests) unlock("all_quests_clear");
+
+    // ★全スキルアンロック
+    const totalSkills = Object.keys(SKILL_TREE).length;
+    if (unlockedSkills >= totalSkills) unlock("all_skills_unlocked");
+
+    // ★クエストモードの星の数
+    if (questStats.questRecord?.totalStars >= 100) unlock("total_stars_100");
+
+    // ★クエストモードのアイテム取得数
+    const healItemCount = (questStats.questRecord?.itemPickupCount?.heal_small || 0) +
+                          (questStats.questRecord?.itemPickupCount?.heal_medium || 0) +
+                          (questStats.questRecord?.itemPickupCount?.heal_large || 0) +
+                          (questStats.questRecord?.itemPickupCount?.heal_full || 0);
+    if (healItemCount >= 100) unlock("item_heal_100");
+
+    // ★アクティブスキル使用回数
+    const totalSkillUses = Object.values(questStats.questRecord?.activeSkillUseCount || {}).reduce((sum, count) => sum + count, 0);
+    if (totalSkillUses >= 100) unlock("active_skill_100_uses");
+
+  } catch (e) {
+    // questPlayerStatsがロードできない場合は何もしない
+  }
+
+  // ★ワールドクリア実績
+  const cleared = getClearedStageCount(true); // 全クリア済みノードIDリストを取得
+  if (cleared.includes("W1_BOSS")) unlock("clear_world_1");
+  if (cleared.includes("W2_BOSS")) unlock("clear_world_2");
+
+
+  // 最高ランク到達
+  if (stats.regular?.maxEScore >= 750) unlock("rank_god");
+}
+
+// 新しい実績定義を追加
+ACHIEVEMENTS.push(
+  { id: "enemy_play_10", name: "エネミーハンター", desc: "エネミーモードを10回プレイ" },
+  { id: "enemy_kill_1000", name: "撃墜王", desc: "エネミーモードで1000体撃破" },
+  { id: "quest_clear_10", name: "冒険の始まり", desc: "クエストを10個クリア" },
+  { id: "quest_clear_50", name: "ベテラン冒険者", desc: "クエストを50個クリア" },
+  { id: "quest_level_10", name: "成長の証", desc: "プレイヤーレベル10到達" },
+  { id: "quest_level_50", name: "熟練の風格", desc: "プレイヤーレベル50到達" },
+  { id: "skill_unlock_10", name: "スキルコレクター", desc: "スキルを10個アンロック" },
+  { id: "rank_god", name: "神の領域", desc: "最高ランク「God」に到達" },
+  // さらに追加
+  { id: "play_500", name: "ベテラン", desc: "500回プレイ" },
+  { id: "play_1000", name: "レジェンド", desc: "1000回プレイ" },
+  { id: "play_time_10h", name: "時間旅行者", desc: "総プレイ時間10時間" },
+  { id: "play_time_50h", name: "時空の覇者", desc: "総プレイ時間50時間" },
+  { id: "kpm_400", name: "光速", desc: "400KPM到達" },
+  { id: "kpm_500", name: "超光速", desc: "500KPM到達" },
+  { id: "no_miss_10", name: "パーフェクト10", desc: "ノーミスクリア10回" },
+  { id: "gscore_100k", name: "スコアマスター", desc: "gScore 10万点到達" },
+  { id: "max_chain_100", name: "チェインマスター", desc: "最大チェイン100到達" },
+  { id: "no_damage_clear_enemy", name: "鉄壁", desc: "エネミーモードでノーダメージクリア" },
+  { id: "all_quests_clear", name: "世界の救世主", desc: "全てのクエストをクリア" },
+  { id: "all_skills_unlocked", name: "スキルマスター", desc: "全てのスキルをアンロック" },
+  { id: "total_stars_100", name: "星々の収集家", desc: "合計スター100個獲得" },
+  // さらに追加
+  { id: "days_30", name: "一ヶ月プレイヤー", desc: "累計30日プレイ" },
+  { id: "max_streak_14", name: "二週間皆勤", desc: "14日連続プレイ達成" },
+  { id: "play_daily_enemy_30", name: "デイリーチャレンジャー", desc: "デイリーエネミーモードを30回プレイ" },
+  { id: "enemy_combo_200", name: "コンボアーティスト", desc: "最大コンボ200到達" },
+  { id: "clear_world_1", name: "フロンティアの開拓者", desc: "ワールド1をクリア" },
+  { id: "clear_world_2", name: "静寂の探求者", desc: "ワールド2をクリア" },
+  { id: "item_heal_100", name: "回復の恩恵", desc: "回復アイテムを100個取得" },
+  { id: "active_skill_100_uses", name: "スキル活用術", desc: "アクティブスキルを100回使用" },
+);

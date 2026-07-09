@@ -718,6 +718,8 @@ async function finishGame(config = {}) {
     let rankingResult = null;
     const diff = getCurrentDifficulty();
 
+    let recordId = null; // ★ UUIDを保持する変数を追加
+    let onlineUpdated = false; // ★ オンライン更新フラグ
     if (shouldSaveRecord) {
       rankingResult = addRankingEntry({
           date: new Date().toISOString(),
@@ -736,6 +738,8 @@ async function finishGame(config = {}) {
           ...gameState.currentMode.buildResultExtra(buildState())
       });
 
+      recordId = rankingResult.record?.id; // ★ 返されたレコードからIDを取得
+
       // =========================
       // オンラインランキング送信
       // =========================
@@ -748,8 +752,10 @@ async function finishGame(config = {}) {
               solvedCount: gameState.solvedCount,
               accuracy,
               mode: gameState.currentMode.id,
-              ranking_version: RANKING_VERSION
+              ranking_version: RANKING_VERSION,
+              id: recordId // ★ UUIDを送信データに含める
           });
+          onlineUpdated = submitResult?.onlineUpdated ?? false;
       } catch (err) {
           console.error("Online ranking submit failed:", err);
       }
@@ -828,6 +834,7 @@ async function finishGame(config = {}) {
         isNewRecord: rankingResult?.isNewRecord ?? false,
         isRankIn: rankingResult?.isRankIn ?? false,
         rankPos: rankingResult?.rankPos ?? null,
+        onlineUpdated: onlineUpdated, // ★ 結果表示に渡す
     });
     
     // 結果表示後にオフ。イントロ中にポーズを起動させないために使っている。

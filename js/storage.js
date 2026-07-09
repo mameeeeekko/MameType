@@ -70,6 +70,8 @@ export function addRecord(record) {
   }
 
   localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+  // ★ IDが付与されたレコードを返す
+  return record;
 }
 
 
@@ -216,11 +218,10 @@ export function syncRankingProtection() {
 // ================================
 export function addRankingEntry(entry) {
 
-  addRecord(entry);
-
   const mode = entry.mode;
+  // ★ addRecordを呼び出し、IDが付与されたレコードオブジェクトを取得
+  const rec = addRecord(entry);
   const records = loadRecords();
-  const rec = records.at(-1);
 
   let ranking = loadRanking(mode);
 
@@ -284,7 +285,8 @@ export function addRankingEntry(entry) {
   return {
     isRankIn, // ランキング圏内に入ったかどうか
     isNewRecord,
-    rankPos: isRankIn ? rankIndex + 1 : null // ランキング順位
+    rankPos: isRankIn ? rankIndex + 1 : null, // ランキング順位
+    record: rec // ★ 生成されたIDを含むレコードオブジェクトを返す
   };
 }
 

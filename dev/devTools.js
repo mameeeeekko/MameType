@@ -1,6 +1,6 @@
 // devTools.js
 import { devOverride } from "./devOverride.js";
-import { getPlayerStats } from "../js/playerStats.js";
+import { getPlayerStats, updateAchievements } from "../js/playerStats.js";
 import { savePlayerStats } from "../js/storage.js";
 import { gameState } from "../js/gameCore.js";
 import { forceSetLevel } from "../js/questPlayerStats.js";
@@ -12,6 +12,19 @@ import { renderQuestMapUI, openQuestMenuModal } from "../js/questMapUI.js";
 
 // =====================================================
 // Dev API（ここだけ触れば全部安全）
+// =====================================================
+
+// Helper to set nested property
+function setNestedProperty(obj, path, value) {
+    const parts = path.split('.');
+    let current = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i];
+        if (!current[part] || typeof current[part] !== 'object') current[part] = {};
+        current = current[part];
+    }
+    current[parts[parts.length - 1]] = value;
+}
 // =====================================================
 
 export const dev = {
@@ -545,6 +558,140 @@ export const dev = {
         log("All stage overrides reset");
     },
     
+    // Achievements ----------------------------------------------------
+
+    /**
+     * プレイヤー統計の特定の値を設定し、実績を再評価します。
+     * 例: dev.setAchievementStat("totalPlays", 100)
+     * 例: dev.setAchievementStat("days.streak", 7)
+     * 例: dev.setAchievementStat("regular.maxSpeed", 300)
+     * // =================================================================
+    // 勲章（実績）検証用コマンド一覧
+    // 使い方: ブラウザの開発者ツール（F12）のコンソールに貼り付けて実行
+    // =================================================================
+
+    // --- 基本操作 ---
+    // dev.resetAchievements();                      // 全ての実績をリセット
+    // dev.triggerAchievementCheck();                // 現在の統計情報で実績を再評価
+    // dev.unlockAchievement("first_play");          // 特定の実績をIDで強制アンロック
+
+    // --- プレイ回数系 ---
+    dev.setAchievementStat("totalPlays", 1);          // はじめの一歩 (first_play)
+    dev.setAchievementStat("totalPlays", 10);         // 常連 (play_10)
+    dev.setAchievementStat("totalPlays", 100);        // 熟練者 (play_100)
+    dev.setAchievementStat("totalPlays", 500);        // ベテラン (play_500)
+    dev.setAchievementStat("totalPlays", 1000);       // レジェンド (play_1000)
+
+    // --- プレイ時間系 ---
+    // ※ totalPlayTimeは複数モードの合計値のため、個別の時間を設定して再評価します
+    dev.setAchievementStat("regular.totalGameTime", 36000); // 総プレイ時間10時間 (play_time_10h)
+    dev.setAchievementStat("regular.totalGameTime", 180000); // 総プレイ時間50時間 (play_time_50h)
+    dev.setAchievementStat("freeMode.totalTime", 3600);     // 自由人 (free_1h)
+    dev.setAchievementStat("freeMode.totalTime", 36000);    // 解放者 (free_10h)
+
+    // --- 日数系 ---
+    dev.setAchievementStat("days.unique", 7);         // 一週間プレイヤー (days_7)
+    dev.setAchievementStat("days.unique", 30);        // 一ヶ月プレイヤー (days_30)
+    dev.setAchievementStat("days.streak", 3);         // 三日坊主卒業 (streak_3)
+    dev.setAchievementStat("days.streak", 7);         // 連続者 (streak_7)
+    dev.setAchievementStat("days.streak", 30);        // 継続の鬼 (streak_30)
+    dev.setAchievementStat("days.maxStreak", 14);     // 二週間皆勤 (max_streak_14)
+
+    // --- スキル系 ---
+    dev.setAchievementStat("regular.maxSpeed", 300);  // 高速域 (speed_300)
+    dev.setAchievementStat("regular.maxSpeed", 400);  // 光速 (kpm_400)
+    dev.setAchievementStat("regular.maxSpeed", 500);  // 超光速 (kpm_500)
+    dev.setAchievementStat("regular.maxEScore", 750); // 神の領域 (rank_god)
+    dev.setAchievementStat("regular.noMissClears", 10); // パーフェクト10 (no_miss_10)
+
+    // --- モード別プレイ回数 ---
+    dev.setAchievementStat("regular.modes.proverb", 50); // (play_proverb_50) ※ことわざモードを50回プレイ
+    dev.setAchievementStat("regular.modes.english", 50); // (play_english_50) ※英語モードを50回プレイ
+
+    // --- エネミーモード系 ---
+    dev.setAchievementStat("enemyMode.totalPlays", 10);         // エネミーハンター (enemy_play_10)
+    dev.setAchievementStat("enemyMode.totalKills", 1000);       // 撃墜王 (enemy_kill_1000)
+    dev.setAchievementStat("enemyMode.maxGScore", 100000);      // スコアマスター (gscore_100k)
+    dev.setAchievementStat("enemyMode.maxChain", 100);          // チェインマスター (max_chain_100)
+    dev.setAchievementStat("enemyMode.maxCombo", 200);          // コンボアーティスト (enemy_combo_200)
+    dev.setAchievementStat("enemyMode.noDamageClears", 1);      // 鉄壁 (no_damage_clear_enemy)
+    dev.setAchievementStat("enemyMode.modes.daily_enemy", 30);  // デイリーチャレンジャー (play_daily_enemy_30)
+
+    // --- クエストモード系 (dev.setAchievementStatでは直接操作不可) ---
+    // クエスト関連の統計は別ファイルで管理されているため、
+    // dev.setAchievementStatでは値を変更できません。
+    // dev.unlockAchievement を使って強制的にアンロックして検証してください。
+
+    dev.unlockAchievement("quest_clear_10");          // 冒険の始まり (クエスト10個クリア)
+    dev.unlockAchievement("quest_clear_50");          // ベテラン冒険者 (クエスト50個クリア)
+    dev.unlockAchievement("all_quests_clear");        // 世界の救世主 (全クエストクリア)
+    dev.unlockAchievement("quest_level_10");          // 成長の証 (Lv10到達)
+    dev.unlockAchievement("quest_level_50");          // 熟練の風格 (Lv50到達)
+    dev.unlockAchievement("skill_unlock_10");         // スキルコレクター (スキル10個アンロック)
+    dev.unlockAchievement("all_skills_unlocked");     // スキルマスター (全スキルアンロック)
+    dev.unlockAchievement("total_stars_100");         // 星々の収集家 (合計スター100個)
+    dev.unlockAchievement("item_heal_100");           // 回復の恩恵 (回復アイテム100個取得)
+    dev.unlockAchievement("active_skill_100_uses");   // スキル活用術 (アクティブスキル100回使用)
+    dev.unlockAchievement("clear_world_1");           // フロンティアの開拓者 (ワールド1クリア)
+    dev.unlockAchievement("clear_world_2");           // 静寂の探求者 (ワールド2クリア)
+     * 
+     * @param {string} path - 設定する統計のパス (例: "totalPlays", "days.streak")
+     * @param {*} value - 設定する値
+     */
+
+    setAchievementStat(path, value) {
+        const stats = getPlayerStats();
+        setNestedProperty(stats, path, value);
+        updateAchievements(stats); // 実績を再評価
+        savePlayerStats(stats);    // 変更を保存
+        updateHud(stats);          // HUDを更新して表示に反映
+        log(`Player stat "${path}" set to ${value}. Achievements re-evaluated.`);
+    },
+
+    /**
+     * 指定した実績IDを直接アンロックします。
+     * @param {string} achievementId - アンロックする実績のID
+     */
+    unlockAchievement(achievementId) {
+        const stats = getPlayerStats();
+        if (!stats.achievements.includes(achievementId)) {
+            stats.achievements.push(achievementId);
+            // seenAchievementsにも追加してNEW表示が出ないようにする
+            if (!stats.seenAchievements.includes(achievementId)) {
+                stats.seenAchievements.push(achievementId);
+            }
+            savePlayerStats(stats);
+            updateHud(stats);
+            log(`Achievement "${achievementId}" unlocked.`);
+        } else {
+            log(`Achievement "${achievementId}" already unlocked.`);
+        }
+    },
+
+    /**
+     * 全ての実績をクリアします。
+     */
+    resetAchievements() {
+        const stats = getPlayerStats();
+        stats.achievements = [];
+        stats.seenAchievements = [];
+        savePlayerStats(stats);
+        updateHud(stats);
+        log("All achievements reset.");
+    },
+
+    /**
+     * 現在のプレイヤー統計に基づいて実績を再評価します。
+     * 主に手動でlocalStorageを編集した後などに使用します。
+     */
+    triggerAchievementCheck() {
+        const stats = getPlayerStats();
+        updateAchievements(stats);
+        savePlayerStats(stats);
+        updateHud(stats);
+        log("Achievements re-evaluated based on current stats.");
+    },
+
     // デバッグ補助 -----------------------------------------------------
 
     resetAll() {

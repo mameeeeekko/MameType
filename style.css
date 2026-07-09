@@ -531,6 +531,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .r-badge.timeup { background: #ef4444; color: #fff; }
 .r-badge.new    { background: #f59e0b; color: #fff; }
 .r-badge.rank   { background: #10b981; color: #fff; }
+.r-badge.online-update { background: #3b82f6; color: #fff; }
 .r-badge.online   { background: #2563eb; color: #fff; }
 
 
@@ -673,6 +674,27 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
     justify-content: center;
     gap: 10px;
     margin-top: 15px;
+}
+
+.online-ranking-container {
+  display: flex;
+  justify-content: center; /* 中央揃え */
+  align-items: center;    /* 垂直方向中央揃え */
+  gap: 15px;              /* ランキングとバッジの間隔 */
+  margin-top: 20px;       /* 上の要素との間隔 */
+  width: 100%;
+}
+
+.online-ranking-container .result-online-ranking {
+  flex-grow: 1; /* ランキング部分ができるだけ幅を取るように */
+  max-width: 400px; /* ランキングの最大幅（任意で調整） */
+}
+
+.online-ranking-container .r-badge.online-update {
+  flex-shrink: 0; /* バッジが縮まないように */
+  /* 必要に応じて、バッジのスタイルを微調整 */
+  padding: 8px 16px;
+  font-size: 0.9em;
 }
 
 /* ボタン群 */
@@ -1658,13 +1680,13 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .settings-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 10px;
+  gap: 12px; /* 狭く */
+  margin-bottom: 5px; /* 狭く */
 }
 
 #settings h2 {
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: 5px; /* 狭く */
   font-size: 1.3rem;
   font-weight: 900;
   font-style: bold;
@@ -1680,8 +1702,8 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   background: rgba(13, 17, 23, 0.92); /* Dark background from daily-stats-card */
   border: 1px solid rgba(88, 166, 255, 0.3); /* Blue border from daily-stats-card */
   border-radius: 12px; /* Rounded corners from daily-stats-card */
-  padding: 15px; /* More padding */
-  margin-bottom: 15px; /* Consistent margin */
+  padding: 12px; /* 狭く */
+  margin-bottom: 10px; /* 狭く */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(88, 166, 255, 0.05); /* Shadow from daily-stats-card */
   backdrop-filter: blur(5px); /* Blur effect */
 }
@@ -1695,14 +1717,14 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   letter-spacing: 1px; /* Letter spacing */
   text-shadow: 0 0 8px rgba(88, 166, 255, 0.4); /* Blue shadow */
   border-bottom: 1px solid rgba(88, 166, 255, 0.2); /* Bottom border */
-  margin-bottom: 10px; /* Margin below legend */
+  margin-bottom: 8px; /* 狭く */
 }
 
 /* チェック行 */
 #settings label {
   display: flex;
   align-items: center;
-  gap: 8px; /* Slightly more gap */
+  gap: 6px; /* 狭く */
   margin: 6px 0; /* Slightly more margin */
   font-weight: normal; /* Less bold */
   color: #c0c0c0; /* Softer color from daily-stats-row */
@@ -1714,8 +1736,8 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .sound-setting-row {
   display: flex;
   align-items: center;
-  gap: 15px;
-  margin: 12px 0;
+  gap: 10px; /* 狭く */
+  margin: 8px 0; /* 狭く */
 }
 
 .sound-setting-row label {
@@ -1784,10 +1806,11 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 /* ボタン群 */
 #settings button {
-  margin: 4px;
-  padding: 8px 15px;
+  margin: 2px; /* 少し詰める */
+  padding: 6px 12px; /* 小さいサイズに合わせる */
   clip-path: none; /* 多角形を解除 */
   background: rgba(88, 166, 255, 0.1); /* Blueish background */
+  font-size: 12px; /* 小さいサイズに合わせる */
   border: 1px solid rgba(88, 166, 255, 0.4); /* Blue border */
   border-radius: 8px; /* More rounded corners */
   color: #f0f6fc; /* Light text */
@@ -1865,9 +1888,9 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 15px; /* ←タイトルと設定の距離 */
-  margin-top: 10px;
-  margin-bottom: 10px;
+  gap: 12px; /* 狭く */
+  margin-top: 8px; /* 狭く */
+  margin-bottom: 8px; /* 狭く */
 }
 
 /* 左ラベル縦並び */
@@ -1920,16 +1943,16 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 /* 保存ボタンも中央 */
 #saveKeybindBtn {
   margin-top: 5px;
-  padding: 4px 15px;
-  font-size: 0.8rem;
+  /* width: 100%; を削除して他のボタンと合わせる */
 }
 
 /* Player Name Box */
 .player-name-box {
   display: flex;
   gap: 8px;
-  margin: 10px 0; /* Adjusted margin */
+  margin: 0; /* setting-rowで制御するためリセット */
   align-items: center;
+  flex-grow: 1; /* 残りの幅をすべて使用 */
 }
 
 #playerNameInput {
@@ -1943,9 +1966,74 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 #savePlayerNameBtn {
-  padding: 6px 12px; /* Adjusted padding */
-  font-size: 0.85rem; /* Adjusted font size */
+  flex-shrink: 0; /* Player IDのボタンと挙動を合わせる */
 }
+
+/* 設定項目を横並びにするための行 */
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* 狭く */
+  margin: 8px 0; /* 狭く */
+  flex-wrap: nowrap; /* 折り返しを禁止 */
+}
+
+/* 設定項目のタイトル */
+.setting-item-title {
+  font-size: 12px;
+  color: #c9d1d9;
+  margin-bottom: 4px;
+  font-weight: bold;
+  text-align: left;
+  white-space: nowrap; /* ラベルの折り返しを禁止 */
+}
+
+/* Player ID Box */
+.player-id-box {
+  display: flex;
+  gap: 6px;
+  margin: 0; /* setting-rowで制御するためリセット */
+  align-items: center;
+  flex-grow: 1; /* 残りの幅をすべて使用 */
+}
+
+.player-id-display {
+  flex-grow: 1;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: monospace;
+  background: #0d1117;
+  color: #8b949e;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#copyPlayerIdBtn,
+#importPlayerIdBtn {
+  flex-shrink: 0;
+}
+
+#importPlayerIdBtn {
+  background: rgba(76, 175, 80, 0.1) !important;
+  border-color: rgba(76, 175, 80, 0.5) !important;
+}
+
+/* 設定画面の説明文 */
+.setting-description {
+  font-size: 11px;
+  color: #8b949e;
+  margin-top: 8px; /* 狭く */
+  line-height: 1.5;
+  text-align: left;
+  background: rgba(13, 17, 23, 0.5);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+}
+
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 768px) {
@@ -2011,7 +2099,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   font-size: 2.2rem;
   font-weight: 900;
   color: #668ebc; /* サイバーブルー */
-  text-shadow: 0 0 10px rgba(95, 153, 219, 0.633); /* サイバーブルーのシャドウ */
+  text-shadow: 0 0 10px rgba(95, 153, 219, 0.446); /* サイバーブルーのシャドウ */
   margin-bottom: 15px;
 }
 
@@ -2250,30 +2338,62 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   margin-top: 12px;
 }
 
+/* 戻るボタンだけ強調 */
+#records #recordsBackBtn {
+  margin-top: 8px;
+  flex: none; /* flexコンテナ内で幅が引き伸ばされるのを防ぐ */
+  width: auto; /* Auto width */
+  padding: 6px 16px !important; /* Paddingをさらに小さく調整 */
+  background: #4b5563; /* Darker gray */
+  color: #ffffff; /* White text */
+  border: 1px solid #6b7280; /* Gray border */
+  border-radius: 8px; /* Rounded corners */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Shadow */
+  font-size: 12px; /* フォントサイズをさらに小さく */
+  transition: 0.15s;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+#records #recordsBackBtn:hover {
+  background: #5a6573;
+  border-color: #7c8694;
+}
+
 #records-buttons button {
   flex: 1;
   max-width: 200px;
-
   padding: 10px 0;
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  border-radius: 8px;
+  background: rgba(88, 166, 255, 0.1);
+  color: #f0f6fc;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+#records-buttons button:hover {
+  background: rgba(88, 166, 255, 0.2);
+}
+
+.records-more-btn {
+  flex: 1;
+  max-width: 150px;
+
+  padding: 3px 10px;
   border: none;
-  border-radius: 14px;
+  border-radius: 10px;
   
   background: rgba(88, 166, 255, 0.1); /* 青系の背景 */
   border: 1px solid rgba(88, 166, 255, 0.4); /* 青系のボーダー */
   color: #f0f6fc; /* 明るいテキスト */
   font-weight: 700;
+  font-size: 12px; /* フォントサイズを調整 */
   cursor: pointer;
   transition: 0.15s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3); /* Subtle shadow */
 }
-
-#records-buttons button:hover {
-  background: rgba(88, 166, 255, 0.2); /* Lighter blue on hover */
-  color: #fff; /* White text on hover */
-  border-color: #58a6ff; /* Brighter border on hover */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Stronger shadow on hover */
-}
-
 /* =====================================================
     記録画面 NEWバッジ
    ===================================================== */
@@ -2405,6 +2525,18 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   font-weight: 600;
 }
 
+.rank-row.my-rank {
+  background: #e0e8f6; /* 少し青みがかった背景色 */
+  border: 1px solid #a8c5f1;
+  box-shadow: 0 2px 8px rgba(74, 124, 194, 0.2);
+}
+
+.rank-row.my-rank span {
+  color: #1c3d6b; /* 濃い青色の文字 */
+  font-weight: 700;
+}
+
+
 .rank-row span {
   color: #222;
 }
@@ -2440,6 +2572,24 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 #onlineRankingScreen {
   min-height: 0;
 }
+
+/* style.css に追加 */
+.my-online-rank {
+  margin: 15px 0;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  text-align: center;
+  font-size: 14px;
+  color: #232323;
+}
+
+.my-rank-position {
+  font-weight: bold;
+  color: #506f93;
+  margin-left: 8px;
+}
+
 
 /* =====================================================
    プレイヤーHUD
@@ -2684,7 +2834,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
     color: #64788f; /* サイバーブルーに統一 */
     margin-bottom: 10px;
     padding-bottom: 5px;
-    border-bottom:jjj 1px solid rgba(88, 166, 255, 0.2);
+    border-bottom: 1px solid rgba(88, 166, 255, 0.2);
     text-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -3624,9 +3774,25 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   background: linear-gradient(#1f2937, #020617);
 }
 
-.ach-icon { font-size: 18px; margin-bottom: 2px; }
-.ach-name { font-weight: bold; font-size: 10px; }
-.ach-desc { font-size: 9px; color: #9ca3af; }
+/* 勲章アイテム内の各要素のスタイル */
+.ach-icon {
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+.ach-name {
+  font-weight: bold;
+  font-size: 10px;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* 縮小ではなく省略に戻します */
+}
+
+.ach-desc {
+  font-size: 9px;
+  color: #9ca3af;
+}
 
 .ach-new {
   position: absolute;
@@ -3688,16 +3854,48 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #fff;
   padding: 16px;
   border-radius: 12px;
-  width: 320px;
+  width: 90%; /* 固定幅を削除し、可変幅に変更 */
+  max-width: 1100px; /* 最大幅を設定 */
   max-height: 70vh;
   overflow-y: auto;
+  position: relative; /* 閉じるボタンの基準点にする */
+}
+
+/* 勲章モーダル内のタイトル部分 */
+.ach-modal-content .daily-stats-section {
+  margin-bottom: 24px; /* タイトルとグリッドの間の余白をさらに広げる */
+}
+
+.ach-title {
+  margin-bottom: 12px;
+}
+
+.achClose {
+  /* クエストステータスモーダルの閉じるボタンと同様のスタイルを適用 */
+  position: absolute;
+  top: 4px;
+  right: 10px;
+  z-index: 10601; /* モーダルコンテンツより手前に表示 */
+
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.achClose:hover {
+  opacity: 1;
 }
 
 /* 中央モーダル内の勲章グリッド */
 .ach-modal-content .ach-grid {
   display: grid;
-  grid-template-columns: repeat(3,1fr); /* 3列 */
-  gap: 8px;
+  /* アイテムの最小幅を少し狭め、より多くの列が表示されるように調整 */
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 16px; /* 勲章アイテム間の縦横の隙間を広げる */
   justify-items: center;
   margin-top: 8px;
 }
@@ -3709,12 +3907,12 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   text-align: center;
   opacity: 0.35;
   transition: 0.2s;
-  width: 72px;   /* 固定幅で列揃え */
-  height: 72px;  /* 高さ揃え */
-  display: flex;
+  width: 110px;  /* 説明文が入るように幅を広げる */
+  min-height: 72px;  /* 最小の高さを設定 */
+  display: flex; /* flexboxを維持 */
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* 上から詰めて配置するように変更 */
 }
 
 .ach-modal-content .ach-item.unlocked {
@@ -3732,11 +3930,20 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .ach-modal-content .ach-name {
   font-weight: bold;
   font-size: 10px;
+  margin-top: 4px; /* アイコンとの間隔 */
+  margin-bottom: 2px; /* 説明文との間隔 */
+  width: 100%; /* 幅を100%に設定 */
+  white-space: nowrap; /* 折り返し禁止 */
+  overflow: hidden; /* はみ出しを隠す */
+  text-overflow: ellipsis; /* はみ出しを「...」で省略 */
 }
 
 .ach-modal-content .ach-desc {
   font-size: 9px;
   color: #9ca3af;
+  white-space: normal; /* 説明文の折り返しを許可 */
+  word-wrap: break-word; /* 長い単語でも折り返す */
+  line-height: 1.3;
 }
 /* =====================================================
    enemymode
@@ -6212,3 +6419,4 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .update-notification button:hover {
   background-color: #5c9bff;
 }
+  

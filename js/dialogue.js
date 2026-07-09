@@ -522,8 +522,8 @@ export function startDialogue(dialogueId, onComplete) {
 
     // ★ MODIFIED: Control Skip button visibility based on whether dialogue has been played
     if (skipButton) {
-        // Only allow skipping if the dialogue has been played before
-        if (hasDialogueBeenPlayed(dialogueId)) {
+        // プロローグ以外で、かつ再生済みの会話のみスキップ可能にする
+        if (dialogueId !== 'prologue' && hasDialogueBeenPlayed(dialogueId)) {
             skipButton.style.display = 'block';
         } else {
             skipButton.style.display = 'none';
