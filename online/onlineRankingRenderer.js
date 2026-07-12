@@ -62,7 +62,7 @@ async function renderRanking(reset = false) {
         <span>
             ${
                 currentMode === "time_attack"
-                ? row.solvedCount
+                ? row.solved_count
                 : row.score
             }
         </span>
@@ -91,10 +91,10 @@ async function renderRanking(reset = false) {
 async function renderMyRank(el, onlineRanking, mode) {
   if (!el) return;
 
-  if (!isOnlineEnabled()) {
-    el.innerHTML = "オンラインランキングは無効です";
-    return;
-  }
+  // if (!isOnlineEnabled()) {
+  //   el.innerHTML = "オンラインランキングは無効です";
+  //   return;
+  // }
 
   // 3. オンラインランキングから自分のplayerIDを探して順位を特定
   const myPlayerId = getPlayerId();

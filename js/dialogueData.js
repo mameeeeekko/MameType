@@ -1,11 +1,77 @@
 // dialogueData.js
 
+/**
+ * @file ゲーム内で使用されるキャラクター情報と会話データを定義します。
+ */
+
+/**
+ * キャラクターの基本情報を定義します。
+ * `dialogue.js` はこの定義を元に、キャラクターの立ち絵や表示位置を制御します。
+ *
+ * @type {Object.<string, {
+ *   name: string,
+ *   position: 'left'|'right',
+ *   images?: Object.<string, string>
+ * }>}
+ *
+ * @property {string} name - キャラクター名。`DIALOGUE_DATA`の`character`プロパティと一致させる必要があります。
+ * @property {'left'|'right'} position - 立ち絵の表示位置。
+ * @property {Object.<string, string>} [images] - 表情ごとの画像パスを格納するオブジェクト。
+ *   - キー (例: "normal", "smile") は、`DIALOGUE_DATA`の`expression`プロパティに対応します。
+ *   - オペレーターのように立ち絵を表示しないキャラクターは、このプロパティを省略できます。
+ */
+// ★ MODIFIED: アイコン画像への参照を追加
+export const CHARACTERS = {
+    "ナビ": {
+        name: "ナビ",
+        position: "left",
+        images: {
+            normal: "navi_normal",
+            smile: "navi_smile",
+            sad: "navi_sad",
+            angry: "navi_angry",
+            surprised: "navi_surprised",
+        },
+        icon: "navi_normal" // デフォルトのアイコン画像キー
+    },
+    "オペレーター": {
+        name: "オペレーター",
+        position: "right",
+        // アイコンを表示しないため、iconプロパティは不要
+    }
+};
+
+/**
+ * ゲーム内の会話イベントデータを定義します。
+ *
+ * @type {Object.<string, {
+ *   title: string,
+ *   messages: Array<{
+ *     character: string,
+ *     expression?: string,
+ *     text: string
+ *   }>
+ * }>}
+ *
+ * @property {string} dialogueId - 各会話イベントのユニークなID。以下の命名規則に従います。
+ *   - `prologue`: ゲーム開始時のプロローグ。
+ *   - `{クエストID}_start`: クエスト開始時の会話。
+ *   - `{クエストID}_end`: クエスト終了時の会話。
+ *   - `true_ending_dialogue`: 真エンディングの会話。
+ *
+ * @property {string} title - 会話のタイトル。ログ画面でチャプター名として表示されます。
+ *
+ * @property {Array} messages - 会話のセリフを格納する配列。
+ * @property {string} messages.character - 発言者名。`CHARACTERS`オブジェクトのキーと一致させる必要があります。
+ * @property {string} [messages.expression] - キャラクターの表情。`CHARACTERS`オブジェクトの`images`内のキーと一致させます。省略した場合は "normal" が使用されます。
+ * @property {string} messages.text - セリフの本文。`\n` を使用することで、セリフ内で改行できます。
+ */
 export const DIALOGUE_DATA = {
     "prologue": {
         title: "プロローグ",
         messages: [
             {
-                character: "ナビ",
+                character: "？",
                 text: "聞こえますか、オペレーター？\nこの世界は汚染されたデータに侵食され、崩壊の危機に瀕しています。"
             },
             {
@@ -14,12 +80,28 @@ export const DIALOGUE_DATA = {
             },
             {
                 character: "ナビ",
+                expression: "sad",
                 text: "あなたのタイピングスキルが、この世界を浄化する唯一の希望です。\nこれは単なるゲームではありません。あなたのキー入力が、未来を紡ぎます。"
             },
             {
                 character: "オペレーター",
                 text: "了解した。\n始めよう。"
-            }
+            },
+            {
+                character: "ナビ",
+                expression: "smile",
+                text: "test\nこれは単なるゲームではありません。あなたのキー入力が、未来を紡ぎます。"
+            },
+            {
+                character: "ナビ",
+                expression: "surprised",
+                text: "testsup\nこれは単なるゲームではありません。あなたのキー入力が、未来を紡ぎます。"
+            },
+            {
+                character: "ナビ",
+                expression: "angry",
+                text: "testa\nこれは単なるゲームではありません。あなたのキー入力が、未来を紡ぎます。"
+            },
         ]
     },
     "W1_Q1_start": {
@@ -27,17 +109,17 @@ export const DIALOGUE_DATA = {
         messages: [
             {
                 character: "ナビ",
-                // icon: "./assets/pic/navi_icon.png",
+                expression: "normal",
                 text: "接続テストを開始します。\n聞こえますか、オペレーター？"
             },
             {
                 character: "オペレーター",
-                // icon: "./assets/pic/player_icon.png",
+                expression: "normal",
                 text: "こちらオペレーター。クリアに聞こえる。"
             },
             {
                 character: "ナビ",
-                // icon: "./assets/pic/navi_icon.png",
+                expression: "smile",
                 text: "了解しました。これよりシステム内部の汚染区域へ侵入します。\n敵性プログラムの排除をお願いします。"
             }
         ]

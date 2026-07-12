@@ -9,6 +9,7 @@ import { openQuestMenuModal } from "./questMapUI.js";
 import { handleGlobalSoundToggle } from "./main.js";
 import { getSoundEnabled } from "./gameCore.js";
 import { images } from "./assetsLoader.js";
+import { devOverride } from "../dev/devOverride.js";
 
 function formatDateOnly(dateStr){
   if(!dateStr) return "";
@@ -46,18 +47,44 @@ function renderAchievements(container) {
   const stats = getPlayerStats();
 
   const html = ACHIEVEMENTS.map(a => {
-    const unlocked = Array.isArray(stats.achievements) && stats.achievements.includes(a.id);
+    // devOverrideがtrueなら強制的にアンロック状態にする
+    const unlocked = devOverride.achievements?.showAll || 
+                     (Array.isArray(stats.achievements) && stats.achievements.includes(a.id));
+
     const isNew =
       unlocked &&
       Array.isArray(stats.seenAchievements) &&
       !stats.seenAchievements.includes(a.id);
 
+    // アンロックされていない実績は情報を隠す
+    const name = unlocked ? a.name : "？？？？？？";
+    const desc = unlocked ? a.desc : "（条件を満たすと表示されます）";
+    const icon = unlocked ? '🏆' : '❓';
+
     return `
-      <div class="ach-item ${unlocked ? "unlocked" : ""}" title="${a.desc}">
-        ${isNew ? `<div class="ach-new">NEW</div>` : ""}
-        <div class="ach-icon">🏆</div>
-        <div class="ach-name">${a.name}</div>
-        <div class="ach-desc">${a.desc}</div>
+      <div class="ach-item ${unlocked ? "unlocked" : "locked"}" title="${unlocked ? a.desc : '未解除'}" style="position: relative;">
+        ${isNew ? `
+          <div class="ach-new-badge" style="
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ff4d4f;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 3px 6px;
+            border-radius: 10px;
+            border: 2px solid #161b22;
+            transform: rotate(10deg);
+            z-index: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          ">NEW</div>
+        ` : ""}
+        <div class="ach-icon">${icon}</div>
+        <div class="ach-text-content">
+          <div class="ach-name">${name}</div>
+          <div class="ach-desc">${desc}</div>
+        </div>
       </div>
     `;
   }).join("");
@@ -70,6 +97,9 @@ function renderAchievements(container) {
     </div>
     <div class="ach-grid">${html}</div>
   `;
+
+  // devToolsから呼び出せるようにグローバルに公開
+  window.renderAchievements = renderAchievements;
 }
 
 function markAchievementsSeen(s) {
@@ -97,6 +127,22 @@ function markAchievementsSeen(s) {
   if (changed) {
     s.seenAchievements = Array.from(s.seenAchievements);
     savePlayerStats(s);
+  }
+}
+
+/**
+ * プレイヤーHUD全体の表示・非表示を制御します。
+ * @param {boolean} show - trueで表示、falseで非表示
+ */
+export function showHud(show) {
+  const hud = document.getElementById("playerHud");
+  if (!hud) return;
+
+  if (show) {
+    hud.classList.remove("hud-hidden");
+    hud.style.display = "block";
+  } else {
+    hud.classList.add("hud-hidden");
   }
 }
 

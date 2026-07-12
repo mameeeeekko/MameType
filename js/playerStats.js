@@ -482,16 +482,58 @@ export function updateAchievements(stats) {
 // 勲章
 // ================================
 export const ACHIEVEMENTS = [
+  // --- プレイ回数・時間 ---
   { id: "first_play", name: "はじめの一歩", desc: "初めてプレイした" },
-  { id: "days_7", name: "一週間プレイヤー", desc: "7日プレイ" },
   { id: "play_10", name: "常連", desc: "10回プレイ" },
   { id: "play_100", name: "熟練者", desc: "100回プレイ" },
+  { id: "play_500", name: "ベテラン", desc: "500回プレイ" },
+  { id: "play_1000", name: "レジェンド", desc: "1000回プレイ" },
+  { id: "play_time_10h", name: "時間旅行者", desc: "総プレイ時間10時間" },
+  { id: "play_time_50h", name: "時空の覇者", desc: "総プレイ時間50時間" },
+
+  // --- 日数・継続 ---
+  { id: "days_7", name: "一週間プレイヤー", desc: "7日プレイ" },
+  { id: "days_30", name: "一ヶ月プレイヤー", desc: "累計30日プレイ" },
+  { id: "streak_3", name: "三日坊主卒業", desc: "3日連続プレイ" },
+  { id: "streak_7", name: "連続者", desc: "7日連続プレイ" },
+  { id: "max_streak_14", name: "二週間皆勤", desc: "14日連続プレイ達成" },
+  { id: "streak_30", name: "継続の鬼", desc: "30日連続プレイ" },
+
+  // --- タイピングスキル ---
+  { id: "speed_300", name: "高速域", desc: "300KPM到達" },
+  { id: "kpm_400", name: "光速", desc: "400KPM到達" },
+  { id: "kpm_500", name: "超光速", desc: "500KPM到達" },
+  { id: "no_miss_10", name: "パーフェクト10", desc: "ノーミスクリア10回" },
+  { id: "rank_god", name: "神の領域", desc: "最高ランク「God」に到達" },
+
+  // --- モード別 ---
   { id: "free_1h", name: "自由人", desc: "フリーモード1時間" },
   { id: "free_10h", name: "解放者", desc: "フリーモード10時間" },
-  { id: "streak_3", name: "三日坊主卒業", desc: "3日連続プレイ" }, // ★追加
-  { id: "streak_7", name: "連続者", desc: "7日連続プレイ" },
-  { id: "streak_30", name: "継続の鬼", desc: "30日連続プレイ" }, // ★追加
-  { id: "speed_300", name: "高速域", desc: "300KPM到達" }
+  { id: "play_proverb_50", name: "ことわざ博士", desc: "ことわざモードを50回プレイ" },
+  { id: "play_english_50", name: "英語マスター", desc: "英語モードを50回プレイ" },
+
+  // --- エネミーモード ---
+  { id: "enemy_play_10", name: "エネミーハンター", desc: "エネミーモードを10回プレイ" },
+  { id: "play_daily_enemy_30", name: "デイリーチャレンジャー", desc: "デイリーエネミーモードを30回プレイ" },
+  { id: "enemy_kill_1000", name: "撃墜王", desc: "エネミーモードで1000体撃破" },
+  { id: "gscore_100k", name: "スコアマスター", desc: "gScore 10万点到達" },
+  { id: "max_chain_100", name: "チェインマスター", desc: "最大チェイン100到達" },
+  { id: "enemy_combo_200", name: "コンボアーティスト", desc: "最大コンボ200到達" },
+  { id: "no_damage_clear_enemy", name: "鉄壁", desc: "エネミーモードでノーダメージクリア" },
+
+  // --- クエストモード ---
+  { id: "quest_clear_10", name: "冒険の始まり", desc: "クエストを10個クリア" },
+  { id: "quest_clear_50", name: "ベテラン冒険者", desc: "クエストを50個クリア" },
+  { id: "all_quests_clear", name: "世界の救世主", desc: "全てのクエストをクリア" },
+  { id: "clear_world_1", name: "フロンティアの開拓者", desc: "ワールド1をクリア" },
+  { id: "clear_world_2", name: "静寂の探求者", desc: "ワールド2をクリア" },
+  { id: "quest_level_10", name: "成長の証", desc: "プレイヤーレベル10到達" },
+  { id: "quest_level_50", name: "熟練の風格", desc: "プレイヤーレベル50到達" },
+  { id: "skill_unlock_10", name: "スキルコレクター", desc: "スキルを10個アンロック" },
+  { id: "all_skills_unlocked", name: "スキルマスター", desc: "全てのスキルをアンロック" },
+  { id: "total_stars_100", name: "星々の収集家", desc: "合計スター100個獲得" },
+  { id: "item_heal_100", name: "回復の恩恵", desc: "回復アイテムを100個取得" },
+  { id: "active_skill_100_uses", name: "スキル活用術", desc: "アクティブスキルを100回使用" },
 ];
 
 /**
@@ -503,16 +545,16 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   // エネミーモードのプレイ回数
   if (stats.enemyMode?.totalPlays >= 10) unlock("enemy_play_10");
   // エネミーモードの総撃破数
-  if (stats.enemyMode?.totalKills >= 1000) unlock("enemy_kill_1000");
-
-  // ★新しい実績判定を追加
-  if (stats.enemyMode?.maxGScore >= 100000) unlock("gscore_100k");
   if (stats.enemyMode?.maxChain >= 100) unlock("max_chain_100");
   if (stats.enemyMode?.maxCombo >= 200) unlock("enemy_combo_200");
   if (stats.enemyMode?.modes?.daily_enemy >= 30) unlock("play_daily_enemy_30");
 
 
   if (stats.enemyMode?.noDamageClears >= 1) unlock("no_damage_clear_enemy");
+
+  // ★新しい実績判定を追加
+  if (stats.enemyMode?.maxGScore >= 100000) unlock("gscore_100k");
+  if (stats.enemyMode?.totalKills >= 1000) unlock("enemy_kill_1000");
 
   // ★総プレイ時間
   const totalPlayTime = (stats.regular?.totalGameTime || 0) + 
@@ -521,11 +563,14 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   if (totalPlayTime >= 36000) unlock("play_time_10h"); // 10時間
   if (totalPlayTime >= 180000) unlock("play_time_50h"); // 50時間
 
+  if (stats.totalPlays >= 500) unlock("play_500");
+  if (stats.totalPlays >= 1000) unlock("play_1000");
+
 
   // ★日数系
   if (stats.days?.unique >= 30) unlock("days_30");
   if (stats.days?.maxStreak >= 14) unlock("max_streak_14");
-
+  
   // ★通常モードのプレイ回数
   const nModes = stats.regular?.modes || {};
   if (nModes["proverb"] >= 50) unlock("play_proverb_50");
@@ -579,41 +624,5 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   if (cleared.includes("W2_BOSS")) unlock("clear_world_2");
 
 
-  // 最高ランク到達
   if (stats.regular?.maxEScore >= 750) unlock("rank_god");
 }
-
-// 新しい実績定義を追加
-ACHIEVEMENTS.push(
-  { id: "enemy_play_10", name: "エネミーハンター", desc: "エネミーモードを10回プレイ" },
-  { id: "enemy_kill_1000", name: "撃墜王", desc: "エネミーモードで1000体撃破" },
-  { id: "quest_clear_10", name: "冒険の始まり", desc: "クエストを10個クリア" },
-  { id: "quest_clear_50", name: "ベテラン冒険者", desc: "クエストを50個クリア" },
-  { id: "quest_level_10", name: "成長の証", desc: "プレイヤーレベル10到達" },
-  { id: "quest_level_50", name: "熟練の風格", desc: "プレイヤーレベル50到達" },
-  { id: "skill_unlock_10", name: "スキルコレクター", desc: "スキルを10個アンロック" },
-  { id: "rank_god", name: "神の領域", desc: "最高ランク「God」に到達" },
-  // さらに追加
-  { id: "play_500", name: "ベテラン", desc: "500回プレイ" },
-  { id: "play_1000", name: "レジェンド", desc: "1000回プレイ" },
-  { id: "play_time_10h", name: "時間旅行者", desc: "総プレイ時間10時間" },
-  { id: "play_time_50h", name: "時空の覇者", desc: "総プレイ時間50時間" },
-  { id: "kpm_400", name: "光速", desc: "400KPM到達" },
-  { id: "kpm_500", name: "超光速", desc: "500KPM到達" },
-  { id: "no_miss_10", name: "パーフェクト10", desc: "ノーミスクリア10回" },
-  { id: "gscore_100k", name: "スコアマスター", desc: "gScore 10万点到達" },
-  { id: "max_chain_100", name: "チェインマスター", desc: "最大チェイン100到達" },
-  { id: "no_damage_clear_enemy", name: "鉄壁", desc: "エネミーモードでノーダメージクリア" },
-  { id: "all_quests_clear", name: "世界の救世主", desc: "全てのクエストをクリア" },
-  { id: "all_skills_unlocked", name: "スキルマスター", desc: "全てのスキルをアンロック" },
-  { id: "total_stars_100", name: "星々の収集家", desc: "合計スター100個獲得" },
-  // さらに追加
-  { id: "days_30", name: "一ヶ月プレイヤー", desc: "累計30日プレイ" },
-  { id: "max_streak_14", name: "二週間皆勤", desc: "14日連続プレイ達成" },
-  { id: "play_daily_enemy_30", name: "デイリーチャレンジャー", desc: "デイリーエネミーモードを30回プレイ" },
-  { id: "enemy_combo_200", name: "コンボアーティスト", desc: "最大コンボ200到達" },
-  { id: "clear_world_1", name: "フロンティアの開拓者", desc: "ワールド1をクリア" },
-  { id: "clear_world_2", name: "静寂の探求者", desc: "ワールド2をクリア" },
-  { id: "item_heal_100", name: "回復の恩恵", desc: "回復アイテムを100個取得" },
-  { id: "active_skill_100_uses", name: "スキル活用術", desc: "アクティブスキルを100回使用" },
-);

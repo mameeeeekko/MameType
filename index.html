@@ -325,19 +325,19 @@
           </div>
         </div>
         <div class="setting-row">
-          <div class="setting-item-title">Player ID</div>
+          <div class="setting-item-title">PlayerID</div>
           <div class="player-id-box">
             <div id="playerIdDisplay" class="player-id-display" title="Your unique Player ID"></div>
-            <button id="copyPlayerIdBtn" title="Copy Player ID">COPY</button>
-            <button id="importPlayerIdBtn" title="Import Player ID">IMPORT</button>
+            <button id="copyPlayerIdBtn" title="引継ぎ情報をコピー">COPY</button>
+            <button id="importPlayerIdBtn" title="引継ぎ情報で復元">IMPORT</button>
           </div>
         </div>
         <div class="setting-description">
-          Player IDはオンラインランキングの記録を識別するためのあなた固有のIDです。
+          Player IDと復元コードは、オンラインランキングの記録を識別し、別デバイスにデータを引き継ぐために必要です。
           <br>
-          PCの買い替えやブラウザのデータを消去した際に、このIDをIMPORTすることで記録を引き継ぐことができます。
+          PCの買い替えやブラウザのデータを消去した際に、この2つの情報を「引継ぎ情報で復元」から入力することで記録を復元できます。
           <br>
-          大切なIDですので、COPYしてテキストファイルなどに保存・バックアップしておくことを強く推奨します。
+          <strong style="color: #ffc107;">復元コードは他人に知られないよう、大切に保管してください。</strong>
         </div>
       </fieldset>
 
@@ -1049,7 +1049,9 @@
     <button onclick="dev.toggleMapAdmin(this)">MAP ALL: OFF</button>
     <button onclick="dev.toggleUnlockAllSkills(this)">SKILL ALL: OFF</button>
     <button onclick="dev.toggleInfiniteSkill(this)">SKILL INF: OFF</button>
+    <button id="devToggleAchvBtn">ACHV ALL: OFF</button>
     <button onclick="dev.logState()">Log</button>
+    <button onclick="dev.resetPlayerId()">ID Reset</button>
     <button onclick="dev.resetAll()">Reset</button>
     <button onclick="dev.resetEnemyStats()">EnemyStatsReset</button>
   </div>

@@ -3,9 +3,10 @@ import { devOverride } from "./devOverride.js";
 import { getPlayerStats, updateAchievements } from "../js/playerStats.js";
 import { savePlayerStats } from "../js/storage.js";
 import { gameState } from "../js/gameCore.js";
-import { forceSetLevel } from "../js/questPlayerStats.js";
+import { forceSetLevel, getPlayerStats as getQuestPlayerStats } from "../js/questPlayerStats.js";
 import { killEnemy } from "../js/enemyCore.js";
 import { updateHud } from "../js/hud.js";
+import { resetPlayerAndRecoveryId, getPlayerId } from "../online/playerProfile.js";
 import { STAGES, ENEMY_MODE_CONFIG } from "../js/enemyModeConfig.js";
 import { renderQuestMapUI, openQuestMenuModal } from "../js/questMapUI.js";
 
@@ -558,6 +559,27 @@ export const dev = {
         log("All stage overrides reset");
     },
     
+    /**
+     * 実績を全て表示するか切り替える
+     * @param {HTMLButtonElement} btn - 状態を表示するボタン要素
+     */
+    toggleShowAllAchievements(btn) {
+        devOverride.achievements.showAll = !devOverride.achievements.showAll;
+
+        if (btn) {
+            btn.textContent = devOverride.achievements.showAll ? "ACHV ALL: ON" : "ACHV ALL: OFF";
+        }
+
+        // 実績モーダルが開いていれば再描画
+        const achModal = document.getElementById("achModal");
+        if (achModal && achModal.style.display !== "none") {
+            const list = document.getElementById("achList");
+            if (list && typeof window.renderAchievements === "function") {
+                window.renderAchievements(list);
+            }
+        }
+        log("Show all achievements:", devOverride.achievements.showAll);
+    },
     // Achievements ----------------------------------------------------
 
     /**
@@ -692,6 +714,23 @@ export const dev = {
         log("Achievements re-evaluated based on current stats.");
     },
 
+    /**
+     * プレイヤーIDと復元コードをリセットします。
+     */
+    resetPlayerId() {
+        if (confirm("本当にPlayer IDとRecovery Codeをリセットしますか？\nこの操作は元に戻せません。")) {
+            resetPlayerAndRecoveryId();
+            // 新しいIDを生成・取得してUIに反映
+            const newId = getPlayerId();
+            const display = document.getElementById("playerIdDisplay");
+            if (display) {
+                display.textContent = newId;
+            }
+            log("Player ID and Recovery Code have been reset. New ID:", newId);
+            alert("Player IDがリセットされました。");
+        }
+    },
+
     // デバッグ補助 -----------------------------------------------------
 
     resetAll() {
@@ -738,6 +777,11 @@ function enableDevPanelDrag() {
     const header = document.getElementById("devPanelHeader");
     if (!panel || !header) return;
 
+    // ボタンにイベントをバインド
+    const achvBtn = document.getElementById("devToggleAchvBtn");
+    if (achvBtn) {
+        achvBtn.addEventListener("click", () => dev.toggleShowAllAchievements(achvBtn));
+    }
     let dragging = false;
     let offsetX = 0;
     let offsetY = 0;

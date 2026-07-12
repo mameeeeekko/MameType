@@ -777,13 +777,6 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #f0f6fc;
   letter-spacing: 0.02em;
 }
-#word-long {
-  font-size: 1.9rem;
-  font-weight: 600;
-  margin-bottom: 0.4rem;
-  color: #f0f6fc;
-  letter-spacing: 0.02em;
-}
 
 #jp { font-size:1.6rem; }
 
@@ -827,17 +820,24 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
    長文表示 / スクロール表示
    ===================================================== */
 #word-long-wrap {
-  display: none;
-  height: 400px;
-  overflow-y: auto;
-  border: 1px solid rgba(88, 166, 255, 0.2);
-  margin-bottom: 10px;
-  padding: 8px 12px;
-  line-height: 1.2;
-  font-size: 34px;
+    display: none;
+    height: 400px;
+    overflow-y: auto;
+    border: 1px solid rgba(88, 166, 255, 0.2);
+    margin-bottom: 10px;
+    padding: 16px 20px;
+    line-height: 1.6; /* フォントサイズに対して行間を広げる */
+    font-size: 34px;
+    text-align: left; /* 長文は左揃えを基本とする */
 }
 
-.hidden { display: none; }
+#word-long {
+    font-size: 1.9rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: #f0f6fc;
+    letter-spacing: 0.02em;
+}
 
 #word-scroll-wrap {
   height: 120px;

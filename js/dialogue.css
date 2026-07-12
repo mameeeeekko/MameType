@@ -68,7 +68,6 @@
     border-right: 1px solid #30363d;
     padding: 15px;
     overflow-y: auto;
-    flex-shrink: 0;
 }
 
 .dialogue-log-panel h3 {
@@ -119,25 +118,43 @@
     padding: 20px;
     padding-bottom: 50px; /* Skipボタンと重ならないように余白を追加 */
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    min-height: 0;
 }
 
 .chat-bubble {
     display: flex;
     gap: 15px;
     max-width: 80%;
+    margin-bottom: 20px; /* 吹き出し間の余白 */
+}
+.chat-bubble:last-child {
+    margin-bottom: 0; /* 最後の吹き出しの余分な余白を削除 */
+}
+
+/* 右側の吹き出し（オペレーター用） */
+.chat-bubble.right {
+    align-self: flex-end; /* 右寄せ */
+    flex-direction: row-reverse; /* アイコンとメッセージの順序を反転 */
+}
+.chat-bubble.right .message-content {
+    align-items: flex-end; /* 名前とテキストを右寄せ */
 }
 
 .character-icon {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-size: cover;
+    background-size: 150%; /*キャラクターの画像拡大率*/
     background-position: center;
     flex-shrink: 0;
+    background-color: #0d1117; /* 画像読み込み中の背景色 */
+    background-image: var(--character-icon-url); /* JSからURLを受け取る */
     border: 2px solid #30363d;
+}
+
+/* オペレーターのアイコンは非表示 */
+.chat-bubble.right .character-icon {
+    display: none;
 }
 
 .message-content {
@@ -186,4 +203,59 @@
 #dialogueSkipBtn:hover {
     color: #c9d1d9;
     transform: translateX(4px);
+}
+
+/* =====================================================
+   レスポンシブ対応
+   ===================================================== */
+@media (max-width: 900px) {
+    /* レスポンシブ用のスタイルは現在不要 */
+}
+
+/* =====================================================
+   ログ表示モード
+   ===================================================== */
+/* --- 通常時：チャット表示 --- */
+.dialogue-container:not(.log-view-mode) .dialogue-log-panel {
+    display: none;
+}
+.dialogue-container:not(.log-view-mode) .dialogue-chat-panel {
+    display: flex;
+    width: 100%;
+}
+.dialogue-container:not(.log-view-mode) .dialogue-close-btn {
+    display: none;
+}
+
+/* --- ログ表示モード時 --- */
+.dialogue-container.log-view-mode .dialogue-log-panel {
+    display: block;
+    width: 250px; /* PC表示用に幅を固定 */
+    flex-shrink: 0;
+}
+.dialogue-container.log-view-mode .dialogue-chat-panel {
+    display: flex; /* 会話内容も表示 */
+    width: 100%;
+}
+.dialogue-container.log-view-mode .dialogue-close-btn {
+    display: block;
+}
+.dialogue-container.log-view-mode .dialogue-controls {
+    display: none;
+}
+
+/* --- ログ表示モードのレスポンシブ対応 --- */
+@media (max-width: 900px) {
+    /* モバイルではログパネルを全幅表示 */
+    .dialogue-container.log-view-mode .dialogue-log-panel {
+        width: 100%;
+    }
+    /* チャプター選択前は会話パネルを非表示 */
+    .dialogue-container.log-view-mode:not(.chapter-selected) .dialogue-chat-panel {
+        display: none;
+    }
+    /* チャプター選択後はログパネルを非表示にして会話パネルを表示 */
+    .dialogue-container.log-view-mode.chapter-selected .dialogue-log-panel {
+        display: none;
+    }
 }

@@ -28,11 +28,11 @@ import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, showHud
 import { renderQuestMapUI, openQuestMenuModal, closeQuestModal } from "./questMapUI.js";
 import { reloadQuestProgress, resetQuestAll, markTrueEndingSeen, hasSeenTrueEnding } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
-import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId } from "../online/playerProfile.js";
+import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId, getRecoveryCode, setRecoveryCode } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
 import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed } from "./dialogue.js";
-import { loadAssets, images } from "./assetsLoader.js";
+import { loadCoreAssets, loadRemainingAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
 import { clearQuestStageCache, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
@@ -43,6 +43,7 @@ import {
   getDifficultyDescription,
 } from "./difficulties.js";
 import { playBGM, stopBGM, playSE } from "./effectManager.js";
+import { supabase } from "../online/supabase.js";
 
 
 
@@ -332,10 +333,14 @@ document.addEventListener("DOMContentLoaded", () => {
       showLoadingScreen();
       document.removeEventListener("keydown", handleBootKey);
 
-      await loadAssets((loaded, total) => {
+      // 最初にコアアセットのみを読み込む
+      await loadCoreAssets((loaded, total) => {
         const percent = Math.floor((loaded / total) * 100);
         setLoadingText(`Loading... ${percent}%`);
       });
+
+      // バックグラウンドで残りのアセットを読み込み開始（awaitしない）
+      loadRemainingAssets();
 
       applyTitleMenuBackground();
       
@@ -436,32 +441,38 @@ document.addEventListener("DOMContentLoaded", () => {
     alert("保存しました");
   });
 
-  // Player IDのコピー
-  copyPlayerIdBtn?.addEventListener("click", () => {
-    const playerId = getPlayerId();
-    if (playerId) {
-      navigator.clipboard.writeText(playerId).then(() => {
-        alert("Player IDをクリップボードにコピーしました。");
-      }).catch(err => {
-        alert("コピーに失敗しました。");
-        console.error('Failed to copy Player ID: ', err);
-      });
-    }
-  });
-
   // Player IDのインポート
-  importPlayerIdBtn?.addEventListener("click", () => {
-    const newPlayerId = prompt("バックアップしたPlayer IDをここに貼り付けてください。");
-    if (newPlayerId && newPlayerId.trim() !== "") {
-      if (confirm(`Player IDを「${newPlayerId.trim()}」に変更しますか？\nこの操作は元に戻せません。`)) {
-        setPlayerId(newPlayerId.trim());
-        // UIを更新
-        if (playerIdDisplay) playerIdDisplay.textContent = newPlayerId.trim();
-        alert("Player IDを更新しました。");
+  importPlayerIdBtn?.addEventListener("click", async () => {
+      const newPlayerId = prompt("バックアップしたPlayer IDを貼り付けてください。");
+      if (!newPlayerId || newPlayerId.trim() === "") {
+          if (newPlayerId !== null) alert("Player IDが入力されていません。");
+          return;
       }
-    } else if (newPlayerId !== null) { // キャンセルではなく空文字が入力された場合
-      alert("Player IDが入力されていません。");
-    }
+
+      const newRecoveryCode = prompt("バックアップした復元コードを貼り付けてください。");
+      if (!newRecoveryCode || newRecoveryCode.trim() === "") {
+          if (newRecoveryCode !== null) alert("復元コードが入力されていません。");
+          return;
+      }
+
+      // ★サーバー側でIDとコードのペアを検証する
+      const { data: isValid, error } = await supabase.rpc('verify_player_credentials', {
+          p_id: newPlayerId.trim(),
+          r_code: newRecoveryCode.trim()
+      });
+
+      if (error || !isValid) {
+          alert("Player IDまたは復元コードが正しくありません。サーバーに記録が見つかりませんでした。");
+          return;
+      }
+
+      // 検証成功
+      if (confirm(`Player IDを「${newPlayerId.trim()}」に変更しますか？\nこの操作は元に戻せません。`)) {
+          setPlayerId(newPlayerId.trim());
+          setRecoveryCode(newRecoveryCode.trim()); // ★復元コードも保存
+          if (playerIdDisplay) playerIdDisplay.textContent = newPlayerId.trim();
+          alert("Player IDを更新しました。");
+      }
   });
 
 
@@ -802,6 +813,43 @@ function initSettingsUI() {
     // Player IDを表示
     if (playerIdDisplay) {
       playerIdDisplay.textContent = getPlayerId() || "（IDがありません）";
+    }
+  });
+
+  // Player IDのコピー
+  copyPlayerIdBtn?.addEventListener("click", () => {
+    const playerId = getPlayerId();
+    const recoveryCode = getRecoveryCode();
+    if (!playerId || !recoveryCode) {
+      alert("引継ぎ情報の取得に失敗しました。");
+      return;
+    }
+
+    const backupText = `【MameType データ引継ぎ情報】\n\nPlayer ID:\n${playerId}\n\n復元コード:\n${recoveryCode}\n\nこのテキストを安全な場所に保管してください。\n※この引継ぎ情報は、オンラインランキングにスコアを送信した時点で有効になります。`;
+
+    // navigator.clipboardが使えるかチェック (HTTPS/localhost環境)
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(backupText).then(() => {
+        alert("Player IDと復元コードをクリップボードにコピーしました。\nテキストファイルなどに貼り付けて安全に保管してください。");
+      }).catch(err => {
+        alert("コピーに失敗しました。");
+        console.error('Failed to copy backup data: ', err);
+      });
+    } else {
+      // http環境など、navigator.clipboardが使えない場合のフォールバック
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = backupText;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        alert("Player IDと復元コードをクリップボードにコピーしました。\nテキストファイルなどに貼り付けて安全に保管してください。");
+      } catch (err) {
+        alert("コピーに失敗しました。手動でコピーしてください。");
+      }
     }
   });
 
@@ -2158,9 +2206,9 @@ function handleMenuKey(e) {
 
   // ★会話・ログモーダルが表示されている場合のキー処理
   if (isDialogueVisible()) {
-    // ログ画面の閉じるボタンが表示されているかチェック
-    const closeBtn = document.getElementById('dialogueCloseBtn');
-    const isLogView = closeBtn && closeBtn.style.display === 'block';
+    // .log-view-mode クラスの有無でログ表示中かを判定する
+    const dialogueContainer = document.querySelector("#dialogueModal .dialogue-container");
+    const isLogView = dialogueContainer && dialogueContainer.classList.contains('log-view-mode');
 
     // ログ画面が表示されていて、'b'または'Escape'が押されたら閉じる
     if (isLogView && (key === 'b' || key === 'escape')) {

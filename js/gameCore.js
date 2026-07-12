@@ -494,7 +494,9 @@ export async function doCountdown(config) {
   const ids = [
     "word-wrap","jp-wrap","roma-wrap","word-long-wrap","scroll-wrap",
     "modeLabel","freeModeBadge","missModeBadge","progress-container","time-bar-container","speed-container",
-    "speed-label","timeLeft","solvedCount","backBtn","gameBackBtn"
+    "speed-label","timeLeft","solvedCount","backBtn","gameBackBtn", // ★タイマーサークルも非表示対象に追加
+    "time-circle-container",
+    "bgmInfoDisplay"
   ];
 
   // 1. まずゲーム画面全体を表示する

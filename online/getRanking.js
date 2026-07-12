@@ -23,7 +23,7 @@ export async function getRanking(
   // モード別ソート
   if (mode === "time_attack") {
     query = query
-      .order("solvedCount", { ascending: false })
+      .order("solved_count", { ascending: false })
       .order("score", { ascending: false });
   } else {
     query = query.order("score", { ascending: false });

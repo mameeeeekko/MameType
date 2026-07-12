@@ -1,8 +1,8 @@
 import { supabase } from "./supabase.js";
 import {
-  isOnlineEnabled,
-  getPlayerName,
-  getPlayerId // ★ インポート
+  isOnlineEnabled,  getPlayerName,
+  getPlayerId, // ★ インポート
+  getRecoveryCode // ★ 追加
 } from "./playerProfile.js";
 
 export async function submitScore(scoreData) {
@@ -39,10 +39,11 @@ export async function submitScore(scoreData) {
   const { data, error } = await supabase.rpc("upsert_score", {
     new_id: scoreData.id,
     new_player_id: getPlayerId(), // ★ 永続的なプレイヤーIDを送信
+    new_recovery_code: getRecoveryCode(), // ★ 復元コードを送信
     new_player_name: scoreData.player_name,
     new_score: scoreData.score,
     new_kpm: scoreData.kpm,
-    new_solvedcount: scoreData.solvedCount,
+    new_solved_count: scoreData.solvedCount,
     new_accuracy: scoreData.accuracy,
     new_mode: scoreData.mode,
     new_ranking_version: scoreData.ranking_version,

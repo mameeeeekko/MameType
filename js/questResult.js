@@ -2,8 +2,8 @@
 
 import { gameState, setGameActive, fullResetGame } from "./gameCore.js";
 import { updateHud } from "./hud.js";
-import { closeDialogue, startDialogue, showLog } from "./dialogue.js";
-import { backToQuestMap, startTrueEndingSequence } from "./main.js";
+import { closeDialogue, startDialogue, showLog, startTrueEndingSequence } from "./dialogue.js";
+import { backToQuestMap } from "./main.js";
 import { restartEnemyMode } from "./enemyCore.js";
 
 export function showEnemyEndIntro(text, onFinish) {

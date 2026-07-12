@@ -13,6 +13,9 @@ export const devOverride = {
     exp: {
         multiplier: 1
     },
+    achievements: {
+        showAll: false
+    },
     chain: {},
     other: {},
     map: {
