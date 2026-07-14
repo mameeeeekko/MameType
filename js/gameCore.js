@@ -498,7 +498,7 @@ export async function doCountdown(config) {
     "time-circle-container",
     "bgmInfoDisplay"
   ];
-
+  
   // 1. まずゲーム画面全体を表示する
   gameDiv.style.display = "block";
   

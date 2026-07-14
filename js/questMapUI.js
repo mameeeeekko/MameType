@@ -450,6 +450,10 @@ export function renderQuestMapUI(){
                 const tooltipLines = [];
                 
                 // ミッションと敵バリエーションの追加
+                if (node.stage) {
+                    tooltipLines.push(`<span class="tooltip-title" style="font-size: 0.9em; color: #888;">${node.stage}</span>`);
+                    tooltipLines.push("");
+                }
                 if (stage.missionName) {
                     tooltipLines.push(`<span class="tooltip-mission-title">${stage.missionName}</span>`);
                     tooltipLines.push(`<span style="font-size:0.9em; color:#ddd;">${stage.missionDescription || ""}</span>`);
@@ -1602,7 +1606,7 @@ function showStageIntro(stage, node, onStart, onCancel) {
   overlay.innerHTML = `
     <div class="stage-intro-box">
       <div class="intro-header">
-        <div class="mission-label">MISSION</div>
+        <div class="mission-label">${node.stage}</div>
         <h2 class="mission-name-main">${missionTitle}</h2>
         <div class="mission-desc-main">${missionDesc}</div>
       </div>

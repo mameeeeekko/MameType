@@ -181,6 +181,8 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   padding: 0;
 }
 
+
+
 /* =====================================================
    ポーズメニュー
    ===================================================== */
@@ -219,6 +221,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  overflow: hidden !important;
 }
 
 /* モーダル背景の違いは個別で指定 */
@@ -6133,99 +6136,6 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 #devPanel hr {
   margin: 3px 0;
   opacity: 0.3;
-}
-
-/* =====================================================
-   モバイル警告画面
-   ===================================================== */
-#mobileWarning {
-  position: fixed;
-  inset: 0;
-  background: #111;
-  color: white;
-  display: none; /* 初期は非表示 */
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 30px;
-  /* z-index: 999999; */ /* 何よりも前面に */
-  text-align: center;
-}
-
-#mobileWarning h2 {
-  color: #ff4d4d;
-  margin-bottom: 20px;
-  font-size: 1.5rem;
-}
-
-#mobileWarning p {
-  line-height: 1.6;
-  font-size: 14px;
-}
-
-/* =====================================================
-   スタッフロール
-   ===================================================== */
-.staff-roll-overlay {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  color: #fff;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  overflow: hidden;
-  z-index: 30000;
-  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
-  opacity: 1;
-  transition: opacity 1.5s ease-out;
-}
-
-.staff-roll-overlay.fade-out {
-  opacity: 0;
-}
-
-.staff-roll-content {
-  width: 80%;
-  max-width: 600px;
-  text-align: center;
-  animation: scrollUp 30s linear forwards;
-  transform: translateY(100%);
-}
-
-@keyframes scrollUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(-120%);
-  }
-}
-
-.staff-roll-line {
-  margin-bottom: 2.5em;
-  font-size: 18px;
-  line-height: 1.5;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.staff-roll-line .role {
-  color: #aaa;
-  text-align: left;
-}
-
-.staff-roll-line .name {
-  font-weight: bold;
-  text-align: right;
-}
-
-.staff-roll-line .role-center {
-  width: 100%;
-  text-align: center;
-  font-size: 1.2em;
-  font-weight: bold;
 }
 
 

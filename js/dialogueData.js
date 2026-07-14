@@ -18,7 +18,13 @@
  * @property {'left'|'right'} position - 立ち絵の表示位置。
  * @property {Object.<string, string>} [images] - 表情ごとの画像パスを格納するオブジェクト。
  *   - キー (例: "normal", "smile") は、`DIALOGUE_DATA`の`expression`プロパティに対応します。
- *   - オペレーターのように立ち絵を表示しないキャラクターは、このプロパティを省略できます。
+ *
+ * @description
+ * このオブジェクトに定義されていないキャラクター名も使用可能です。
+ * 特に、以下の名前はシステム側で特別な挙動をします。
+ * - **`？`**: 発言者が不明な場合に使用します。立ち絵は表示されません。
+ * - **`SYSTEM`**: システムメッセージに使用します。立ち絵が表示されず、機械的なフォントと四角い会話枠の専用スタイルが適用されます。
+ * - **`オペレーター`**: プレイヤーの発言として扱われます。立ち絵は表示されず、会話ログでは右側に表示されます。
  */
 // ★ MODIFIED: アイコン画像への参照を追加
 export const CHARACTERS = {
@@ -44,103 +50,224 @@ export const CHARACTERS = {
 /**
  * ゲーム内の会話イベントデータを定義します。
  *
- * @type {Object.<string, {
- *   title: string,
- *   messages: Array<{
- *     character: string,
- *     expression?: string,
- *     text: string
- *   }>
- * }>}
- *
- * @property {string} dialogueId - 各会話イベントのユニークなID。以下の命名規則に従います。
+ * @property {string} [dialogueId] - 各会話イベントのユニークなID。以下の命名規則に従います。
  *   - `prologue`: ゲーム開始時のプロローグ。
  *   - `{クエストID}_start`: クエスト開始時の会話。
  *   - `{クエストID}_end`: クエスト終了時の会話。
  *   - `true_ending_dialogue`: 真エンディングの会話。
+ *   - その他、分岐先としてユニークなIDを自由に設定可能。
  *
  * @property {string} title - 会話のタイトル。ログ画面でチャプター名として表示されます。
+ * @property {boolean} [isBranch=false] - `true`に設定すると、この会話データはログ画面のチャプターリストに表示されなくなります。選択肢からの分岐先など、メインストーリーラインではない会話に使用します。
  *
- * @property {Array} messages - 会話のセリフを格納する配列。
- * @property {string} messages.character - 発言者名。`CHARACTERS`オブジェクトのキーと一致させる必要があります。
- * @property {string} [messages.expression] - キャラクターの表情。`CHARACTERS`オブジェクトの`images`内のキーと一致させます。省略した場合は "normal" が使用されます。
- * @property {string} messages.text - セリフの本文。`\n` を使用することで、セリフ内で改行できます。
+ * @property {Array<Object>} messages - 会話のセリフや選択肢を格納する配列。各要素はメッセージオブジェクトです。
+ *
+ * @typedef {Object} MessageObject
+ * @property {string} character - 発言者名。`CHARACTERS`オブジェクトのキーと一致させる必要があります。"SYSTEM"や"？"も使用可能です。
+ * @property {string} [expression] - キャラクターの表情。`CHARACTERS`オブジェクトの`images`内のキーと一致させます。省略した場合は "normal" が使用されます。
+ * @property {string} text - セリフの本文。`\n` を使用することで、セリフ内で改行できます。
+ * @property {string} [choiceId] - このメッセージに選択肢がある場合、その選択肢グループを識別するためのユニークなID。既読管理に使用されます。`choices`プロパティとセットで使います。
+ * @property {Array<ChoiceObject>} [choices] - プレイヤーに提示する選択肢の配列。
+ *
+ * @typedef {Object} ChoiceObject
+ * @property {string} text - 選択肢のボタンに表示されるテキスト。
+ * @property {MessageObject} [response] - この選択肢を選んだ直後に表示されるキャラクターの応答メッセージ。`nextId`と併用可能です。
+ * @property {string} [nextId] - この選択肢を選んだ後に遷移する、別の会話データのID。`DIALOGUE_DATA`のトップレベルキーと一致させる必要があります。
+ * @property {boolean} [end] - `true`に設定すると、この選択肢を選んだ時点で会話が終了し、完了コールバックが抑制されます。
+ *
+ * @example
+ * "W1_Q1_start": {
+ *   title: "チュートリアル１",
+ *   messages: [
+ *     { character: "ナビ", text: "準備はよろしいですか？" },
+ *     {
+ *       character: "ナビ",
+ *       text: "選択してください。",
+ *       choiceId: "W1_Q1_start_1",
+ *       choices: [
+ *         { text: "はい", response: { character: "ナビ", text: "素晴らしい！" }, nextId: "W1_Q1_mission_start" },
+ *         { text: "いいえ", response: { character: "ナビ", text: "準備ができたら教えてください。" }, end: true }
+ *       ]
+ *     }
+ *   ]
+ * }
  */
 export const DIALOGUE_DATA = {
     "prologue": {
         title: "プロローグ",
         messages: [
             {
+                character: "SYSTEM",
+                text: ".....\n \nInitializing...\nSecure Channel Established.\nQuantum Signature Verified.\nLoading Core Interface...\n \n.....\n \nConnection Established.\nOperator Signature Detected.\nAuthentication in Progress...\n \n.....\n \nAuthentication Successful.\nWelcome, Operator."
+            },
+            {
                 character: "？",
-                text: "聞こえますか、オペレーター？\nこの世界は汚染されたデータに侵食され、崩壊の危機に瀕しています。"
+                text: "ようこそ。\nまずは、このゲームをダウンロードしてくれてありがとうございます。"
             },
             {
-                character: "オペレーター",
-                text: "......。"
+                character: "？",
+                text: "あなたが起動したのは、一般公開用ゲームクライアント。"
             },
             {
+                character: "？",
+                text: "\n正式名称\n \nproject THREAD"
+            },
+            {
+                character: "？",
+                text: "わたしは、\nM.A.M.E\nMutual Adaptive Monitoring Entity\nProject THREADの管理AIです。\nあなたのナビを務めさせていただきます。"
+            },
+                        {
                 character: "ナビ",
-                expression: "sad",
-                text: "あなたのタイピングスキルが、この世界を浄化する唯一の希望です。\nこれは単なるゲームではありません。あなたのキー入力が、未来を紡ぎます。"
-            },
-            {
-                character: "オペレーター",
-                text: "了解した。\n始めよう。"
-            },
-            {
-                character: "ナビ",
-                expression: "smile",
-                text: "test\nこれは単なるゲームではありません。あなたのキー入力が、未来を紡ぎます。"
-            },
-            {
-                character: "ナビ",
-                expression: "surprised",
-                text: "testsup\nこれは単なるゲームではありません。あなたのキー入力が、未来を紡ぎます。"
-            },
-            {
-                character: "ナビ",
-                expression: "angry",
-                text: "testa\nこれは単なるゲームではありません。あなたのキー入力が、未来を紡ぎます。"
-            },
-        ]
-    },
-    "W1_Q1_start": {
-        title: "最初の接続",
-        messages: [
-            {
-                character: "ナビ",
-                expression: "normal",
-                text: "接続テストを開始します。\n聞こえますか、オペレーター？"
-            },
-            {
-                character: "オペレーター",
-                expression: "normal",
-                text: "こちらオペレーター。クリアに聞こえる。"
-            },
-            {
-                character: "ナビ",
-                expression: "smile",
-                text: "了解しました。これよりシステム内部の汚染区域へ侵入します。\n敵性プログラムの排除をお願いします。"
+                text: "あなたは、正式にProject THREADのOperatorとして認証されました。"
             }
         ]
     },
-    // --- 以下、会話データのサンプルです ---
-
-    //【サンプル1】クエストクリア後の会話
-    // キーを「(クエストID)_end」のようにすると、クリア後イベントとして設定できます。（別途実装が必要）
+    "W1_Q1_start": {
+        title: "チュートリアル１",
+        messages: [
+            {
+                character: "ナビ",
+                text: "接続テストを開始します。"
+            },
+            {
+                character: "オペレーター",
+                text: "OK！"
+            },
+            {
+                character: "ナビ",
+                text: "了解しました。\nゲームについて説明します。"
+            },
+            {
+                character: "ナビ",
+                text: "文字列を持った敵が出現するので、すべての文字を入力して倒します。\n先頭の文字を入力すると、自動でロックオンします。\n先頭の文字が同じ場合は次の文字で判別します。"
+            },
+            {
+                character: "ナビ",
+                text: "別の敵を攻撃したい場合は、Unlockキーを入力し、ロックオンを解除してください。（settingでキー設定できます）\nその後、対象の敵の文字をタイピングしてください。"
+            },
+            {
+                character: "ナビ",
+                text: "一番近くの敵にロックオンしたい場合は、Auto Lockキーを入力してください。（settingでキー設定できます）"
+            },
+            {
+                character: "ナビ",
+                text: "ゲーム中に一時停止する場合は、Pauseキーを入力してください。（settingでキー設定できます。）"
+            },
+            {
+                character: "ナビ",
+                text: "では開始してください。\nよろしくお願いします。"
+            },
+            {
+                character: "ナビ",
+                text: "準備はよろしいですか？", // このメッセージに選択肢を追加
+                choiceId: "W1_Q1_start_1", // ★ 選択肢グループのIDを追加
+                choices: [
+                    { text: "はい、準備OKです！", response: { character: "ナビ", expression: "smile", text: "素晴らしい意気込みです！" }, nextId: "W1_Q1_mission_start" },
+                    { text: "まだ心の準備が…", response: { character: "ナビ", expression: "sad", text: "そうですか…\n準備ができたら、いつでも声をかけてくださいね。" } }
+                ]
+            },
+            { character: "ナビ", text: "というとでも思ったかこのやろう…\nゆるさん" }, 
+            { character: "ナビ", text: "てすとてすと\nてすてすと" }, 
+            {
+                character: "ナビ",
+                text: "第二の選択肢", // このメッセージに選択肢を追加
+                choiceId: "W1_Q1_start_2", // ★ 選択肢グループのIDを追加
+                choices: [
+                    { text: "aaaaaaaaaa", response: { character: "ナビ", expression: "smile", text: "a----ppo--" } },
+                    { text: "bbbbbbbbbb", response: { character: "ナビ", expression: "sad", text: "b---b-b-b-" } }
+                ]
+            },
+            { character: "ナビ", text: "というと\nゆるさん" }, 
+            { character: "ナビ", text: "てすてす\nてすてす" }, 
+        ]
+    },
+    "W1_Q1_mission_start": {
+        isBranch: true, // ログ画面に表示しないためのフラグ
+        messages: [
+            { character: "ナビ", text: "それでは、ミッションを開始します。" }
+        ]
+    },
+    //     ]
+    // },
     "W1_Q1_end": {
         title: "初任務完了",
         messages: [
             {
                 character: "ナビ",
-                // icon: "./assets/pic/navi_icon.png",
-                text: "汚染プログラムの排除を確認。素晴らしい腕前です、オペレーター。"
+                text: "敵プログラムの排除を確認。\n初めてのミッションお疲れ様でした。"
+            },
+            {
+                character: "ナビ",
+                text: "素晴らしい腕前です、オペレーター。"
+            },
+            {
+                character: "SYSTEM",
+                text: "Project THREAD\n \nSynchronization\n■□□□□□□□□□□ 2.4%\nSystem Stability\n84%"
             },
             {
                 character: "オペレーター",
-                // icon: "./assets/pic/player_icon.png",
-                text: "これくらいは当然だ。次の目標は？"
-            }
+                text: "？"
+            },
+            {
+                character: "ナビ",
+                text: "オペレーターにはまだ開示できない情報です。\nゲームを進めていくことを推奨します。"
+            },
+            {
+                character: "ナビ",
+                text: "よろしくお願いします。"
+            },
+                        {
+                character: "ナビ",
+                text: "準備はよろしいですか？", // このメッセージに選択肢を追加
+                choiceId: "W1_Q1_end_1", // ★ 選択肢グループのIDを追加
+                choices: [
+                    { text: "はい、準備OKです！", response: { character: "ナビ", expression: "smile", text: "素晴らしい意気込みです！" } },
+                    { text: "まだ心の準備が…", response: { character: "ナビ", expression: "sad", text: "そうですか…\n準備ができたら、いつでも声をかけてくださいね。" } }
+                ]
+            },
+            { character: "ナビ", text: "というとでも思ったかこのやろう…\nゆるさん" }, 
+            { character: "ナビ", text: "てすとてすと\nてすてすと" }, 
+            {
+                character: "ナビ",
+                text: "第二の選択肢", // このメッセージに選択肢を追加
+                choiceId: "W1_Q1_end_2", // ★ 選択肢グループのIDを追加
+                choices: [
+                    { text: "aaaaaaaaaa", response: { character: "ナビ", expression: "smile", text: "a----ppo--" } },
+                    { text: "bbbbbbbbbb", response: { character: "ナビ", expression: "sad", text: "b---b-b-b-" } }
+                ]
+            },
+            { character: "ナビ", text: "というと\nゆるさん" }, 
+            { character: "ナビ", text: "てすてす\nてすてす" }, 
+
+        ]
+    },
+
+    "W1_Q2_start": {
+        title: "チュートリアル２",
+        messages: [
+            {
+                character: "ナビ",
+                text: "ミッションのパターンについて説明します。"
+            },
+            {
+                character: "ナビ",
+                text: "ミッションには複数の種類があり、\nこの世界を構築する際（「NEW GAME」で始めた時）にランダムで決定されます。"
+            },
+            {
+                character: "ナビ",
+                expression: "smile",
+                text: "基本的に、10ステージごとに敵の強さは上昇していきます。"
+            },
+            {
+                character: "ナビ",
+                expression: "smile",
+                text: "そして、ステージ数の１桁の数字が大きいほどミッションの難度が難しい傾向があります。"
+            },
+            {
+                character: "ナビ",
+                expression: "smile",
+                text: "ではミッションを開始します。"
+            },
         ]
     },
 

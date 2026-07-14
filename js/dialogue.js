@@ -1,6 +1,6 @@
 // dialogue.js
 
-import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasSeenTrueEnding, markTrueEndingSeen } from './questProgress.js'; // ★ MODIFIED: Import new functions
+import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed } from './questProgress.js'; // ★ MODIFIED: Import new functions
 import { playBGM, stopBGM } from './effectManager.js';
 import { showHud } from './enemyCore.js';
 import { DIALOGUE_DATA, CHARACTERS } from './dialogueData.js';
@@ -9,11 +9,12 @@ import { showQuestMap } from './main.js';
 import { images } from './assetsLoader.js';
 
 let dialogueModal = null;
-let logPanel = null;
 let chatPanel = null;
 let chatContent = null;
 let closeButton = null;
-let skipButton = null; // Skipボタン用の変数を追加
+let skipToEndButton = null; // 最後までスキップ
+let skipToChoiceButton = null; // 選択肢までスキップ
+let choicesContainer = null; // 選択肢コンテナ用の変数を追加
 let isStaffRollShowing = false; // スタッフロール表示中フラグ
 
 let currentDialogueId = null;
@@ -21,6 +22,7 @@ let currentMessageIndex = 0;
 let onCompleteCallback = null;
 let isTyping = false;
 
+let isChoosing = false; // 選択肢表示中フラグ
 // イベントリスナーを管理するための変数
 const DIALOGUE_SPEEDS = [100, 75, 50, 30, 15]; // Slow -> Fast (ms)
 let currentDialogueSpeed = DIALOGUE_SPEEDS[3]; // デフォルトは "Fast" (30ms)
@@ -42,11 +44,16 @@ function createDialogueUI() {
     const existingModal = document.getElementById('dialogueModal');
     if (existingModal) {
         dialogueModal = existingModal;
-        logPanel = existingModal.querySelector('.dialogue-log-panel');
         chatPanel = existingModal.querySelector('.dialogue-chat-panel');
         chatContent = existingModal.querySelector('#dialogueChatContent');
         closeButton = existingModal.querySelector('#dialogueCloseBtn');
-        skipButton = existingModal.querySelector('#dialogueSkipBtn'); // Skipボタンを取得
+        choicesContainer = existingModal.querySelector('.dialogue-choices-container');
+        skipToEndButton = existingModal.querySelector('#dialogueSkipToEndBtn');
+        skipToChoiceButton = existingModal.querySelector('#dialogueSkipToChoiceBtn');
+        // ★ MODIFIED: 会話エリアの下に余白を追加してボタンとの重なりを防ぐ
+        if (chatContent) {
+            chatContent.style.paddingBottom = '100px';
+        }
         return;
     }
 
@@ -75,9 +82,11 @@ function createDialogueUI() {
             </div>
             <div class="dialogue-chat-panel">
                 <div id="dialogueChatContent" class="dialogue-chat-content"></div>
-                <div class="dialogue-controls">
-                    <button id="dialogueSkipBtn">skip &gt;&gt;&gt;</button>
-                </div>
+            </div>
+            <div class="dialogue-controls">
+                <div class="dialogue-choices-container"></div>
+                <button id="dialogueSkipToEndBtn">skip to end(E) &gt;&gt;&gt;</button>
+                <button id="dialogueSkipToChoiceBtn">skip to choices(C) &gt;&gt;&gt;</button>
             </div>
         </div>
     `;
@@ -88,17 +97,74 @@ function createDialogueUI() {
     else document.body.appendChild(modal); // フォールバック
 
     dialogueModal = modal;
-    logPanel = modal.querySelector('.dialogue-log-panel');
     chatPanel = modal.querySelector('.dialogue-chat-panel');
     chatContent = modal.querySelector('#dialogueChatContent');
-    skipButton = modal.querySelector('#dialogueSkipBtn'); // Skipボタンを取得
+    choicesContainer = modal.querySelector('.dialogue-choices-container');
+    skipToEndButton = modal.querySelector('#dialogueSkipToEndBtn');
+    skipToChoiceButton = modal.querySelector('#dialogueSkipToChoiceBtn');
+
+    // ★ MODIFIED: 会話エリアの下に余白を追加してボタンとの重なりを防ぐ
+    if (chatContent) {
+        chatContent.style.paddingBottom = '100px';
+    }
 
     // 閉じるボタンのイベント
     closeButton = modal.querySelector('#dialogueCloseBtn');
     closeButton.addEventListener('click', () => closeDialogue());
 
-    // Skipボタンのクリックイベント
-    skipButton.addEventListener('click', () => skipDialogue());
+    // スキップボタンのイベント
+    skipToEndButton.addEventListener('click', () => skipDialogue(true)); // true: 最後まで
+    skipToChoiceButton.addEventListener('click', () => skipDialogue(false)); // false: 選択肢まで
+
+    // ★ SYSTEMメッセージ用のスタイルを動的に追加
+    const systemStyle = document.createElement('style');
+    systemStyle.id = 'dialogue-system-style';
+    systemStyle.textContent = `
+        .chat-bubble.system-message {
+            background: #1c1c1c;
+            border: 1px solid #444;
+            padding: 12px 16px;   /* ← ここに余白を持たせる */
+            border-radius: 4px;
+        }
+        .chat-bubble.system-message::before,
+        .chat-bubble.system-message::after {
+            display: none !important; /* 吹き出しのしっぽを非表示 */
+        }
+        .chat-bubble.system-message .character-name,
+        .chat-bubble.system-message .character-icon {
+            display: none; /* 名前とアイコンを非表示 */
+        }
+        .chat-bubble.system-message .message-text {
+            background: transparent !important;
+            padding: 0;
+            border-radius: 0;
+            box-shadow: none;
+            font-family: 'monospace', 'Courier New', Courier;
+            text-shadow: none;
+        }
+    `;
+    document.head.appendChild(systemStyle);
+}
+
+/**
+ * 吹き出しの内部HTMLを生成します。クラスの付与は行いません。
+ * @param {object} message - メッセージオブジェクト
+ * @returns {string} - 吹き出しの内部HTML
+ */
+function createBubbleHTML(message) { // ★ MODIFIED: 'left' クラスを削除
+    // アイコン画像のパスを取得
+    const charData = CHARACTERS[message.character];
+    const expression = message.expression || 'normal';
+    const iconKey = charData?.images?.[expression] || charData?.icon;
+    const iconUrl = iconKey && images[iconKey] ? images[iconKey].src : '';
+
+    return `
+        <div class="character-icon" style="${iconUrl ? `--character-icon-url: url('${iconUrl}');` : ''}"></div>
+        <div class="message-content">
+            <div class="character-name">${message.character}</div>
+            <div class="message-text"></div>
+        </div>
+    `;
 }
 
 function displayChapterContent(dialogueId) {
@@ -113,31 +179,36 @@ function displayChapterContent(dialogueId) {
     dialogue.messages.forEach(message => {
         const bubble = document.createElement('div');
         bubble.className = 'chat-bubble';
-        
-        bubble.innerHTML = `
-            <div class="character-icon"></div>
-            <div class="message-content">
-                <div class="character-name">${message.character}</div>
-                <div class="message-text">${message.text.replace(/\n/g, '<br>')}</div>
-            </div>
-        `;
 
-        // ★ MODIFIED: キャラクターアイコンを設定するロジックを追加
-        const iconElement = bubble.querySelector('.character-icon');
-        if (iconElement) {
+        // ★ MODIFIED: クラス付与ロジックをここに集約
+        if (message.character === 'SYSTEM') {
+            bubble.classList.add('system-message');
+            bubble.innerHTML = `<div class="message-content"><div class="message-text">${message.text.replace(/\n/g, '<br>')}</div></div>`;
+        } else {
+            if (message.character === 'オペレーター') {
+                bubble.classList.add('right');
+            } else {
+                bubble.classList.add('left');
+            }
+
+            // 通常の吹き出しHTMLを生成
+            bubble.innerHTML = createBubbleHTML(message);
+            // テキストを設定
+            bubble.querySelector('.message-text').innerHTML = message.text.replace(/\n/g, '<br>');
+
+            // アイコン設定
+            const iconElement = bubble.querySelector('.character-icon');
             const charData = CHARACTERS[message.character];
-            // ★ MODIFIED: 表情に応じたアイコンキーを取得
-            const expression = message.expression || 'normal';
-            const iconKey = charData?.images?.[expression] || charData?.icon;
+            if (iconElement && charData) {
+                const expression = message.expression || 'normal';
+                const iconKey = charData?.images?.[expression] || charData?.icon;
 
-            if (iconKey && images[iconKey]) {
-                const imageUrl = images[iconKey].src;
-                iconElement.style.setProperty('--character-icon-url', `url('${imageUrl}')`);
+                if (iconKey && images[iconKey]) {
+                    const imageUrl = images[iconKey].src;
+                    iconElement.style.setProperty('--character-icon-url', `url('${imageUrl}')`);
+                }
             }
         }
-        // オペレーターの発言は右側に表示
-        if (message.character === 'オペレーター') bubble.classList.add('right');
-
         chatContent.appendChild(bubble);
     });
 
@@ -152,6 +223,15 @@ function updateCharacterDisplay(message) {
     const leftChar = document.getElementById('dialogueCharLeft');
     const rightChar = document.getElementById('dialogueCharRight');
     if (!leftChar || !rightChar) return;
+
+    // ★ SYSTEMの場合は、両方の立ち絵を非表示にする
+    if (message.character === 'SYSTEM') {
+        leftChar.style.backgroundImage = 'none';
+        rightChar.style.backgroundImage = 'none';
+        leftChar.classList.remove('active');
+        rightChar.classList.remove('active');
+        return;
+    }
 
     // ★ 追加：キャラクターが「？」の場合は、両方の立ち絵を非表示にする
     if (message.character === '？') {
@@ -212,6 +292,8 @@ function renderChapterLog() {
             return hasDialogueBeenPlayed(id);
         }
         // それ以外の会話はクエストクリアを条件とする
+        // ★ MODIFIED: 分岐会話はログに表示しない
+        if (DIALOGUE_DATA[id]?.isBranch) return false;
         const questId = id.replace(/_start$|_end$/, '');
         return isCleared(questId);
     });
@@ -440,6 +522,17 @@ function showStaffRoll(onComplete) {
 
         // クリックでのスキップ
         skipButton.addEventListener('click', endRoll);
+
+        // ホバーエフェクト
+        skipButton.style.transition = 'transform 0.2s, opacity 0.2s';
+        skipButton.onmouseover = () => {
+            skipButton.style.transform = 'scale(1.1)';
+            skipButton.style.opacity = '1';
+        };
+        skipButton.onmouseout = () => {
+            skipButton.style.transform = 'scale(1.0)';
+            skipButton.style.opacity = '0.7';
+        };
     }
 }
 
@@ -482,96 +575,151 @@ function typeMessage(element, text, onFinished) {
     type();
 }
 
-function displayNextMessage() {
-    const dialogue = DIALOGUE_DATA[currentDialogueId];
-    if (!dialogue || currentMessageIndex >= dialogue.messages.length) {
-        finishDialogue(); // ★コールバック付きの終了処理を呼び出す
+function displayNextMessage(messageOverride, onComplete, noType = false) {
+    // ★ MODIFIED: メッセージ決定ロジックを修正
+    let message;
+    if (messageOverride) {
+        message = messageOverride;
+    } else {
+        const dialogue = DIALOGUE_DATA[currentDialogueId];
+        if (!dialogue || currentMessageIndex >= dialogue.messages.length) {
+            finishDialogue();
+            return;
+        }
+        message = dialogue.messages[currentMessageIndex];
+        currentMessageIndex++;
+    }
+
+    // ★立ち絵を更新
+    updateCharacterDisplay(message);
+
+    // ★ MODIFIED: 選択肢がある場合は、ここで処理を分岐
+    // messageOverrideの場合でも選択肢をチェックできるように、finalMessageではなくmessageを見る
+    if (message.choices) {
+        displayChoices(message.choices);
         return;
     }
 
-    const message = dialogue.messages[currentMessageIndex];
-    // ★立ち絵を更新
-updateCharacterDisplay(message);
-    
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble';
-    
-    bubble.innerHTML = `
-        <div class="character-icon"></div>
-        <div class="message-content">
-            <div class="character-name">${message.character}</div>
-            <div class="message-text"></div>
-        </div>
-    `;
 
-    // ★ MODIFIED: キャラクターアイコンを設定するロジック
-    const iconElement = bubble.querySelector('.character-icon');
-    if (iconElement) {
-        const charData = CHARACTERS[message.character];
-        // ★ MODIFIED: 表情に応じたアイコンキーを取得
-        const expression = message.expression || 'normal';
-        const iconKey = charData?.images?.[expression] || charData?.icon;
+    // ★ MODIFIED: クラス付与ロジックをここに集約
+    if (message.character === 'SYSTEM') {
+        bubble.classList.add('system-message');
+        // SYSTEMの場合はアイコンや名前が不要なシンプルな構造
+        bubble.innerHTML = `<div class="message-content"><div class="message-text"></div></div>`;
+    } else {
+        if (message.character === 'オペレーター') {
+            bubble.classList.add('right');
+        } else {
+            bubble.classList.add('left');
+        }
 
-        if (iconKey && images[iconKey]) {
-            const imageUrl = images[iconKey].src;
-            iconElement.style.setProperty('--character-icon-url', `url('${imageUrl}')`);
+        // 通常の吹き出しHTMLを生成
+        bubble.innerHTML = createBubbleHTML(message);
+
+        // アイコン設定
+        const iconElement = bubble.querySelector('.character-icon');
+        if (iconElement) {
+            const charData = CHARACTERS[message.character];
+            const expression = message.expression || 'normal';
+            const iconKey = charData?.images?.[expression] || charData?.icon;
+
+            if (iconKey && images[iconKey]) {
+                const imageUrl = images[iconKey].src;
+                iconElement.style.setProperty('--character-icon-url', `url('${imageUrl}')`);
+            }
         }
     }
 
     chatContent.appendChild(bubble);
 
-    // ★ MODIFIED: 新しい吹き出しが表示されたら、即座に一番下までスクロールする
-    chatContent.scrollTop = chatContent.scrollHeight;
-
-    // オペレーターの発言は右側に表示するためのクラスを追加
-    if (message.character === 'オペレーター') bubble.classList.add('right');
-
     const messageTextElement = bubble.querySelector('.message-text');
 
-    currentMessageIndex++;
-
-    typeMessage(messageTextElement, message.text);
+    if (noType) {
+        messageTextElement.innerHTML = message.text.replace(/\n/g, '<br>');
+        if (onComplete) onComplete();
+    } else {
+        typeMessage(messageTextElement, message.text, onComplete);
+    }
 }
 
-function skipDialogue() {
+/**
+ * 会話を指定されたIDに切り替えます。モーダルは閉じません。
+ * @param {string} dialogueId - 次の会話のID
+ */
+function continueDialogue(dialogueId) {
+    console.log(`[DEBUG] continueDialogue: Calling startDialogue for ID: "${dialogueId}" with isContinuation = true`);
+    startDialogue(dialogueId, onCompleteCallback, true);
+}
+/**
+ * 会話をスキップする
+ * @param {boolean} toEnd - trueなら最後まで、falseなら未読の選択肢までスキップ
+ */
+function skipDialogue(toEnd = true) {
     if (!currentDialogueId) return;
 
-    const dialogue = DIALOGUE_DATA[currentDialogueId];
-    // 既に会話が最後まで表示されている場合は、会話を終了させる
-    if (currentMessageIndex >= dialogue.messages.length && !isTyping) {
-        finishDialogue();
+    // ★ MODIFIED: 「最後までスキップ」の場合、即座に会話を終了してコールバックを呼ぶ
+    if (toEnd) {
+        finishDialogue(); // suppressCallbackはfalse（デフォルト）でコールバックを実行
         return;
     }
 
-    // 1. 現在のタイピングを即時完了
-    isTyping = false;
-    const lastMessage = dialogue.messages[currentMessageIndex - 1];
-    const lastMessageBubble = chatContent.querySelector('.chat-bubble:last-child .message-text');
-    if (lastMessageBubble && lastMessage) {
-        lastMessageBubble.innerHTML = lastMessage.text.replace(/\n/g, '<br>');
+    const dialogue = DIALOGUE_DATA[currentDialogueId];
+    let stopIndex = -1; // スキップを停止するメッセージのインデックス
+
+    // ★ MODIFIED: toEndがfalseの場合、現在の再生位置以降で最初の選択肢を探す
+    if (!toEnd) {
+        // currentMessageIndexから探し始めることで、すでに表示済みの選択肢はスキップする
+        for (let i = currentMessageIndex; i < dialogue.messages.length; i++) {
+            const message = dialogue.messages[i];
+            // 選択肢があれば、そこで停止する（既読・未読は問わない）
+            if (message.choices) {
+                stopIndex = i;
+                break;
+            }
+        }
     }
 
+    // 未再生の選択肢が見つかった場合
+    if (stopIndex !== -1) {
+        // その選択肢の手前まで一気に表示
+        while (currentMessageIndex < stopIndex) {
+            displayNextMessage(null, null, true); // true: noType
+        }
+
+        // ★ MODIFIED: displayNextMessage() を直接呼ばず、選択肢表示に特化させる
+        // これにより、currentMessageIndex が余計に進むのを防ぐ
+        const choiceMessage = dialogue.messages[stopIndex];
+        currentMessageIndex = stopIndex + 1; // 選択肢を表示するメッセージのインデックスを正しく設定
+        updateCharacterDisplay(choiceMessage); // 立ち絵を更新
+        displayChoices(choiceMessage.choices); // 選択肢を直接表示
+
+
+        // ★ 選択肢までスキップしたら、両方のスキップボタンを隠す
+        if (skipToEndButton) skipToEndButton.style.display = 'none';
+        if (skipToChoiceButton) skipToChoiceButton.style.display = 'none';
+        return;
+    }
+
+    // 未再生の選択肢がない場合は、最後までスキップ
+    // 既に会話が最後まで表示されている場合は、会話を終了させる
+    if (currentMessageIndex >= dialogue.messages.length && !isTyping) {
+        finishDialogue();
+
+        return;
+    }
+
+
     // 2. 残りのメッセージをすべて表示
-    while (currentMessageIndex < dialogue.messages.length) {
-        const message = dialogue.messages[currentMessageIndex];
-        const bubble = document.createElement('div');
-        bubble.className = 'chat-bubble';
-        const iconStyle = message.icon ? `style="background-image: url('${message.icon}')"` : '';
-        bubble.innerHTML = `
-            <div class="character-icon" ${iconStyle}></div>
-            <div class="message-content">
-                <div class="character-name">${message.character}</div>
-                <div class="message-text">${message.text.replace(/\n/g, '<br>')}</div>
-            </div>
-        `;
-        chatContent.appendChild(bubble);
-        if (message.character === 'オペレーター') bubble.classList.add('right');
-        currentMessageIndex++;
+    while (currentMessageIndex < dialogue.messages.length) { 
+        displayNextMessage(null, null, true); // true: noType
     }
 
     // 3. UIを更新
     chatContent.scrollTop = chatContent.scrollHeight;
-    skipButton.style.display = 'none';
+    if (skipToEndButton) skipToEndButton.style.display = 'none';
+    if (skipToChoiceButton) skipToChoiceButton.style.display = 'none';
 
     // 会話の最後に到達したので、次のクリック/キー入力でダイアログが閉じるように
     // currentMessageIndexをメッセージ数に設定しておく
@@ -579,7 +727,7 @@ function skipDialogue() {
 }
 
 function advanceDialogue() {
-    if (isTyping) {
+    if (isTyping || isChoosing) { // ★ MODIFIED: 選択肢表示中も何もしない
         // タイピングエフェクトをスキップ
         const dialogue = DIALOGUE_DATA[currentDialogueId];
         const message = dialogue.messages[currentMessageIndex - 1];
@@ -591,7 +739,7 @@ function advanceDialogue() {
                 behavior: 'smooth'
             });
         }
-        isTyping = false;
+        isTyping = false; // タイピングはスキップするが、選択肢はスキップしない
     } else {
         // 次のメッセージへ、または会話終了
         const dialogue = DIALOGUE_DATA[currentDialogueId];
@@ -602,18 +750,171 @@ function advanceDialogue() {
         }
     }
 }
+/**
+ * 選択肢を表示します。
+ * @param {Array} choices - 選択肢の配列
+ */
+function displayChoices(choices) {
+    if (!choicesContainer) return;
+
+    isChoosing = true; // 選択肢表示モードON
+    choicesContainer.innerHTML = ''; // コンテナをクリア
+    choicesContainer.style.display = 'flex';
+    chatPanel?.classList.add('is-choosing'); // ★選択肢表示中のクラスを追加
+
+    // ★ 選択肢表示中はスキップボタンを非表示にする
+    if (skipToEndButton) skipToEndButton.style.display = 'none';
+    if (skipToChoiceButton) skipToChoiceButton.style.display = 'none';
+
+
+    // ★ MODIFIED: 現在のメッセージから choiceId を取得
+    const currentMessage = DIALOGUE_DATA[currentDialogueId].messages[currentMessageIndex - 1];
+    const choiceId = currentMessage.choiceId;
+
+    choices.forEach((choice, index) => {
+        const button = document.createElement('button');
+        button.className = 'dialogue-choice-btn';
+        // ★ MODIFIED: 既読の選択肢は文字色を変更する
+        if (isChoicePlayed(choiceId, index)) {
+            button.style.color = '#4caf50'; // 緑色
+            button.style.opacity = '0.8'; // 少し薄くして既読感を出す
+        }
+        // ★ MODIFIED: 選択肢に番号を追加
+        button.textContent = `${index + 1}. ${choice.text}`;
+
+        button.onclick = (e) => {
+            e.stopPropagation(); // 親要素へのクリックイベント伝播を停止
+            // ★ MODIFIED: 現在のメッセージオブジェクトからchoiceIdを取得して渡す
+            const currentMessage = DIALOGUE_DATA[currentDialogueId].messages[currentMessageIndex - 1];
+            handleChoice(choice, index, currentMessage.choiceId);
+        };
+        choicesContainer.appendChild(button);
+    });
+}
+
+/**
+ * 選択肢が選ばれたときの処理
+ * @param {object} choice - 選択されたchoiceオブジェクト
+ * @param {number} choiceIndex - 選択された選択肢のインデックス
+ * @param {string} choiceId - 選択肢グループのID
+ */
+function handleChoice(choice, choiceIndex, choiceId) {
+    
+    isChoosing = false; // 選択肢表示モードOFF
+    if (choicesContainer) {
+        choicesContainer.style.display = 'none';
+        choicesContainer.innerHTML = '';
+        chatPanel?.classList.remove('is-choosing'); // ★選択肢表示中のクラスを削除
+
+        // ★ 選択肢を選んだ後、スキップボタンの表示を再評価する
+        const dialogueData = DIALOGUE_DATA[currentDialogueId];
+        // 現在の再生位置「以降」に、未読の選択肢が残っているかチェック
+        const remainingMessages = dialogueData.messages.slice(currentMessageIndex);
+        const hasUnplayedChoicesAhead = remainingMessages.some(m =>
+            m.choices && m.choiceId && !haveAllChoicesBeenPlayed(m.choiceId, m.choices.length)
+        );
+        // 現在の再生位置以降に、選択肢（既読・未読問わず）が残っているかチェック
+        const hasMoreChoicesAhead = dialogueData.messages.slice(currentMessageIndex).some(m => m.choices && m.choiceId);
+
+        if (dialogueData) {
+            // 会話全体がスキップ可能か（一度クリア/再生済みか）を判定
+            const isSkippable = currentDialogueId.endsWith('_start')
+                ? isCleared(currentDialogueId.replace(/_start$/, ''))
+                : hasDialogueBeenPlayed(currentDialogueId);
+
+
+            if (choiceId !== undefined && choiceIndex !== undefined) {
+                //選択肢が未読だったかどうかをチェック
+                const wasUnread = !isChoicePlayed(choiceId, choiceIndex);
+                if (wasUnread) {
+
+                    if (skipToEndButton) skipToEndButton.style.display = 'none';
+                    if (skipToChoiceButton) skipToChoiceButton.style.display = 'none';
+
+                } else {
+
+                    if (isSkippable) {
+                        // この先にまだ見ていない選択肢が残っている場合、かつ、この先にも選択肢がある場合。
+                        if (hasUnplayedChoicesAhead && hasMoreChoicesAhead) {
+                            // 「選択肢までスキップ」を表示
+                            if (skipToChoiceButton) skipToChoiceButton.style.display = 'block';
+                            if (skipToEndButton) skipToEndButton.style.display = 'none';
+                        // この先にまだ見ていない選択肢が残っていない場合、かつ、この先にも選択肢がある場合。   
+                        } else if (!hasUnplayedChoicesAhead && hasMoreChoicesAhead) {
+                            if (skipToChoiceButton) skipToChoiceButton.style.display = 'block';
+                            if (skipToEndButton) skipToEndButton.style.display = 'block';
+                        // この先に未読の選択肢がない場合
+                        } else {
+                            if (skipToChoiceButton) skipToChoiceButton.style.display = 'none';
+                            if (skipToEndButton) skipToEndButton.style.display = 'block';
+                        }
+                    } else {
+                        // スキップ不可能な会話（初回プレイなど）ではボタンを非表示
+                        if (skipToEndButton) skipToEndButton.style.display = 'none';
+                        if (skipToChoiceButton) skipToChoiceButton.style.display = 'none';
+                    }
+
+                }
+                
+            }
+
+        }
+
+    }
+
+    const showResponse = choice.response;
+    const goToNextId = choice.nextId;
+
+    // ★ NEW: 選択肢の再生履歴を記録
+    if (choiceId !== undefined && choiceIndex !== undefined) {
+        markChoicePlayed(choiceId, choiceIndex);
+    }
+
+    // ★ NEW: プレイヤーの選択をログに追加
+    // responseやnextIdがなくても、選択したという事実をログに残す
+    if (choice.text) {
+        // 選択肢のテキストをログとして表示
+        const playerResponseBubble = document.createElement('div');
+        playerResponseBubble.className = 'chat-bubble right'; // プレイヤーの発言として右寄せ
+        // オペレーターの発言として名前を表示しないように、シンプルな構造にする
+        playerResponseBubble.innerHTML = `<div class="message-content"><div class="message-text">${choice.text}</div></div>`;
+        chatContent.appendChild(playerResponseBubble);
+        chatContent.scrollTop = chatContent.scrollHeight;
+        
+    }
+    if (showResponse) {
+        // ★ NEW: response表示後にnextIdへ遷移する
+        const onResponseComplete = () => {
+            // response表示後に自動で進めず、ユーザーの入力を待つ
+            // nextIdがある場合は、次のクリックでそちらに遷移する
+            if (goToNextId) {
+                currentDialogueId = goToNextId; // 次の会話IDをセット
+                currentMessageIndex = 0; // インデックスをリセット
+            }
+        };
+        displayNextMessage(showResponse, onResponseComplete);
+    } else if (goToNextId) {
+        // responseがなくnextIdだけの場合
+        continueDialogue(goToNextId);
+    } else {
+        // responseもnextIdもない場合は、会話を終了する
+        // この選択肢が会話の最後である場合を想定
+        finishDialogue(choice.end);
+    }
+}
+
 
 /**
  * 会話モーダルを閉じ、完了コールバックを実行します。
  * 主に会話が正常に終了した際に内部的に使用されます。
  */
-function finishDialogue() {
-    // ★ MODIFIED: Mark dialogue as played when it finishes
-    if (currentDialogueId) {
-        markDialoguePlayed(currentDialogueId);
+function finishDialogue(suppressCallback = false) {
+    // 選択肢を選んだ直後で、まだ response や nextId への遷移が残っている可能性がある場合は終了しない
+    if (isChoosing) {
+        return;
     }
-    // 立ち絵を非表示にする
-    const leftChar = document.getElementById('dialogueCharLeft');
+    if (currentDialogueId) markDialoguePlayed(currentDialogueId);
+    const leftChar = document.getElementById('dialogueCharLeft'); // 立ち絵を非表示にする
     const rightChar = document.getElementById('dialogueCharRight');
     if(leftChar) leftChar.style.backgroundImage = 'none';
     if(rightChar) rightChar.style.backgroundImage = 'none';
@@ -629,8 +930,8 @@ function finishDialogue() {
     handleDialogueClick = null;
     handleDialogueKeydown = null;
 
-
-    if (onCompleteCallback) {
+    // ★ MODIFIED: コールバックを抑制するフラグを追加
+    if (onCompleteCallback && !suppressCallback) {
         const cb = onCompleteCallback;
         // コールバックを呼んだ後でクリアする
         onCompleteCallback = null;
@@ -660,6 +961,14 @@ export function closeDialogue() {
     currentDialogueId = null;
     currentMessageIndex = 0;
     isTyping = false;
+    isChoosing = false; // ★ 選択肢表示中のフラグをリセット
+
+    // ★ 選択肢コンテナをクリアし、関連クラスを削除
+    if (choicesContainer) {
+        choicesContainer.style.display = 'none';
+        choicesContainer.innerHTML = '';
+    }
+    chatPanel?.classList.remove('is-choosing');
 
     // イベントリスナーを削除
     if (handleDialogueClick) dialogueModal.removeEventListener('click', handleDialogueClick);
@@ -675,24 +984,34 @@ export function closeDialogue() {
  * 指定されたIDの会話を開始します。
  * @param {string} dialogueId - dialogueData.jsで定義された会話のID
  * @param {function} onComplete - 会話が終了したときに呼び出されるコールバック関数
+ * @param {boolean} isContinuation - 内部用フラグ。モーダルを再生成しない場合にtrue
  */
-export function startDialogue(dialogueId, onComplete) {
+export function startDialogue(dialogueId, onComplete, isContinuation = false) {
     if (!DIALOGUE_DATA[dialogueId]) {
         console.error(`Dialogue with id "${dialogueId}" not found.`);
-        if (onComplete) onComplete();
+        // isContinuation でない場合のみコールバックを呼ぶ
+        if (onComplete && !isContinuation) {
+            onComplete();
+        }
         return;
     }
 
-    createDialogueUI();
+    if (!isContinuation) {
+        createDialogueUI();
+    }
 
     currentDialogueId = dialogueId;
     currentMessageIndex = 0;
-    onCompleteCallback = onComplete;
+    if (!isContinuation) onCompleteCallback = onComplete;
     isTyping = false;
 
     // ★チャットモードに設定
     dialogueModal.querySelector('.dialogue-container')?.classList.remove('log-view-mode');
-    chatContent.innerHTML = '';
+    // 会話が継続している場合はチャット内容をクリアしない
+    if (!isContinuation) {
+        console.log(`[DEBUG] startDialogue: Clearing chatContent for dialogue ID: "${dialogueId}" (isContinuation: ${isContinuation})`);
+        chatContent.innerHTML = '';
+    }
     if (dialogueModal) {
         dialogueModal.style.display = 'flex';
         dialogueModal.style.opacity = '1';
@@ -701,52 +1020,104 @@ export function startDialogue(dialogueId, onComplete) {
     }
     dialogueModal.classList.add('show');
 
-    // イベントリスナーをセット
-    handleDialogueClick = () => advanceDialogue();
-    handleDialogueKeydown = (e) => {
-        // 会話モーダルが表示されていない場合は何もしない
-        // ★スタッフロール表示中はメニューキーを無効化
-        if (isStaffRollShowing) return true;
+    // 継続でない場合のみイベントリスナーを再設定
+    if (!isContinuation) {
+        // イベントリスナーをセット
+        handleDialogueClick = () => advanceDialogue();
+        handleDialogueKeydown = (e) => {
+            // 会話モーダルが表示されていない場合は何もしない
+            // ★スタッフロール表示中はメニューキーを無効化
+            if (isStaffRollShowing) return true;
 
-        if (!isDialogueVisible()) return;
+            if (!isDialogueVisible()) return;
 
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            advanceDialogue();
-        }
-        // 's'キーでスキップ
-        if (e.key.toLowerCase() === 's') {
-            e.preventDefault();
-            // skipButtonが存在し、かつ表示されている場合のみクリックする
-            if (skipButton && skipButton.style.display !== 'none') {
-                skipButton.click();
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                advanceDialogue();
+            }
+            // 'E'キーで最後までスキップ
+            if (e.key.toLowerCase() === 'e') {
+                e.preventDefault();
+                if (skipToEndButton && skipToEndButton.style.display !== 'none') {
+                    skipToEndButton.click();
+                }
+            }
+            // 'C'キーで選択肢までスキップ
+            if (e.key.toLowerCase() === 'c') {
+                e.preventDefault();
+                if (skipToChoiceButton && skipToChoiceButton.style.display !== 'none') {
+                    skipToChoiceButton.click();
+                }
+            }
+            // ★ ADDED: 数字キーで選択肢を選ぶ
+            if (isChoosing && /^[1-9]$/.test(e.key)) {
+                e.preventDefault();
+                const choiceIndex = parseInt(e.key, 10) - 1;
+                const choiceButtons = choicesContainer.querySelectorAll('.dialogue-choice-btn');
+                if (choiceButtons[choiceIndex]) {
+                    // 対応するボタンのクリックイベントを発火
+                    choiceButtons[choiceIndex].click();
+                }
+                return; // 選択肢を選んだら他のキー処理は行わない
+            }
+            // ESCキーで会話を中断してマップに戻る
+            if (e.key === 'Escape') {
+                e.preventDefault();
+
+                // ★ プロローグとエンディング中はESCを無効化
+                if (currentDialogueId === 'prologue' || currentDialogueId === 'true_ending_dialogue') {
+                    return; // 何もせずに処理を抜ける
+                } else {
+                    closeDialogue();
+                    showQuestMap();
+                }
             }
         }
-        // ESCキーで会話を中断してマップに戻る
-        if (e.key === 'Escape') {
-            e.preventDefault();
+        dialogueModal.addEventListener('click', handleDialogueClick);
+        document.addEventListener('keydown', handleDialogueKeydown);
+    }
 
-            // ★ プロローグとエンディング中はESCを無効化
-            if (currentDialogueId === 'prologue' || currentDialogueId === 'true_ending_dialogue') {
-                return; // 何もせずに処理を抜ける
-            } else {
-                closeDialogue();
-                showQuestMap();
-            }
-        }
-    };
-    dialogueModal.addEventListener('click', handleDialogueClick);
-    document.addEventListener('keydown', handleDialogueKeydown);
-    
     // ★ MODIFIED: Control Skip button visibility based on whether dialogue has been played
-    if (skipButton) {
-        // プロローグ以外で、かつ再生済みの会話のみスキップ可能にする
-        if (dialogueId !== 'prologue' && hasDialogueBeenPlayed(dialogueId)) {
-            skipButton.style.display = 'block';
+    if (skipToEndButton && skipToChoiceButton) {
+        const dialogue = DIALOGUE_DATA[dialogueId]; // ★ この行を追加
+        // デフォルトでは両方のボタンを非表示
+        skipToEndButton.style.display = 'none';
+        skipToChoiceButton.style.display = 'none';
+
+        let canSkip = false;
+        if (dialogueId.endsWith('_start')) {
+            // クエスト開始前の会話：クエストがクリア済みならスキップ可能
+            const questId = dialogueId.replace(/_start$/, '');
+            canSkip = isCleared(questId);
+        } else if (dialogueId.endsWith('_end')) {
+            // クエストクリア後の会話：一度再生済みならスキップ可能
+            const questId = dialogueId.replace(/_start$|_end$/, '');
+            canSkip = hasDialogueBeenPlayed(dialogueId);
         } else {
-            skipButton.style.display = 'none';
+            // プロローグやエンディングなど、特殊な会話の場合：再生済みかチェック
+            canSkip = hasDialogueBeenPlayed(dialogueId);
+        }
+
+        // プロローグは初回はスキップ不可
+        if (dialogueId === 'prologue' && !hasDialogueBeenPlayed('prologue')) {
+            canSkip = false;
+        }
+
+        if (dialogue && canSkip) {
+            const hasChoices = dialogue.messages.some(m => m.choices && m.choiceId);
+            const allChoicesPlayed = !dialogue.messages.some(m => m.choices && m.choiceId && !haveAllChoicesBeenPlayed(m.choiceId, m.choices.length));
+
+            // 「選択肢までスキップ」の表示条件
+            if (hasChoices) {
+                skipToChoiceButton.style.display = 'block';
+            }
+            // 「最後までスキップ」の表示条件
+            if (!hasChoices || allChoicesPlayed) {
+                skipToEndButton.style.display = 'block';
+            }
         }
     }
+
     displayNextMessage();
 }
 

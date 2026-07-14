@@ -1288,7 +1288,8 @@ function renderProgressionTabContent(r, gridContainerStyle, cardStyle, cardConte
           ${Object.entries(r.stageAttemptCount || {}).sort((a, b) => b[1] - a[1]).map(([id, count]) => {
             const node = findQuestNode(id);
             const name = node?.name || id;
-            return `<div class="quest-bottom-row"><span class="quest-bottom-label">${id} (${name})</span><span class="quest-bottom-value">${count}</span></div>`;
+            const stageName = node?.stage || id;
+            return `<div class="quest-bottom-row"><span class="quest-bottom-label">${stageName} (${name})</span><span class="quest-bottom-value">${count}</span></div>`;
           }).join("")}
         </div>
       </div>

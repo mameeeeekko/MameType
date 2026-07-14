@@ -9,6 +9,7 @@ const DEFAULT_PROGRESS = {
     selectedWorldId: "WORLD1",
     hasSeenTrueEnding: false,
     playedDialogues: {}, // 会話再生履歴
+    playedChoices: {}, // { choiceId: [index1, index2] }
 };
 
 let progress = load();
@@ -20,6 +21,9 @@ function load(){
     // playedDialoguesプロパティがない古いセーブデータのための後方互換性
     if (!parsed.playedDialogues) {
         parsed.playedDialogues = {};
+    }
+    if (!parsed.playedChoices) {
+        parsed.playedChoices = {};
     }
     return { ...DEFAULT_PROGRESS, ...parsed };
 }
@@ -37,6 +41,7 @@ export function reloadQuestProgress() {
     unlockedWorlds: data.unlockedWorlds ?? ["WORLD1"],
     selectedWorldId: data.selectedWorldId ?? "WORLD1",
     playedDialogues: data.playedDialogues ?? {},
+    playedChoices: data.playedChoices ?? {},
     hasSeenTrueEnding: data.hasSeenTrueEnding || false,
   };// ←これが重要
   return progress;
@@ -94,6 +99,43 @@ export function markDialoguePlayed(dialogueId) {
 // ★ ADDED: Check if a dialogue has been played
 export function hasDialogueBeenPlayed(dialogueId) {
     return progress.playedDialogues && progress.playedDialogues[dialogueId] === true;
+}
+
+/**
+ * 選択肢が選ばれたことを記録します。
+ * @param {string} choiceId - 選択肢グループのID
+ * @param {number} choiceIndex - 選ばれた選択肢のインデックス
+ */
+export function markChoicePlayed(choiceId, choiceIndex) {
+    if (!progress.playedChoices) {
+        progress.playedChoices = {};
+    }
+    if (!progress.playedChoices[choiceId]) {
+        progress.playedChoices[choiceId] = [];
+    }
+    if (!progress.playedChoices[choiceId].includes(choiceIndex)) {
+        progress.playedChoices[choiceId].push(choiceIndex);
+    }
+    save();
+}
+
+/**
+ * 指定された選択肢グループのすべての選択肢が選ばれたかを確認します。
+ * @param {string} choiceId - 選択肢グループのID
+ * @param {number} totalChoices - そのグループの選択肢の総数
+ */
+export function haveAllChoicesBeenPlayed(choiceId, totalChoices) {
+    const played = progress.playedChoices?.[choiceId] || [];
+    return played.length >= totalChoices;
+}
+
+/**
+ * 指定された選択肢が選ばれたことがあるかを確認します。
+ * @param {string} choiceId - 選択肢グループのID
+ * @param {number} choiceIndex - 確認する選択肢のインデックス
+ */
+export function isChoicePlayed(choiceId, choiceIndex) {
+    return progress.playedChoices?.[choiceId]?.includes(choiceIndex) || false;
 }
 
 // ★ ADDED: Mark true ending as seen
@@ -165,6 +207,7 @@ export function resetQuestAll() {
         selectedWorldId: "WORLD1",
         hasSeenTrueEnding: false,
         playedDialogues: {}, // ★ playedDialoguesを初期化
+        playedChoices: {}, // ★ playedChoicesを初期化
     }));
 
     localStorage.setItem("quest_auto_save", JSON.stringify({

@@ -32,6 +32,7 @@
     display: flex;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    position: relative; /* .dialogue-controls の absolute 配置の基準点にする */
     transform: scale(0.95);
     transition: transform 0.3s ease;
 }
@@ -110,13 +111,11 @@
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    position: relative; /* Skipボタンを絶対配置するための基準 */
 }
 
 .dialogue-chat-content {
     flex-grow: 1;
     padding: 20px;
-    padding-bottom: 50px; /* Skipボタンと重ならないように余白を追加 */
     overflow-y: auto;
     min-height: 0;
 }
@@ -180,15 +179,30 @@
     text-align: left; /* メッセージ本文を左寄せに */
 }
 
+/* 1つの吹き出し内に複数のメッセージ（段落）がある場合のスタイル */
+.message-text p {
+    margin: 0 0 10px 0; /* 段落間の下に余白を追加 */
+}
+
+/* 最後の段落の下の余白は不要なため削除 */
+.message-text p:last-child {
+    margin-bottom: 0;
+}
+
+
+/* ボタンコンテナ */
 .dialogue-controls {
     position: absolute;
     bottom: 10px;
     right: 20px;
     z-index: 10;
+    display: flex;
+    gap: 16px;
+    align-items: center;
 }
-
 /* Skip button style */
-#dialogueSkipBtn {
+#dialogueSkipToEndBtn,
+#dialogueSkipToChoiceBtn {
     padding: 4px 8px;
     background: transparent;
     border: none;
@@ -198,11 +212,45 @@
     font-weight: 600;
     letter-spacing: 0.5px;
     transition: color 0.2s, transform 0.2s;
+    display: none; /* デフォルトは非表示 */
 }
 
-#dialogueSkipBtn:hover {
+#dialogueSkipToEndBtn:hover,
+#dialogueSkipToChoiceBtn:hover {
     color: #c9d1d9;
     transform: translateX(4px);
+}
+
+/* =====================================================
+   会話中の選択肢
+   ===================================================== */
+.dialogue-choices {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start; /* 左寄せ */
+}
+
+.dialogue-choice-btn {
+    width: auto; /* 内容に合わせる */
+    min-width: 150px; /* 最小幅 */
+    padding: 12px 18px;
+    background: #2b313a;
+    border: 1px solid #444c56;
+    border-radius: 6px;
+    color: #c9d1d9;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s ease-in-out;
+}
+
+.dialogue-choice-btn:hover {
+    background: #3a4049;
+    border-color: #58a6ff;
+    transform: scale(1.05); /* 拡大効果を追加 */
 }
 
 /* =====================================================
