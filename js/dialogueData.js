@@ -59,6 +59,10 @@ export const CHARACTERS = {
  *
  * @property {string} title - 会話のタイトル。ログ画面でチャプター名として表示されます。
  * @property {boolean} [isBranch=false] - `true`に設定すると、この会話データはログ画面のチャプターリストに表示されなくなります。選択肢からの分岐先など、メインストーリーラインではない会話に使用します。
+ * @property {boolean} [showOnce=false] - `true`に設定すると、特定の条件下で会話の表示が一度きりになります。
+ *   - **クエスト開始前 (`_start`) の会話**: クエストをクリアするまで表示され、クリア後は表示されなくなります。
+ *   - **クエスト終了後 (`_end`) の会話**: クエストクリア後に一度だけ表示され、二度目以降は表示されなくなります。
+ *   - `false`または未定義の場合は、常に表示されます。
  *
  * @property {Array<Object>} messages - 会話のセリフや選択肢を格納する配列。各要素はメッセージオブジェクトです。
  *
@@ -68,6 +72,14 @@ export const CHARACTERS = {
  * @property {string} text - セリフの本文。`\n` を使用することで、セリフ内で改行できます。
  * @property {string} [choiceId] - このメッセージに選択肢がある場合、その選択肢グループを識別するためのユニークなID。既読管理に使用されます。`choices`プロパティとセットで使います。
  * @property {Array<ChoiceObject>} [choices] - プレイヤーに提示する選択肢の配列。
+ * 
+ * @description
+ * ### ログ画面での表示について
+ * - プレイヤーが選択した選択肢は、ログ画面で「└「（選択肢のテキスト）」を選択」という形式で表示されます。
+ * - 2階層目以降の選択肢は、親の選択肢テキストも表示され、インデントが深くなります。
+ * - `response`で指定された応答メッセージは、選択肢の直後にキャラクターの吹き出しとして表示されます。
+ * - `end: true`が設定された選択肢を選ぶと、ログに「--- 会話終了 ---」と表示され、その分岐がそこで終わったことが示されます。
+ *
  *
  * @typedef {Object} ChoiceObject
  * @property {string} text - 選択肢のボタンに表示されるテキスト。
@@ -92,6 +104,69 @@ export const CHARACTERS = {
  *   ]
  * }
  */
+/**
+ * @typedef {Object} RandomDialogueMessage
+ * @property {string} character - 発言者名。
+ * @property {string} [expression] - キャラクターの表情。
+ * @property {string} text - セリフの本文。
+ */
+
+/**
+ * @typedef {Object} RandomDialogueCategory
+ * @property {RandomDialogueMessage[]} pre - ミッション開始前に再生される可能性のある会話の配列。
+ * @property {RandomDialogueMessage[]} post - ミッション終了後に再生される可能性のある会話の配列。
+ */
+
+/**
+ * ステージごとのランダム会話データを定義します。
+ * `startDialogue`で指定されたIDの会話が存在せず、かつ対象ステージで`enableRandomDialogue`がtrueの場合に、
+ * このデータからランダムに会話が選ばれて再生されます。
+ * これらの会話はログには記録されません。
+ *
+ * @type {Object.<string, RandomDialogueCategory>}
+ * @property {string} '1-10' - ステージ番号1から10の範囲。
+ */
+export const RANDOM_DIALOGUES = {
+    '0-3': {
+        pre: [
+            { character: "ナビ", text: "３オペレーター、準備はよろしいですか？気を引き締めていきましょう。" },
+            { character: "オペレーター", text: "３いつでもどうぞ。腕が鳴るね。" }
+        ],
+        post: [
+            { character: "ナビ", text: "３任務完了、お疲れ様でした。この調子でお願いします。" },
+            { character: "オペレーター", text: "３ふぅ、一仕事終わりっと。" }
+        ]
+    },
+    '4-6': {
+        pre: [
+            { character: "ナビ", text: "４この領域の汚染は拡大しているようです。注意してください。" },
+            { character: "オペレーター", text: "４了解。少しずつ敵も手強くなってきたな。" }
+        ],
+        post: [
+            { character: "ナビ", text: "４お見事です。確実にエリアを浄化できています。" },
+            { character: "オペレーター", text: "４このくらい、朝飯前だよ。" }
+        ]
+    },
+    '7-10': {
+        pre: [
+            { character: "ナビ", text: "７さらに深層へ。ここから先は未知の領域です。" },
+            { character: "オペレーター", text: "７何が出てきても、やることは変わらないさ。" }
+        ],
+        post: [
+            { character: "ナビ", text: "７素晴らしい腕前です。あなたのタイピングが、この世界の光になります。" },
+            { character: "オペレーター", text: "７大げさだな。でも、悪い気はしないね。" }
+        ]
+    },
+    // '11-20': {
+    //     pre: [
+    //         { character: "ナビ", text: "..." },
+    //     ],
+    //     post: [
+    //         { character: "ナビ", text: "..." },
+    //     ]
+    // }
+};
+
 export const DIALOGUE_DATA = {
     "prologue": {
         title: "プロローグ",
@@ -124,6 +199,7 @@ export const DIALOGUE_DATA = {
     },
     "W1_Q1_start": {
         title: "チュートリアル１",
+        showOnce: false, // ★追加：クリア後は表示しない
         messages: [
             {
                 character: "ナビ",
@@ -162,23 +238,10 @@ export const DIALOGUE_DATA = {
                 text: "準備はよろしいですか？", // このメッセージに選択肢を追加
                 choiceId: "W1_Q1_start_1", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "はい、準備OKです！", response: { character: "ナビ", expression: "smile", text: "素晴らしい意気込みです！" }, nextId: "W1_Q1_mission_start" },
-                    { text: "まだ心の準備が…", response: { character: "ナビ", expression: "sad", text: "そうですか…\n準備ができたら、いつでも声をかけてくださいね。" } }
+                    { text: "はい、準備OKです！", response: { character: "ナビ", expression: "smile", text: "素晴らしい意気込みです！" }, nextId: "W1_Q1_mission_start", end:true },
+                    { text: "まだ心の準備が…", response: { character: "ナビ", expression: "sad", text: "そうですか…\n準備ができたら、いつでも声をかけてくださいね。" }, nextId: "W1_Q1_start_1"}
                 ]
             },
-            { character: "ナビ", text: "というとでも思ったかこのやろう…\nゆるさん" }, 
-            { character: "ナビ", text: "てすとてすと\nてすてすと" }, 
-            {
-                character: "ナビ",
-                text: "第二の選択肢", // このメッセージに選択肢を追加
-                choiceId: "W1_Q1_start_2", // ★ 選択肢グループのIDを追加
-                choices: [
-                    { text: "aaaaaaaaaa", response: { character: "ナビ", expression: "smile", text: "a----ppo--" } },
-                    { text: "bbbbbbbbbb", response: { character: "ナビ", expression: "sad", text: "b---b-b-b-" } }
-                ]
-            },
-            { character: "ナビ", text: "というと\nゆるさん" }, 
-            { character: "ナビ", text: "てすてす\nてすてす" }, 
         ]
     },
     "W1_Q1_mission_start": {
@@ -187,10 +250,30 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "それでは、ミッションを開始します。" }
         ]
     },
-    //     ]
-    // },
+    "W1_Q1_start_1": {
+        isBranch: true,
+        messages: [
+            { character: "ナビ", text: "というとでも思ったかこのやろう…\nゆるさん" },
+            { character: "ナビ", text: "てすとてすと\nてすてすと" },
+            { character: "ナビ", text: "てすとてすと\nてすてすと" },
+            { character: "ナビ", text: "てすとてすと\nてすてすと" },
+            { character: "ナビ", text: "てすとてすと\nてすてすと" },
+            {
+                character: "ナビ",
+                text: "第二の選択肢",
+                choiceId: "W1_Q1_start_2",
+                choices: [
+                    { text: "aaaaaaaaaa", response: { character: "ナビ", expression: "smile", text: "a----ppo--" } },
+                    { text: "bbbbbbbbbb", response: { character: "ナビ", expression: "sad", text: "b---b-b-b-" },  }
+                ]
+            },
+            { character: "ナビ", text: "というと\nゆるさん" },
+            { character: "ナビ", text: "てすてす\nてすてす" },
+        ]
+    },
     "W1_Q1_end": {
         title: "初任務完了",
+        showOnce: true, // ★追加：一度再生したら表示しない
         messages: [
             {
                 character: "ナビ",
@@ -221,8 +304,8 @@ export const DIALOGUE_DATA = {
                 text: "準備はよろしいですか？", // このメッセージに選択肢を追加
                 choiceId: "W1_Q1_end_1", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "はい、準備OKです！", response: { character: "ナビ", expression: "smile", text: "素晴らしい意気込みです！" } },
-                    { text: "まだ心の準備が…", response: { character: "ナビ", expression: "sad", text: "そうですか…\n準備ができたら、いつでも声をかけてくださいね。" } }
+                    { text: "はい、準備OKです！", response: { character: "ナビ", expression: "smile", text: "素晴らしい意気込みです！" }, end: true },
+                    { text: "まだ心の準備が…", response: { character: "ナビ", expression: "sad", text: "そうですか…\n準備ができたら、いつでも声をかけてくださいね。" }, end: true }
                 ]
             },
             { character: "ナビ", text: "というとでも思ったかこのやろう…\nゆるさん" }, 
@@ -232,8 +315,8 @@ export const DIALOGUE_DATA = {
                 text: "第二の選択肢", // このメッセージに選択肢を追加
                 choiceId: "W1_Q1_end_2", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "aaaaaaaaaa", response: { character: "ナビ", expression: "smile", text: "a----ppo--" } },
-                    { text: "bbbbbbbbbb", response: { character: "ナビ", expression: "sad", text: "b---b-b-b-" } }
+                    { text: "aaaaaaaaaa", response: { character: "ナビ", expression: "smile", text: "a----ppo--" }, end: true },
+                    { text: "bbbbbbbbbb", response: { character: "ナビ", expression: "sad", text: "b---b-b-b-" }, end: true }
                 ]
             },
             { character: "ナビ", text: "というと\nゆるさん" }, 
@@ -244,6 +327,7 @@ export const DIALOGUE_DATA = {
 
     "W1_Q2_start": {
         title: "チュートリアル２",
+        showOnce: true,
         messages: [
             {
                 character: "ナビ",
@@ -274,6 +358,7 @@ export const DIALOGUE_DATA = {
     //【サンプル2】中ボス戦前の会話
     "W1_MiniBoss_1_start": {
         title: "異常信号",
+        showOnce: true,
         messages: [
             {
                 character: "ナビ",
@@ -291,6 +376,7 @@ export const DIALOGUE_DATA = {
     //【サンプル3】ワールドボス戦前の会話
     "W1_BOSS_start": {
         title: "ゲートキーパー",
+        showOnce: true,
         messages: [
             {
                 character: "ナビ",
@@ -308,6 +394,7 @@ export const DIALOGUE_DATA = {
         //【サンプル3】lastboss前の会話
     "WEND_LastBoss_start": {
         title: "最終決戦",
+        showOnce: true,
         messages: [
             {
                 character: "ナビ",
@@ -324,6 +411,7 @@ export const DIALOGUE_DATA = {
 
     "WEND_LastBoss_end": {
         title: "the end",
+        showOnce: true,
         messages: [
             {
                 character: "ナビ",

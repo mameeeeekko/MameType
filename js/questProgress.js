@@ -14,6 +14,28 @@ const DEFAULT_PROGRESS = {
 
 let progress = load();
 
+/**
+ * クリア済みのノードIDの中から最大のステージ番号を取得します。
+ * 'W1_Q10' のようなIDから '10' のような数値を抽出して比較します。
+ * @returns {number} 最大のステージ番号。クリア済みがなければ0を返す。
+ */
+export function getMaxClearedStageNumber() {
+    if (!progress.cleared || progress.cleared.length === 0) {
+        return 0;
+    }
+
+    return progress.cleared.reduce((maxNum, nodeId) => {
+        // ★★★ 修正: "W1_Q10" のようなIDから末尾の数字(10)を正しく抽出するため、
+        // 正規表現を末尾にマッチする `/\d+$/` に変更します。
+        const match = nodeId.match(/\d+$/);
+        if (match) {
+            const num = parseInt(match[0], 10);
+            return Math.max(maxNum, num);
+        }
+        return maxNum;
+    }, 0);
+}
+
 function load(){
     const data = localStorage.getItem("questProgress");
     if (!data) return { ...DEFAULT_PROGRESS };

@@ -10,7 +10,7 @@ import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, rend
     renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, spawnItemSkillEffect,
     renderItemSkillEffects, clearAllEffects, playErrorSound, playPhaseWarningSound,
     renderLaserEffects, renderPlayerDamageEffects, spawnLaserEffect, spawnHitWave,
-    renderPlayerNegateEffects, spawnPlayerNegateEffect} from "./effectManager.js";
+    renderPlayerNegateEffects} from "./effectManager.js";
 import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
@@ -19,13 +19,13 @@ import { handleGlobalSoundToggle } from "./main.js";
 import { gameState, setGameActive, renderState, setLastWasEnemyMode, getSoundSettings, getSoundEnabled, resetGameState, setPaused, getPaused, getNow, getERank } from "./gameCore.js";
 import { GameModes, QUEST_MAP } from "./gameModes.js";
 import { addRankingEntry } from "./storage.js";
-import { ENEMY_MODE_CONFIG, STAGES, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
-import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats, 
+import { ENEMY_MODE_CONFIG, STAGES } from "./enemyModeConfig.js";
+import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats,
     applySkillNodeEffect, hasReceivedStageReward, markStageRewardReceived,
     getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed, addQuestActiveSkillUse, addQuestStageAttempt, getActiveSkillStockMax  } from "./questPlayerStats.js";
 import { getCurrentDifficulty, getDifficulty } from "./difficulties.js";
 import { getPlayerStats, updatePlayerStats } from "./playerStats.js";
-import { markCleared, setStar  } from "./questProgress.js";
+import { markCleared, setStar, hasDialogueBeenPlayed  } from "./questProgress.js";
 import { STAR_EVALUATORS } from "./starEvaluator.js";
 import { submitScore } from "../online/submitScore.js"; 
 import { RANKING_VERSION } from "../js/version.js";
@@ -935,20 +935,27 @@ function gameLoop(timestamp) {
                     if (lastEnemyConfig?.isQuestMode) {
                         const node = gameState.currentQuestNode;
                         const endDialogueId = `${node.id}_end`;
-        
-                        // クエストクリア後、かつ終了会話が存在する場合
-                        if (!isFailed && DIALOGUE_DATA[endDialogueId]) {
-                            // ★先に会話を開始し、会話終了後にリザルト表示のイントロを再生する
-                            startDialogue(endDialogueId, () => {
-                                showEnemyEndIntro(introText, () => {
-                                    showQuestResult(gameState.questStats);
+                        const dialogueData = DIALOGUE_DATA?.[endDialogueId];
+
+                    // ★★★ 修正箇所 ★★★
+                    // DIALOGUE_DATAに会話が存在しなくてもstartDialogueを呼び出すように変更。
+                    // これにより、ランダム会話のフォールバック処理が正しく機能するようになります。
+                    if (!isFailed) {
+                            const hasPlayed = hasDialogueBeenPlayed(endDialogueId);
+                        const shouldSkipDialogue = dialogueData?.showOnce && hasPlayed;
+
+                            if (shouldSkipDialogue) {
+                                // 会話をスキップしてリザルトへ
+                                showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
+                            } else {
+                            // 会話（固定またはランダム）を開始し、終了後にリザルト表示
+                                startDialogue(endDialogueId, () => {
+                                    showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
                                 });
-                            });
+                            }
                         } else {
-                            // クエストモードの場合、会話がない場合
-                            showEnemyEndIntro(introText, () => {
-                                showQuestResult(gameState.questStats);
-                            });
+                        // クエスト失敗時は会話なしでリザルトへ
+                        showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
                         }
                     } else {
                         // クエストモード以外の場合（デイリー・フリーモード）

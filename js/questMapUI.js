@@ -520,16 +520,19 @@ export function renderQuestMapUI(){
                 // 会話IDを生成
                 const dialogueId = `${node.id}_start`;
 
-                // DIALOGUE_DATAが存在し、かつ該当IDの会話データがあるかチェック
-                if (
-                  typeof DIALOGUE_DATA !== "undefined" &&
-                  DIALOGUE_DATA[dialogueId]
-                ) {
-                  // 会話がある場合： 会話 → イントロ → 戦闘
-                  startDialogue(dialogueId, showIntro);
+                // ★★★ 修正箇所 ★★★
+                // DIALOGUE_DATAに会話が存在しなくてもstartDialogueを呼び出すように変更。
+                // これにより、ランダム会話のフォールバック処理が正しく機能するようになります。
+                const dialogueData = DIALOGUE_DATA?.[dialogueId];
+                const isStageCleared = isCleared(node.id);
+                const shouldSkipDialogue = dialogueData?.showOnce && isStageCleared;
+
+                if (shouldSkipDialogue) {
+                    // クリア済みで、かつshowOnceがtrueの会話はスキップしてイントロへ
+                    showIntro();
                 } else {
-                  // 会話がない場合： イントロ → 戦闘
-                  showIntro();
+                    // 上記以外の場合は、会話（固定またはランダム）を開始し、終了後にイントロを表示
+                    startDialogue(dialogueId, showIntro);
                 }
             };
         }
