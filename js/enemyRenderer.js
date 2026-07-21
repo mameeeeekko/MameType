@@ -2521,33 +2521,21 @@ export function renderActiveSkillUI(ctx, state, canvas) {
         skill,
         x + size / 2,
         y + size / 2,
-        size - 12,
+        size - 4,
         ready
     );
 
-    // 内側リング（ストック）
-    if (maxStock > 1) {
-        drawStockSegments(
-            ctx,
-            x + size / 2,
-            y + size / 2,
-            size / 2 - 3,
-            stock,
-            maxStock
-        );
-    }
-
     ctx.restore();
 
-    // // ストック数字
-    // if (stock > 0) {
-    //     drawSkillStockNumber(
-    //         ctx,
-    //         x + size - 2,
-    //         y + size - 2,
-    //         stock
-    //     );
-    // }
+    // ストック数字
+    if (stock > 0) {
+        drawSkillStockNumber(
+            ctx,
+            x + size - 2,
+            y + size - 2,
+            stock
+        );
+    }
 
     if (isMouseHoverRect(x, y, size, size)) {
         drawSkillTooltip(ctx, skill, x, y + size + 8);
@@ -2704,43 +2692,43 @@ function drawSkillTooltip(ctx, skill, x, y) {
 // ===============================
 // Active Skill Stock UI
 // ===============================
-// function drawSkillStockNumber(ctx, x, y, stock) {
-//     ctx.save();
+function drawSkillStockNumber(ctx, x, y, stock) {
+    ctx.save();
 
-//     // 少し左上へ寄せる（右下から呼ばれても見切れにくい）
-//     const offsetX = -2;
-//     const offsetY = -2;
+    // 少し左上へ寄せる（右下から呼ばれても見切れにくい）
+    const offsetX = -2;
+    const offsetY = -2;
 
-//     const cx = x + offsetX;
-//     const cy = y + offsetY;
+    const cx = x + offsetX;
+    const cy = y + offsetY;
 
-//     // stock数でサイズ微調整
-//     const text = String(stock);
-//     const radius = text.length >= 2 ? 10 : 8;
+    // stock数でサイズ微調整
+    const text = String(stock);
+    const radius = text.length >= 2 ? 10 : 8;
 
-//     // バッジ背景
-//     ctx.beginPath();
-//     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-//     ctx.fillStyle = "rgba(8,12,18,0.92)";
-//     ctx.fill();
+    // バッジ背景
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(8,12,18,0.92)";
+    ctx.fill();
 
-//     // 枠線
-//     ctx.strokeStyle = "rgba(120,190,255,0.65)";
-//     ctx.lineWidth = 1.5;
-//     ctx.stroke();
+    // 枠線
+    ctx.strokeStyle = "rgba(120,190,255,0.65)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-//     // 数字
-//     ctx.font = text.length >= 2
-//         ? "bold 9px sans-serif"
-//         : "bold 11px sans-serif";
+    // 数字
+    ctx.font = text.length >= 2
+        ? "bold 9px sans-serif"
+        : "bold 11px sans-serif";
 
-//     ctx.textAlign = "center";
-//     ctx.textBaseline = "middle";
-//     ctx.fillStyle = "#d8ecff";
-//     ctx.fillText(text, cx, cy + 0.5);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#d8ecff";
+    ctx.fillText(text, cx, cy + 0.5);
 
-//     ctx.restore();
-// }
+    ctx.restore();
+}
 
 function drawStockSegments(
     ctx,

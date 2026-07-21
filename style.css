@@ -3259,17 +3259,17 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 .skill-icon-wrap {
   flex-shrink: 0; /* アイコン部分が縮まないようにする */
-  width: 36px;    /* アイコン部分の幅を固定 */
+  width: 46px;    /* アイコン部分の幅を固定 */
   text-align: center; /* アイコンを中央揃え */
 }
 
 .skill-item.equipped {
   box-shadow: 0 0 10px rgba(0,255,255,0.15);
 }
-
+/* スキルノードオンマウスとスキル詳細ステータスのスキルアイコンサイズ */
 .skill-icon {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
 }
 
 .skill-name {
@@ -5344,8 +5344,8 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 /* icon 少し小さく */
 .equip-slot-icon {
-    width: 26px;
-    height: 26px;
+    width: 38px;
+    height: 38px;
     object-fit: contain;
 }
 
@@ -5413,8 +5413,8 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 .skill-grid-icon {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   object-fit: contain;
   image-rendering: auto;
 }

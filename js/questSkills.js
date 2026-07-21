@@ -577,7 +577,7 @@ export const PASSIVE_SKILLS = {
   // =====================
   cooldown_speed_1: {
     name: "高速詠唱Ⅰ",
-    icon: "chain_up_1", // TODO: アイコンを後で差し替える
+    icon: "cooldown_1", // TODO: アイコンを後で差し替える
     desc: "スキルのクールダウン速度が10%上昇",
     equipable: true,
     apply: (p) => {
@@ -588,7 +588,7 @@ export const PASSIVE_SKILLS = {
 
   cooldown_speed_2: {
     name: "高速詠唱Ⅱ",
-    icon: "chain_up_2", // TODO: アイコンを後で差し替える
+    icon: "cooldown_2", // TODO: アイコンを後で差し替える
     desc: "スキルのクールダウン速度が15%上昇",
     equipable: true,
     apply: (p) => {
@@ -598,7 +598,7 @@ export const PASSIVE_SKILLS = {
 
   cooldown_speed_3: {
     name: "高速詠唱Ⅲ",
-    icon: "chain_up_3", // TODO: アイコンを後で差し替える
+    icon: "cooldown_3", // TODO: アイコンを後で差し替える
     desc: "スキルのクールダウン速度が20%上昇",
     equipable: true,
     apply: (p) => {

@@ -502,7 +502,7 @@ function renderQuestStatsModal() {
     const logContainerStyle = ``; // このスタイルはカード個別に適用するため、ここでは不要
     // 2つのカードを均等に並べるためのスタイル
     const gridContainerStyle = `display: grid; grid-template-columns: 1fr 1fr; gap: 10px;`;
-    const cardStyle = `height: 160px; display: flex; flex-direction: column;`;
+    const cardStyle = `height: 145px; display: flex; flex-direction: column;`; //ボトムのカードの高さ調整
     const cardContentStyle = `flex-grow: 1; overflow-y: auto; margin-top: 8px; padding-right: 10px; min-height: 0;`;
 
     bottom.innerHTML = `
