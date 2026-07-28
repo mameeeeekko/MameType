@@ -79,24 +79,33 @@ const PATTERN_PROPS = {
  * @returns {object} 生成された敵タイプのオブジェクト
  */
 function createEnemyType(colorProp, shapeProp, sizeProp, patternProp) {
-    const id = `${colorProp.name}_${shapeProp.name}_${sizeProp.name}${patternProp.name !== 'Null' ? `_${patternProp.name}` : ''}`.toUpperCase();
-    const name = `${colorProp.name} ${shapeProp.name} ${sizeProp.name}${patternProp.name !== 'Null' ? ` ${patternProp.name}` : ''}`;
+    let finalSizeProp = sizeProp;
+    let finalId, finalName;
+
+    // ★★★ ことわざ(Yellow)には短い単語がないため、SMALLサイズをNORMALサイズに強制変換する
+    if (colorProp.name === 'Yellow' && sizeProp.name === 'Small') {
+        finalSizeProp = SIZE_PROPS.NORMAL;
+        // IDと名前もNORMALのものに強制的に書き換える
+        finalId = `${colorProp.name}_${shapeProp.name}_${finalSizeProp.name}${patternProp.name !== 'Null' ? `_${patternProp.name}` : ''}`.toUpperCase();
+        finalName = `${colorProp.name} ${shapeProp.name} ${finalSizeProp.name}${patternProp.name !== 'Null' ? ` ${patternProp.name}` : ''}`;
+    }
+    // ★★★
 
     let finalSpeed = shapeProp.speed;
     let finalRotationSpeed = shapeProp.rotationSpeed;
     let finalScore = colorProp.baseScore * shapeProp.scoreMultiplier * sizeProp.scoreMultiplier;
 
     const enemyData = {
-        id: id,
-        name: name,
+        id: finalId || `${colorProp.name}_${shapeProp.name}_${sizeProp.name}${patternProp.name !== 'Null' ? `_${patternProp.name}` : ''}`.toUpperCase(),
+        name: finalName || `${colorProp.name} ${shapeProp.name} ${sizeProp.name}${patternProp.name !== 'Null' ? ` ${patternProp.name}` : ''}`,
         color: colorProp.color,
         shape: shapeProp.shape,
         pattern: patternProp.pattern,
-        size: sizeProp.size,
-        damage: sizeProp.damage,
+        size: finalSizeProp.size,
+        damage: finalSizeProp.damage,
         tags: colorProp.tags,
-        minLen: sizeProp.minLen,
-        maxLen: sizeProp.maxLen,
+        minLen: finalSizeProp.minLen,
+        maxLen: finalSizeProp.maxLen,
         killSound: sizeProp.killSound,
         killedEffect: sizeProp.killedEffect,
         damageSound: 1,

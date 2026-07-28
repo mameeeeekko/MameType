@@ -180,7 +180,14 @@ export function spawnEnemy(
     const entry = pickWeightedEntry(config?.enemyTable);
     if (!entry) return null;
 
-    const type = EnemyTypes[entry.type];
+    let enemyTypeId = entry.type;
+
+    // ★★★ ことわざ(Yellow)には短い単語がないため、SMALLサイズをNORMALサイズに強制変換する
+    if (enemyTypeId.startsWith('YELLOW_') && enemyTypeId.includes('_SMALL')) {
+        enemyTypeId = enemyTypeId.replace('_SMALL', '_NORMAL');
+    }
+
+    const type = EnemyTypes[enemyTypeId];
     if (!type) return null;
 
     const target = getUniqueWord(type, enemies);

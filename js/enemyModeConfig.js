@@ -242,7 +242,7 @@ export const ENEMY_TIER_BALANCED = {
 // --- バリエーション: 英語多め (Purpleの比率が高い) ---
 export const ENEMY_TIER_ENGLISH_HEAVY = {
     description: "英語多め（Purpleタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "PURPLE_CIRCLE_SMALL", weight: 50 }],
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "PURPLE_CIRCLE_SMALL", weight: 60 }],
     T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "PURPLE_PINWHEEL_SMALL", weight: 50 }],
     T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "PURPLE_SQUARE_NORMAL", weight: 50 }],
     T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "PURPLE_SQUARE_SMALL_RING", weight: 10 }, { type: "PURPLE_SQUARE_NORMAL", weight: 40 }, { type: "PURPLE_CIRCLE_SMALL", weight: 10 }],
@@ -272,7 +272,7 @@ export const ENEMY_TIER_SYMBOL_HEAVY = {
 // --- バリエーション: 擬音多め (Pinkの比率が高い) ---
 export const ENEMY_TIER_ONOMATOPOEIA_HEAVY = {
     description: "擬音多め（Pinkタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "PINK_SQUARE_SMALL", weight: 50 }],
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "PINK_SQUARE_SMALL", weight: 60 }],
     T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "PINK_PINWHEEL_SMALL", weight: 50 }],
     T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "PINK_CIRCLE_NORMAL", weight: 50 }],
     T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "PINK_SQUARE_NORMAL", weight: 50 }, { type: "PINK_SQUARE_SMALL", weight: 10 }],
@@ -287,7 +287,7 @@ export const ENEMY_TIER_ONOMATOPOEIA_HEAVY = {
 // --- バリエーション: 句読点多め (Greenの比率が高い) ---
 export const ENEMY_TIER_PUNCTUATION_HEAVY = {
     description: "句読点多め（Greenタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "GREEN_SQUARE_SMALL", weight: 50 }],
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "GREEN_SQUARE_SMALL", weight: 60 }],
     T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "GREEN_PINWHEEL_SMALL", weight: 50 }],
     T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GREEN_PINWHEEL_NORMAL", weight: 50 }],
     T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "GREEN_SQUARE_NORMAL", weight: 50 }, { type: "GREEN_SQUARE_SMALL", weight: 10 }],
@@ -302,7 +302,7 @@ export const ENEMY_TIER_PUNCTUATION_HEAVY = {
 // --- バリエーション: 促音多め (Blueの比率が高い) ---
 export const ENEMY_TIER_SOKUON_HEAVY = {
     description: "促音多め（Blueタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "BLUE_PINWHEEL_SMALL", weight: 50 }],
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "BLUE_PINWHEEL_SMALL", weight: 60 }],
     T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "BLUE_CIRCLE_NORMAL", weight: 50 }],
     T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "BLUE_CIRCLE_NORMAL_STRIPE", weight: 50 }],
     T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "BLUE_CIRCLE_NORMAL_RING", weight: 50 }, { type: "BLUE_CIRCLE_SMALL", weight: 10 }],
@@ -317,8 +317,8 @@ export const ENEMY_TIER_SOKUON_HEAVY = {
 // --- バリエーション: ことわざ多め (Yellowの比率が高い) ---
 export const ENEMY_TIER_PROVERB_HEAVY = {
     description: "ことわざ多め（Yellowタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "YELLOW_CIRCLE_SMALL", weight: 50 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "YELLOW_PINWHEEL_SMALL", weight: 50 }],
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "YELLOW_CIRCLE_SMALL", weight: 60 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 20 }, { type: "YELLOW_PINWHEEL_SMALL", weight: 20 },{ type: "YELLOW_CIRCLE_SMALL", weight: 40 }],
     T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 50 }],
     T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE", weight: 50 }, { type: "YELLOW_CIRCLE_SMALL", weight: 10 }],
     T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "YELLOW_CIRCLE_LARGE", weight: 50 }],
@@ -505,7 +505,7 @@ function getTierKey(stageNum) {
 
 function getItemTierKey(stageNum) {
     // ステージ30以降は最高ランクのアイテムテーブルを使用
-    return `T${Math.min(5, Math.ceil(stageNum / 6))}`;
+    return `T${Math.min(5, Math.ceil(stageNum / 10))}`;
 }
 
 // =====================================================
@@ -541,9 +541,9 @@ function getItemTierKey(stageNum) {
  *
  * 3. ステージ/環境設定:
  *    - 背景画像: 1-30:blue, 31-60:purple, 60-90:red
- *    - アイテム: ステージ5で解禁。
+ *    - アイテム: ステージ12で解禁。
  *               出現率: 0.3 + (i * 0.005)
- *               Tier遷移: 6ステージごとにT1→T5へ上昇。
+ *               Tier遷移: 10ステージごとにT1→T5へ上昇。
  *
  * 4. エネミーTier定義:
  *    - 10ステージごとに T1 ～ T10 へ自動遷移。
@@ -901,8 +901,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             break;
     }
 
-    // ステージ5からアイテム解禁
-    if (i >= 5 && config.itemSpawn !== null) {
+    // ステージ12からアイテム解禁
+    if (i >= 12 && config.itemSpawn !== null) {
         config.itemSpawn = {
             interval: 8000 - (i * 30),
             chance: 0.2 + (i * 0.001), // 徐々にアイテムが出やすくなる

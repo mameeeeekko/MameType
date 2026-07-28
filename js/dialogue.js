@@ -21,11 +21,15 @@ let isStaffRollShowing = false; // スタッフロール表示中フラグ
 let currentDialogueId = null;
 let currentMessageIndex = 0;
 let onCompleteCallback = null;
-let isTyping = false;
+let currentTypingMessage = null; // ★ MODIFIED: 現在タイピング中のメッセージを保持
 
-let isChoosing = false; // 選択肢表示中フラグ
+// ★★★ 修正: 状態管理をオブジェクトに集約
+// 'IDLE', 'TYPING', 'WAITING', 'CHOOSING', 'WAITING_FOR_CHOICE'
+let dialogueState = 'IDLE'; 
+
+let waitingForMapReturn = false; // ★ マップに戻る待機フラグ
 // イベントリスナーを管理するための変数
-const DIALOGUE_SPEEDS = [100, 75, 50, 30, 15]; // Slow -> Fast (ms)
+const DIALOGUE_SPEEDS = [100, 80, 60, 40, 15]; // Slow -> Fast (ms)
 let currentDialogueSpeed = DIALOGUE_SPEEDS[3]; // デフォルトは "Fast" (30ms)
 
 /**
@@ -153,7 +157,7 @@ function createDialogueUI() {
  * @returns {string} - 吹き出しの内部HTML
  */
 function createBubbleHTML(message) { // ★ MODIFIED: 'left' クラスを削除
-    // アイコン画像のパスを取得
+    // アイコン画像のパスを取得 (この関数はHTML構造のみを生成)
     const charData = CHARACTERS[message.character];
     const expression = message.expression || 'normal';
     const iconKey = charData?.images?.[expression] || charData?.icon;
@@ -599,10 +603,10 @@ function showStaffRoll(onComplete) {
     }
 }
 
-function typeMessage(element, text, onFinished) {
-    isTyping = true;
+function typeMessage(element, text, onFinished, noType = false) {
+    dialogueState = 'TYPING';
     let i = 0;
-    const speed = currentDialogueSpeed; // ms
+    const speed = noType ? 0 : currentDialogueSpeed;
     let timerId = null; // タイマーIDを保持する変数
 
     // ★ 右側の吹き出しの場合、タイピング開始前に最大幅を計算して固定する
@@ -617,7 +621,7 @@ function typeMessage(element, text, onFinished) {
     }
 
     function type() {
-        if (!isTyping) { // スキップされた場合
+        if (dialogueState !== 'TYPING') { // スキップされた場合
             clearTimeout(timerId); // タイマーを停止
             return;
         }
@@ -631,7 +635,6 @@ function typeMessage(element, text, onFinished) {
                 type();
             }, speed);
         } else {
-            isTyping = false;
             if (onFinished) onFinished();
         }
     }
@@ -639,7 +642,8 @@ function typeMessage(element, text, onFinished) {
 }
 
 function displayNextMessage(messageOverride, onComplete, noType = false) {
-    // ★ MODIFIED: メッセージ決定ロジックを修正
+
+    dialogueState = 'TYPING';
     let message;
     if (messageOverride) {
         message = messageOverride;
@@ -652,16 +656,10 @@ function displayNextMessage(messageOverride, onComplete, noType = false) {
         message = dialogue.messages[currentMessageIndex];
         currentMessageIndex++;
     }
+    currentTypingMessage = message;
 
     // ★立ち絵を更新
     updateCharacterDisplay(message);
-
-    // ★ MODIFIED: 選択肢がある場合は、ここで処理を分岐
-    // messageOverrideの場合でも選択肢をチェックできるように、finalMessageではなくmessageを見る
-    if (message.choices) {
-        displayChoices(message.choices);
-        return;
-    }
 
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble';
@@ -699,11 +697,30 @@ function displayNextMessage(messageOverride, onComplete, noType = false) {
 
     const messageTextElement = bubble.querySelector('.message-text');
 
+    // ★ 選択肢がある場合のコールバックを定義
+    const onTypingFinished = () => {
+        if (message.choices) {
+            // ★★★ 修正: すぐに選択肢を表示せず、ユーザーの入力を待つ状態にする
+            // このメッセージが現在タイピング中のメッセージであることを保持
+            currentTypingMessage = message;
+            dialogueState = 'WAITING_FOR_CHOICE';
+        } else {
+            // ★★★ 修正: 応答メッセージ表示後などはユーザーの入力を待つ
+            dialogueState = 'WAITING';
+        }
+        if (onComplete) {
+            onComplete();
+        }
+    };
+    
+    // ★★★ 修正: スキップ処理から参照できるように、コールバックをメッセージオブジェクトに保持
+    message._onTypingFinished = onTypingFinished;
+
     if (noType) {
         messageTextElement.innerHTML = message.text.replace(/\n/g, '<br>');
-        if (onComplete) onComplete();
+        onTypingFinished();
     } else {
-        typeMessage(messageTextElement, message.text, onComplete);
+        typeMessage(messageTextElement, message.text, onTypingFinished, noType);
     }
 }
 
@@ -720,7 +737,7 @@ function continueDialogue(dialogueId) {
  * @param {boolean} toEnd - trueなら最後まで、falseなら未読の選択肢までスキップ
  */
 function skipDialogue(toEnd = true) {
-    if (!currentDialogueId) return;
+    if (!currentDialogueId || dialogueState === 'IDLE') return;
 
     // ★ MODIFIED: 「最後までスキップ」の場合、即座に会話を終了してコールバックを呼ぶ
     if (toEnd) {
@@ -776,7 +793,7 @@ function skipDialogue(toEnd = true) {
 
     // 2. 残りのメッセージをすべて表示
     while (currentMessageIndex < dialogue.messages.length) { 
-        displayNextMessage(null, null, true); // true: noType
+        displayNextMessage(null, null, true);
     }
 
     // 3. UIを更新
@@ -786,33 +803,54 @@ function skipDialogue(toEnd = true) {
 
     // 会話の最後に到達したので、次のクリック/キー入力でダイアログが閉じるように
     // currentMessageIndexをメッセージ数に設定しておく
-    currentMessageIndex = dialogue.messages.length;
+    dialogueState = 'WAITING';
 }
 
 function advanceDialogue() {
-    // ★★★ 修正: 会話終了後に呼び出された場合のエラーを防止
-    if (!currentDialogueId) return;
-    // ★★★ 修正: 会話終了後や、ランダム会話のように一時的なIDが削除された後に
-    // advanceDialogueが呼ばれてもエラーにならないように、データが存在するかをチェックする。
+    if (!currentDialogueId || dialogueState === 'IDLE') return;
+
+    // 選択肢表示中、またはマップ遷移待機中は入力を無視
+    // ★★★ 修正: WAITING_FOR_CHOICE状態のときに選択肢を表示する
+    if (dialogueState === 'WAITING_FOR_CHOICE') {
+        if (currentTypingMessage?.choices) {
+            displayChoices(currentTypingMessage.choices);
+        }
+        return;
+    }
+
+    if (dialogueState === 'CHOOSING' || waitingForMapReturn) {
+        return;
+    }
+
+    // タイピング中の場合、タイピングをスキップする
+    if (dialogueState === 'TYPING') {
+        const lastMessageBubble = chatContent.querySelector('.chat-bubble:last-child .message-text');
+        if (lastMessageBubble && currentTypingMessage) {
+            lastMessageBubble.innerHTML = currentTypingMessage.text.replace(/\n/g, '<br>');
+            chatContent.scrollTo({ top: chatContent.scrollHeight, behavior: 'smooth' });
+            // ★★★ 修正: スキップ時にも onTypingFinished を呼び出す
+            // これにより、スキップ後に 'WAITING_FOR_CHOICE' 状態へ正しく移行できる
+            const onTypingFinished = currentTypingMessage._onTypingFinished;
+            if (onTypingFinished) {
+                onTypingFinished();
+            }
+        }
+        return;
+    }
+
+    // 応答メッセージ表示後(WAITING状態)にnextIdがあれば遷移
+    if (dialogueState === 'WAITING' && currentTypingMessage?.nextId) {
+        const nextId = currentTypingMessage.nextId;
+        currentTypingMessage = null; // 処理したのでクリア
+        continueDialogue(nextId);
+        return;
+    }
+
+    // 通常の会話進行
     const dialogue = DIALOGUE_DATA[currentDialogueId];
     if (!dialogue) return;
 
-    if (isTyping || isChoosing) { // ★ MODIFIED: 選択肢表示中も何もしない
-        // タイピングエフェクトをスキップ
-        const dialogue = DIALOGUE_DATA[currentDialogueId];
-        const message = dialogue.messages[currentMessageIndex - 1];
-        const lastMessageBubble = chatContent.querySelector('.chat-bubble:last-child .message-text');
-        if (lastMessageBubble && message) {
-            lastMessageBubble.innerHTML = message.text.replace(/\n/g, '<br>');
-            chatContent.scrollTo({
-                top: chatContent.scrollHeight,
-                behavior: 'smooth'
-            });
-        }
-        isTyping = false; // タイピングはスキップするが、選択肢はスキップしない
-    } else {
-        // 次のメッセージへ、または会話終了
-        const dialogue = DIALOGUE_DATA[currentDialogueId];
+    if (dialogueState === 'WAITING') {
         if (currentMessageIndex >= dialogue.messages.length) {
             finishDialogue();
         } else {
@@ -827,7 +865,7 @@ function advanceDialogue() {
 function displayChoices(choices) {
     if (!choicesContainer) return;
 
-    isChoosing = true; // 選択肢表示モードON
+    dialogueState = 'CHOOSING';
     choicesContainer.innerHTML = ''; // コンテナをクリア
     choicesContainer.style.display = 'flex';
     chatPanel?.classList.add('is-choosing'); // ★選択肢表示中のクラスを追加
@@ -869,8 +907,7 @@ function displayChoices(choices) {
  * @param {string} choiceId - 選択肢グループのID
  */
 function handleChoice(choice, choiceIndex, choiceId) {
-    
-    isChoosing = false; // 選択肢表示モードOFF
+    dialogueState = 'IDLE'; // 一時的にIDLEにして、次の処理で状態を更新
     if (choicesContainer) {
         choicesContainer.style.display = 'none';
         choicesContainer.innerHTML = '';
@@ -935,6 +972,21 @@ function handleChoice(choice, choiceIndex, choiceId) {
         markChoicePlayed(choiceId, choiceIndex);
     }
 
+    // ★ backToMap フラグがあれば、会話を終了してマップに戻る
+    if (choice.backToMap) {
+        // response があればそれを表示してからマップに戻る
+        if (!choice.response) {
+            // responseがなければ即座にマップに戻る
+            closeDialogue();
+            showQuestMap();
+        } else {
+            // responseがあれば、表示後にユーザーの入力を待つ
+            waitingForMapReturn = true;
+            displayNextMessage(choice.response);
+        }
+        return;
+    }
+
     // ★ NEW: プレイヤーの選択をログに追加
     // responseやnextIdがなくても、選択したという事実をログに残す
     if (choice.text) {
@@ -948,22 +1000,22 @@ function handleChoice(choice, choiceIndex, choiceId) {
         
     }
     if (showResponse) {
-        // ★ NEW: response表示後にnextIdへ遷移する
-        const onResponseComplete = () => {
-            // response表示後に自動で進めず、ユーザーの入力を待つ
-            // nextIdがある場合は、次のクリックでそちらに遷移する
-            if (goToNextId) {
-                continueDialogue(goToNextId);
-            }
-        };
-        displayNextMessage(showResponse, onResponseComplete);
+        // ★★★ 修正: responseにnextIdを紐付けて、advanceDialogueで処理させる
+        if (goToNextId) {
+            showResponse.nextId = goToNextId; // 次のIDを渡す
+        }
+        // response表示後はユーザーの入力を待つので、コールバックは不要
+        displayNextMessage(showResponse);
     } else if (goToNextId) {
         // responseがなくnextIdだけの場合
+        // こちらは即時遷移で問題ない
         continueDialogue(goToNextId);
     } else {
-        // responseもnextIdもない場合は、会話を終了する
-        // この選択肢が会話の最後である場合を想定
-        finishDialogue(choice.end);
+        // responseもnextIdもない場合は、通常の会話フローを継続
+        // advanceDialogueを直接呼ぶと状態遷移が複雑になるため、
+        // WAITING状態にしてユーザーの次の入力を待つ
+        dialogueState = 'WAITING';
+        advanceDialogue();
     }
 }
 
@@ -972,21 +1024,21 @@ function handleChoice(choice, choiceIndex, choiceId) {
  * 会話モーダルを閉じ、完了コールバックを実行します。
  * 主に会話が正常に終了した際に内部的に使用されます。
  */
-function finishDialogue(suppressCallback = false) {
-    // 選択肢を選んだ直後で、まだ response や nextId への遷移が残っている可能性がある場合は終了しない
-    if (isChoosing) {
+function finishDialogue() {
+    // 選択肢表示中は終了しない
+    if (dialogueState === 'CHOOSING') {
         return;
     }
-    // ★★★ 修正: ランダム会話のように一時的なIDが削除された後でもエラーにならないように、
+    dialogueState = 'IDLE';
     // DIALOGUE_DATAにデータが存在する場合のみ再生履歴を記録する。
-    if (currentDialogueId && DIALOGUE_DATA[currentDialogueId]) {
+    const lastPlayedDialogueId = currentDialogueId; // コールバック前にIDを保持
+    if (lastPlayedDialogueId && DIALOGUE_DATA[lastPlayedDialogueId]) {
         // ★★★ 修正: ランダム会話の場合、再生履歴は記録しない
         // isBranchフラグで判定する
-        const isRandomOrBranch = DIALOGUE_DATA[currentDialogueId].isBranch;
+        const isRandomOrBranch = DIALOGUE_DATA[lastPlayedDialogueId].isBranch;
         if (!isRandomOrBranch) {
-            markDialoguePlayed(currentDialogueId);
+            markDialoguePlayed(lastPlayedDialogueId);
         }
-        markDialoguePlayed(currentDialogueId);
     }
     currentDialogueId = null; // ★★★ 会話IDを確実にクリアする
 
@@ -1006,14 +1058,12 @@ function finishDialogue(suppressCallback = false) {
     handleDialogueClick = null;
     handleDialogueKeydown = null;
 
-    // ★ MODIFIED: コールバックを抑制するフラグを追加
-    if (onCompleteCallback && !suppressCallback) {
+    if (onCompleteCallback) {
         const cb = onCompleteCallback;
         // ★★★ 修正: コールバックを呼ぶ直前に、一時的なランダム会話データを削除する
         // currentDialogueIdは既にnullになっているので、最後に再生したIDを別の変数で保持する必要がある
-        const lastId = window._lastDialogueId;
-        if (lastId && lastId.startsWith('_random_')) {
-            delete DIALOGUE_DATA[lastId];
+        if (lastPlayedDialogueId && lastPlayedDialogueId.startsWith('_random_')) {
+            delete DIALOGUE_DATA[lastPlayedDialogueId];
         }
         // コールバックを呼んだ後でクリアする
         onCompleteCallback = null;
@@ -1042,8 +1092,8 @@ export function closeDialogue() {
     }
     currentDialogueId = null;
     currentMessageIndex = 0;
-    isTyping = false;
-    isChoosing = false; // ★ 選択肢表示中のフラグをリセット
+    dialogueState = 'IDLE';
+    waitingForMapReturn = false; // ★ マップに戻る待機フラグをリセット
 
     // ★ 選択肢コンテナをクリアし、関連クラスを削除
     if (choicesContainer) {
@@ -1122,7 +1172,7 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false) {
     currentDialogueId = dialogueId;
     currentMessageIndex = 0;
     if (!isContinuation) onCompleteCallback = onComplete;
-    isTyping = false;
+    dialogueState = 'IDLE';
 
     // ★チャットモードに設定
     dialogueModal.querySelector('.dialogue-container')?.classList.remove('log-view-mode');
@@ -1169,7 +1219,7 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false) {
                 }
             }
             // ★ ADDED: 数字キーで選択肢を選ぶ
-            if (isChoosing && /^[1-9]$/.test(e.key)) {
+            if (dialogueState === 'CHOOSING' && /^[1-9]$/.test(e.key)) {
                 e.preventDefault();
                 const choiceIndex = parseInt(e.key, 10) - 1;
                 const choiceButtons = choicesContainer.querySelectorAll('.dialogue-choice-btn');
