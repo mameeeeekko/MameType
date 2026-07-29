@@ -40,6 +40,7 @@ const remainingAssets = [
   { type: "img", name: "navi_sad", src: "./assets/pic/char/navi_sad.png" },
   { type: "img", name: "navi_angry", src: "./assets/pic/char/navi_angry.png" },
   { type: "img", name: "navi_surprised", src: "./assets/pic/char/navi_surprised.png" },
+  { type: "img", name: "enemy_normal", src: "./assets/pic/char/enemy.png" },
 
   // passiveスキル画像
   { type: "img", name: "chain_up_1", src: "./assets/pic/skill/chain_up_1.png" },
