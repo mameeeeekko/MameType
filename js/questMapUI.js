@@ -2,10 +2,9 @@
 
 import { QUEST_MAP } from "./questMap.js";
 import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId } from "./questProgress.js";
-import { startEnemyMode, endEnemyMode } from "./enemyCore.js";
+import { startEnemyMode } from "./enemyCore.js";
 import { gameState } from "./gameCore.js";
-import * as Game from "./gameCore.js";
-import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty, getDifficultyDescription } from "./difficulties.js";
+import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
 import { backToQuestMenu, backToQuestMap } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
@@ -24,6 +23,7 @@ import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } f
 import { startDialogue, DIALOGUE_DATA, isDialogueVisible, showLog } from "./dialogue.js";
 import { devOverride } from "../dev/devOverride.js";
 import { images } from "./assetsLoader.js";
+import { playSE } from "./effectManager.js";
 import { hideAllScreens, showMenuBackground } from "./main.js";
 
 
@@ -1064,6 +1064,7 @@ export function openQuestMenuModal(type = "difficulty") {
 
                         slot.onclick = () => {
                             unequipSkill(skillId);
+                            playSE("skill_off");
                             refresh();
                         };
 
@@ -1107,6 +1108,7 @@ export function openQuestMenuModal(type = "difficulty") {
                     slot.innerHTML = `<img src="${images[skill.icon]?.src || ""}" class="equip-slot-icon">`;
                     slot.onclick = () => {
                         unequipActiveSkill(skillId);
+                        playSE("skill_off");
                         refresh();
                     };
                     slot.onmousemove = (e) => showSkillTooltip(skill, e);
@@ -1257,8 +1259,10 @@ export function openQuestMenuModal(type = "difficulty") {
                         item.onclick = () => {
                             if (isEquipped) {
                                 unequipActiveSkill(node.skillId);
+                                playSE("skill_off");
                             } else {
                                 equipActiveSkill(node.skillId);
+                                playSE("skill_on");
                             }
                             refresh();
                         };
@@ -1325,10 +1329,11 @@ export function openQuestMenuModal(type = "difficulty") {
 
                         if (isEquipped) {
                             unequipSkill(node.skillId);
+                            playSE("skill_off");
                         } else {
                             equipSkill(node.skillId);
+                            playSE("skill_on");
                         }
-
                         refresh(getActiveTab());
                     };
 

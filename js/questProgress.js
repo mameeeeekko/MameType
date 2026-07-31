@@ -329,3 +329,16 @@ export function getAvailableMaxStars() {
 
     return count * 5;
 }
+
+/**
+ * ゲーム内に存在する全てのノードの最大スター数を計算します。
+ * @returns {number}
+ */
+export function getTotalMaxStars() {
+    let totalNodes = 0;
+    for (const worldId in QUEST_MAP) {
+        totalNodes += QUEST_MAP[worldId].nodes.length;
+    }
+    // 各ステージの最大スター数は5
+    return totalNodes * 5;
+}

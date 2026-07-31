@@ -2,7 +2,8 @@
 
 import { gameState, setGameActive, fullResetGame } from "./gameCore.js";
 import { updateHud } from "./hud.js";
-import { closeDialogue, startDialogue, showLog, startTrueEndingSequence } from "./dialogue.js";
+import { getPlayerStats, updateAchievements, savePlayerStats, showAchievementPopup } from "./playerStats.js";
+import { closeDialogue, startDialogue, startTrueEndingSequence } from "./dialogue.js";
 import { backToQuestMap } from "./main.js";
 import { restartEnemyMode } from "./enemyCore.js";
 
@@ -363,8 +364,10 @@ export function showQuestResult(stats) {
 
         if (gameState.isTrueEnding) {
             gameState.isTrueEnding = false;
-            startDialogue("true_ending_dialogue", () => {
-                startTrueEndingSequence(backToQuestMap);
+            startDialogue("true_ending_dialogue", () => { // エピローグ再生
+                startTrueEndingSequence(() => { // スタッフロール再生
+                    startDialogue("epilogue_after_staffroll", backToQuestMap); // スタッフロール後の会話
+                });
             });
             return;
         }
@@ -375,6 +378,15 @@ export function showQuestResult(stats) {
 
         const modal = document.querySelector(".game-modal");
         if (modal) modal.style.display = "none";
+
+        // ★★★ ワールドクリア実績などを即時反映させるための処理を追加 ★★★
+        const stats = getPlayerStats();
+        const newAchievements = updateAchievements(stats);
+        if (newAchievements.length > 0) {
+            showAchievementPopup(newAchievements);
+        }
+        savePlayerStats(stats);
+        // ★★★ ここまで ★★★
 
         backToQuestMap();
     };

@@ -2,7 +2,7 @@
 
 import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed, getMaxClearedStageNumber } from './questProgress.js'; // ★ MODIFIED: Import new functions
 import { gameState } from './gameCore.js';
-import { playBGM, stopBGM } from './effectManager.js';
+import { playBGM, stopBGM, playDialogueSound, playSystemDialogueSound } from './effectManager.js';
 import { showHud } from './enemyCore.js';
 import { DIALOGUE_DATA, CHARACTERS, RANDOM_DIALOGUES } from './dialogueData.js';
 import { QUEST_MAP } from './questMap.js';
@@ -535,7 +535,7 @@ function showMessage(text, duration = 2000) {
  * スタッフロールを開始します。
  */
 function showStaffRoll(onComplete) {
-    isStaffRollShowing = true; // ★表示開始
+    isStaffRollShowing = true;
 
     const canSkip = hasSeenTrueEnding();
 
@@ -545,9 +545,12 @@ function showStaffRoll(onComplete) {
             ${canSkip ? '<div class="staff-roll-skip" style="position: fixed; bottom: 20px; right: 20px; color: white; font-family: monospace; z-index: 10001; opacity: 0.7; cursor: pointer;">skip &gt;&gt;&gt;</div>' : ''}
             <div class="staff-roll-content">
                 <div class="staff-roll-line"><span class="role-center">STAFF</span></div>
-                <div class="staff-roll-line"><span class="role">Direction / Design / Programming</span><span class="name">MameSamurai</span></div>
-                <div class="staff-roll-line"><span class="role">Music</span><span class="name">DOVA-SYNDROME</span></div>
-                <div class="staff-roll-line"><span class="role">Sound Effect</span><span class="name">OtoLogic</span></div>
+                <div class="staff-roll-line"><span class="role">Direction / Design / Programming</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Music</span><span class="name">Pixabay</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">RYU ITO</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">moeru music.</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">MusMus</span></div>
+                <div class="staff-roll-line"><span class="role">Sound Effect</span><span class="name">Pixabay</span></div>
                 <div class="staff-roll-line"><span class="role-center" style="margin-top: 4em;">Special Thanks</span></div>
                 <div class="staff-roll-line"><span class="role-center">All Players</span></div>
                 <div class="staff-roll-line" style="margin-top: 6em; justify-content: center;"><span class="role-center">Thank you for playing!</span></div>
@@ -559,18 +562,22 @@ function showStaffRoll(onComplete) {
     const overlay = document.querySelector('.staff-roll-overlay');
     const skipButton = canSkip ? document.querySelector('.staff-roll-skip') : null;
     let skipHandler = null;
+    let isCompleted = false; // 多重実行防止フラグ
 
     const endRoll = () => {
-        if (!overlay) return;
+        if (isCompleted || !overlay) return;
+        isCompleted = true;
+
         clearTimeout(rollTimer);
         // イベントリスナーを安全に解除
         if (skipHandler) document.removeEventListener('keydown', skipHandler);
         if (skipButton) skipButton.removeEventListener('click', endRoll);
 
         overlay.classList.add('fade-out');
+
         setTimeout(() => {
             overlay.remove();
-            isStaffRollShowing = false; // ★表示終了
+            isStaffRollShowing = false;
             if (onComplete) onComplete();
         }, 1500);
     };
@@ -600,10 +607,12 @@ function showStaffRoll(onComplete) {
             skipButton.style.transform = 'scale(1.0)';
             skipButton.style.opacity = '0.7';
         };
+        
+
     }
 }
 
-function typeMessage(element, text, onFinished, noType = false) {
+function typeMessage(element, text, onFinished, noType = false, message = null) {
     dialogueState = 'TYPING';
     let i = 0;
     const speed = noType ? 0 : currentDialogueSpeed;
@@ -627,6 +636,16 @@ function typeMessage(element, text, onFinished, noType = false) {
         }
         if (i < text.length) {
             element.innerHTML = text.substring(0, i + 1).replace(/\n/g, '<br>');
+            // ★★★ 会話の文字表示音を再生 ★★★
+            const char = text[i];
+            // 空白や改行文字では音を鳴らさない
+            if (char !== ' ' && char !== '\n' && char !== '\r') {
+                if (message && message.character === 'SYSTEM') {
+                    playSystemDialogueSound();
+                } else {
+                    playDialogueSound();
+                }
+            }
             timerId = setTimeout(() => {
                 // ★文字を追加した直後にスクロール
                 if (chatContent) chatContent.scrollTop = chatContent.scrollHeight;
@@ -720,7 +739,7 @@ function displayNextMessage(messageOverride, onComplete, noType = false) {
         messageTextElement.innerHTML = message.text.replace(/\n/g, '<br>');
         onTypingFinished();
     } else {
-        typeMessage(messageTextElement, message.text, onTypingFinished, noType);
+        typeMessage(messageTextElement, message.text, onTypingFinished, noType, message);
     }
 }
 

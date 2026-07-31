@@ -315,6 +315,28 @@ export function playTypeSound() {
     osc.stop(ctx.currentTime + 0.05);
 }
 
+export function playDialogueSound() {
+    const freq = 480 + Math.random() * 120;
+    playTone(
+        freq,
+        0.04,
+        "sine",
+        0.3,
+        seGain // 効果音用のゲインノードを使用
+    );
+}
+
+export function playSystemDialogueSound() {
+    const freq = 800 + Math.random() * 200; // 周波数を高く設定
+    playTone(
+        freq,
+        0.03, // 短くする
+        "sawtooth", // 波形をサイバーチックに変更
+        0.2,  // 音量を少し下げる
+        seGain // 効果音用のゲインノードを使用
+    );
+}
+
 export function playMissSound() {
     getAudioContext();
     playNoise(0.08, 1.0, missGain); // 0.25 -> 0.35 に変更

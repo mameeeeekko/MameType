@@ -1,8 +1,9 @@
 // playerStats.js
 
-import { loadPlayerStats, savePlayerStats } from "./storage.js";
-import { getClearedStageCount } from "./questProgress.js";
+import { loadPlayerStats, savePlayerStats } from "./storage.js"; export { savePlayerStats };
+import { getClearedStageCount, hasSeenTrueEnding, getTotalStars, getTotalMaxStars } from "./questProgress.js";
 import { QUEST_MAP } from "./questMap.js";
+import { playSE } from "./effectManager.js";
 import { getPlayerStats as getQuestPlayerStats } from "./questPlayerStats.js";
 import { SKILL_TREE } from "./skillTree.js";
 
@@ -371,9 +372,12 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   // ========================
   // ポップアップUI追加
   // ========================
-function showAchievementPopup(ids) {
+export function showAchievementPopup(ids) {
   const container = document.createElement("div");
   container.className = "ach-popup-container";
+
+  // ★ 実績獲得時に効果音を再生
+  playSE("trophy", 1.0);
 
   ids.forEach(id => {
     const a = ACHIEVEMENTS.find(x => x.id === id);
@@ -381,7 +385,7 @@ function showAchievementPopup(ids) {
 
     const el = document.createElement("div");
     el.className = "ach-popup";
-    el.innerHTML = `🏅 ${a.name} 獲得！`;
+    el.innerHTML = `🏆 ${a.name} 獲得！`;
     container.appendChild(el);
   });
 
@@ -458,83 +462,37 @@ export function updateAchievements(stats) {
 
   // ===== 日数 =====
   if (stats.days?.unique >= 7) unlock("days_7");
+  if (stats.days?.unique >= 30) unlock("days_30");
   if (stats.days?.streak >= 3) unlock("streak_3");
   if (stats.days?.streak >= 7) unlock("streak_7");
+  if (stats.days?.streak >= 14 ) unlock("streak_14");  
   if (stats.days?.streak >= 30) unlock("streak_30");
 
   // ===== 速度 =====
-  if (stats.regular?.maxSpeed >= 300) unlock("speed_300");
+  if (stats.regular?.maxSpeed >= 200) unlock("kpm_200");
+  if (stats.regular?.maxSpeed >= 250) unlock("kpm_250");
+  if (stats.regular?.maxSpeed >= 300) unlock("kpm_300");
 
-  // ★新しい実績判定を追加
-  if (stats.regular?.maxSpeed >= 400) unlock("kpm_400");
-  if (stats.regular?.maxSpeed >= 500) unlock("kpm_500");
   if (stats.regular?.noMissClears >= 10) unlock("no_miss_10");
 
   // ===== クエスト & エネミーモード =====
   updateQuestAndEnemyAchievements(stats, unlock);
 
+  // 真エンディング到達
+  if (hasSeenTrueEnding()) {
+    unlock("true_ending");
+  }
+
+  // 全実績解除
+  // 「全実績解除」の実績自体を除いた総数
+  const totalAchievements = ACHIEVEMENTS.filter(ach => ach.id !== 'all_achievements').length;
+  const currentUnlockedCount = a.filter(id => id !== "all_achievements").length;
+  if (currentUnlockedCount >= totalAchievements) {
+    unlock("all_achievements");
+  }
   return unlockedNow; // 勲章お知らせ用
 }
 
-
-
-// ================================
-// 勲章
-// ================================
-export const ACHIEVEMENTS = [
-  // --- プレイ回数・時間 ---
-  { id: "first_play", name: "はじめの一歩", desc: "初めてプレイした" },
-  { id: "play_10", name: "常連", desc: "10回プレイ" },
-  { id: "play_100", name: "熟練者", desc: "100回プレイ" },
-  { id: "play_500", name: "ベテラン", desc: "500回プレイ" },
-  { id: "play_1000", name: "レジェンド", desc: "1000回プレイ" },
-  { id: "play_time_10h", name: "時間旅行者", desc: "総プレイ時間10時間" },
-  { id: "play_time_50h", name: "時空の覇者", desc: "総プレイ時間50時間" },
-
-  // --- 日数・継続 ---
-  { id: "days_7", name: "一週間プレイヤー", desc: "7日プレイ" },
-  { id: "days_30", name: "一ヶ月プレイヤー", desc: "累計30日プレイ" },
-  { id: "streak_3", name: "三日坊主卒業", desc: "3日連続プレイ" },
-  { id: "streak_7", name: "連続者", desc: "7日連続プレイ" },
-  { id: "max_streak_14", name: "二週間皆勤", desc: "14日連続プレイ達成" },
-  { id: "streak_30", name: "継続の鬼", desc: "30日連続プレイ" },
-
-  // --- タイピングスキル ---
-  { id: "speed_300", name: "高速域", desc: "300KPM到達" },
-  { id: "kpm_400", name: "光速", desc: "400KPM到達" },
-  { id: "kpm_500", name: "超光速", desc: "500KPM到達" },
-  { id: "no_miss_10", name: "パーフェクト10", desc: "ノーミスクリア10回" },
-  { id: "rank_god", name: "神の領域", desc: "最高ランク「God」に到達" },
-
-  // --- モード別 ---
-  { id: "free_1h", name: "自由人", desc: "フリーモード1時間" },
-  { id: "free_10h", name: "解放者", desc: "フリーモード10時間" },
-  { id: "play_proverb_50", name: "ことわざ博士", desc: "ことわざモードを50回プレイ" },
-  { id: "play_english_50", name: "英語マスター", desc: "英語モードを50回プレイ" },
-
-  // --- エネミーモード ---
-  { id: "enemy_play_10", name: "エネミーハンター", desc: "エネミーモードを10回プレイ" },
-  { id: "play_daily_enemy_30", name: "デイリーチャレンジャー", desc: "デイリーエネミーモードを30回プレイ" },
-  { id: "enemy_kill_1000", name: "撃墜王", desc: "エネミーモードで1000体撃破" },
-  { id: "gscore_100k", name: "スコアマスター", desc: "gScore 10万点到達" },
-  { id: "max_chain_100", name: "チェインマスター", desc: "最大チェイン100到達" },
-  { id: "enemy_combo_200", name: "コンボアーティスト", desc: "最大コンボ200到達" },
-  { id: "no_damage_clear_enemy", name: "鉄壁", desc: "エネミーモードでノーダメージクリア" },
-
-  // --- クエストモード ---
-  { id: "quest_clear_10", name: "冒険の始まり", desc: "クエストを10個クリア" },
-  { id: "quest_clear_50", name: "ベテラン冒険者", desc: "クエストを50個クリア" },
-  { id: "all_quests_clear", name: "世界の救世主", desc: "全てのクエストをクリア" },
-  { id: "clear_world_1", name: "フロンティアの開拓者", desc: "ワールド1をクリア" },
-  { id: "clear_world_2", name: "静寂の探求者", desc: "ワールド2をクリア" },
-  { id: "quest_level_10", name: "成長の証", desc: "プレイヤーレベル10到達" },
-  { id: "quest_level_50", name: "熟練の風格", desc: "プレイヤーレベル50到達" },
-  { id: "skill_unlock_10", name: "スキルコレクター", desc: "スキルを10個アンロック" },
-  { id: "all_skills_unlocked", name: "スキルマスター", desc: "全てのスキルをアンロック" },
-  { id: "total_stars_100", name: "星々の収集家", desc: "合計スター100個獲得" },
-  { id: "item_heal_100", name: "回復の恩恵", desc: "回復アイテムを100個取得" },
-  { id: "active_skill_100_uses", name: "スキル活用術", desc: "アクティブスキルを100回使用" },
-];
 
 /**
  * クエストモードとエネミーモードに関連する実績を判定・更新する
@@ -542,18 +500,24 @@ export const ACHIEVEMENTS = [
  * @param {function} unlock - 実績をアンロックする関数
  */
 function updateQuestAndEnemyAchievements(stats, unlock) {
-  // エネミーモードのプレイ回数
-  if (stats.enemyMode?.totalPlays >= 10) unlock("enemy_play_10");
+
   // エネミーモードの総撃破数
+  if (stats.enemyMode?.maxChain >= 50) unlock("max_chain_50");//ok
   if (stats.enemyMode?.maxChain >= 100) unlock("max_chain_100");
+  if (stats.enemyMode?.maxCombo >= 100) unlock("enemy_combo_100");//ok
   if (stats.enemyMode?.maxCombo >= 200) unlock("enemy_combo_200");
-  if (stats.enemyMode?.modes?.daily_enemy >= 30) unlock("play_daily_enemy_30");
+  if (stats.enemyMode?.maxCombo >= 300) unlock("enemy_combo_300");
+  if (stats.enemyMode?.maxCombo >= 350) unlock("enemy_combo_350");
+  if (stats.enemyMode?.modes?.daily_enemy >= 30) unlock("play_daily_enemy_30");//ok
+  if (stats.enemyMode?.modes?.daily_enemy >= 100) unlock("play_daily_enemy_100");
+  if (stats.enemyMode?.modes?.daily_enemy >= 1) unlock("play_daily_enemy_1"); //test
+
 
 
   if (stats.enemyMode?.noDamageClears >= 1) unlock("no_damage_clear_enemy");
 
   // ★新しい実績判定を追加
-  if (stats.enemyMode?.maxGScore >= 100000) unlock("gscore_100k");
+  if (stats.enemyMode?.maxGScore >= 10000) unlock("gscore_10k");
   if (stats.enemyMode?.totalKills >= 1000) unlock("enemy_kill_1000");
 
   // ★総プレイ時間
@@ -566,10 +530,6 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   if (stats.totalPlays >= 500) unlock("play_500");
   if (stats.totalPlays >= 1000) unlock("play_1000");
 
-
-  // ★日数系
-  if (stats.days?.unique >= 30) unlock("days_30");
-  if (stats.days?.maxStreak >= 14) unlock("max_streak_14");
   
   // ★通常モードのプレイ回数
   const nModes = stats.regular?.modes || {};
@@ -587,6 +547,7 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
     // クエストモードのプレイヤーレベル
     if (questStats.level >= 10) unlock("quest_level_10");
     if (questStats.level >= 50) unlock("quest_level_50");
+    if (questStats.level >= 99) unlock("quest_level_99");
 
     // スキルツリーのアンロック数
     const unlockedSkills = questStats.skillTreeProgress?.unlockedNodes?.length || 0;
@@ -602,17 +563,48 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
 
     // ★クエストモードの星の数
     if (questStats.questRecord?.totalStars >= 100) unlock("total_stars_100");
+    if (questStats.questRecord?.totalStars >= 300) unlock("total_stars_300");
+    
+    // 全てのスターを獲得
+    const totalStars = getTotalStars(); // 現在の星の数
+    const maxStars = getTotalMaxStars(); // 全ステージの最大スター数
+    if (maxStars > 0 && totalStars >= maxStars) {
+      unlock("total_stars_all");
+    }
 
     // ★クエストモードのアイテム取得数
     const healItemCount = (questStats.questRecord?.itemPickupCount?.heal_small || 0) +
                           (questStats.questRecord?.itemPickupCount?.heal_medium || 0) +
                           (questStats.questRecord?.itemPickupCount?.heal_large || 0) +
                           (questStats.questRecord?.itemPickupCount?.heal_full || 0);
-    if (healItemCount >= 100) unlock("item_heal_100");
+    if (healItemCount >= 50) unlock("item_heal_30");
+    if (healItemCount >= 1) unlock("item_heal_1");//test
+
+
+    const killItemCount = (questStats.questRecord?.itemPickupCount?.kill_small || 0) +
+                          (questStats.questRecord?.itemPickupCount?.kill_medium || 0) +
+                          (questStats.questRecord?.itemPickupCount?.kill_large || 0) +
+                          (questStats.questRecord?.itemPickupCount?.kill_all || 0);
+    if (killItemCount >= 50) unlock("item_kill_30");
+    if (killItemCount >= 1) unlock("item_kill_1");//test
+
+    const supportItemCount = (questStats.questRecord?.itemPickupCount?.freeze_small || 0) +
+                             (questStats.questRecord?.itemPickupCount?.freeze_medium || 0) +
+                             (questStats.questRecord?.itemPickupCount?.freeze_large || 0) +
+                             (questStats.questRecord?.itemPickupCount?.cooldown_small || 0) +
+                             (questStats.questRecord?.itemPickupCount?.cooldown_medium || 0) +
+                             (questStats.questRecord?.itemPickupCount?.cooldown_large || 0) +
+                             (questStats.questRecord?.itemPickupCount?.cooldown_stock || 0);
+    if (supportItemCount >= 50) unlock("item_support_30");
+    if (supportItemCount >= 1) unlock("item_support_1");//test
 
     // ★アクティブスキル使用回数
     const totalSkillUses = Object.values(questStats.questRecord?.activeSkillUseCount || {}).reduce((sum, count) => sum + count, 0);
     if (totalSkillUses >= 100) unlock("active_skill_100_uses");
+  // 真エンディング到達
+  if (hasSeenTrueEnding()) {
+    unlock("true_ending");
+  }
 
   } catch (e) {
     // questPlayerStatsがロードできない場合は何もしない
@@ -622,7 +614,83 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   const cleared = getClearedStageCount(true); // 全クリア済みノードIDリストを取得
   if (cleared.includes("W1_BOSS")) unlock("clear_world_1");
   if (cleared.includes("W2_BOSS")) unlock("clear_world_2");
+  if (cleared.includes("W3_BOSS")) unlock("clear_world_3");
 
-
-  if (stats.regular?.maxEScore >= 750) unlock("rank_god");
+  if (stats.regular?.maxEScore >= 260) unlock("rank_s");
 }
+
+// ================================
+// 勲章
+// ================================
+export const ACHIEVEMENTS = [
+  // --- プレイ回数・時間 ---
+  { id: "first_play", name: "はじめの一歩", desc: "初めてプレイした" },//ok
+  { id: "play_10", name: "常連", desc: "10回プレイ" },//ok
+  { id: "play_100", name: "熟練者", desc: "100回プレイ" },
+  { id: "play_500", name: "ベテラン", desc: "500回プレイ" },
+  { id: "play_1000", name: "レジェンド", desc: "1000回プレイ" },
+  { id: "play_time_10h", name: "時間旅行者", desc: "総プレイ時間10時間" },
+  { id: "play_time_50h", name: "時空の覇者", desc: "総プレイ時間50時間" },
+
+  // --- 日数・継続 ---
+  { id: "days_7", name: "一週間プレイヤー", desc: "7日プレイ" },
+  { id: "days_30", name: "一ヶ月プレイヤー", desc: "累計30日プレイ" },
+  { id: "streak_3", name: "三日坊主卒業", desc: "3日連続プレイ" },//ok
+  { id: "streak_7", name: "連続者", desc: "7日連続プレイ" },
+  { id: "streak_14", name: "二週間皆勤", desc: "14日連続プレイ達成" },
+  { id: "streak_30", name: "継続の鬼", desc: "30日連続プレイ" },
+
+  // --- タイピングスキル ---
+  { id: "kpm_200", name: "高速域", desc: "200KPM到達" },//ok
+  { id: "kpm_250", name: "光速", desc: "250KPM到達" },
+  { id: "kpm_300", name: "超光速", desc: "300KPM到達" },
+  { id: "no_miss_10", name: "パーフェクト10", desc: "ノーミスクリア10回" },
+  { id: "rank_s", name: "Sの領域", desc: "eScoreのランクSに到達" },//ok
+
+  // --- モード別 ---
+  { id: "free_1h", name: "自由人", desc: "フリーモード1時間" },
+  { id: "free_10h", name: "解放者", desc: "フリーモード10時間" },
+  { id: "play_proverb_50", name: "ことわざ博士", desc: "ことわざモードを50回プレイ" },
+  { id: "play_english_50", name: "英語マスター", desc: "英語モードを50回プレイ" },
+
+  // --- エネミーモード ---
+  { id: "play_daily_enemy_30", name: "エネミーチャレンジャー30", desc: "デイリーのエネミーモードを30回プレイ" }, //ok
+  { id: "play_daily_enemy_100", name: "デイリーチャレンジャー100", desc: "デイリーのエネミーモードを100回プレイ" },
+  //{ id: "play_daily_enemy_1", name: "デイリーチャレンジャー1", desc: "デイリーのエネミーモードを1回プレイ" },
+  { id: "enemy_kill_1000", name: "撃墜王", desc: "エネミーモードで1000体撃破" },
+  { id: "gscore_10k", name: "スコアマスター", desc: "gScore 1万点到達" },//ok
+  { id: "max_chain_50", name: "チェイン50", desc: "最大チェイン50到達" },//ok
+  { id: "max_chain_100", name: "チェインマスター", desc: "最大チェイン100到達" },
+  { id: "enemy_combo_100", name: "コンボ100", desc: "最大コンボ100到達" },//ok
+  { id: "enemy_combo_200", name: "コンボ200", desc: "最大コンボ200到達" },
+  { id: "enemy_combo_300", name: "コンボアーティスト", desc: "最大コンボ300到達" },
+  { id: "enemy_combo_350", name: "コンボマスター", desc: "最大コンボ350到達" },
+  { id: "no_damage_clear_enemy", name: "鉄壁", desc: "エネミーモードでノーダメージクリア" },
+
+  // --- クエストモード ---
+  { id: "quest_clear_10", name: "冒険の始まり", desc: "クエストを10個クリア" },
+  { id: "quest_clear_50", name: "ベテラン冒険者", desc: "クエストを50個クリア" },
+  { id: "all_quests_clear", name: "世界の救世主", desc: "全てのクエストをクリア" },
+  { id: "clear_world_1", name: "開拓者", desc: "ワールド1をクリア" }, //ok
+  { id: "clear_world_2", name: "探求者", desc: "ワールド2をクリア" },
+  { id: "clear_world_3", name: "到達者", desc: "ワールド3をクリア" },
+  { id: "quest_level_10", name: "成長の証", desc: "プレイヤーレベル10到達" },//ok
+  { id: "quest_level_50", name: "熟練の風格", desc: "プレイヤーレベル50到達" },
+  { id: "quest_level_99", name: "王者の風格", desc: "プレイヤーレベル99到達" },
+  { id: "skill_unlock_10", name: "スキルコレクター", desc: "スキルを10個アンロック" },
+  { id: "all_skills_unlocked", name: "スキルマスター", desc: "全てのスキルをアンロック" },
+  { id: "total_stars_100", name: "星々の収集家", desc: "合計スター100個獲得" },
+  { id: "total_stars_300", name: "星空の探検家", desc: "合計スター300個獲得" },
+  { id: "total_stars_all", name: "星空の覇者", desc: "全てのスターを獲得した" },
+  { id: "item_heal_50", name: "回復の恩恵", desc: "回復アイテムを50個取得" },//ok
+  { id: "item_kill_50", name: "破壊の恩恵", desc: "攻撃アイテムを50個取得" },
+  { id: "item_support_50", name: "支援の達人", desc: "補助アイテムを50個取得" },
+ // { id: "item_heal_1", name: "test回復の恩恵", desc: "test回復アイテムを50個取得" },
+  //{ id: "item_kill_1", name: "test破壊の恩恵", desc: "test攻撃アイテムを50個取得" },
+  //{ id: "item_support_1", name: "test支援の達人", desc: "test補助アイテムを50個取得" },
+  { id: "active_skill_100_uses", name: "スキル活用術", desc: "アクティブスキルを100回使用" },
+
+  // --- ストーリー・コンプリート ---
+  { id: "true_ending", name: "物語の終わり、そして始まり", desc: "真のエンディングに到達した" },
+  { id: "all_achievements", name: "完全無欠のタイパー", desc: "すべての実績を解除した" },
+];

@@ -138,6 +138,10 @@ const remainingAssets = [
   { type: "sound", name: "combo_tier_max", src: "./assets/sound/se/combo_tier_max.mp3", composer: "", title: "", volume: 1.5 },
   { type: "sound", name: "chain_break", src: "./assets/sound/se/chain_break.mp3", composer: "", title: "", volume: 1.3 },
 
+  { type: "sound", name: "trophy", src: "./assets/sound/se/trophy.mp3", composer: "", title: "", volume: 1.0 },
+  { type: "sound", name: "skill_on", src: "./assets/sound/se/skillon.mp3", composer: "", title: "", volume: 1.0 },
+  { type: "sound", name: "skill_off", src: "./assets/sound/se/skilloff.mp3", composer: "", title: "", volume: 1.0 },
+
   // BGM
   { type: "sound", name: "bgm_rojiura", src: "./assets/sound/bgm/rojiura.mp3", composer: "もえるごみ", title: "rojiura", volume: 1.2 },
   { type: "sound", name: "bgm_flashback", src: "./assets/sound/bgm/flashback.mp3", composer: "RYU ITO", title: "Flashback", volume: 1.0 },

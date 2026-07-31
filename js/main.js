@@ -99,8 +99,6 @@ let enemyIntervalSlider, enemyImmediateToggle;
 let currentFreeModeId = 'Standard'; // フリーモードの選択状態を保持する変数
 let currentEnemyPattern = 'time'; // エネミーモード内のパターン選択状態
 
-let isStaffRollShowing = false; // スタッフロール表示中フラグ
-
 function cacheDOM() {
   bootScreen = document.getElementById("bootScreen");
   loadingScreen = document.getElementById("loadingScreen");
@@ -1578,144 +1576,6 @@ function bindGameMenuEvents() {
   });
 }
 
-// =====================================================
-// エンディング演出
-// =====================================================
-
-/**
- * スタッフロール用のCSSを動的に読み込みます。
- * @returns {Promise<void>}
- */
-function loadStaffRollCSS() {
-    return new Promise((resolve) => {
-        if (document.getElementById('staff-roll-css')) {
-            resolve();
-            return;
-        }
-        const link = document.createElement('link');
-        link.id = 'staff-roll-css';
-        link.rel = 'stylesheet';
-        link.href = './js/staffRoll.css'; // CSSファイルのパス
-        link.onload = () => resolve();
-        link.onerror = () => {
-            console.error("Failed to load staffRoll.css");
-            resolve(); // エラーでも処理を続行
-        };
-        document.head.appendChild(link);
-    });
-}
-
-/**
- * 画面を暗転させます。
- * @param {number} duration - 暗転にかかる時間 (ms)
- * @returns {Promise<void>}
- */
-function fadeToBlack(duration = 1500) {
-    return new Promise(resolve => {
-        const blackout = document.createElement('div');
-        blackout.className = 'true-ending-blackout';
-        document.body.appendChild(blackout);
-
-        requestAnimationFrame(() => {
-            blackout.style.opacity = '1';
-        });
-
-        setTimeout(() => {
-            resolve(blackout); // 暗転用divを後で消せるように返す
-        }, duration);
-    });
-}
-
-/**
- * 画面にメッセージを表示します。
- * @param {string} text - 表示するテキスト
- * @param {number} duration - 表示時間 (ms)
- * @returns {Promise<void>}
- */
-function showMessage(text, duration = 2000) {
-    return new Promise(resolve => {
-        const overlay = document.createElement('div');
-        overlay.className = 'true-ending-message-overlay';
-        const p = document.createElement('p');
-        p.textContent = text;
-        overlay.appendChild(p);
-        document.body.appendChild(overlay);
-
-        requestAnimationFrame(() => {
-            overlay.style.opacity = '1';
-        });
-
-        setTimeout(() => {
-            overlay.style.opacity = '0';
-            setTimeout(() => {
-                overlay.remove();
-                resolve();
-            }, 1500);
-        }, duration);
-    });
-}
-
-/**
- * スタッフロールを開始します。
- */
-function showStaffRoll(onComplete) {
-    isStaffRollShowing = true; // ★表示開始
-
-    const canSkip = hasSeenTrueEnding();
-
-    // クリックとポインター表示に対応
-    const staffRollHTML = `
-        <div class="staff-roll-overlay">
-            ${canSkip ? '<div class="staff-roll-skip" style="position: fixed; bottom: 20px; right: 20px; color: white; font-family: monospace; z-index: 10001; opacity: 0.7; cursor: pointer;">skip &gt;&gt;&gt;</div>' : ''}
-            <div class="staff-roll-content">
-                <div class="staff-roll-line"><span class="role-center">STAFF</span></div>
-                <div class="staff-roll-line"><span class="role">Direction / Design / Programming</span><span class="name">MameSamurai</span></div>
-                <div class="staff-roll-line"><span class="role">Music</span><span class="name">DOVA-SYNDROME</span></div>
-                <div class="staff-roll-line"><span class="role">Sound Effect</span><span class="name">OtoLogic</span></div>
-                <div class="staff-roll-line"><span class="role-center" style="margin-top: 4em;">Special Thanks</span></div>
-                <div class="staff-roll-line"><span class="role-center">All Players</span></div>
-                <div class="staff-roll-line" style="margin-top: 6em; justify-content: center;"><span class="role-center">Thank you for playing!</span></div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', staffRollHTML);
-
-    const overlay = document.querySelector('.staff-roll-overlay');
-    const skipButton = canSkip ? document.querySelector('.staff-roll-skip') : null;
-    let skipHandler = null;
-
-    const endRoll = () => {
-        if (!overlay) return;
-        clearTimeout(rollTimer);
-        // イベントリスナーを安全に解除
-        if (skipHandler) document.removeEventListener('keydown', skipHandler);
-        if (skipButton) skipButton.removeEventListener('click', endRoll);
-
-        overlay.classList.add('fade-out');
-        setTimeout(() => {
-            overlay.remove();
-            isStaffRollShowing = false; // ★表示終了
-            if (onComplete) onComplete();
-        }, 1500);
-    };
-
-    const rollTimer = setTimeout(endRoll, 30000); // 30秒でロール終了
-
-    if (canSkip && skipButton) {
-        // Sキーでのスキップ
-        skipHandler = (e) => {
-            if (e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                endRoll();
-            }
-        };
-        document.addEventListener('keydown', skipHandler);
-
-        // クリックでのスキップ
-        skipButton.addEventListener('click', endRoll);
-    }
-}
-
 /**
  * 真エンディングシーケンスを開始します。
  */
@@ -2198,8 +2058,6 @@ function handleGameKey(e) {
 }
 
 function handleMenuKey(e) {
-  // スタッフロール表示中はメニューキーを無効化
-  if (isStaffRollShowing) return true;
 
 
   const key = e.key.toLowerCase();
