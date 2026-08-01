@@ -12,28 +12,43 @@ const DEFAULT_PROGRESS = {
     playedChoices: {}, // { choiceId: [index1, index2] }
 };
 
-let progress = load();
+let progress = load(); // 初期ロード
+
+// 全ノードを順番に並べたリストを一度だけ生成
+const allNodesInOrder = Object.values(QUEST_MAP).flatMap(world => world.nodes);
 
 /**
  * クリア済みのノードIDの中から最大のステージ番号を取得します。
- * 'W1_Q10' のようなIDから '10' のような数値を抽出して比較します。
- * @returns {number} 最大のステージ番号。クリア済みがなければ0を返す。
+ * この関数は、IDの数字だけでなく、クエストマップ全体での進行度を考慮して数値を返します。
+ * @returns {number} 進行度を示す数値。クリア済みがなければ0を返す。
  */
 export function getMaxClearedStageNumber() {
     if (!progress.cleared || progress.cleared.length === 0) {
         return 0;
     }
 
-    return progress.cleared.reduce((maxNum, nodeId) => {
-        // ★★★ 修正: "W1_Q10" のようなIDから末尾の数字(10)を正しく抽出するため、
-        // 正規表現を末尾にマッチする `/\d+$/` に変更します。
-        const match = nodeId.match(/\d+$/);
+    // 1. クリア済みのノードがマップ全体の何番目にあるか、そのインデックスの最大値を取得
+    const maxIndex = progress.cleared.reduce((maxIdx, clearedId) => {
+        const currentIndex = allNodesInOrder.findIndex(node => node.id === clearedId);
+        return Math.max(maxIdx, currentIndex);
+    }, -1);
+
+    if (maxIndex === -1) return 0;
+
+    // 2. そのインデックスにあるノードのIDからステージ番号を抽出する
+    const furthestNodeId = allNodesInOrder[maxIndex]?.id;
+    if (furthestNodeId) {
+        const match = furthestNodeId.match(/\d+$/);
         if (match) {
             const num = parseInt(match[0], 10);
-            return Math.max(maxNum, num);
+            // IDから数字が取れればそれを返す
+            return num;
         }
-        return maxNum;
-    }, 0);
+    }
+
+    // 3. IDに数字がない場合（ボスなど）は、そのインデックス自体を進行度として返す
+    // これにより、W3_BOSSクリア後は90以上の値が返るようになる
+    return maxIndex + 1;
 }
 
 function load(){
