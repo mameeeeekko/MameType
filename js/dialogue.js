@@ -41,6 +41,174 @@ export function setDialogueSpeed(level) {
     currentDialogueSpeed = DIALOGUE_SPEEDS[safeLevel];
 }
 
+export function showDialoguePlaybackChoicePopup(message, onYes, onNo) {
+    const existing = document.getElementById('dialoguePlaybackChoicePopup');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'dialoguePlaybackChoicePopup';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.zIndex = '30000';
+    overlay.style.background = 'rgba(0, 0, 0, 0.7)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.padding = '16px';
+
+    overlay.innerHTML = `
+        <div style="max-width: 520px; width: 100%; background: #111319; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; box-shadow: 0 18px 40px rgba(0,0,0,0.45); padding: 24px; color: #f7f7f7; text-align: center;">
+            <div style="margin-bottom: 22px; font-size: 1rem; line-height: 1.7;">${message}</div>
+            <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;">
+                <button id="dialoguePlaybackChoiceYes" style="min-width: 130px; padding: 12px 18px; border: none; border-radius: 10px; background: #2f8aff; color: #fff; font-weight: 700; cursor: pointer;">再生する</button>
+                <button id="dialoguePlaybackChoiceNo" style="min-width: 130px; padding: 12px 18px; border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 700; cursor: pointer;">再生しない</button>
+            </div>
+        </div>
+    `;
+
+    const cleanup = () => {
+        const existingPopup = document.getElementById('dialoguePlaybackChoicePopup');
+        if (existingPopup) existingPopup.remove();
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+
+    const yesButton = overlay.querySelector('#dialoguePlaybackChoiceYes');
+    const noButton = overlay.querySelector('#dialoguePlaybackChoiceNo');
+
+    yesButton.addEventListener('click', () => {
+        cleanup();
+        onYes();
+    });
+    noButton.addEventListener('click', () => {
+        cleanup();
+        onNo();
+    });
+
+    const handleKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            cleanup();
+            onNo();
+        }
+    };
+
+    document.body.appendChild(overlay);
+    document.addEventListener('keydown', handleKeyDown);
+}
+
+export function showClearRewardPopup(htmlContent, onClose) {
+    const existing = document.getElementById('clearRewardPopup');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'clearRewardPopup';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.zIndex = '30000';
+    overlay.style.background = 'rgba(0, 0, 0, 0.75)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.padding = '16px';
+
+    overlay.innerHTML = `
+        <div style="max-width: 640px; width: 100%; background: #0f1113; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; box-shadow: 0 18px 40px rgba(0,0,0,0.45); padding: 24px; color: #f7f7f7; text-align: center;">
+            <div style="margin-bottom: 18px; font-size: 1.1rem; line-height: 1.6;">クリア特典</div>
+            <div style="margin-bottom: 22px;">${htmlContent}</div>
+            <div style="display: flex; justify-content: center;
+                        gap: 14px; flex-wrap: wrap;">
+                <button id="clearRewardOk" style="min-width: 120px; padding: 12px 18px; border: none; border-radius: 10px; background: #2f8aff; color: #fff; font-weight: 700; cursor: pointer;">閉じる</button>
+            </div>
+        </div>
+    `;
+
+    const cleanup = () => {
+        const existingPopup = document.getElementById('clearRewardPopup');
+        if (existingPopup) existingPopup.remove();
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+
+    const okButton = overlay.querySelector('#clearRewardOk');
+    okButton.addEventListener('click', () => {
+        cleanup();
+        if (onClose) onClose();
+    });
+
+    const handleKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            cleanup();
+            if (onClose) onClose();
+        }
+    };
+
+    document.body.appendChild(overlay);
+    document.addEventListener('keydown', handleKeyDown);
+}
+
+export function showSaveConfirmPopup(message, onYes, onNo) {
+    const existing = document.getElementById('saveConfirmPopup');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'saveConfirmPopup';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.zIndex = '30010';
+    overlay.style.background = 'rgba(0, 0, 0, 0.7)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.padding = '16px';
+
+    overlay.innerHTML = `
+        <div style="max-width: 520px; width: 100%; background: #111319; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 20px; color: #f7f7f7; text-align: center;">
+            <div style="margin-bottom: 18px; font-size: 1rem; line-height: 1.6;">${message}</div>
+            <div style="display:flex; justify-content:center; gap:12px;">
+                <button id="saveConfirmYes" style="min-width:120px; padding:10px 14px; border:none; border-radius:8px; background:#2f8aff; color:#fff; font-weight:700;">セーブする</button>
+                <button id="saveConfirmNo" style="min-width:120px; padding:10px 14px; border:1px solid rgba(255,255,255,0.12); border-radius:8px; background:rgba(255,255,255,0.02); color:#fff; font-weight:700;">セーブしない</button>
+            </div>
+        </div>
+    `;
+
+    const cleanup = () => {
+        const existingPopup = document.getElementById('saveConfirmPopup');
+        if (existingPopup) existingPopup.remove();
+        document.removeEventListener('keydown', handleKeyDown);
+    };
+
+    const yes = overlay.querySelector('#saveConfirmYes');
+    const no = overlay.querySelector('#saveConfirmNo');
+
+    yes.addEventListener('click', () => {
+        cleanup();
+        onYes && onYes();
+    });
+    no.addEventListener('click', () => {
+        cleanup();
+        onNo && onNo();
+    });
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            cleanup();
+            onNo && onNo();
+        }
+    };
+
+    document.body.appendChild(overlay);
+    document.addEventListener('keydown', handleKeyDown);
+}
 
 let handleDialogueClick = null;
 let handleDialogueKeydown = null;
@@ -1255,6 +1423,10 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false) {
                 // ★ プロローグとエンディング中はESCを無効化
                 if (currentDialogueId === 'prologue' || currentDialogueId === 'true_ending_dialogue') {
                     return; // 何もせずに処理を抜ける
+                }
+                // ★ 初めてクリアしたノードの戦闘後会話はESCでスキップさせない
+                if (currentDialogueId?.endsWith('_end') && !hasDialogueBeenPlayed(currentDialogueId)) {
+                    return;
                 } else {
                     closeDialogue();
                     showQuestMap();

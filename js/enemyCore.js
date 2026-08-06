@@ -25,7 +25,7 @@ import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats,
     getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed, addQuestActiveSkillUse, addQuestStageAttempt, getActiveSkillStockMax  } from "./questPlayerStats.js";
 import { getCurrentDifficulty, getDifficulty } from "./difficulties.js";
 import { getPlayerStats, updatePlayerStats } from "./playerStats.js";
-import { markCleared, setStar, hasDialogueBeenPlayed  } from "./questProgress.js";
+import { markCleared, setStar, hasDialogueBeenPlayed, hasSeenTrueEnding } from "./questProgress.js";
 import { STAR_EVALUATORS } from "./starEvaluator.js";
 import { submitScore } from "../online/submitScore.js"; 
 import { RANKING_VERSION } from "../js/version.js";
@@ -33,7 +33,7 @@ import { loadKeybinds } from "./keybinds.js";
 import { devOverride, applyOverride } from "../dev/devOverride.js";
 import { activateSkill, ACTIVE_SKILLS } from "./questSkills.js";
 
-import { closeDialogue, startDialogue, DIALOGUE_DATA } from "./dialogue.js";
+import { closeDialogue, startDialogue, DIALOGUE_DATA, showDialoguePlaybackChoicePopup } from "./dialogue.js";
 let currentStage = "STAGE1";
 let loopId = null;
 let currentEnemyDifficulty = null;
@@ -941,19 +941,30 @@ function gameLoop(timestamp) {
                     // DIALOGUE_DATAに会話が存在しなくてもstartDialogueを呼び出すように変更。
                     // これにより、ランダム会話のフォールバック処理が正しく機能するようになります。
                     if (!isFailed) {
-                            const hasPlayed = hasDialogueBeenPlayed(endDialogueId);
-                        const shouldSkipDialogue = dialogueData?.showOnce && hasPlayed;
+                        const hasPlayed = hasDialogueBeenPlayed(endDialogueId);
+                        const shouldAskDialogueChoice = dialogueData?.showOnce && hasSeenTrueEnding();
+                        const shouldSkipDialogue = dialogueData?.showOnce && hasPlayed && !hasSeenTrueEnding();
 
-                            if (shouldSkipDialogue) {
-                                // 会話をスキップしてリザルトへ
-                                showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
-                            } else {
-                            // 会話（固定またはランダム）を開始し、終了後にリザルト表示
-                                startDialogue(endDialogueId, () => {
-                                    showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
-                                });
-                            }
+                        if (shouldAskDialogueChoice) {
+                            showDialoguePlaybackChoicePopup(
+                                "全クリア後の特典：戦闘後のこの会話を再生しますか？",
+                                () => {
+                                    startDialogue(endDialogueId, () => {
+                                        showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
+                                    });
+                                },
+                                () => showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats))
+                            );
+                        } else if (shouldSkipDialogue) {
+                            // 会話をスキップしてリザルトへ
+                            showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
                         } else {
+                            // 会話（固定またはランダム）を開始し、終了後にリザルト表示
+                            startDialogue(endDialogueId, () => {
+                                showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
+                            });
+                        }
+                    } else {
                         // クエスト失敗時は会話なしでリザルトへ
                         showEnemyEndIntro(introText, () => showQuestResult(gameState.questStats));
                         }

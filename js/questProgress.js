@@ -10,6 +10,8 @@ const DEFAULT_PROGRESS = {
     hasSeenTrueEnding: false,
     playedDialogues: {}, // 会話再生履歴
     playedChoices: {}, // { choiceId: [index1, index2] }
+    // 初回全クリ特典を表示済みかどうか
+    hasShownFirstFullClearReward: false,
 };
 
 let progress = load(); // 初期ロード
@@ -79,7 +81,8 @@ export function reloadQuestProgress() {
     selectedWorldId: data.selectedWorldId ?? "WORLD1",
     playedDialogues: data.playedDialogues ?? {},
     playedChoices: data.playedChoices ?? {},
-    hasSeenTrueEnding: data.hasSeenTrueEnding || false,
+        hasSeenTrueEnding: data.hasSeenTrueEnding || false,
+        hasShownFirstFullClearReward: data.hasShownFirstFullClearReward || false,
   };// ←これが重要
   return progress;
 }
@@ -188,6 +191,18 @@ export function hasSeenTrueEnding() {
     return !!progress.hasSeenTrueEnding;
 }
 
+// 初回全クリ特典表示フラグを記録する
+export function markFirstFullClearRewardShown() {
+    if (progress) {
+        progress.hasShownFirstFullClearReward = true;
+    }
+    save();
+}
+
+export function hasShownFirstFullClearReward() {
+    return !!progress.hasShownFirstFullClearReward;
+}
+
 function save(){
     localStorage.setItem("questProgress", JSON.stringify(progress));
     // ★追加：オートセーブ連動
@@ -243,6 +258,7 @@ export function resetQuestAll() {
         unlockedWorlds: ["WORLD1"],
         selectedWorldId: "WORLD1",
         hasSeenTrueEnding: false,
+        hasShownFirstFullClearReward: false,
         playedDialogues: {}, // ★ playedDialoguesを初期化
         playedChoices: {}, // ★ playedChoicesを初期化
     }));

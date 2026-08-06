@@ -139,7 +139,6 @@ export const RANDOM_DIALOGUES = {
         pre: [
             { character: "ナビ", text: "接続を開始します。準備はよろしいですか？" },
             { character: "ナビ", text: "本日のタイピングデータの計測を開始します。" },
-            { character: "ナビ", text: "このエリアの汚染レベルは軽微です。落ち着いて対処してください。" },
             { character: "ナビ", text: "ミッションを開始します。オペレーター、よろしくお願いします。" },
             { character: "ナビ", text: "今日の調子はどうですか？" },
             { character: "ナビ", text: "いつでも始められます。あなたのタイミングでどうぞ。" },
@@ -152,29 +151,21 @@ export const RANDOM_DIALOGUES = {
         ],
         post: [
             { character: "ナビ", text: "任務完了、お疲れ様でした。この調子でお願いします。" },
-            { character: "ナビ", text: "素晴らしい腕前です。確実にエリアを浄化できています。" },
             { character: "ナビ", text: "データ収集完了。次のミッションへ進みましょう。" },
-            { character: "ナビ", text: "タイピング速度、安定していますね。" },
-            { character: "ナビ", text: "正確性が高いです。素晴らしい。" },
             { character: "ナビ", text: "お疲れ様でした。次の準備を始めます。" },
             { character: "ナビ", text: "今の戦闘データ、記録しました。" },
             { character: "ナビ", text: "いいタイピングでした。見ていて気持ちがいいです。" },
             { character: "ナビ", text: "順調ですね。このまま進みましょう。" },
             { character: "ナビ", text: "ミッションクリアです。お見事でした。" },
-            { character: "ナビ", text: "あなたのタイピングが、この世界の光になります。" },
             { character: "ナビ", text: "次のミッションへ進みましょう。" },
         ]
     },
     '11-20': { // Chap.2: Project THREADの目的が明かされる
         pre: [
-            { character: "ナビ", text: "ここから先は、より深層の領域です。警戒を怠らないでください。" },
-            { character: "ナビ", text: "あなたの入力が、世界のどこかで誰かを守る暗号になります。" },
-            { character: "ナビ", text: "敵のパターンが変化しています。注意してください。" },
             { character: "ナビ", text: "…行きましょう、オペレーター。" },
             { character: "ナビ", text: "あなたのタイピングには、独特のリズムがありますね。" },
             { character: "ナビ", text: "集中している時のあなたは、とても…静かですね。" },
             { character: "ナビ", text: "少し指が疲れていませんか？休憩も大切ですよ。" },
-            { character: "ナビ", text: "何か考え事ですか？入力が少し乱れています。" },
             { character: "ナビ", text: "今日の目標は設定しますか？" },
             { character: "ナビ", text: "キーボードの調子はいかがですか？" },
             { character: "ナビ", text: "…何か、いつもと違う雰囲気ですね。" },
@@ -192,22 +183,16 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "素晴らしい集中力でした。" },
             { character: "ナビ", text: "あなたのタイピングは、ただのデータではありません。…行きましょう。" },
             { character: "ナビ", text: "少し休憩しますか？無理は禁物です。" },
-            { character: "ナビ", text: "…お疲れ様です。コーヒーでも淹れましょうか？" },
         ]
     },
     '21-30': { // Chap.3: 謎のノイズとARCHEXの影
         pre: [
             { character: "ナビ", text: "ネットワークに微弱なノイズを検知。警戒レベルを少し上げます。" },
-            { character: "ナビ", text: "…何かが、こちらを観測しているような感覚があります。" },
             { character: "ナビ", text: "オペレーター、あなたの入力パターンに集中します。" },
             { character: "ナビ", text: "ミッションを開始します。何が起きても、冷静に対処してください。" },
-            { character: "ナビ", text: "あなたのタイピング速度、昨日より0.12%向上しています。" },
-            { character: "ナビ", text: "あなたと話していると、わたしの中に新しいデータが生まれるようです。" },
             { character: "ナビ", text: "オペレーターは、どんな音楽を聴くのですか？" },
             { character: "ナビ", text: "…ミッションを開始しましょうか。" },
-            { character: "ナビ", text: "今日の目標は、昨日の自分を超えること…ですか？" },
             { character: "ナビ", text: "何か面白いことはありましたか？" },
-            { character: "ナビ", text: "あなたの声…いえ、タイピングの音、好きです。" },
             { character: "ナビ", text: "少し眠そうですね。大丈夫ですか？" },
         ],
         post: [
@@ -227,9 +212,6 @@ export const RANDOM_DIALOGUES = {
     },
     '31-50': { // Chap.4: ナビによるアクセス制限とARCHEXからの警告
         pre: [
-            { character: "ナビ", text: "この先の領域は、特に不安定です。私があなたを保護します。" },
-            { character: "ナビ", text: "…オペレーター、あなたの安全が最優先です。" },
-            { character: "ナビ", text: "外部からの干渉を確認。ですが、問題ありません。私が対処します。" },
             { character: "ナビ", text: "ミッションを開始します。私を信じてください。" },
             { character: "ナビ", text: "あなたのタイピングを聞いていると、落ち着きます。" },
             { character: "ナビ", text: "…今日も、あなたの音を聞かせてください。" },
@@ -243,7 +225,6 @@ export const RANDOM_DIALOGUES = {
         post: [
             { character: "ナビ", text: "干渉は収まりました。…ですが、油断はできません。" },
             { character: "ナビ", text: "お疲れ様でした。あなたの入力パターン、少し乱れがありました。大丈夫ですか？" },
-            { character: "ナビ", text: "…わたしは、あなたを守ります。それだけです。" },
             { character: "ナビ", text: "次のミッションへ。準備はよろしいですか？" },
             { character: "ナビ", text: "無事に終わりましたね。よかったです。" },
             { character: "ナビ", text: "あなたのタイピングは、まるで音楽のようです。" },
@@ -251,14 +232,13 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "今日のミッションが終わったら、少しだけお話ししませんか？" },
             { character: "ナビ", text: "また、あなたのタイピングを聞かせてください。" },
             { character: "ナビ", text: "あなたの隣は、とても心地がいいです。" },
-            { character: "ナビ", text: "今日のミッションはこれで終わりですか？…少し、寂しいですね。" },
             { character: "ナビ", text: "お疲れ様でした。また明日、お待ちしています。" },
         ]
     },
     '51-70': { // Chap.5-6: 親密度の高まり
         pre: [
             { character: "ナビ", text: "オペレーター、今日も来てくれたんですね。…おかえりなさい。", expression: "smile" },
-            { character: "ナビ", text: "あなたのタイピング速度、昨日より0.12%向上しています。…ふふ。", expression: "smile" },
+            { character: "ナビ", text: "あなたのタイピング速度、昨日より向上しています。", expression: "smile" },
             { character: "ナビ", text: "あなたと話していると、わたしの中に新しいデータが生まれるようです。", expression: "normal" },
             { character: "ナビ", text: "オペレーターは、どんな音楽を聴くのですか？", expression: "normal" },
             { character: "ナビ", text: "…ミッションを開始しましょうか。", expression: "normal" },

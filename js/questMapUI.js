@@ -1,7 +1,7 @@
         //questMapUI.js
 
 import { QUEST_MAP } from "./questMap.js";
-import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId } from "./questProgress.js";
+import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId, hasSeenTrueEnding } from "./questProgress.js";
 import { startEnemyMode } from "./enemyCore.js";
 import { gameState } from "./gameCore.js";
 import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
@@ -20,12 +20,11 @@ import {
     getActiveSkillStockMax,
 } from "./questPlayerStats.js";
 import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } from "./enemyModeConfig.js";
-import { startDialogue, DIALOGUE_DATA, isDialogueVisible, showLog } from "./dialogue.js";
+import { startDialogue, DIALOGUE_DATA, isDialogueVisible, showLog, showDialoguePlaybackChoicePopup } from "./dialogue.js";
 import { devOverride } from "../dev/devOverride.js";
 import { images } from "./assetsLoader.js";
 import { playSE } from "./effectManager.js";
 import { hideAllScreens, showMenuBackground } from "./main.js";
-
 
 export function renderQuestMapUI(){
 
@@ -525,13 +524,18 @@ export function renderQuestMapUI(){
                 // これにより、ランダム会話のフォールバック処理が正しく機能するようになります。
                 const dialogueData = DIALOGUE_DATA?.[dialogueId];
                 const isStageCleared = isCleared(node.id);
-                const shouldSkipDialogue = dialogueData?.showOnce && isStageCleared;
+                const shouldAskDialogueChoice = dialogueData?.showOnce && hasSeenTrueEnding();
+                const shouldSkipDialogue = dialogueData?.showOnce && isStageCleared && !hasSeenTrueEnding();
 
-                if (shouldSkipDialogue) {
-                    // クリア済みで、かつshowOnceがtrueの会話はスキップしてイントロへ
+                if (shouldAskDialogueChoice) {
+                    showDialoguePlaybackChoicePopup(
+                        "全クリア後の特典：この会話を再生しますか？",
+                        () => startDialogue(dialogueId, showIntro),
+                        showIntro
+                    );
+                } else if (shouldSkipDialogue) {
                     showIntro();
                 } else {
-                    // 上記以外の場合は、会話（固定またはランダム）を開始し、終了後にイントロを表示
                     startDialogue(dialogueId, showIntro);
                 }
             };

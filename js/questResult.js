@@ -3,8 +3,10 @@
 import { gameState, setGameActive, fullResetGame } from "./gameCore.js";
 import { updateHud } from "./hud.js";
 import { getPlayerStats, updateAchievements, savePlayerStats, showAchievementPopup } from "./playerStats.js";
-import { closeDialogue, startDialogue, startTrueEndingSequence } from "./dialogue.js";
+import { closeDialogue, startDialogue, startTrueEndingSequence, showClearRewardPopup, showSaveConfirmPopup } from "./dialogue.js";
 import { backToQuestMap } from "./main.js";
+import { hasShownFirstFullClearReward, markFirstFullClearRewardShown } from "./questProgress.js";
+import { autoSaveQuest } from "./storage.js";
 import { restartEnemyMode } from "./enemyCore.js";
 
 export function showEnemyEndIntro(text, onFinish) {
@@ -366,7 +368,69 @@ export function showQuestResult(stats) {
             gameState.isTrueEnding = false;
             startDialogue("true_ending_dialogue", () => { // エピローグ再生
                 startTrueEndingSequence(() => { // スタッフロール再生
-                    startDialogue("epilogue_after_staffroll", backToQuestMap); // スタッフロール後の会話
+                    startDialogue("epilogue_after_staffroll", () => {
+                        // エピローグ後、初回全クリ後の特典を一度だけ表示する
+                        if (!hasShownFirstFullClearReward()) {
+                            const rewardHtml = `<div>おめでとうございます！<br>全ステージを初めてクリアしました。特典を獲得！</div>`;
+                            // まずセーブの確認（スロット保存）を行い、保存完了またはモーダル閉じた後に特典を表示する
+                            showSaveConfirmPopup("セーブしますか？（スロットに保存）", () => {
+                                // ユーザーが「セーブする」を選んだ → セーブモーダルを開いてスロット選択を促す
+                                const saveBtn = document.getElementById('questSaveBtn');
+                                const saveModalBack = document.getElementById('saveToQuestMenuBackBtn');
+
+                                const cleanup = () => {
+                                    document.removeEventListener('questSlotSaved', onSlotSaved);
+                                    saveModalBack?.removeEventListener('click', onBackClicked);
+                                };
+
+                                const proceedToReward = () => {
+                                    cleanup();
+                                    showClearRewardPopup(rewardHtml, () => {
+                                        markFirstFullClearRewardShown();
+                                        try {
+                                            const stats = getPlayerStats();
+                                            updateHud(stats, { isQuestMode: true });
+                                        } catch (e) {
+                                            console.warn('updateHud failed', e);
+                                        }
+                                        backToQuestMap();
+                                    });
+                                };
+
+                                const onSlotSaved = (e) => {
+                                    // セーブが完了したらモーダルを閉じて続行
+                                    try { document.getElementById('saveModal').classList.add('hidden'); } catch (e) {}
+                                    proceedToReward();
+                                };
+
+                                const onBackClicked = () => {
+                                    // ユーザーがモーダルを閉じた（セーブしなかった）場合も続行
+                                    proceedToReward();
+                                };
+
+                                document.addEventListener('questSlotSaved', onSlotSaved);
+                                saveModalBack?.addEventListener('click', onBackClicked);
+
+                                // open save modal (renderQuestSlots is invoked by the click handler)
+                                try { saveBtn?.click(); } catch (e) { console.warn('open save modal failed', e); proceedToReward(); }
+
+                            }, () => {
+                                // セーブしない場合はそのまま特典表示へ
+                                showClearRewardPopup(rewardHtml, () => {
+                                    markFirstFullClearRewardShown();
+                                    try {
+                                        const stats = getPlayerStats();
+                                        updateHud(stats, { isQuestMode: true });
+                                    } catch (e) {
+                                        console.warn('updateHud failed', e);
+                                    }
+                                    backToQuestMap();
+                                });
+                            });
+                        } else {
+                            backToQuestMap();
+                        }
+                    }); // スタッフロール後の会話
                 });
             });
             return;

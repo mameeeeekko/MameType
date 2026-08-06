@@ -117,13 +117,13 @@ const remainingAssets = [
 
   // 音源
   // SE
-  { type: "sound", name: "kill1", src: "./assets/sound/se/kill1.mp3", composer: "", title: "", volume: 1.0 },
-  { type: "sound", name: "kill2", src: "./assets/sound/se/kill2.mp3", composer: "", title: "", volume: 1.0 },
-  { type: "sound", name: "kill3", src: "./assets/sound/se/kill3.mp3", composer: "", title: "", volume: 1.0 },
-  { type: "sound", name: "killLaser", src: "./assets/sound/se/killLaser.mp3", composer: "", title: "", volume: 1.0 },
-  { type: "sound", name: "kill5", src: "./assets/sound/se/kill5.mp3", composer: "", title: "", volume: 1.0 },
-  { type: "sound", name: "killBullet", src: "./assets/sound/se/killBullet.mp3", composer: "", title: "", volume: 1.0 },
-  { type: "sound", name: "killItem", src: "./assets/sound/se/killItem.mp3", composer: "", title: "", volume: 1.0 },
+  { type: "sound", name: "kill1", src: "./assets/sound/se/kill1.mp3", composer: "", title: "", volume: 0.8 },
+  { type: "sound", name: "kill2", src: "./assets/sound/se/kill2.mp3", composer: "", title: "", volume: 0.8 },
+  { type: "sound", name: "kill3", src: "./assets/sound/se/kill3.mp3", composer: "", title: "", volume: 0.8 },
+  { type: "sound", name: "killLaser", src: "./assets/sound/se/killLaser.mp3", composer: "", title: "", volume: 0.8 },
+  { type: "sound", name: "kill5", src: "./assets/sound/se/kill5.mp3", composer: "", title: "", volume: 0.8 },
+  { type: "sound", name: "killBullet", src: "./assets/sound/se/killBullet.mp3", composer: "", title: "", volume: 0.8 },
+  { type: "sound", name: "killItem", src: "./assets/sound/se/killItem.mp3", composer: "", title: "", volume: 0.8 },
   { type: "sound", name: "damage1", src: "./assets/sound/se/damage1.mp3", composer: "", title: "", volume: 1.0 },
   { type: "sound", name: "error1", src: "./assets/sound/se/error1.mp3", composer: "", title: "", volume: 1.0 },
 

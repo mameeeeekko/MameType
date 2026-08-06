@@ -655,7 +655,10 @@ function renderQuestSlots() {
 
       div.innerHTML = `
         <div class="slot-header">
-          <span>SLOT ${i + 1}</span>
+          <div class="slot-left">
+            <span>SLOT ${i + 1}</span>
+            ${s.cleared > 0 ? '<span class="slot-cleared">CLEARED</span>' : ''}
+          </div>
           <span class="slot-date">${date}</span>
         </div>
 
@@ -704,6 +707,12 @@ function renderQuestSlots() {
 
       saveQuestSlot(i);
       renderQuestSlots();
+      // カスタムイベントでセーブ完了を通知（モーダル外からの待機用）
+      try {
+        document.dispatchEvent(new CustomEvent('questSlotSaved', { detail: { slot: i } }));
+      } catch (e) {
+        console.warn('dispatch questSlotSaved failed', e);
+      }
     });
 
     // =========================
