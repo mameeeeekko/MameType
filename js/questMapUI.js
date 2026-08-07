@@ -267,7 +267,15 @@ export function renderQuestMapUI(){
         starEl.className = "map-star";
 
         const starCount = getStar(node.id);
-        
+
+        // 会話イベントがあるノードにバッジを追加
+        const startDialogueId = `${node.id}_start`;
+        const endDialogueId = `${node.id}_end`;
+        const hasStartDialogue = DIALOGUE_DATA[startDialogueId] && !DIALOGUE_DATA[startDialogueId].isBranch;
+        const hasEndDialogue = DIALOGUE_DATA[endDialogueId] && !DIALOGUE_DATA[endDialogueId].isBranch;
+        const el = document.createElement("div");
+        el.classList.add("map-node");
+
         starEl.textContent = renderStarString(starCount);
         wrapper.appendChild(starEl);
 
@@ -277,8 +285,7 @@ export function renderQuestMapUI(){
         wrapper.style.left = (node.pos.x - NODE_SIZE / 2 + OFFSET_X) + "px";
         wrapper.style.top  = (node.pos.y - NODE_SIZE / 2) + "px";
 
-        const el = document.createElement("div");
-        el.classList.add("map-node");
+        
         if (visibility === "near") el.classList.add("near-fog-node");
         if (visibility === "far") el.classList.add("far-fog-node");
         if (visibility === "fog") el.classList.add("hard-fog-node");
@@ -326,17 +333,22 @@ export function renderQuestMapUI(){
 
         // 2. 最も広い角度の隙間を計算
         let bestAngle = -Math.PI / 2; // デフォルトは上方向
+        let secondBestAngle = bestAngle + Math.PI / 2;
         if (angles.length > 0) {
             angles.sort((a, b) => a - b);
-            let maxGap = 0;
+            const gaps = [];
             for (let i = 0; i < angles.length; i++) {
                 const a1 = angles[i];
                 const a2 = (i === angles.length - 1) ? angles[0] + 2 * Math.PI : angles[i + 1];
                 const gap = a2 - a1;
-                if (gap > maxGap) {
-                    maxGap = gap;
-                    bestAngle = a1 + gap / 2;
-                }
+                gaps.push({ start: a1, size: gap, center: a1 + gap / 2 });
+            }
+            gaps.sort((a, b) => b.size - a.size);
+            bestAngle = gaps[0].center;
+            if (gaps.length > 1) {
+                secondBestAngle = gaps[1].center;
+            } else {
+                secondBestAngle = bestAngle + Math.PI / 2;
             }
         }
 
@@ -377,6 +389,22 @@ export function renderQuestMapUI(){
         starEl.style.left = labelX + "px";
         starEl.style.top  = (labelY - 14) + "px";
         starEl.style.transform = labelTransform; // ラベルと同じ水平方向のtransformを適用
+
+        // 会話バッジの位置を線と重ならない隙間に設定
+        if (hasStartDialogue || hasEndDialogue) {
+            const dialogueBadge = document.createElement("div");
+            dialogueBadge.className = "map-dialogue-badge";
+            dialogueBadge.textContent = "!";
+
+            const badgeAngle = secondBestAngle;
+            const badgeDist = 30; // ノードからの距離
+            const badgeX = center + Math.cos(badgeAngle) * badgeDist;
+            const badgeY = center + Math.sin(badgeAngle) * badgeDist;
+            dialogueBadge.style.left = `${badgeX}px`;
+            dialogueBadge.style.top = `${badgeY}px`;
+            dialogueBadge.style.transform = "translate(-50%, -50%)";
+            wrapper.appendChild(dialogueBadge);
+        }
 
         const canEnter = canEnterNode(node, world);
         const cleared = isCleared(node.id);

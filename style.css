@@ -4684,6 +4684,24 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   pointer-events: none;
 }
 
+.map-dialogue-badge {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  color: #333;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+}
+
 /* クエストマップの報酬表示 */
 .map-reward-inline {
     margin-left: 6px;
