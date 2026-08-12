@@ -102,6 +102,7 @@
   <button id="freeTimeAttackBtn">TIME ATTACK</button>
   <button id="freeLongTextBtn">LONG TEXT</button>
   <button id="freeEnemyModeBtn">ENEMY</button>
+  <button id="freeBossBtn" style="display: none;">QUEST BOSS</button>
   <button id="freeStartMenuBackBtn">BACK</button>
 
   <!-- フリーモード詳細設定コンテナ -->
@@ -283,6 +284,34 @@
         </select>
       </div>
       <button id="startLongFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
+    </div>
+
+    <div id="configBoss" class="mode-config-group" style="display: none;">
+      <div class="config-section-title">Boss Challenge Config</div>
+      <!-- Difficulty settings for Boss Mode -->
+      <div class="config-row">
+        <label>難易度</label>
+        <div id="bossDifficultyButtons" class="difficulty-buttons"></div>
+      </div>
+      <div id="bossDifficultyInfo" class="difficulty-info"></div>
+
+      <!-- Player Level setting for Boss Mode -->
+      <div class="config-row">
+        <label>PLAYER Lv</label>
+        <input type="range" id="bossPlayerLvRange" min="1" max="100" step="1" value="1"
+               oninput="document.getElementById('bossEnemyLvValue').innerText = this.value">
+        <span class="config-value level-color" id="bossEnemyLvValue">1</span>
+      </div>
+
+
+
+      <div class="config-row">
+        <label>ボス選択</label>
+        <select id="bossStageSelect">
+          <option value="W1_WORLD_BOSS">ボス1</option>
+        </select>
+      </div>
+      <button id="startBossFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
     </div>
   </div>
 

@@ -116,23 +116,23 @@ export const STAR_EVALUATORS = {
   composite: (stats, ctx, config) => {
     if (stats.failed) return 0;
 
-    const accuracy = (stats.accuracy ?? 0) / 100;
-    const hpRate = ctx.player.hp / ctx.player.maxHp;
-
-    const elapsed = ctx.now - ctx.startTime;
-    const total = ctx.stage.endConditions.timerMs || elapsed;
-
-    const timeRate = 1 - (elapsed / total);
+    const accuracy = (stats.accuracy ?? 0) / 100; // 0-1
+    const hpRate = ctx.player.hp / ctx.player.maxHp; // 0-1
+    
+    // KPMを評価指標に追加 (300KPMで満点とする)
+    const speed = stats.gKpm ?? 0;
+    const maxKpmForScore = 300;
+    const speedRate = Math.min(speed / maxKpmForScore, 1.0);
 
     const weights = config.weights || {
         accuracy: 0.4,
-        time: 0.3,
+        speed: 0.3,
         hp: 0.3
     };
 
     const score =
         accuracy * weights.accuracy +
-        timeRate * weights.time +
+        speedRate * weights.speed +
         hpRate * weights.hp;
 
     let stars = 0;

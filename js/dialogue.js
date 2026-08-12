@@ -41,6 +41,53 @@ export function setDialogueSpeed(level) {
     currentDialogueSpeed = DIALOGUE_SPEEDS[safeLevel];
 }
 
+/**
+ * 免責事項などのメッセージをフェードイン・アウトで表示します。
+ * @param {string} message - 表示するメッセージ
+ * @returns {Promise<void>} ユーザーが確認すると解決するPromise
+ */
+export function showDisclaimer(message) {
+    return new Promise(resolve => {
+        const existing = document.getElementById('disclaimerOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'disclaimerOverlay';
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            color: #ccc;
+            display: flex; justify-content: center; align-items: center;
+            text-align: center;
+            z-index: 40000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            padding: 20px;
+            line-height: 1.8;
+            font-size: 0.9rem;
+        `;
+        overlay.innerHTML = `<div>${message.replace(/\n/g, '<br>')}</div>`;
+        document.body.appendChild(overlay);
+
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+        });
+
+        const cleanup = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                document.removeEventListener('keydown', cleanup);
+                document.removeEventListener('click', cleanup);
+                resolve();
+            }, 500);
+        };
+
+        overlay.addEventListener('click', cleanup, { once: true });
+        document.addEventListener('keydown', cleanup, { once: true });
+    });
+}
+
 export function showDialoguePlaybackChoicePopup(message, onYes, onNo) {
     const existing = document.getElementById('dialoguePlaybackChoicePopup');
     if (existing) existing.remove();

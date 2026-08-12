@@ -79,7 +79,8 @@ const defaultStats = {
   // ========================
   // 勲章
   // ========================
-  achievements: [],     // 取得済み勲章ID一覧
+  achievements: [],     // 取得済み勲章ID一覧,
+  hasSeenTrueEnding: false, // ★真エンディングを見たことがあるか
   seenAchievements: []  // 表示済み勲章ID（未読管理用）
 };
 
@@ -92,6 +93,7 @@ export function getPlayerStats() {
   // ===== 基本補完 =====
   if (!loaded.achievements) loaded.achievements = [];
   if (!loaded.seenAchievements) loaded.seenAchievements = [];
+  if (loaded.hasSeenTrueEnding === undefined) loaded.hasSeenTrueEnding = false; // ★追加
   if (!loaded.regular.maxSpeedDate)
   loaded.regular.maxSpeedDate = null;
   if (!loaded.freeMode) {
@@ -479,7 +481,7 @@ export function updateAchievements(stats) {
   updateQuestAndEnemyAchievements(stats, unlock);
 
   // 真エンディング到達
-  if (hasSeenTrueEnding()) {
+  if (stats.hasSeenTrueEnding) {
     unlock("true_ending");
   }
 

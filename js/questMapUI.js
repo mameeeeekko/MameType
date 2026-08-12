@@ -786,46 +786,54 @@ export function openQuestMenuModal(type = "difficulty") {
         difficulty: () => {
             title.textContent = "DIFFICULTY";
 
-            // `現在`ラベルは表示しない（UI要望により削除）
+            // 中央揃えにするためのコンテナ
+            const centerContainer = document.createElement("div");
+            centerContainer.style.display = "flex";
+            centerContainer.style.flexDirection = "column";
+            centerContainer.style.alignItems = "center";
+            centerContainer.style.gap = "20px"; // ボタンと説明の間のスペース
+            content.appendChild(centerContainer);
 
             const btnContainer = document.createElement("div");
             btnContainer.className = "quest-difficulty-list";
-            content.appendChild(btnContainer);
+            centerContainer.appendChild(btnContainer);
             
             // 難易度説明を描画するヘルパー
             function renderDiffDescription(diff) {
                 if (!diff) return;
 
                 // 既存の説明要素があれば全部削除してから再生成（重複を防ぐ）
-                const prevs = document.querySelectorAll('#questDifficultyDesc');
+                const prevs = centerContainer.querySelectorAll('#questDifficultyDesc');
                 prevs.forEach(p => p.remove());
 
                 const desc = document.createElement("div");
                 desc.id = "questDifficultyDesc";
                 desc.className = "quest-difficulty-desc";
-                desc.style.marginTop = "12px";
-                desc.style.fontSize = "0.9em";
-                desc.style.color = "#ddd";
-                content.appendChild(desc);
+                desc.style.width = "100%";
+                desc.style.maxWidth = "320px"; // 説明文の最大幅を制限して凝縮感を出す
+                centerContainer.appendChild(desc);
 
                 const e = diff.enemy || {};
                 const sb = e.scoreBonus || {};
 
-                // 整形して表示（不足する値は '-' で表示）
                 desc.innerHTML = `
                     <div style="font-weight:700; margin-bottom:6px;">${diff.name} の設定</div>
                     <br>
-                    <div>[敵関連]</div>
-                    <div>・敵出現間隔 (spawnRate): ${e.spawnRate ?? '-' } 倍</div>
-                    <div>・敵速度 (enemySpeed): ${e.enemySpeed ?? '-' } 倍</div>
-                    <div>・敵ダメージ倍率 (damageMultiplier): ${e.damageMultiplier ?? '-' } 倍</div>
-                    <div>・チェイン減衰 (chainDecay): ${e.chainDecay ?? '-' } 倍</div>
+                    <div style="font-weight: bold; margin-bottom: 4px;">[敵関連]</div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-left: 1em; text-indent: -1em;">
+                        <div style="display:flex; justify-content: space-between;"><span>・敵出現間隔 (spawnRate):</span> <span>${e.spawnRate ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・敵速度 (enemySpeed):</span> <span>${e.enemySpeed ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・敵ダメージ倍率 (damageMultiplier):</span> <span>${e.damageMultiplier ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・チェイン減衰 (chainDecay):</span> <span>${e.chainDecay ?? '-'} 倍</span></div>
+                    </div>
                     <br>
-                    <div style="margin-top:8px">[スコア関連]</div>
-                    <div>・スコア倍率 (scoreMultiplier): ${e.scoreMultiplier ?? '-' } 倍</div>
-                    <div>・クリアボーナス: +${Math.round((sb.clearBonus ?? 0)*100)}%</div>
-                    <div>・ノーミスボーナス: +${Math.round((sb.noMissBonus ?? 0)*100)}%</div>
-                    <div>・被ダメージなしボーナス: +${Math.round((sb.noDamageBonus ?? 0)*100)}%</div>
+                    <div style="font-weight: bold; margin-bottom: 4px; margin-top:8px;">[スコア関連]</div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-left: 1em; text-indent: -1em;">
+                        <div style="display:flex; justify-content: space-between;"><span>・スコア倍率 (scoreMultiplier):</span> <span>${e.scoreMultiplier ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・クリアボーナス:</span> <span>+${Math.round((sb.clearBonus ?? 0) * 100)}%</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・ノーミスボーナス:</span> <span>+${Math.round((sb.noMissBonus ?? 0) * 100)}%</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・被ダメージなしボーナス:</span> <span>+${Math.round((sb.noDamageBonus ?? 0) * 100)}%</span></div>
+                    </div>
                 `;
             }
             function update(){

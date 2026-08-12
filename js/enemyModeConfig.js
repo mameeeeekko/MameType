@@ -235,98 +235,98 @@ export const ENEMY_TIER_BALANCED = {
     T6:  [{ type: "GRAY_SQUARE_LARGE", weight: 20 }, { type: "GRAY_CIRCLE_LARGE", weight: 20 }, { type: "BLUE_CIRCLE_NORMAL_STRIPE", weight: 20 }, { type: "RED_CIRCLE_SMALL", weight: 10 }, { type: "PURPLE_SQUARE_NORMAL", weight: 15 }, { type: "PINK_SQUARE_NORMAL", weight: 15 }],
     T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 25 }, { type: "PINK_PINWHEEL_NORMAL", weight: 15 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 15 }, { type: "BLUE_SQUARE_LARGE", weight: 10 }, { type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_CIRCLE_SMALL", weight: 10 }],
     T8:  [{ type: "GRAY_PINWHEEL_LARGE_RING", weight: 5 }, { type: "GRAY_CIRCLE_LARGE_RING", weight: 5 }, { type: "RED_SQUARE_NORMAL", weight: 15 }, { type: "PURPLE_CIRCLE_LARGE", weight: 15 }, { type: "YELLOW_SQUARE_NORMAL_RING", weight: 5 }, { type: "GRAY_SQUARE_NORMAL", weight: 45 }, { type: "GRAY_SQUARE_SMALL", weight: 10 }],
-    T9:  [{ type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "RED_PINWHEEL_LARGE", weight: 15 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 10 }, { type: "GREEN_PINWHEEL_NORMAL_RING", weight: 5 }, { type: "BLUE_PINWHEEL_LARGE_STRIPE", weight: 10 }, { type: "GRAY_PINWHEEL_NORMAL", weight: 40 }, { type: "GRAY_PINWHEEL_SMALL", weight: 10 }],
-    T10: [{ type: "RED_PINWHEEL_LARGE_RING", weight: 5 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PINK_PINWHEEL_LARGE_STRIPE", weight: 15 }, { type: "PURPLE_CIRCLE_LARGE_STRIPE", weight: 15 }, { type: "BLUE_SQUARE_LARGE", weight: 15 }, { type: "GRAY_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_SMALL", weight: 10 }]
+    T9:  [{ type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "RED_PINWHEEL_LARGE", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 10 }, { type: "GREEN_CIRCLE_NORMAL_RING", weight: 15 }, { type: "BLUE_PINWHEEL_LARGE_STRIPE", weight: 5 }, { type: "GRAY_CIRCLE_NORMAL", weight: 35 }, { type: "GRAY_PINWHEEL_SMALL", weight: 10 },{ type: "GRAY_PINWHEEL_NORMAL", weight: 10 }, ],
+    T10: [{ type: "RED_PINWHEEL_LARGE_RING", weight: 5 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 5 }, { type: "GRAY_PINWHEEL_NORMAL_RING", weight: 5 }, { type: "PINK_PINWHEEL_LARGE_STRIPE", weight: 10 }, { type: "PURPLE_CIRCLE_LARGE_STRIPE", weight: 20 }, { type: "BLUE_SQUARE_LARGE", weight: 15 }, { type: "GRAY_CIRCLE_NORMAL", weight: 35 }, { type: "GRAY_CIRCLE_SMALL", weight: 10 }]
 };
 
 // --- バリエーション: 英語多め (Purpleの比率が高い) ---
 export const ENEMY_TIER_ENGLISH_HEAVY = {
     description: "英語多め（Purpleタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "PURPLE_CIRCLE_SMALL", weight: 60 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "PURPLE_PINWHEEL_SMALL", weight: 50 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "PURPLE_SQUARE_NORMAL", weight: 50 }],
-    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "PURPLE_SQUARE_SMALL_RING", weight: 10 }, { type: "PURPLE_SQUARE_NORMAL", weight: 40 }, { type: "PURPLE_CIRCLE_SMALL", weight: 10 }],
-    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "PURPLE_CIRCLE_LARGE", weight: 50 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 20 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 20 }, { type: "PURPLE_CIRCLE_LARGE_STRIPE", weight: 60 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "PURPLE_CIRCLE_LARGE_RING", weight: 50 }, { type: "PURPLE_CIRCLE_SMALL", weight: 10 }],
-    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PURPLE_PINWHEEL_LARGE_RING", weight: 50 }, { type: "PURPLE_SQUARE_SMALL", weight: 10 }],
-    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "PURPLE_PINWHEEL_LARGE_STRIPE", weight: 50 }, { type: "PURPLE_PINWHEEL_SMALL", weight: 10 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PURPLE_CIRCLE_LARGE_RING", weight: 50 }, { type: "PURPLE_CIRCLE_SMALL", weight: 10 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "GRAY_SQUARE_SMALL", weight: 10 }, { type: "PURPLE_CIRCLE_SMALL", weight: 50 }, { type: "PURPLE_SQUARE_SMALL", weight: 10 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 15 }, { type: "PURPLE_PINWHEEL_SMALL", weight: 50 }, { type: "PURPLE_CIRCLE_NORMAL", weight: 15 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 15 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "PURPLE_SQUARE_NORMAL", weight: 40 }, { type: "PURPLE_CIRCLE_NORMAL_STRIPE", weight: 20 }],
+    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "PURPLE_SQUARE_SMALL_RING", weight: 10 }, { type: "PURPLE_SQUARE_NORMAL", weight: 40 }, { type: "PURPLE_PINWHEEL_SMALL", weight: 20 }],
+    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "PURPLE_CIRCLE_LARGE", weight: 40 }, { type: "PURPLE_PINWHEEL_NORMAL", weight: 20 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 15 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 15 }, { type: "PURPLE_CIRCLE_LARGE_STRIPE", weight: 50 }, { type: "PURPLE_SQUARE_LARGE", weight: 20 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 15 }, { type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "PURPLE_CIRCLE_LARGE_RING", weight: 40 }, { type: "PURPLE_PINWHEEL_NORMAL_STRIPE", weight: 30 }],
+    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PURPLE_PINWHEEL_LARGE_RING", weight: 30 }, { type: "PURPLE_CIRCLE_NORMAL_RING", weight: 30 }, { type: "PURPLE_SQUARE_LARGE", weight: 10 }],
+    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 10 }, { type: "PURPLE_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "PURPLE_PINWHEEL_LARGE_STRIPE", weight: 20 }, { type: "PURPLE_SQUARE_LARGE_RING", weight: 15 }, { type: "PURPLE_SQUARE_NORMAL", weight: 10 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 5 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PURPLE_CIRCLE_LARGE_RING", weight: 35 }, { type: "PURPLE_PINWHEEL_LARGE_RING", weight: 20 }, { type: "PURPLE_SQUARE_NORMAL_STRIPE", weight: 10 }, { type: "PURPLE_PINWHEEL_NORMAL", weight: 10 }]
 };
 
 // --- バリエーション: 記号多め (Redの比率が高い) ---
 export const ENEMY_TIER_SYMBOL_HEAVY = {
     description: "記号多め（Redタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 50 }, { type: "RED_CIRCLE_SMALL", weight: 50 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "RED_PINWHEEL_SMALL", weight: 50 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "RED_SQUARE_NORMAL", weight: 50 }],
-    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "RED_CIRCLE_NORMAL", weight: 50 }, { type: "RED_CIRCLE_SMALL", weight: 10 }],
-    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "RED_PINWHEEL_LARGE", weight: 50 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 20 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 20 }, { type: "RED_PINWHEEL_LARGE_STRIPE", weight: 60 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 50 }, { type: "RED_CIRCLE_SMALL", weight: 10 }],
-    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "RED_CIRCLE_LARGE_RING", weight: 50 }, { type: "RED_SQUARE_SMALL", weight: 10 }],
-    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 50 }, { type: "RED_PINWHEEL_SMALL", weight: 10 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 60 }, { type: "RED_CIRCLE_SMALL", weight: 10 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "GRAY_SQUARE_SMALL", weight: 10 }, { type: "RED_CIRCLE_SMALL", weight: 50 }, { type: "RED_SQUARE_SMALL", weight: 10 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 15 }, { type: "RED_PINWHEEL_SMALL", weight: 50 }, { type: "RED_CIRCLE_NORMAL", weight: 15 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 15 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "RED_SQUARE_NORMAL", weight: 40 }, { type: "RED_CIRCLE_NORMAL_STRIPE", weight: 20 }],
+    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "RED_SQUARE_SMALL_RING", weight: 10 }, { type: "RED_SQUARE_NORMAL", weight: 40 }, { type: "RED_PINWHEEL_SMALL", weight: 20 }],
+    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "RED_PINWHEEL_LARGE", weight: 40 }, { type: "RED_CIRCLE_NORMAL", weight: 20 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 15 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 15 }, { type: "RED_PINWHEEL_LARGE_STRIPE", weight: 50 }, { type: "RED_SQUARE_LARGE", weight: 20 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 15 }, { type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 40 }, { type: "RED_CIRCLE_NORMAL_STRIPE", weight: 30 }],
+    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "RED_CIRCLE_LARGE_RING", weight: 30 }, { type: "RED_SQUARE_NORMAL_RING", weight: 30 }, { type: "RED_SQUARE_LARGE", weight: 10 }],
+    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 10 }, { type: "RED_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "RED_PINWHEEL_LARGE_STRIPE", weight: 25 }, { type: "RED_CIRCLE_LARGE_RING", weight: 15 }, { type: "RED_CIRCLE_NORMAL", weight: 10 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "RED_PINWHEEL_LARGE_RING", weight: 35 }, { type: "RED_SQUARE_LARGE_RING", weight: 20 }, { type: "RED_SQUARE_NORMAL_STRIPE", weight: 10 }, { type: "RED_PINWHEEL_NORMAL", weight: 10 }]
 };
 
 // --- バリエーション: 擬音多め (Pinkの比率が高い) ---
 export const ENEMY_TIER_ONOMATOPOEIA_HEAVY = {
     description: "擬音多め（Pinkタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "PINK_SQUARE_SMALL", weight: 60 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "PINK_PINWHEEL_SMALL", weight: 50 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "PINK_CIRCLE_NORMAL", weight: 50 }],
-    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "PINK_SQUARE_NORMAL", weight: 50 }, { type: "PINK_SQUARE_SMALL", weight: 10 }],
-    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "PINK_PINWHEEL_LARGE", weight: 50 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 20 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 20 }, { type: "PINK_PINWHEEL_LARGE_STRIPE", weight: 60 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 50 }, { type: "PINK_CIRCLE_SMALL", weight: 10 }],
-    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PINK_CIRCLE_LARGE_RING", weight: 50 }, { type: "PINK_SQUARE_SMALL", weight: 10 }],
-    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 50 }, { type: "PINK_PINWHEEL_SMALL", weight: 10 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 50 }, { type: "PINK_CIRCLE_SMALL", weight: 10 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "GRAY_SQUARE_SMALL", weight: 10 }, { type: "PINK_SQUARE_SMALL", weight: 50 }, { type: "PINK_CIRCLE_SMALL", weight: 10 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 15 }, { type: "PINK_PINWHEEL_SMALL", weight: 50 }, { type: "PINK_SQUARE_NORMAL", weight: 15 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 15 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "PINK_CIRCLE_NORMAL", weight: 40 }, { type: "PINK_SQUARE_NORMAL_STRIPE", weight: 20 }],
+    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "PINK_SQUARE_SMALL_RING", weight: 10 }, { type: "PINK_SQUARE_NORMAL", weight: 40 }, { type: "PINK_CIRCLE_SMALL", weight: 20 }],
+    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "PINK_PINWHEEL_LARGE", weight: 40 }, { type: "PINK_CIRCLE_NORMAL", weight: 20 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 15 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 15 }, { type: "PINK_PINWHEEL_LARGE_STRIPE", weight: 50 }, { type: "PINK_CIRCLE_LARGE", weight: 20 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 15 }, { type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 40 }, { type: "PINK_CIRCLE_NORMAL_STRIPE", weight: 30 }],
+    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PINK_CIRCLE_LARGE_RING", weight: 30 }, { type: "PINK_SQUARE_NORMAL_RING", weight: 30 }, { type: "PINK_CIRCLE_LARGE", weight: 10 }],
+    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 10 }, { type: "PINK_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "PINK_PINWHEEL_LARGE_STRIPE", weight: 25 }, { type: "PINK_CIRCLE_LARGE_RING", weight: 15 }, { type: "PINK_SQUARE_NORMAL", weight: 10 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "PINK_PINWHEEL_LARGE_RING", weight: 35 }, { type: "PINK_CIRCLE_LARGE_RING", weight: 20 }, { type: "PINK_SQUARE_NORMAL_STRIPE", weight: 10 }, { type: "PINK_PINWHEEL_NORMAL", weight: 10 }]
 };
 
 // --- バリエーション: 句読点多め (Greenの比率が高い) ---
 export const ENEMY_TIER_PUNCTUATION_HEAVY = {
     description: "句読点多め（Greenタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "GREEN_SQUARE_SMALL", weight: 60 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "GREEN_PINWHEEL_SMALL", weight: 50 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GREEN_PINWHEEL_NORMAL", weight: 50 }],
-    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "GREEN_SQUARE_NORMAL", weight: 50 }, { type: "GREEN_SQUARE_SMALL", weight: 10 }],
-    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GREEN_CIRCLE_LARGE", weight: 50 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 20 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 20 }, { type: "GREEN_CIRCLE_LARGE_STRIPE", weight: 60 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 50 }, { type: "GREEN_CIRCLE_SMALL", weight: 10 }],
-    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "GREEN_PINWHEEL_LARGE_RING", weight: 50 }, { type: "GREEN_SQUARE_SMALL", weight: 10 }],
-    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 50 }, { type: "GREEN_PINWHEEL_SMALL", weight: 10 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 50 }, { type: "GREEN_CIRCLE_SMALL", weight: 10 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "GRAY_SQUARE_SMALL", weight: 10 }, { type: "GREEN_SQUARE_SMALL", weight: 50 }, { type: "GREEN_CIRCLE_SMALL", weight: 10 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 15 }, { type: "GREEN_PINWHEEL_SMALL", weight: 50 }, { type: "GREEN_SQUARE_NORMAL", weight: 15 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 15 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "GREEN_PINWHEEL_NORMAL", weight: 40 }, { type: "GREEN_CIRCLE_NORMAL_STRIPE", weight: 20 }],
+    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "GREEN_SQUARE_SMALL_RING", weight: 10 }, { type: "GREEN_SQUARE_NORMAL", weight: 40 }, { type: "GREEN_PINWHEEL_SMALL", weight: 20 }],
+    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GREEN_CIRCLE_LARGE", weight: 40 }, { type: "GREEN_PINWHEEL_NORMAL", weight: 20 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 15 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 15 }, { type: "GREEN_CIRCLE_LARGE_STRIPE", weight: 50 }, { type: "GREEN_SQUARE_LARGE", weight: 20 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 15 }, { type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 40 }, { type: "GREEN_PINWHEEL_NORMAL_STRIPE", weight: 30 }],
+    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "GREEN_PINWHEEL_LARGE_RING", weight: 30 }, { type: "GREEN_SQUARE_NORMAL_RING", weight: 30 }, { type: "GREEN_CIRCLE_LARGE", weight: 10 }],
+    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 10 }, { type: "GREEN_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "GREEN_CIRCLE_LARGE_STRIPE", weight: 25 }, { type: "GREEN_PINWHEEL_LARGE_RING", weight: 15 }, { type: "GREEN_CIRCLE_NORMAL", weight: 10 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "GREEN_CIRCLE_LARGE_RING", weight: 35 }, { type: "GREEN_SQUARE_LARGE_RING", weight: 20 }, { type: "GREEN_SQUARE_NORMAL_STRIPE", weight: 10 }, { type: "GREEN_PINWHEEL_NORMAL", weight: 10 }]
 };
 
 // --- バリエーション: 促音多め (Blueの比率が高い) ---
 export const ENEMY_TIER_SOKUON_HEAVY = {
     description: "促音多め（Blueタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "BLUE_PINWHEEL_SMALL", weight: 60 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 25 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 25 }, { type: "BLUE_CIRCLE_NORMAL", weight: 50 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "BLUE_CIRCLE_NORMAL_STRIPE", weight: 50 }],
-    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "BLUE_CIRCLE_NORMAL_RING", weight: 50 }, { type: "BLUE_CIRCLE_SMALL", weight: 10 }],
-    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "BLUE_SQUARE_LARGE", weight: 50 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 20 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 20 }, { type: "BLUE_SQUARE_LARGE_STRIPE", weight: 60 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "BLUE_PINWHEEL_LARGE", weight: 50 }, { type: "BLUE_CIRCLE_SMALL", weight: 10 }],
-    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 50 }, { type: "BLUE_SQUARE_SMALL", weight: 10 }],
-    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 50 }, { type: "BLUE_PINWHEEL_SMALL", weight: 10 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 50 }, { type: "BLUE_CIRCLE_SMALL", weight: 10 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "GRAY_PINWHEEL_SMALL", weight: 10 }, { type: "BLUE_PINWHEEL_SMALL", weight: 50 }, { type: "BLUE_CIRCLE_SMALL", weight: 10 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 15 }, { type: "BLUE_CIRCLE_NORMAL", weight: 50 }, { type: "BLUE_PINWHEEL_NORMAL", weight: 15 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 15 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "BLUE_CIRCLE_NORMAL_STRIPE", weight: 40 }, { type: "BLUE_SQUARE_NORMAL", weight: 20 }],
+    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "BLUE_CIRCLE_NORMAL_RING", weight: 40 }, { type: "BLUE_PINWHEEL_NORMAL", weight: 30 }],
+    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "BLUE_SQUARE_LARGE", weight: 40 }, { type: "BLUE_CIRCLE_NORMAL_STRIPE", weight: 20 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 15 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 15 }, { type: "BLUE_SQUARE_LARGE_STRIPE", weight: 50 }, { type: "BLUE_CIRCLE_LARGE", weight: 20 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 15 }, { type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "BLUE_PINWHEEL_LARGE", weight: 40 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 30 }],
+    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 30 }, { type: "BLUE_CIRCLE_LARGE_RING", weight: 30 }, { type: "BLUE_PINWHEEL_LARGE", weight: 10 }],
+    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 10 }, { type: "BLUE_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_STRIPE", weight: 25 }, { type: "BLUE_PINWHEEL_LARGE_RING", weight: 15 }, { type: "BLUE_CIRCLE_NORMAL", weight: 10 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "BLUE_SQUARE_LARGE_RING", weight: 35 }, { type: "BLUE_CIRCLE_LARGE_RING", weight: 20 }, { type: "BLUE_SQUARE_NORMAL_STRIPE", weight: 10 }, { type: "BLUE_PINWHEEL_NORMAL", weight: 10 }]
 };
 
 // --- バリエーション: ことわざ多め (Yellowの比率が高い) ---
 export const ENEMY_TIER_PROVERB_HEAVY = {
     description: "ことわざ多め（Yellowタイプ混成）",
-    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 40 }, { type: "YELLOW_CIRCLE_SMALL", weight: 60 }],
-    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 20 }, { type: "YELLOW_PINWHEEL_SMALL", weight: 20 },{ type: "YELLOW_CIRCLE_SMALL", weight: 40 }],
-    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 50 }],
-    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE", weight: 50 }, { type: "YELLOW_CIRCLE_SMALL", weight: 10 }],
-    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 30 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "YELLOW_CIRCLE_LARGE", weight: 50 }],
-    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 20 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 20 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 60 }],
-    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "YELLOW_PINWHEEL_LARGE", weight: 50 }, { type: "YELLOW_CIRCLE_SMALL", weight: 10 }],
-    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 50 }, { type: "YELLOW_SQUARE_SMALL", weight: 10 }],
-    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 50 }, { type: "YELLOW_PINWHEEL_SMALL", weight: 10 }],
-    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 30 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 50 }, { type: "YELLOW_CIRCLE_SMALL", weight: 10 }]
+    T1:  [{ type: "GRAY_CIRCLE_SMALL", weight: 30 }, { type: "GRAY_SQUARE_SMALL", weight: 10 }, { type: "YELLOW_CIRCLE_NORMAL", weight: 50 }, { type: "YELLOW_SQUARE_NORMAL", weight: 10 }],
+    T2:  [{ type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "GRAY_SQUARE_SMALL_STRIPE", weight: 15 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 50 }, { type: "YELLOW_CIRCLE_NORMAL", weight: 15 }],
+    T3:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 15 }, { type: "GRAY_SQUARE_NORMAL", weight: 25 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 40 }, { type: "YELLOW_SQUARE_NORMAL_STRIPE", weight: 20 }],
+    T4:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL_RING", weight: 10 }, { type: "YELLOW_SQUARE_NORMAL_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE", weight: 40 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 20 }],
+    T5:  [{ type: "GRAY_SQUARE_NORMAL_STRIPE", weight: 20 }, { type: "GRAY_CIRCLE_NORMAL", weight: 20 }, { type: "YELLOW_CIRCLE_LARGE", weight: 40 }, { type: "YELLOW_SQUARE_NORMAL", weight: 20 }],
+    T6:  [{ type: "GRAY_PINWHEEL_NORMAL_RING", weight: 15 }, { type: "GRAY_SQUARE_NORMAL_RING", weight: 15 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 50 }, { type: "YELLOW_CIRCLE_LARGE", weight: 20 }],
+    T7:  [{ type: "GRAY_PINWHEEL_LARGE", weight: 15 }, { type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "YELLOW_PINWHEEL_LARGE", weight: 40 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 30 }],
+    T8:  [{ type: "GRAY_SQUARE_NORMAL", weight: 20 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 30 }, { type: "YELLOW_CIRCLE_LARGE_RING", weight: 30 }, { type: "YELLOW_PINWHEEL_LARGE", weight: 10 }],
+    T9:  [{ type: "GRAY_PINWHEEL_NORMAL", weight: 10 }, { type: "YELLOW_SQUARE_NORMAL", weight: 30 }, { type: "GRAY_SQUARE_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_STRIPE", weight: 25 }, { type: "YELLOW_PINWHEEL_LARGE_RING", weight: 15 }, { type: "YELLOW_CIRCLE_NORMAL", weight: 10 }],
+    T10: [{ type: "GRAY_CIRCLE_NORMAL", weight: 15 }, { type: "GRAY_PINWHEEL_LARGE_RING", weight: 10 }, { type: "YELLOW_SQUARE_LARGE_RING", weight: 35 }, { type: "YELLOW_CIRCLE_LARGE_RING", weight: 20 }, { type: "YELLOW_SQUARE_NORMAL_STRIPE", weight: 10 }, { type: "YELLOW_PINWHEEL_NORMAL", weight: 10 }]
 };
 
 // --- バリエーション: 標準（Gray）のみ ---
@@ -643,10 +643,14 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             // スター：タイピング速度(KPM) または クリア時間
             if (Math.random() > 0.5) {
                 config.star = {
-                    type: "typingSpeed",
-                    thresholds: [
-                        60 + (i * 0.8), 90 + (i * 1.0), 120 + (i * 1.2), 150 + (i * 1.4), 180 + (i * 1.6)
-                    ]
+                  type: "typingSpeed",
+                  thresholds: [ // 圧倒も厳しかったため緩和
+                      80 + (i * 0.5), // 精密射撃も緩和
+                      100 + (i * 0.5),
+                      130 + (i * 0.5),
+                      150 + (i * 0.5),
+                      170 + (i * 0.5)
+                  ]
                 };
             } else {
                 // 最小スポーン時間 ＋ 最後の敵を倒すための猶予
@@ -719,32 +723,42 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
                 const minPossibleTime = minSpawnTime + typingBuffer;
                 const baseTime = Math.max(minPossibleTime + 10000, spawnLimit * 4000);
 
+                // ★★★ 修正: 最低保証時間(minPossibleTime)を基準に、段階的に目標時間を設定する
+                // これにより、ステージが進んでも目標タイムが適切にスケールするようになります。
                 config.star = {
                     type: "clearTime",
                     thresholds: [
-                        baseTime, baseTime * 0.8, baseTime * 0.7, baseTime * 0.6, baseTime * 0.5
-                    ].map(t => Math.max(minPossibleTime, t)) // 最低保証時間を適用
+                        // [★1, ★2, ★3, ★4, ★5] の目標タイム (ms)
+                        minPossibleTime + 15000, minPossibleTime + 10000, minPossibleTime + 6000, minPossibleTime + 3000, minPossibleTime + 1000
+                    ]
                 };
             }
             break;
 
         case 3: // 【電撃戦】極めて短い制限時間内に指定数撃破
-            const blitzTime = Math.max(15000, 25000 + (i * 100)); // 非常にタイトな時間
-            config.spawn.interval *= 0.7; // 敵がどんどん出る
-            config.endConditions = { hpZero: true, timerMs: blitzTime, killCount: killGoal };
-            config.clearConditions = { killCount: killGoal };
+            const blitzTime = Math.max(30000, 25000 + (i * 250)); // 制限時間を少し緩和 (25s -> 30sベース)
+            const blitzKillGoal = Math.floor(killGoal * 0.6); // 討伐目標を基本の8割に緩和
+            config.spawn.interval *= 0.8; // 敵がどんどん出る
+            config.endConditions = { hpZero: true, timerMs: blitzTime, killCount: blitzKillGoal };
+            config.clearConditions = { killCount: blitzKillGoal };
             config.spawn.immediateOnClear = true;
             
-            // スター：残り時間率(timeRemaining) 
+            // ★スター評価基準を「残り時間」から「タイピング速度」に変更
             config.star = {
-                type: "timeRemaining",
-                thresholds: [0.1, 0.25, 0.4, 0.6, 0.75]
+                type: "typingSpeed",
+                thresholds: [ // 圧倒も厳しかったため緩和
+                    80 + (i * 0.5), // 精密射撃も緩和
+                    100 + (i * 0.5),
+                    130 + (i * 0.5),
+                    150 + (i * 0.5),
+                    170 + (i * 0.5)
+                ]
             };
             break;
 
         case 4: // 【精密防衛】高密度サバイバル
-            config.spawn.maxAlive += 3; // 増加量を抑制
-            config.spawn.interval *= 0.6;
+            config.spawn.maxAlive += 2; // 増加量を抑制
+            config.spawn.interval *= 0.8;
             config.endConditions = { hpZero: true, timerMs: timeLimit * 0.8 };
             config.clearConditions = { survive: true };
 
@@ -754,9 +768,9 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
                 thresholds: [
                     0.4, 
                     0.6, 
-                    0.75, 
-                    0.85, 
-                    0.95
+                    0.7, 
+                    0.8, 
+                    0.9,
                 ]
             };
             break;
@@ -786,8 +800,12 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             } else {
                 config.star = {
                     type: "typingSpeed",
-                    thresholds: [ // タイムアタックは特に厳しかったため大幅緩和
-                        70 + (i * 1.0), 100 + (i * 1.2), 130 + (i * 1.4), 160 + (i * 1.6), 190 + (i * 1.8)
+                    thresholds: [ // 圧倒も厳しかったため緩和
+                        80 + (i * 0.5), // 精密射撃も緩和
+                        100 + (i * 0.5),
+                        130 + (i * 0.5),
+                        150 + (i * 0.5),
+                        170 + (i * 0.5)
                     ]
                 };
             }
@@ -833,11 +851,11 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.star = {
                 type: "typingSpeed",
                 thresholds: [ // 圧倒も厳しかったため緩和
-                    60 + (i * 1.2),
-                    90 + (i * 1.3),
-                    120 + (i * 1.4),
-                    150 + (i * 1.5),
-                    180 + (i * 1.6)
+                    80 + (i * 0.5), // 精密射撃も緩和
+                    100 + (i * 0.5),
+                    130 + (i * 0.5),
+                    150 + (i * 0.5),
+                    170 + (i * 0.5)
                 ]
             };
             break;
@@ -869,11 +887,11 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             config.star = {
                 type: "typingSpeed",
                 thresholds: [
-                    60 + (i * 1.2), // 精密射撃も緩和
-                    90 + (i * 1.3),
-                    120 + (i * 1.4),
-                    150 + (i * 1.5),
-                    180 + (i * 1.6)
+                    80 + (i * 0.5), // 精密射撃も緩和
+                    100 + (i * 0.5),
+                    130 + (i * 0.5),
+                    150 + (i * 0.5),
+                    170 + (i * 0.5)
                 ]
             };
             break;

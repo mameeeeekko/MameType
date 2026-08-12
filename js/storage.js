@@ -37,10 +37,9 @@ function ensureModeFlags(record) {
 // ============================================
 export function addRecord(record) {
   const records = loadRecords();
-
   if (!record.id) record.id = crypto.randomUUID();
   ensureModeFlags(record);
-
+  
   records.push(record);
 
   const mode = record.mode;
@@ -70,8 +69,7 @@ export function addRecord(record) {
   }
 
   localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
-  // ★ IDが付与されたレコードを返す
-  return record;
+  return { record, records }; // ★ 更新されたrecords配列も返す
 }
 
 
@@ -219,9 +217,8 @@ export function syncRankingProtection() {
 export function addRankingEntry(entry) {
 
   const mode = entry.mode;
-  // ★ addRecordを呼び出し、IDが付与されたレコードオブジェクトを取得
-  const rec = addRecord(entry);
-  const records = loadRecords();
+  // ★ addRecordから更新されたレコードとレコード配列全体を受け取る
+  const { record: rec, records } = addRecord(entry);
 
   let ranking = loadRanking(mode);
 

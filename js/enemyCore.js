@@ -328,8 +328,9 @@ function gameLoop(timestamp) {
     }
 
     const isPureEnemyMode =
-        gameState.mode === GameModes.ENEMY_MODE &&
-        !gameState.currentQuestNode;
+      gameState.mode === GameModes.ENEMY_MODE &&
+      !gameState.currentQuestNode &&
+      !gameState.isFreeMode; // フリーモードのボス戦でもUIを表示するため、isFreeModeでないことを条件に追加
 
     // プレイヤー無敵タイマーの減算
     if (gameState.player && gameState.player.invincibleTimer > 0) {
@@ -599,11 +600,19 @@ function gameLoop(timestamp) {
         timerStarted ? enemyStartTime : null 
     );
 
-    if (!isPureEnemyMode) {
+        // Render Active Skill UI only in Quest Mode
+    if (gameState.isQuestMode) {
         renderActiveSkillUI(ctx, gameState, canvas);
-        renderActiveAttackUI(ctx, player, enemies, lockedEnemy, candidateEnemies);
-        renderSystemMessage(ctx, gameState, canvas);
     }
+
+    // Render Active Attack UI (defense typing) if any enemy has an active attack
+    // This covers both Quest Boss and Free Boss if activeAttack is a boss-only feature
+    if (enemies.some(en => en.activeAttack)) {
+        renderActiveAttackUI(ctx, player, enemies, lockedEnemy, candidateEnemies);
+    }
+
+    // Render general system messages
+    renderSystemMessage(ctx, gameState, canvas);
 
     renderPhaseWarning(ctx, stats, canvas);
   
@@ -1736,59 +1745,91 @@ export async function startEnemyMode(config = {}) {
     const custom = config.customConditions || {};
 
     if (config.isFreeMode) {
-        const firstPhase = (baseStage.phases && baseStage.phases[0]) ? baseStage.phases[0] : {};
+        // Boss-onlyモードが要求されている場合は、ベースステージの最終フェーズ（ボスフェーズ）または
+        // 選択されたフェーズだけを取り出して単一フェーズのステージとして扱う。
+        if (config.bossOnly && baseStage && Array.isArray(baseStage.phases) && baseStage.phases.length > 0) {
+            const bossPhaseIndex = (config.bossPhaseIndex !== undefined && config.bossPhaseIndex !== null)
+                ? config.bossPhaseIndex
+                : (baseStage.phases.length - 1);
 
-        // 1. DAILYの設定を継承しつつ、フェーズ構造をフラット化
-        stage = { ...baseStage, ...firstPhase };
+            const bossPhase = baseStage.phases[Math.max(0, Math.min(baseStage.phases.length - 1, bossPhaseIndex))] || baseStage.phases[baseStage.phases.length - 1];
 
-        // 2. ルール設定に関わるプロパティを一旦すべて物理的に削除する
-        // これにより「TimeAttack」設定などが残存するのを完全に防ぐ
-        delete stage.phases;
-        delete stage.phaseConditions;
-        delete stage.endConditions;
-        delete stage.clearConditions;
+            // ベースのステージ情報を踏襲しつつ、ボスフェーズの設定を優先して単一フェーズ化する
+            stage = { ...baseStage, ...bossPhase };
+            // 不要なフェーズ配列やフェーズ条件は削除
+            delete stage.phases;
+            delete stage.phaseConditions;
 
-        // 3. ゼロから終了条件を構築する（マージではなく完全新規作成）
-        stage.endConditions = {
-            hpZero: true,
-            timerMs: custom.endConditions?.timerMs !== undefined ? custom.endConditions.timerMs : null,
-            killCount: custom.endConditions?.killCount !== undefined ? custom.endConditions.killCount : null,
-            failOnMiss: custom.endConditions?.failOnMiss === true
-        };
+            // スポーンはボスフェーズのものを使う（fallbackでbaseStage.spawn）
+            stage.spawn = { ...(baseStage.spawn || {}), ...(bossPhase.spawn || {}), ...(custom.spawn || {}) };
+            stage.enemyTable = bossPhase.enemyTable || stage.enemyTable || baseStage.enemyTable;
 
-        stage.clearConditions = {
-            timerMs: custom.clearConditions?.timerMs !== undefined ? custom.clearConditions.timerMs : null,
-            killCount: custom.clearConditions?.killCount !== undefined ? custom.clearConditions.killCount : null,
-            endless: !!custom.clearConditions?.endless
-        };
+            // ボス戦では「ボスを倒す」ことのみをクリア条件にする
+            const bossKill = bossPhase.phaseConditions?.killCount ?? bossPhase.phaseConditions?.killcount ?? 1;
+            stage.endConditions = { hpZero: true };
+            stage.clearConditions = { killCount: bossKill };
 
-        // 4. スポーン設定のマージ
-        stage.spawn = {
-            ...(baseStage.spawn || {}),
-            ...(firstPhase.spawn || {}),
-            ...(custom.spawn || {}),
-        };
+            // ボスは1体出現する想定なので出現上限を1にする（未設定なら1を割り当て）
+            if (!stage.spawn) stage.spawn = {};
+            stage.spawn.limit = stage.spawn.limit ?? 1;
+            stage.spawn.maxAlive = stage.spawn.maxAlive ?? 1;
 
-        // main.jsから直接渡されたenemyTableを優先的に適用
-        if (config.enemyTable) {
-            stage.enemyTable = config.enemyTable;
+            console.log("FREE MODE BOSS-ONLY: Applied boss phase", { stageId: currentStage, bossPhaseIndex });
+        } else {
+            const firstPhase = (baseStage.phases && baseStage.phases[0]) ? baseStage.phases[0] : {};
+
+            // 1. DAILYの設定を継承しつつ、フェーズ構造をフラット化
+            stage = { ...baseStage, ...firstPhase };
+
+            // 2. ルール設定に関わるプロパティを一旦すべて物理的に削除する
+            // これにより「TimeAttack」設定などが残存するのを完全に防ぐ
+            delete stage.phases;
+            delete stage.phaseConditions;
+            delete stage.endConditions;
+            delete stage.clearConditions;
+
+            // 3. ゼロから終了条件を構築する（マージではなく完全新規作成）
+            stage.endConditions = {
+                hpZero: true,
+                timerMs: custom.endConditions?.timerMs !== undefined ? custom.endConditions.timerMs : null,
+                killCount: custom.endConditions?.killCount !== undefined ? custom.endConditions.killCount : null,
+                failOnMiss: custom.endConditions?.failOnMiss === true
+            };
+
+            stage.clearConditions = {
+                timerMs: custom.clearConditions?.timerMs !== undefined ? custom.clearConditions.timerMs : null,
+                killCount: custom.clearConditions?.killCount !== undefined ? custom.clearConditions.clearCount : custom.clearConditions?.killCount ?? null,
+                endless: !!custom.clearConditions?.endless
+            };
+
+            // 4. スポーン設定のマージ
+            stage.spawn = {
+                ...(baseStage.spawn || {}),
+                ...(firstPhase.spawn || {}),
+                ...(custom.spawn || {}),
+            };
+
+            // main.jsから直接渡されたenemyTableを優先的に適用
+            if (config.enemyTable) {
+                stage.enemyTable = config.enemyTable;
+            }
+
+            // 難易度計算やログ表示のためにTier情報を保存
+            if (custom.spawn?.tier) {
+                stage.spawn.tier = custom.spawn.tier;
+            }
+
+            // 5. フリーモードでは、討伐目標の有無に関わらず出現数自体は制限せず無限に出現させる
+            stage.spawn.limit = null; 
+
+            console.log("FREE MODE: MODE APPLIED", {
+                mode: stage.clearConditions.endless ? "endless" : (stage.clearConditions.killCount ? "count" : "time"),
+                timer: stage.endConditions.timerMs,
+                kill: stage.clearConditions.killCount,
+                tier: stage.spawn.tier,
+                enemyTypes: custom.spawn?.enemyList
+            });
         }
-
-        // 難易度計算やログ表示のためにTier情報を保存
-        if (custom.spawn?.tier) {
-            stage.spawn.tier = custom.spawn.tier;
-        }
-
-        // 5. フリーモードでは、討伐目標の有無に関わらず出現数自体は制限せず無限に出現させる
-        stage.spawn.limit = null; 
-
-        console.log("FREE MODE: MODE APPLIED", {
-            mode: stage.clearConditions.endless ? "endless" : (stage.clearConditions.killCount ? "count" : "time"),
-            timer: stage.endConditions.timerMs,
-            kill: stage.clearConditions.killCount,
-            tier: stage.spawn.tier,
-            enemyTypes: custom.spawn?.enemyList
-        });
     } else if (config.customConditions) {
         // クエスト等の通常カスタム
         stage = { ...stage, ...custom };

@@ -138,14 +138,14 @@ export function getDifficultyDescription(diff, mode) {
 `;
     }
 
-    if (mode === "enemy") {
+        if (mode === "enemy") {
 
-      return `
-敵出現間隔 ${(diff.enemy.spawnRate * 100).toFixed(0)}%  / 敵速度 ${(diff.enemy.enemySpeed * 100).toFixed(0)}%  / 被ダメージ ${(diff.enemy.damageMultiplier * 100).toFixed(0)}%  / Chain減衰 ${(diff.enemy.chainDecay * 100).toFixed(0)}%  / Score ×${diff.enemy.scoreMultiplier.toFixed(1)}
+          return `
+          敵出現間隔 ${(diff.enemy.spawnRate * 100).toFixed(0)}%  / 敵速度 ${(diff.enemy.enemySpeed * 100).toFixed(0)}%  / 被ダメージ ${(diff.enemy.damageMultiplier * 100).toFixed(0)}%  / Chain減衰 ${(diff.enemy.chainDecay * 100).toFixed(0)}%  / Score ×${diff.enemy.scoreMultiplier.toFixed(1)}
 
-CLEAR +${(diff.enemy.scoreBonus.clearBonus * 100).toFixed(0)}%  / NO MISS +${(diff.enemy.scoreBonus.noMissBonus * 100).toFixed(0)}%  / NO DMG +${(diff.enemy.scoreBonus.noDamageBonus * 100).toFixed(0)}%
-`;
-    }
+          CLEAR +${(diff.enemy.scoreBonus.clearBonus * 100).toFixed(0)}%  / NO MISS +${(diff.enemy.scoreBonus.noMissBonus * 100).toFixed(0)}%  / NO DMG +${(diff.enemy.scoreBonus.noDamageBonus * 100).toFixed(0)}%
+          `;
+        }
 
-    return "";
-}
+          return "";
+  }

@@ -12,6 +12,8 @@ const DEFAULT_PROGRESS = {
     playedChoices: {}, // { choiceId: [index1, index2] }
     // 初回全クリ特典を表示済みかどうか
     hasShownFirstFullClearReward: false,
+    // ボスチャレンジモードのアンロック
+    hasBossChallengeUnlocked: false,
 };
 
 let progress = load(); // 初期ロード
@@ -83,6 +85,7 @@ export function reloadQuestProgress() {
     playedChoices: data.playedChoices ?? {},
         hasSeenTrueEnding: data.hasSeenTrueEnding || false,
         hasShownFirstFullClearReward: data.hasShownFirstFullClearReward || false,
+        hasBossChallengeUnlocked: data.hasBossChallengeUnlocked || false,
   };// ←これが重要
   return progress;
 }
@@ -201,6 +204,17 @@ export function markFirstFullClearRewardShown() {
 
 export function hasShownFirstFullClearReward() {
     return !!progress.hasShownFirstFullClearReward;
+}
+
+export function markBossChallengeUnlocked() {
+    if (progress) {
+        progress.hasBossChallengeUnlocked = true;
+    }
+    save();
+}
+
+export function hasBossChallengeUnlocked() {
+    return !!progress.hasBossChallengeUnlocked || !!progress.hasSeenTrueEnding;
 }
 
 function save(){

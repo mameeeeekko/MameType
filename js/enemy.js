@@ -53,9 +53,9 @@ const COLOR_PROPS = {
 };
 
 const SHAPE_PROPS = {
-    PINWHEEL: { name: "Pinwheel", shape: "pinwheel", speed: 1.0, rotationSpeed: 0.05, scoreMultiplier: 1.5 },
-    CIRCLE:   { name: "Circle",   shape: "circle",   speed: 0.8, rotationSpeed: 0.02, scoreMultiplier: 1.0 },
-    SQUARE:   { name: "Square",   shape: "square",   speed: 0.4, rotationSpeed: 0.01, scoreMultiplier: 0.7 },
+    PINWHEEL: { name: "Pinwheel", shape: "pinwheel", speed: 0.7, rotationSpeed: 0.05, scoreMultiplier: 1.5 },
+    CIRCLE:   { name: "Circle",   shape: "circle",   speed: 0.5, rotationSpeed: 0.02, scoreMultiplier: 1.0 },
+    SQUARE:   { name: "Square",   shape: "square",   speed: 0.35, rotationSpeed: 0.01, scoreMultiplier: 0.7 },
 };
 
 const SIZE_PROPS = {

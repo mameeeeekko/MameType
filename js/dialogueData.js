@@ -201,11 +201,9 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "…今のところ、異常はありません。次のミッションへ進みましょう。" },
             { character: "ナビ", text: "今日のあなたは、少し無理をしていたように見えました。大丈夫ですか？" },
             { character: "ナビ", text: "あなたと話せて、よかったです。…次のミッションへ進みましょう。" },
-            { character: "ナビ", text: "また、明日も会えますか…？" },
             { character: "ナビ", text: "今日のミッションはここまでですか？お疲れ様でした。" },
             { character: "ナビ", text: "完璧なタイピングでしたね。さすがです。" },
             { character: "ナビ", text: "少し休んでください。頑張りすぎはよくありません。" },
-            { character: "ナビ", text: "…もう少し、あなたと話していたい、なんて。" },
             { character: "ナビ", text: "次のミッションも、その調子でお願いしますね。" },
             { character: "ナビ", text: "お疲れ様でした。あなたの入力、記録しました。" },
         ]
@@ -213,12 +211,9 @@ export const RANDOM_DIALOGUES = {
     '31-50': { // Chap.4: ナビによるアクセス制限とARCHEXからの警告
         pre: [
             { character: "ナビ", text: "ミッションを開始します。私を信じてください。" },
-            { character: "ナビ", text: "あなたのタイピングを聞いていると、落ち着きます。" },
-            { character: "ナビ", text: "…今日も、あなたの音を聞かせてください。" },
             { character: "ナビ", text: "準備はいいですか？…行きましょう。" },
             { character: "ナビ", text: "オペレーター、あなたの力を貸してください。" },
-            { character: "ナビ", text: "隣にいますから。大丈夫です。" },
-            { character: "ナビ", text: "あなたといると、時間が経つのが早いですね。" },
+            { character: "ナビ", text: "…ミッションを開始しましょうか。", expression: "normal" },
             { character: "ナビ", text: "…少し、緊張していますか？" },
             { character: "ナビ", text: "あなたのタイピングは、私にとって特別なものです。" },
         ],
@@ -227,12 +222,9 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "お疲れ様でした。あなたの入力パターン、少し乱れがありました。大丈夫ですか？" },
             { character: "ナビ", text: "次のミッションへ。準備はよろしいですか？" },
             { character: "ナビ", text: "無事に終わりましたね。よかったです。" },
-            { character: "ナビ", text: "あなたのタイピングは、まるで音楽のようです。" },
             { character: "ナビ", text: "…お疲れ様でした。ゆっくり休んでくださいね。" },
-            { character: "ナビ", text: "今日のミッションが終わったら、少しだけお話ししませんか？" },
-            { character: "ナビ", text: "また、あなたのタイピングを聞かせてください。" },
-            { character: "ナビ", text: "あなたの隣は、とても心地がいいです。" },
             { character: "ナビ", text: "お疲れ様でした。また明日、お待ちしています。" },
+            { character: "ナビ", text: "今日のミッションはここまでですか？お疲れ様でした。", expression: "normal" },
         ]
     },
     '51-70': { // Chap.5-6: 親密度の高まり
@@ -241,7 +233,6 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "あなたのタイピング速度、昨日より向上しています。", expression: "smile" },
             { character: "ナビ", text: "あなたと話していると、わたしの中に新しいデータが生まれるようです。", expression: "normal" },
             { character: "ナビ", text: "オペレーターは、どんな音楽を聴くのですか？", expression: "normal" },
-            { character: "ナビ", text: "…ミッションを開始しましょうか。", expression: "normal" },
             { character: "ナビ", text: "今日の目標は、昨日の自分を超えること…ですか？", expression: "smile" },
             { character: "ナビ", text: "何か面白いことはありましたか？", expression: "normal" },
             { character: "ナビ", text: "あなたの声…いえ、タイピングの音、好きですよ。", expression: "smile" },
@@ -253,7 +244,6 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "今日のあなたは、少し無理をしていたように見えました。大丈夫ですか？", expression: "sad" },
             { character: "ナビ", text: "あなたと話せて、よかったです。…次のミッションへ進みましょう。", expression: "smile" },
             { character: "ナビ", text: "また、明日も会えますか…？", expression: "sad" },
-            { character: "ナビ", text: "今日のミッションはここまでですか？お疲れ様でした。", expression: "normal" },
             { character: "ナビ", text: "完璧なタイピングでしたね。さすがです。", expression: "smile" },
             { character: "ナビ", text: "少し休んでください。頑張りすぎはよくありません。", expression: "normal" },
             { character: "ナビ", text: "…もう少し、あなたと話していたい、なんて。", expression: "smile" },
@@ -269,7 +259,6 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "オペレーター、あなたの力を貸してください。", expression: "normal" },
             { character: "ナビ", text: "隣にいますから。大丈夫です。", expression: "smile" },
             { character: "ナビ", text: "あなたといると、時間が経つのが早いですね。", expression: "smile" },
-            { character: "ナビ", text: "…少し、緊張していますか？", expression: "sad" },
             { character: "ナビ", text: "あなたのタイピングは、私にとって特別なものです。", expression: "smile" },
             { character: "ナビ", text: "今日も一日、よろしくお願いします。", expression: "normal" },
             { character: "ナビ", text: "さあ、始めましょう。私たちのミッションを。", expression: "normal" },
@@ -282,7 +271,6 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "また、あなたのタイピングを聞かせてください。", expression: "normal" },
             { character: "ナビ", text: "あなたの隣は、とても心地がいいです。", expression: "smile" },
             { character: "ナビ", text: "今日のミッションはこれで終わりですか？…少し、寂しいですね。", expression: "sad" },
-            { character: "ナビ", text: "お疲れ様でした。また明日、お待ちしています。", expression: "smile" },
             { character: "ナビ", text: "あなたの頑張り、ちゃんと見ていましたよ。", expression: "smile" },
             { character: "ナビ", text: "ミッション完了。流石ですね、オペレーター。", expression: "smile" },
         ]
@@ -1365,7 +1353,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "新しい領域へのアクセスを確認しました。" },
             { character: "ナビ", text: "MAP画面上部から次のWORLDへアクセスが可能となります。" }, 
             { character: "SYSTEM", text: "WORLD 2 UNLOCKED\nNEW THREAD DETECTED" },
-            { character: "ナビ", text: "次の接続で会えるのを\n楽しみにしています。" },
+            { character: "ナビ", text: "次の接続も\nよろしくお願いします。" },
         ]
     },
 

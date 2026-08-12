@@ -31,10 +31,10 @@ import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId, getRecoveryCode, setRecoveryCode } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
-import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed } from "./dialogue.js";
+import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed, showDisclaimer } from "./dialogue.js";
 import { loadCoreAssets, loadRemainingAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
-import { clearQuestStageCache, TIER_TABLES, getTierEnemies } from "./enemyModeConfig.js";
+import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
   DIFFICULTIES,
@@ -227,6 +227,12 @@ function hideLoading() {
   if (loadingScreen) loadingScreen.style.display = "none";
 }
 
+function hasBossChallengeUnlocked() {
+  // プレイヤー全体の統計情報からクリア済みかチェックする
+  return getPlayerStats().hasSeenTrueEnding;
+}
+
+
 function showBootScreen() {
   hideAllScreens();
   if (bootScreen) {
@@ -347,6 +353,10 @@ document.addEventListener("DOMContentLoaded", () => {
       await new Promise(r => setTimeout(r, 500));
 
       hideLoading();
+      // 毎回免責事項を表示
+      const disclaimerMessage = `このゲームのセーブデータは、お使いのブラウザ（ローカルストレージ）に保存されます。\n\nブラウザのキャッシュや履歴を削除すると、セーブデータが失われる可能性がありますのでご注意ください。\n\n大切なデータは、設定画面の「データ管理」からエクスポートしてバックアップを取ることをお勧めします。`;
+      await showDisclaimer(disclaimerMessage);
+
       // メインメニューを表示
       showMainMenu();
     };
@@ -369,6 +379,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ★設定を読み込む（UI描画より先に）
   loadSettings();
   loadFreeModeConfig();
+  // populate boss select after free mode config is loaded
+  populateBossSelect();
 
   // ★UI初期化
   createDifficultySelector(
@@ -392,6 +404,13 @@ document.addEventListener("DOMContentLoaded", () => {
     "enemy"
   );
 
+  // フリーモードのボス戦用難易度セレクター
+  createDifficultySelector(
+    "bossDifficultyButtons",
+    "bossDifficultyInfo",
+    "free-boss", // 新しいスコープ
+    "enemy" // エネミーモードと同じ難易度説明を使用
+  );
   initKeybinds(); // キーバインドUI初期化
   initAchievementsUI(); // 実績UI初期化
   Game.initRenderer(); // ゲーム画面描画準備
@@ -1041,6 +1060,11 @@ function saveFreeModeConfig() {
       tier: document.getElementById("freeEnemyTier")?.value || "1",
       typeSet: document.getElementById("freeEnemyTypeSet")?.value || "ENEMY_TIER_BALANCED",
       lv: parseInt(document.getElementById("playerLvRange")?.value) || 1
+    },
+    boss: {
+      selectedStage: document.getElementById("bossStageSelect")?.value || "W1_WORLD_BOSS",
+      difficulty: getCurrentDifficulty("free-boss").id, // ボスモードの難易度を追加
+      level: parseInt(document.getElementById("bossPlayerLvRange")?.value) || 1 // ボスモードのプレイヤーレベルを追加
     }
   };
   localStorage.setItem("free_mode_config_v1", JSON.stringify(config));
@@ -1124,10 +1148,54 @@ function loadFreeModeConfig() {
       }
       // パターンの復元
       switchEnemyPattern(currentEnemyPattern);
+
+      // boss選択の復元
+      if (config.boss?.selectedStage) {
+        const el = document.getElementById("bossStageSelect");
+        if (el) el.value = config.boss.selectedStage;
+      }
+    }
+    // ボスモードの難易度を復元
+    if (config.boss?.difficulty) {
+      setCurrentDifficulty(config.boss.difficulty, "free-boss");
+    }
+    // ボスモードのプレイヤーレベルを復元
+    if (config.boss?.level !== undefined) {
+      const el = document.getElementById("bossPlayerLvRange");
+      if (el) {
+        el.value = config.boss.level;
+        updateConfigSliderLabel("bossPlayerLvRange", el.value);
+      }
     }
   } catch (e) {
     console.warn("Failed to load free mode config", e);
   }
+}
+
+// フリーモード用: ボス選択肢を動的に作成
+function populateBossSelect() {
+  const select = document.getElementById("bossStageSelect");
+  if (!select) return;
+  select.innerHTML = "";
+
+  const entries = Object.entries(STAGES).filter(([k, v]) => /BOSS|MID/i.test(k));
+
+  for (const [key, val] of entries) {
+    let label = key;
+    try {
+      if (Array.isArray(val.phases) && val.phases.length > 0) {
+        const bossPhase = val.phases[val.phases.length - 1];
+        if (bossPhase && bossPhase.name) label = `${key}: ${bossPhase.name}`;
+      }
+    } catch (e) {}
+
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = label;
+    select.appendChild(opt);
+  }
+
+  select.addEventListener("change", () => saveFreeModeConfig());
 }
 
 /**
@@ -1229,7 +1297,7 @@ function initFreeModeConfigUI() {
   });
 
   // スライダー変更時に保存
-  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "playerLvRange"];
+  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "playerLvRange", "bossPlayerLvRange"]; // bossPlayerLvRangeを追加
   sliders.forEach(id => {
     const el = document.getElementById(id);
     el?.addEventListener("input", () => {
@@ -1333,6 +1401,23 @@ function initFreeModeConfigUI() {
   });
 
   document.getElementById("startEnemyFree")?.addEventListener("click", startFreeEnemyMode);
+  document.getElementById("startBossFree")?.addEventListener("click", () => {
+    const selectedStage = document.getElementById("bossStageSelect")?.value || "W1_WORLD_BOSS";
+    const selectedDifficulty = getCurrentDifficulty("free-boss").id; // ボスモードの難易度を取得
+    const selectedLevel = parseInt(document.getElementById("bossPlayerLvRange")?.value) || 1; // ボスモードのプレイヤーレベルを取得
+    hideAllScreens();
+    showMenuBackground(false);
+    gameState.isFreeMode = true;
+    gameState.isQuestMode = false;
+    startEnemyMode({
+      mode: GameModes.ENEMY_MODE,
+      isFreeMode: true,
+      difficulty: selectedDifficulty, // 取得した難易度を渡す
+      level: selectedLevel, // 取得したレベルを渡す
+      stage: selectedStage,
+      bossOnly: true // ボスフェーズのみ実行するフラグ
+    });
+  });
 
   // エネミーモードの開始ボタンを設定パネルの最下部に移動する
   const enemyStartBtn = document.getElementById("startEnemyFree");
@@ -1348,7 +1433,7 @@ function initFreeModeConfigUI() {
 function updateConfigSliderLabel(id, value) {
   const valDisplay = document.getElementById(id.replace("Slider", "Value").replace("Range", "Value").replace("playerLv", "enemyLv"));
   if (!valDisplay) return;
-  
+
   if (id === "enemyIntervalSlider") {
     valDisplay.textContent = (value / 1000).toFixed(1);
   } else {
@@ -1401,7 +1486,8 @@ function switchFreeModeConfig(modeId) {
     'Standard': freeStartBtn,
     'TimeAttack': freeTimeAttackBtn,
     'Enemy': freeEnemyModeBtn,
-    'Long': freeLongTextBtn
+    'Long': freeLongTextBtn,
+    'Boss': document.getElementById('freeBossBtn') // BOSSボタンもマップに追加
   };
 
   Object.values(btnMap).forEach(btn => btn?.classList.remove("active"));
@@ -1489,6 +1575,11 @@ function showFreeStartMenu() {
   
   const freeModeConfig = document.getElementById("freeModeConfig");
   if (freeModeConfig) freeModeConfig.style.display = "block";
+
+  // BOSS チャレンジボタンの表示制御
+  if (freeBossBtn) {
+    freeBossBtn.style.display = hasBossChallengeUnlocked() ? "inline-block" : "none";
+  }
 
   showMenuBackground("title_menu");
   // 最後に選択されていた（またはデフォルトの）モードを表示
@@ -1661,11 +1752,18 @@ function bindModeStartEvents() {
           );
           if (!ok) return;
       }
-  
-      // ロード画面を表示
+
+      // 一旦ロード画面を隠す
+      hideLoading();
+
+      // 免責事項をフェード表示し、ユーザーのアクションを待つ
+      await showDisclaimer("この物語はフィクションです。\n登場する人物、団体、名称などはすべて架空のものであり、実在のものとは一切関係ありません。");
+
+      // ローディング画面を再表示
       showLoadingScreen();
+      
       setLoadingText("Creating New World...");
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 1000));
   
       // 進行状況の初期化
       resetQuestAll();
@@ -1705,6 +1803,10 @@ function bindModeStartEvents() {
 
   freeEnemyModeBtn?.addEventListener("click", () => {
     switchFreeModeConfig('Enemy');
+  });
+
+  freeBossBtn?.addEventListener("click", () => {
+    switchFreeModeConfig('Boss');
   });
 
   startBtn?.addEventListener("click", () => {
@@ -2274,6 +2376,7 @@ function handleMenuKey(e) {
       case "t": freeTimeAttackBtn?.click(); break;
       case "l": freeLongTextBtn?.click(); break;
       case "e": freeEnemyModeBtn?.click(); break; // Enemy
+      case "q": freeBossBtn?.click(); break; // Quest Boss
       case "b": freeStartMenuBackBtn?.click(); break;
       case "n": switchToNormalBtn?.click(); break;
       case "a": // Achievements
