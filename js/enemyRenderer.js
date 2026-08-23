@@ -5,7 +5,7 @@ import { getDifficulty } from "./difficulties.js";
 import { getNow } from "./gameCore.js";
 import { getChainMultiplier } from "./enemyCore.js";
 import { spawnComboTierUpEffect, playComboTierUpSound } from "./effectManager.js";
-import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, } from "./questPlayerStats.js";
+import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, OVERDRIVE_SPEED, } from "./questPlayerStats.js";
 import { ACTIVE_SKILLS } from "./questSkills.js";
 import { getItemDescription } from "./enemy.js";
 import { renderEnemyBehaviorEffect,renderFreezeAura } from "./effectManager.js";
@@ -642,6 +642,7 @@ function drawShape(ctx, x, y, type, color) {
     }
 }
 
+
 // ===============================
 // ラミエル風のダイヤモンド形状
 // ===============================
@@ -937,7 +938,7 @@ function drawHoneycomb(ctx, x, y, type) {
     ctx.clip();
     const hexSize = size * 0.25; // 六角形のサイズ
     const hexWidth = hexSize * 2;
-    const hexHeight = Math.sqrt(3) * hexSize;
+    const hexHeight = Math.sqrt(3) * hexSize; // No change, this is correct for tight packing
     const horizDist = hexWidth * 3 / 4;
     const vertDist = hexHeight;
 
@@ -1853,7 +1854,6 @@ const tierCount = 3;
 /* =====================
 初期生成
 ===================== */
-
 export function initComboTierBar() {
 
     const tierWrapper =
@@ -1861,10 +1861,16 @@ export function initComboTierBar() {
         "comboTierWrapper"
     );
 
+    // ★ chainUI を表示状態にする
+    const chainUI = document.getElementById("chainUI");
+    if (chainUI) {
+        chainUI.style.display = "block";
+    }
+
     if (!tierWrapper) return;
 
-       tierWrapper.innerHTML = "";
-
+    tierWrapper.innerHTML = "";
+    const tierCount = COMBO_TIERS.length;
     for (let i = 0; i < tierCount; i++) {
 
         const block =
@@ -1885,7 +1891,7 @@ export function initComboTierBar() {
 
 let prevComboTier = -1;
 
-export function updateComboTierBar(stats) {
+export function updateComboTierBar(stats, isQuestMode = false) {
 
     const tierWrapper =
         document.getElementById(
@@ -1901,7 +1907,7 @@ export function updateComboTierBar(stats) {
         tierWrapper.children;
 
     const isOverdrive =
-        combo >= OVERDRIVE_COMBO;    
+        combo >= OVERDRIVE_COMBO;
 
     // =====================
     // tier判定
@@ -2016,6 +2022,14 @@ export function updateComboTierBar(stats) {
                 spawnComboTierUpEffect(centerX, centerY, currentTier, false);
                 playComboTierUpSound(currentTier, false);
             }
+
+            // ★コンボで獲得したクールタイム短縮倍率をポップアップ表示
+            // （クエストモードかつアクティブスキルUI表示中のみ）
+            if (isQuestMode) {
+                triggerCooldownSpeedPopup(
+                    COMBO_TIERS[currentTier].cooldownSpeed
+                );
+            }
         }
     }
 
@@ -2032,6 +2046,11 @@ export function updateComboTierBar(stats) {
         const lastTier = COMBO_TIERS.length - 1; // 最後のティア
         spawnComboTierUpEffect(centerX, centerY, lastTier, true);
         playComboTierUpSound(lastTier, true);
+
+        // ★オーバードライブ到達時もクールタイム短縮倍率をポップアップ表示
+        if (isQuestMode) {
+            triggerCooldownSpeedPopup(OVERDRIVE_SPEED);
+        }
     }
 
     prevComboTier = currentTier;
@@ -2453,6 +2472,118 @@ function drawSmallDots(ctx, x, y, count, anim) {
 // Active Skill UI
 // ===============================
 
+// ===============================
+// コンボで獲得したクールタイム短縮倍率のポップアップ
+// （アクティブスキルUIの横に表示）
+// ===============================
+let cooldownSpeedPopup = null;
+
+function triggerCooldownSpeedPopup(multiplier) {
+
+    // アクティブスキルを装備していない（スキルUI非表示）場合は出さない
+    const equipped = getEquippedActiveSkills();
+    if (!equipped || equipped.length === 0) return;
+
+    cooldownSpeedPopup = {
+        text: `x${Number(multiplier).toFixed(1)}`,
+        timer: 0,
+        duration: 150
+    };
+}
+
+function drawCooldownSpeedPopup(ctx, canvas) {
+
+    if (!cooldownSpeedPopup) return;
+
+    const popup = cooldownSpeedPopup;
+    popup.timer++;
+
+    const progress = popup.timer / popup.duration;
+
+    if (progress >= 1) {
+        cooldownSpeedPopup = null;
+        return;
+    }
+
+    // アクティブスキルUIと同じ基準で位置を計算
+    const chainUI = document.getElementById("chainUI");
+    if (!chainUI) return;
+
+    const rect = chainUI.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const size = 36;
+    const OFFSET_X = 22;
+    const OFFSET_Y = 5;
+
+    const skillX = rect.right - canvasRect.left + OFFSET_X;
+    const skillY = rect.top - canvasRect.top + OFFSET_Y;
+
+    // スキルアイコンの右側に表示
+    const baseX = skillX + size + 8;
+    const centerY = skillY + size / 2;
+
+    // フェードイン / フェードアウト
+    const fadeInFrames = 8;
+    const fadeOutFrames = 30;
+
+    let alpha = 1;
+    if (popup.timer < fadeInFrames) {
+        alpha = popup.timer / fadeInFrames;
+    } else if (popup.duration - popup.timer < fadeOutFrames) {
+        alpha = (popup.duration - popup.timer) / fadeOutFrames;
+    }
+
+    alpha = Math.max(0, Math.min(1, alpha));
+
+    // ゆっくり浮き上がる
+    const riseOffset = progress * 8;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    const labelText = "COOLDOWN";
+    const valueText = popup.text;
+
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
+
+    ctx.font = "bold 9px sans-serif";
+    const labelWidth = ctx.measureText(labelText).width;
+
+    ctx.font = "bold 14px monospace";
+    const valueWidth = ctx.measureText(valueText).width;
+
+    const gap = 5;
+    const padX = 8;
+    const w = labelWidth + gap + valueWidth + padX * 2;
+    const h = 20;
+
+    const x = baseX;
+    const y = centerY - h / 2 - riseOffset;
+
+    // 背景
+    roundRect(ctx, x, y, w, h, 6);
+    ctx.fillStyle = "rgba(10, 16, 26, 0.78)";
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(143, 211, 255, 0.45)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // ラベル
+    ctx.font = "bold 9px sans-serif";
+    ctx.fillStyle = "rgba(160, 200, 235, 0.85)";
+    ctx.fillText(labelText, x + padX, centerY + 0.5 - riseOffset);
+
+    // 倍率
+    ctx.font = "bold 14px monospace";
+    ctx.fillStyle = "#bfe3ff";
+    ctx.fillText(valueText, x + padX + labelWidth + gap, centerY - riseOffset);
+
+    ctx.restore();
+}
+
 export function renderActiveSkillUI(ctx, state, canvas) {
     const equipped = getEquippedActiveSkills();
     const skillId = equipped?.[0];
@@ -2540,6 +2671,10 @@ export function renderActiveSkillUI(ctx, state, canvas) {
     if (isMouseHoverRect(x, y, size, size)) {
         drawSkillTooltip(ctx, skill, x, y + size + 8);
     }
+
+    // コンボで獲得したクールタイム短縮倍率のポップアップ
+    // （スキルUI表示中＝装備中のみ描画される）
+    drawCooldownSpeedPopup(ctx, canvas);
 }
 
 function drawSkillIconCircle(ctx, skill, x, y, size, ready) {
@@ -2664,11 +2799,40 @@ function isMouseHoverRect(x, y, w, h) {
 function drawSkillTooltip(ctx, skill, x, y) {
 
     const w = 180;
-    const h = 64;
+    const padding = 10;
 
     ctx.save();
 
+    ctx.font = "12px sans-serif";
+
+    const desc = skill.desc ?? "";
+    const descWidth = w - padding * 2;
+    const lineHeight = 16;
+
+    // 説明文を折り返す
+    const lines = [];
+    let line = "";
+
+    for (const char of desc) {
+        const testLine = line + char;
+
+        if (ctx.measureText(testLine).width > descWidth) {
+            lines.push(line);
+            line = char;
+        } else {
+            line = testLine;
+        }
+    }
+
+    if (line) {
+        lines.push(line);
+    }
+
+    // 高さを自動計算
+    const h = 38 + lines.length * lineHeight;
+
     roundRect(ctx, x, y, w, h, 10);
+
     ctx.fillStyle = "rgba(10,14,22,0.96)";
     ctx.fill();
 
@@ -2678,13 +2842,22 @@ function drawSkillTooltip(ctx, skill, x, y) {
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
 
+    // スキル名
     ctx.font = "bold 14px sans-serif";
     ctx.fillStyle = "#e7f3ff";
-    ctx.fillText(skill.name, x + 10, y + 8);
+    ctx.fillText(skill.name, x + padding, y + 8);
 
+    // 説明
     ctx.font = "12px sans-serif";
     ctx.fillStyle = "rgba(220,235,255,0.7)";
-    ctx.fillText(skill.desc ?? "", x + 10, y + 30);
+
+    lines.forEach((text, i) => {
+        ctx.fillText(
+            text,
+            x + padding,
+            y + 30 + i * lineHeight
+        );
+    });
 
     ctx.restore();
 }

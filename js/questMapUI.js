@@ -1,8 +1,9 @@
         //questMapUI.js
 
 import { QUEST_MAP } from "./questMap.js";
-import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId, hasSeenTrueEnding } from "./questProgress.js";
+import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId, hasSeenTrueEnding, getTotalStars } from "./questProgress.js";
 import { startEnemyMode } from "./enemyCore.js";
+import { startDefenseMode } from "./defenseCore.js";
 import { gameState } from "./gameCore.js";
 import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
 import { backToQuestMenu, backToQuestMap } from "./main.js";
@@ -18,6 +19,14 @@ import {
     unequipActiveSkill,
     getEquippedActiveSkills,
     getActiveSkillStockMax,
+    getStarUpgradeLevel,
+    getStarUpgradeCost,
+    getStarUpgradeCooldownMultiplier,
+    STAR_UPGRADE_MAX_LEVEL,
+    STAR_UPGRADE_REDUCTION_PER_LEVEL,
+    upgradeStarSkill,
+    getTotalStarsEarned,
+    getAvailableStars,
 } from "./questPlayerStats.js";
 import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } from "./enemyModeConfig.js";
 import { startDialogue, DIALOGUE_DATA, isDialogueVisible, showLog, showDialoguePlaybackChoicePopup } from "./dialogue.js";
@@ -254,6 +263,9 @@ export function renderQuestMapUI(){
         const isStartNode = !allNextsInWorld.has(node.id);
         const isEndNode = trueEndNodes.has(node.id);
         const isMidBoss = node.stage && node.stage.includes("MID_");
+        // ★ 防衛モードのノードか判定する
+        const stageConfig = getStageConfig(node.stage);
+        const isDefenseNode = stageConfig?.isDefenseMode === true;
 
         const visibility = window.QUEST_MAP_ADMIN_SHOW_ALL
             ? "open"
@@ -295,6 +307,10 @@ export function renderQuestMapUI(){
         if (visibility === "near") label.classList.add("near-fog-label");
         if (visibility === "far") label.classList.add("far-fog-label");
         if (visibility === "fog") label.classList.add("hard-fog-label");
+        // ★ 防衛ノードのラベルに専用クラスを付与
+        if (isDefenseNode) {
+            label.classList.add("defense-label");
+        }
 
         label.textContent = node.name ?? "";
         
@@ -412,6 +428,10 @@ export function renderQuestMapUI(){
         if (isMidBoss) {
             el.classList.add("mid-boss-node");
         }
+        // ★ 防衛モード用のクラスを付与
+        if (isDefenseNode) {
+            el.classList.add("defense-node");
+        }
 
         // スタート/ゴール（中ボスを除く）用のターゲットマーク装飾を追加
         if ((isStartNode || isEndNode) && !isMidBoss) {
@@ -459,8 +479,8 @@ export function renderQuestMapUI(){
                 // フェーズがある場合は最初のフェーズの条件、なければトップレベルの条件を参照
                 const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
                 
-                const clearText = buildClearText(stage.clearConditions);
-                const endText   = buildEndText(endConditions, stage.player);
+                const clearText = buildClearText(stage.clearConditions, stage.defenseConfig);
+                const endText   = buildEndText(endConditions, stage.player, stage.defenseConfig);
                 const starText  = buildStarText(stage.star);
 
                 const rewardText = [];
@@ -523,6 +543,7 @@ export function renderQuestMapUI(){
                 const stageData = getStageConfig(actualStage);
                 const skillTreeDiv = document.getElementById("skill-tree");
                 gameState.currentQuestNode = node;
+                gameState.isQuestMode = true; // ★クエストモードであることを明示
 
                 const startCombat = () => {
                   startEnemyMode({
@@ -532,16 +553,21 @@ export function renderQuestMapUI(){
                   });
                 };
 
+                const startDefense = () => {
+                  startDefenseMode({
+                    isQuestMode: true,
+                    custom: stageData.defenseConfig,
+                  });
+                };
+
+                // ★ isDefenseMode フラグを見て呼び出す関数を切り替える
+                const startGameFunction = stageData.isDefenseMode ? startDefense : startCombat;
+
                 const showIntro = () => {
-                  showStageIntro(
-                    stageData,
-                    node,
-                    startCombat, // Introが終わったら戦闘開始
-                    () => {
-                      if (skillTreeDiv) skillTreeDiv.style.display = "none";
-                      backToQuestMap();
-                    }
-                  );
+                  showStageIntro(stageData, node, startGameFunction, () => {
+                    if (skillTreeDiv) skillTreeDiv.style.display = "none";
+                    backToQuestMap();
+                  });
                 };
 
                 // 会話IDを生成
@@ -558,7 +584,7 @@ export function renderQuestMapUI(){
                 if (shouldAskDialogueChoice) {
                     showDialoguePlaybackChoicePopup(
                         "全クリア後の特典：この会話を再生しますか？",
-                        () => startDialogue(dialogueId, showIntro),
+                        () => startDialogue(dialogueId, showIntro, false, startGameFunction),
                         showIntro
                     );
                 } else if (shouldSkipDialogue) {
@@ -674,6 +700,7 @@ function renderQuestSideMenu(container){
     menu.appendChild(createBtn("DIFFICULTY", () => openQuestMenuModal("difficulty")));
     menu.appendChild(createBtn("SKILL TREE (T)", () => openQuestMenuModal("skillTree")));
     menu.appendChild(createBtn("EQUIP SKILLS", () => openQuestMenuModal("skill")));
+    menu.appendChild(createBtn("UPGRADE", () => openQuestMenuModal("starUpgrade")));
     menu.appendChild(createBtn("STATUS (I)", () => document.getElementById("hudDetailBtn").click()));
     menu.appendChild(createBtn("LOG", () => showLog()));
     menu.appendChild(createBtn("SAVE / LOAD", () => document.getElementById("questSaveBtn").click()));
@@ -1494,6 +1521,121 @@ export function openQuestMenuModal(type = "difficulty") {
             wrapper.appendChild(leftColumn);
             wrapper.appendChild(rightColumn);
             content.appendChild(wrapper);
+        },
+
+        starUpgrade: () => {
+            title.textContent = "STAR UPGRADE";
+
+            // =========================
+            // ヘッダー（所持星数）
+            // =========================
+            const header = document.createElement("div");
+            header.className = "star-upgrade-header";
+
+            // ★利用可能な星数（獲得総数 − 強化で消費した星数）
+            const availableStars = getAvailableStars();
+            const totalEarned = Math.max(getTotalStarsEarned(), getTotalStars());
+
+            header.innerHTML = `
+                <div class="star-upgrade-owned">
+                    <span class="star-upgrade-label">OWNED STARS</span>
+                    <span class="star-upgrade-value">★ ${availableStars} / ${totalEarned}</span>
+                </div>
+                <div class="star-upgrade-desc">
+                    星を消費してアクティブスキルのクールダウンを短縮できます。<br>
+                    各スキルごとに強化レベルが上がり、レベルごとに5%ずつ短縮されます（最大Lv.${STAR_UPGRADE_MAX_LEVEL}・50%短縮）。<br>
+                    ※ 表示は「使用可能な星数 / 獲得した星の総数」です。
+                </div>
+            `;
+            content.appendChild(header);
+
+            // =========================
+            // スキル一覧
+            // =========================
+            const list = document.createElement("div");
+            list.className = "star-upgrade-list";
+            content.appendChild(list);
+
+            function renderList() {
+                list.innerHTML = "";
+
+                // ★獲得済みのアクティブスキルのみ表示
+                const stats = getPlayerStats();
+                const unlockedNodes = devOverride.unlockAllSkills
+                    ? Object.keys(SKILL_TREE)
+                    : (stats.skillTreeProgress?.unlockedNodes || ["START"]);
+
+                // 獲得済みノードからアクティブスキルIDを収集
+                const ownedSkillIds = new Set();
+                unlockedNodes.forEach(nodeId => {
+                    const node = SKILL_TREE[nodeId];
+                    if (node?.skillId && ACTIVE_SKILLS[node.skillId]) {
+                        ownedSkillIds.add(node.skillId);
+                    }
+                });
+
+                // 獲得済みのアクティブスキルのみ表示
+                Object.entries(ACTIVE_SKILLS).forEach(([skillId, skill]) => {
+                    if (!ownedSkillIds.has(skillId)) return;
+
+                    const level = getStarUpgradeLevel(skillId);
+                    const maxLevel = STAR_UPGRADE_MAX_LEVEL;
+                    const currentMultiplier = getStarUpgradeCooldownMultiplier(skillId);
+                    const currentReduction = Math.round((currentMultiplier - 1) * 100);
+
+                    const isMaxed = level >= maxLevel;
+                    const nextCost = isMaxed ? null : getStarUpgradeCost(level + 1);
+                    const canAfford = !isMaxed && availableStars >= nextCost;
+
+                    const item = document.createElement("div");
+                    item.className = "star-upgrade-item";
+
+                    // 進行バー
+                    const progressPercent = (level / maxLevel) * 100;
+
+                    item.innerHTML = `
+                        <div class="star-upgrade-item-icon">
+                            <img src="${images[skill.icon]?.src || ""}" class="star-upgrade-skill-icon">
+                        </div>
+                        <div class="star-upgrade-item-info">
+                            <div class="star-upgrade-item-name">${skill.name}</div>
+                            <div class="star-upgrade-item-desc">${skill.desc ?? ""}</div>
+                            <div class="star-upgrade-item-cooldown">cooldown: ${skill.cooldown ?? "-"}sec</div>
+                            <div class="star-upgrade-progress">
+                                <div class="star-upgrade-progress-fill" style="width:${progressPercent}%"></div>
+                            </div>
+                            <div class="star-upgrade-item-stats">
+                                <span>Lv.${level}/${maxLevel}</span>
+                                <span>短縮 ${currentReduction}%</span>
+                            </div>
+                        </div>
+                        <div class="star-upgrade-item-action">
+                            ${isMaxed
+                                ? `<div class="star-upgrade-maxed">MAX</div>`
+                                : `<button class="star-upgrade-btn ${canAfford ? "" : "disabled"}" ${canAfford ? "" : "disabled"}>
+                                    ★${nextCost}<br>UPGRADE
+                                  </button>`
+                            }
+                        </div>
+                    `;
+
+                    if (!isMaxed && canAfford) {
+                        const btn = item.querySelector(".star-upgrade-btn");
+                        btn.onclick = () => {
+                            const success = upgradeStarSkill(skillId);
+                            if (success) {
+                                playSE("skill_on");
+                                // 再描画
+                                openQuestMenuModal("starUpgrade");
+                            }
+                        };
+                    }
+
+                    list.appendChild(item);
+                });
+            }
+
+            renderList();
         }
     };
 
@@ -1601,7 +1743,7 @@ function showSkillTooltip(skill, event) {
 // =========================
 // クエストスタート前情報表示
 // =========================
-function showStageIntro(stage, node, onStart, onCancel) {
+function showStageIntro(stage, node, onStart, onCancel, startGameFunction) {
 
   if (!stage) {
       console.error("Stage config not found for node:", node.id);
@@ -1612,8 +1754,15 @@ function showStageIntro(stage, node, onStart, onCancel) {
   overlay.className = "stage-intro";
 
   const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
-  const clearText = buildClearText(stage.clearConditions);
-  const endText   = buildEndText(endConditions, stage.player);
+  const clearText = buildClearText(stage.clearConditions, stage.defenseConfig);
+  let endText = [];
+  // ★防衛モード用の説明を追加
+  if (stage.isDefenseMode) {
+    const config = stage.defenseConfig || {};
+    endText.push(`制限時間: ${config.timeLimit || '-'}秒`); // 制限時間は終了条件に残す
+  } else {
+    endText = buildEndText(endConditions, stage.player); // This line is correct as is
+  }
   const starText  = buildStarText(stage.star);
   
   const missionTitle = stage.missionName || "標準ミッション";

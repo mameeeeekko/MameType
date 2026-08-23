@@ -90,12 +90,12 @@ export function fullResetInput() {
 // 正解時処理関数
 // 1英文字成功時の処理　コンボ、スピードバー、正解数、処理
 // =====================================================
-function onCorrectType(count = 1) {
+function onCorrectType(count = 1, state = gameState) {
 
-    gameState.correctCount += count;
+    state.correctCount += count;
 
     // Enemy Combo数追加
-    addCombo(count);
+    addCombo(count, state);
 
     gameState.speedCorrectChars += count;
 
@@ -118,15 +118,15 @@ function onCorrectType(count = 1) {
 // ミス時処理関数
 // ミスサウンド、フラッシュ、ミスカウント、チェイン、チェインバー、コンボ処理
 // =====================================================
-  function handleMiss() {
+  function handleMiss(state = gameState) {
     
     safePlayMissSound();
     safeFlashMiss();
 
     if (!gameState.enemyMode) { // Enemyモードでない場合のみグローバルミスカウントを更新
-        gameState.mistakeCount++;
+        state.mistakeCount++;
     }
-    resetCombo();
+    resetCombo(state);
 
     // Chain Penalty =================
     if(gameState.enemyMode){
@@ -153,20 +153,18 @@ function onCorrectType(count = 1) {
 // コンボ処理
 // =====================================================  
 
-function getComboTarget() {
-
-  // enemy mode
-  if (gameState.enemyStats) {
-    return gameState.enemyStats;
+function getComboTarget(state = gameState) {
+  // 優先度1: state.enemyStats があればそれを使う (防衛モード、エネミーモード)
+  if (state.enemyStats) {
+    return state.enemyStats;
   }
-
-  // normal mode
-  return gameState;
+  // 優先度2: なければ state 自体を使う (通常モード)
+  return state;
 }
 
-function addCombo(value) {
+function addCombo(value, state = gameState) {
 
-  const target = getComboTarget();
+  const target = getComboTarget(state);
 
   target.currentCombo += value;
 
@@ -175,13 +173,13 @@ function addCombo(value) {
   }
 }
 
-function resetCombo() {
-
-  const target = getComboTarget();
+function resetCombo(state = gameState) {
+  const target = getComboTarget(state);
   target.currentCombo = 0;
 }
 
-  export function handleKey(e, silent = false, state = gameState) {
+  export function handleKey(e, silent = false, state = gameState, options = {}) {
+    const { processComboInSilent = false } = options;
     //log
     // console.log("INPUT", {
     //   key: e.key,
@@ -189,7 +187,12 @@ function resetCombo() {
     //   kana: getKana(gameState.text, gameState.pos),
     //   typed: gameState.typed
     // });
-    
+
+    // サイレントモードで、かつコンボ処理が不要な場合は早期リターン
+    if (silent && !processComboInSilent) {
+        // 既存のサイレント処理ロジック（もしあれば）
+    }
+
     if (!silent) safePlayTypeSound();   // タイプ音
     let key = e.key;
 
@@ -233,11 +236,11 @@ function resetCombo() {
         // 既に typed が 'n' の場合、2回目の 'n' で 'nn' を確定させる
         if (state.typed === "n" && key === "n") {
           state.inputedRomaji += "nn";
-          if (!silent) onCorrectType(2);
+          if (!silent || processComboInSilent) onCorrectType(2, state);
           state.typed = "";
           state.pos += kana.length;
           resetCandidates();
-          if (!silent) { updateRender(); updateGameEnd(); }
+          if (!silent) { updateRender(); updateGameEnd(); } // silentモードでは呼び出さない
           return { success: true, isMiss: false, charCount: 2, isComplete: true };
         }
 
@@ -248,13 +251,13 @@ function resetCombo() {
             if (mode === 'n') {
               // single 'n' で確定
               state.inputedRomaji += "n"; // 確定
-              if (!silent) onCorrectType(1); //正解処理
+              if (!silent || processComboInSilent) onCorrectType(1, state); //正解処理
 
               state.typed = "";            // typed をクリア
               state.pos += kana.length;    // pos を進める
               resetCandidates();     // 次の候補をセット
 
-              if (!silent) { updateRender(); updateGameEnd(); }
+              if (!silent) { updateRender(); updateGameEnd(); } // silentモードでは呼び出さない
               return { success: true, isMiss: false, charCount: 1, isComplete: true };
             } else {
               // 'nn' モード: single 'n' では確定せず typed バッファに入れる
@@ -265,17 +268,17 @@ function resetCombo() {
           } catch (e) {
             // localStorage 失敗時は従来の single 'n' 動作
             state.inputedRomaji += "n"; // 確定
-            if (!silent) onCorrectType(1);
+            if (!silent || processComboInSilent) onCorrectType(1, state);
 
             state.typed = "";
             state.pos += kana.length;
             resetCandidates();
-            if (!silent) { updateRender(); updateGameEnd(); }
+            if (!silent) { updateRender(); updateGameEnd(); } // silentモードでは呼び出さない
             return { success: true, isMiss: false, charCount: 1, isComplete: true };
           }
         }
 
-        if (!silent) handleMiss(); // (handleMissは呼ばれた)
+        if (!silent || processComboInSilent) handleMiss(state); // (handleMissは呼ばれた)
         return { success: false, isMiss: true, charCount: 0 };
       }
 
@@ -286,13 +289,13 @@ function resetCombo() {
         if (key === "n") {
           state.inputedRomaji += "nn";
           //正解処理
-          if (!silent) onCorrectType(2);
+          if (!silent || processComboInSilent) onCorrectType(2, state);
 
           state.typed = "";
           state.pos += kana.length;
           resetCandidates();
 
-          if (!silent) { updateRender(); updateGameEnd(); }
+          if (!silent) { updateRender(); updateGameEnd(); } // silentモードでは呼び出さない
           return { success: true, isMiss: false, charCount: 2, isComplete: true };
         }
 
@@ -345,7 +348,7 @@ function resetCombo() {
 
           // ん確定
           state.inputedRomaji += "n";
-          if (!silent) onCorrectType(1);
+          if (!silent || processComboInSilent) onCorrectType(1, state);
 
           // 次のかなへ移動
           state.pos += kana.length;
@@ -363,7 +366,7 @@ function resetCombo() {
         // =========================
         // ③ どちらもダメ → ミス
         // =========================
-        if (!silent) { handleMiss(); }
+        if (!silent || processComboInSilent) { handleMiss(state); }
         return { success: false, isMiss: true, charCount: 0 }; // (handleMissは呼ばれた)
       }
 
@@ -384,7 +387,7 @@ function resetCombo() {
         const match = candidates.some(r => r.startsWith(nextTyped));
 
         if (!match) {
-            if (!silent) handleMiss();
+            if (!silent || processComboInSilent) handleMiss(state);
             return { success: false, isMiss: true, charCount: 0 };
         }
 
@@ -395,7 +398,7 @@ function resetCombo() {
         if (complete) {
             state.inputedRomaji += state.typed;
             const confirmedCharCount = state.typed.length;
-            if (!silent) onCorrectType(confirmedCharCount);
+            if (!silent || processComboInSilent) onCorrectType(confirmedCharCount, state);
 
             const nextKana = getKana(state.text, state.pos + kana.length);
             state.pos += kana.length;
@@ -407,7 +410,7 @@ function resetCombo() {
 
             state.typed = "";
             resetCandidates();
-            if (!silent) { updateRender(); updateGameEnd(); }
+            if (!silent) { updateRender(); updateGameEnd(); } // silentモードでは呼び出さない
             return { success: true, isMiss: false, charCount: confirmedCharCount, isComplete: true };
         } else {
             if (!silent) { updateRender(); }
@@ -421,14 +424,14 @@ function resetCombo() {
     const nextTyped = state.typed + key; // typed にキーを追加
 
     if (!candidates || candidates.length === 0) {
-      if (!silent) { handleMiss(); }
+      if (!silent || processComboInSilent) { handleMiss(state); }
       return { success: false, isMiss: true, charCount: 0 }; // (handleMissは呼ばれた)
     }
 
     const match = candidates.some(r => r.startsWith(nextTyped)); // 候補と照合
 
     if (!match) { 
-      if (!silent) { handleMiss(); }
+      if (!silent || processComboInSilent) { handleMiss(state); }
       return { success: false, isMiss: true, charCount: 0 }; // (handleMissは呼ばれた)
     }
 
@@ -441,7 +444,7 @@ function resetCombo() {
         state.inputedRomaji += state.typed;
 
           const confirmedCharCount = state.typed.length;
-          if (!silent) onCorrectType(confirmedCharCount);
+          if (!silent || processComboInSilent) onCorrectType(confirmedCharCount, state);
         
         const nextKana = getKana(state.text, state.pos + kana.length);
         state.pos += kana.length;
@@ -456,8 +459,8 @@ function resetCombo() {
 
         state.typed = "";                     // typed リセット
         resetCandidates();       // 次の候補セット
-        if (!silent) { updateRender(); }
-        if (!silent) { updateGameEnd(); }      // ゲーム終了判定
+        if (!silent) { updateRender(); } // silentモードでは呼び出さない
+        if (!silent) { updateGameEnd(); }      // ゲーム終了判定 // silentモードでは呼び出さない
         return { success: true, isMiss: false, charCount: confirmedCharCount, isComplete: true };
     } 
     else { if (!silent) { updateRender(); } return { success: true, isMiss: false, charCount: 0 }; } // 完全一致でなければ表示更新のみ (typed buffer updated)

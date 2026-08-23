@@ -1052,7 +1052,7 @@ function advanceDialogue() {
         return;
     }
 
-    if (dialogueState === 'CHOOSING' || waitingForMapReturn) {
+    if (dialogueState === 'CHOOSING') {
         return;
     }
 
@@ -1069,6 +1069,14 @@ function advanceDialogue() {
                 onTypingFinished();
             }
         }
+        return;
+    }
+
+    // ★ NEW: マップに戻る待機中の場合、モーダルを閉じてマップに戻る
+    if (waitingForMapReturn) {
+        waitingForMapReturn = false;
+        closeDialogue();
+        showQuestMap();
         return;
     }
 
@@ -1201,6 +1209,18 @@ function handleChoice(choice, choiceIndex, choiceId) {
     const showResponse = choice.response;
     const goToNextId = choice.nextId;
 
+    // ★ NEW: プレイヤーの選択をログに追加
+    // responseやnextIdがなくても、選択したという事実をログに残す
+    if (choice.text) {
+        // 選択肢のテキストをログとして表示
+        const playerResponseBubble = document.createElement('div');
+        playerResponseBubble.className = 'chat-bubble right'; // プレイヤーの発言として右寄せ
+        // オペレーターの発言として名前を表示しないように、シンプルな構造にする
+        playerResponseBubble.innerHTML = `<div class="message-content"><div class="message-text">${choice.text}</div></div>`;
+        chatContent.appendChild(playerResponseBubble);
+        chatContent.scrollTop = chatContent.scrollHeight;
+    }
+
     // ★ NEW: 選択肢の再生履歴を記録
     if (choiceId !== undefined && choiceIndex !== undefined) {
         markChoicePlayed(choiceId, choiceIndex);
@@ -1208,6 +1228,9 @@ function handleChoice(choice, choiceIndex, choiceId) {
 
     // ★ backToMap フラグがあれば、会話を終了してマップに戻る
     if (choice.backToMap) {
+        if (skipToEndButton) skipToEndButton.style.display = 'none';
+        if (skipToChoiceButton) skipToChoiceButton.style.display = 'none';
+
         // response があればそれを表示してからマップに戻る
         if (!choice.response) {
             // responseがなければ即座にマップに戻る
@@ -1219,19 +1242,6 @@ function handleChoice(choice, choiceIndex, choiceId) {
             displayNextMessage(choice.response);
         }
         return;
-    }
-
-    // ★ NEW: プレイヤーの選択をログに追加
-    // responseやnextIdがなくても、選択したという事実をログに残す
-    if (choice.text) {
-        // 選択肢のテキストをログとして表示
-        const playerResponseBubble = document.createElement('div');
-        playerResponseBubble.className = 'chat-bubble right'; // プレイヤーの発言として右寄せ
-        // オペレーターの発言として名前を表示しないように、シンプルな構造にする
-        playerResponseBubble.innerHTML = `<div class="message-content"><div class="message-text">${choice.text}</div></div>`;
-        chatContent.appendChild(playerResponseBubble);
-        chatContent.scrollTop = chatContent.scrollHeight;
-        
     }
     if (showResponse) {
         // ★★★ 修正: responseにnextIdを紐付けて、advanceDialogueで処理させる
@@ -1324,10 +1334,16 @@ export function closeDialogue() {
     if (chatContent) {
         chatContent.innerHTML = '';
     }
+    const leftChar = document.getElementById('dialogueCharLeft');
+    const rightChar = document.getElementById('dialogueCharRight');
+    if (leftChar) leftChar.style.backgroundImage = 'none';
+    if (rightChar) rightChar.style.backgroundImage = 'none';
+
     currentDialogueId = null;
     currentMessageIndex = 0;
     dialogueState = 'IDLE';
     waitingForMapReturn = false; // ★ マップに戻る待機フラグをリセット
+    currentTypingMessage = null;
 
     // ★ 選択肢コンテナをクリアし、関連クラスを削除
     if (choicesContainer) {

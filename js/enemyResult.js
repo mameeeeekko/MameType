@@ -127,7 +127,6 @@ export function showEnemyResult({
                         <div class="r-value big accent">${stats.isInvalidRun ? "-" : `${stats.rank ?? "-"} <span style="font-size: 0.6em;">(${stats.skillScore ?? 0})</span>`}</div>
                     </div>
                 </div>
-
                 ${failedText}
                 
                 <div class="result-stats-grid">
@@ -137,9 +136,9 @@ export function showEnemyResult({
                     <div class="r-row"><span class="result-label">CorrectKeys</span><span class="result-value">${stats.correctCount}</span></div>
                     <div class="r-row"><span class="result-label">Misses</span><span class="result-value">${stats.mistakeCount}</span></div>
                     <div class="r-row"><span class="result-label">Accuracy</span><span class="result-value">${stats.accuracy.toFixed(1)}%</span></div>
+                    <div class="r-row"><span class="result-label">gKPM</span><span class="result-value">${stats.gKpm.toFixed(0)}</span></div>
                     <div class="r-row"><span class="result-label">PlayTime</span><span class="result-value">${((stats.endTime - stats.startTime)/1000).toFixed(1)}s</span></div>
                     <div class="r-row"><span class="result-label">TypingTime</span><span class="result-value">${((stats.typingActiveTime)/1000).toFixed(1)}s</span></div>
-                    <div class="r-row"><span class="result-label">gKPM</span><span class="result-value">${stats.gKpm.toFixed(0)}</span></div>
                     <div class="r-row"><span class="result-label">MaxCombo</span><span class="result-value">${stats.maxCombo}</span></div>
                     <div class="r-row"><span class="result-label">MaxChain</span><span class="result-value">${stats.maxChainCount}</span></div>
                 </div>
@@ -149,9 +148,9 @@ export function showEnemyResult({
                     ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
                 </div>
 
-                <div class="online-ranking-container">
-                    <div id="onlineRanking" class="result-online-ranking"></div>
+                <div class="online-ranking-container" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;">
                     ${onlineUpdated ? `<div class="r-badge online-update">ONLINE RECORD UPDATED</div>` : ""}
+                    <div id="onlineRanking" class="result-online-ranking"></div>
                 </div>
             </div>
         `;

@@ -18,6 +18,7 @@ const loopingSounds = {};
 export let comboTierUpEffects = [];
 const playerDamageEffects = [];
 const playerNegateEffects = [];
+export let timeBonusPopups = []; // ★タイムボーナスポップアップ用
 let buffers = {};
 let bgmSource = null;
 
@@ -2401,6 +2402,76 @@ export function renderDamagePopups(ctx) {
 }
 
 // ===============================
+// タイムボーナスポップアップ
+// ===============================
+
+/**
+ * タイムボーナスのポップアップを生成します。
+ * @param {number} x - 表示するX座標
+ * @param {number} y - 表示するY座標
+ * @param {string} text - 表示するテキスト(例: "+5s")
+ * @param {object} [options={}] - オプション
+ * @param {'float'|'fade'} [options.type='float'] - アニメーションの種類
+ * @param {number} [options.vy=-0.7] - 縦方向の速度
+ */
+export function spawnTimeBonusPopup(x, y, text, options = {}) {
+    timeBonusPopups.push({
+        x, y,
+        text,
+        life: 240, // ★寿命を240フレーム（約4秒）に設定
+        maxLife: 240, // ★maxLifeとlifeを同じ値で初期化
+        vy: options.vy ?? -0.3, // ★デフォルトの上昇速度を緩やかに
+        type: options.type || 'float',
+        alpha: 1
+    });
+}
+
+/**
+ * タイムボーナスのポップアップを描画します。
+ * @param {CanvasRenderingContext2D} ctx - 描画コンテキスト
+ */
+export function renderTimeBonusPopups(ctx) {
+    for (let i = timeBonusPopups.length - 1; i >= 0; i--) {
+        const p = timeBonusPopups[i];
+
+        // 'float' タイプの場合のみY座標を動かす
+        if (p.type === 'float') {
+            p.y += p.vy;
+        }
+        p.life--;
+
+        // ★★★ アニメーションタイプに関わらず、アルファ値の計算を適用する ★★★
+        const FADE_IN_DURATION = 60;  // フェードインにかける時間（約1秒）
+        const FADE_OUT_START_LIFE = 120; // 残り寿命が120フレーム（約2秒）からフェードアウト開始
+
+        if (p.life > p.maxLife - FADE_IN_DURATION) {
+            // フェードイン
+            p.alpha = (p.maxLife - p.life) / FADE_IN_DURATION;
+        } else if (p.life < FADE_OUT_START_LIFE) {
+            // フェードアウト
+            p.alpha = Math.max(0, p.life / FADE_OUT_START_LIFE); // 2秒かけてフェードアウト
+        } else {
+            // 表示維持
+            p.alpha = 1;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha); // alphaは0-1の範囲で変動
+        ctx.font = "bold 16px monospace"; // さらに小さく
+        ctx.fillStyle = "#15dd03"; // より緑がかった薄い色に変更
+        ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+        ctx.shadowBlur = 5;
+        ctx.textAlign = "center";
+        ctx.fillText(p.text, p.x, p.y);
+        ctx.restore();
+
+        if (p.life <= 0) {
+            timeBonusPopups.splice(i, 1);
+        }
+    }
+}
+
+// ===============================
 // コンボティアアップエフェクト
 // ===============================
 export function spawnComboTierUpEffect(x, y, tier, isMax) {
@@ -3725,6 +3796,7 @@ export function clearAllEffects() {
     scorePopups.length = 0;
     comboTierUpEffects.length = 0;
     damagePopups.length = 0;
+    timeBonusPopups.length = 0; // ★追加
 
     itemSkillEffects.length = 0;
     laserEffects.length = 0;
@@ -3747,5 +3819,6 @@ export function areAllEffectsDone() {
            hitEffects.length === 0 &&
            knockbackEffects.length === 0 &&
            chainBreakEffects.length === 0 &&
-           comboTierUpEffects.length === 0;
+           comboTierUpEffects.length === 0 &&
+           timeBonusPopups.length === 0; // ★追加
 }

@@ -32,6 +32,26 @@ const defaultStats = {
   },
   
   // ========================
+  // 防衛モード
+  // ========================
+  defenseMode: {
+    totalPlays: 0,
+    totalTyped: 0,
+    totalMiss: 0,
+    totalPlayTime: 0,
+    maxGScore: 0,
+    maxGScoreDate: null,
+    maxGKpm: 0,
+    maxGKpmDate: null,
+    avgGKpm: 0,
+    avgAccuracy: 0,
+    modes: {},
+    maxCombo: 0,
+    totalSolved: 0,
+    noMissClears: 0,
+  },
+
+  // ========================
   // エネミーモード
   // ========================
   enemyMode: {
@@ -130,6 +150,19 @@ export function getPlayerStats() {
   if (!loaded.days.maxStreak) loaded.days.maxStreak = 0;
 
   // ===== categories → modes 移行 =====
+  if (!loaded.defenseMode) {
+    loaded.defenseMode = {
+      totalPlays: 0, totalTyped: 0, totalMiss: 0, totalPlayTime: 0,
+      maxGScore: 0, maxGScoreDate: null, maxGKpm: 0, maxGKpmDate: null,
+      avgGKpm: 0, avgAccuracy: 0, modes: {}, maxCombo: 0, totalSolved: 0,
+      noMissClears: 0
+    };
+  }
+  if (!loaded.enemyMode) {
+    loaded.enemyMode = { ...defaultStats.enemyMode };
+  }
+
+
   if (loaded.regular.categories) {
     loaded.regular.modes = loaded.regular.categories;
     delete loaded.regular.categories;
@@ -157,7 +190,7 @@ function todayStr() {
 // stats: 現在の統計オブジェクト
 // mode: プレイモードID
 // date: プレイ日付
-// isFree: フリーモードフラグ
+// isFree: フリーモードまたはクエストモードフラグ
 export function updatePlayerStats(stats, result, mode, date = null, isFree = false) {
 
   stats = stats || getPlayerStats(); // 統計取得
@@ -165,6 +198,7 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   result = result || {};             // result安全化
   
   const isEnemy = mode === "enemy_mode";
+  const isDefense = mode === "defense_mode";
 
   const totalChars = result.totalChars ?? 0;     // 正解文字数
   const totalMistake = result.totalMistake ?? 0; // ミス数
@@ -261,9 +295,72 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   }
 
   // ========================
+  // 防衛モード
+  // ========================
+  if (!isFree && isDefense) {
+    if (!stats.defenseMode) {
+      stats.defenseMode = { ...defaultStats.defenseMode };
+    }
+    const d = stats.defenseMode;
+
+    d.totalPlays++;
+    d.totalTyped += totalChars;
+    d.totalMiss += totalMistake;
+    d.totalPlayTime += totalPlayTime;
+
+    const gkpm = result.kpm ?? 0;
+    const gScore = result.gScore ?? 0;
+    const solved = result.solvedCount ?? 0;
+
+    d.totalSolved = (d.totalSolved || 0) + solved;
+
+    // 最大GKPM
+    if (gkpm > (d.maxGKpm || 0)) {
+      d.maxGKpm = gkpm;
+      d.maxGKpmDate = date;
+    }
+
+    // 最大スコア
+    if (gScore > (d.maxGScore || 0)) {
+      d.maxGScore = gScore;
+      d.maxGScoreDate = date;
+    }
+
+    if (combo > (d.maxCombo || 0)) {
+      d.maxCombo = combo;
+    }
+
+    // ノーミスクリア
+    if (totalMistake === 0 && !result.failed) {
+      d.noMissClears = (d.noMissClears || 0) + 1;
+    }
+
+    // 平均
+    const totalAllDefense = d.totalTyped + d.totalMiss;
+    d.avgGKpm = d.totalPlayTime > 0 ? (d.totalTyped / d.totalPlayTime) * 60 : 0;
+    d.avgAccuracy = totalAllDefense > 0 ? (d.totalTyped / totalAllDefense) * 100 : 0;
+
+    // モード別回数
+    if (!d.modes) d.modes = {};
+    d.modes[mode] = (d.modes[mode] || 0) + 1;
+  }
+
+  // ========================
+  // フリーモード処理
+  // ========================
+  if (isFree) {
+    stats.freeMode.totalPlays++;                 // フリー回数++
+    // 通常モードの totalTime または エネミーモードの totalPlayTime を加算
+    stats.freeMode.totalTime += (totalTime || totalPlayTime); 
+    if (!stats.freeMode.modes) stats.freeMode.modes = {};
+    const modeKey = mode === 'enemy_mode' ? 'free_enemy' : (mode === 'defense_mode' ? 'free_defense' : mode);
+    stats.freeMode.modes[modeKey] = (stats.freeMode.modes[modeKey] || 0) + 1; // モード回数++
+  }
+
+  // ========================
   // 通常モード処理
   // ========================
-  if (!isFree && !isEnemy) {
+  if (!isFree && !isEnemy && !isDefense) {
     stats.regular.totalPlays++;              // 通常回数++
     stats.regular.totalTyped += totalChars;  // 累計Typed
     stats.regular.totalMiss += totalMistake; // 累計Miss
@@ -278,7 +375,7 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
     }
 
     const totalAll = stats.regular.totalTyped + stats.regular.totalMiss; // 全入力数
-    stats.regular.avgSpeed = stats.regular.totalGameTime > 0 ? (stats.regular.totalTyped / stats.regular.totalGameTime) * 60 : 0; // 平均KPM
+    stats.regular.avgSpeed = stats.regular.totalGameTime > 0 ? (stats.regular.totalTyped / stats.regular.totalGameTime) * 60 : 0;
     stats.regular.avgAccuracy = totalAll > 0 ? (stats.regular.totalTyped / totalAll) * 100 : 0; // 平均正確率
 
     // ★ノーミスクリア回数
@@ -293,16 +390,6 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
 
        stats.regular.modes[mode]++;
     }
-  }
-
-  // ========================
-  // フリーモード処理
-  // ========================
-  if (isFree) {
-    stats.freeMode.totalPlays++;                 // フリー回数++
-    // 通常モードの totalTime または エネミーモードの totalPlayTime を加算
-    stats.freeMode.totalTime += (totalTime + totalPlayTime); 
-    stats.freeMode.modes[mode] = (stats.freeMode.modes[mode] || 0) + 1; // モード回数++
   }
 
   // ========================
@@ -356,7 +443,7 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   // ========================
   // 勲章判定
   // ========================
-  const newAchievements = updateAchievements(stats);
+  const newAchievements = updateAchievements(stats, isFree);
 
   // ★新規取得があれば通知
   if (newAchievements.length > 0) {
@@ -438,7 +525,7 @@ export function formatPlayTime(seconds) {
 // ================================
 // 勲章判定
 // ================================
-export function updateAchievements(stats) {
+export function updateAchievements(stats, isFree = false) {
   // ===== 配列保証 =====
   if (!Array.isArray(stats.achievements)) stats.achievements = [];
   if (!Array.isArray(stats.seenAchievements)) stats.seenAchievements = [];
@@ -459,6 +546,7 @@ export function updateAchievements(stats) {
   if (stats.totalPlays >= 100) unlock("play_100");
 
   // ===== フリー時間 =====
+  // freeMode.totalTime は秒単位
   if (stats.freeMode?.totalTime >= 3600) unlock("free_1h");
   if (stats.freeMode?.totalTime >= 36000) unlock("free_10h");
 
@@ -470,19 +558,23 @@ export function updateAchievements(stats) {
   if (stats.days?.streak >= 14 ) unlock("streak_14");  
   if (stats.days?.streak >= 30) unlock("streak_30");
 
-  // ===== 速度 =====
-  if (stats.regular?.maxSpeed >= 200) unlock("kpm_200");
-  if (stats.regular?.maxSpeed >= 250) unlock("kpm_250");
-  if (stats.regular?.maxSpeed >= 300) unlock("kpm_300");
+  // フリーモードでは記録系の実績は更新しない
+  if (!isFree) {
+    // ===== 速度 =====
+    if (stats.regular?.maxSpeed >= 200) unlock("kpm_200");
+    if (stats.regular?.maxSpeed >= 250) unlock("kpm_250");
+    if (stats.regular?.maxSpeed >= 300) unlock("kpm_300");
 
-  if (stats.regular?.noMissClears >= 10) unlock("no_miss_10");
+    if (stats.regular?.noMissClears >= 10) unlock("no_miss_10");
 
-  // ===== クエスト & エネミーモード =====
-  updateQuestAndEnemyAchievements(stats, unlock);
+    // ===== クエスト & エネミーモード =====
+    updateQuestAndEnemyAchievements(stats, unlock);
 
-  // 真エンディング到達
-  if (stats.hasSeenTrueEnding) {
-    unlock("true_ending");
+    // 真エンディング到達
+    if (stats.hasSeenTrueEnding) {
+      unlock("true_ending");
+    }
+    if (stats.regular?.maxEScore >= 260) unlock("rank_s");
   }
 
   // 全実績解除
@@ -492,7 +584,8 @@ export function updateAchievements(stats) {
   if (currentUnlockedCount >= totalAchievements) {
     unlock("all_achievements");
   }
-  return unlockedNow; // 勲章お知らせ用
+
+  return unlockedNow;
 }
 
 
@@ -521,6 +614,17 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   // ★新しい実績判定を追加
   if (stats.enemyMode?.maxGScore >= 10000) unlock("gscore_10k");
   if (stats.enemyMode?.totalKills >= 1000) unlock("enemy_kill_1000");
+
+  // ★防衛モードの実績
+  if (stats.defenseMode?.totalPlays >= 1) unlock("play_defense_1");
+  if (stats.defenseMode?.totalPlays >= 30) unlock("play_defense_30");
+  if (stats.defenseMode?.totalPlays >= 100) unlock("play_defense_100");
+  if (stats.defenseMode?.maxGScore >= 10000) unlock("defense_gscore_10k");
+  if (stats.defenseMode?.maxCombo >= 251) unlock("defense_overdrive");
+  if (stats.defenseMode?.maxCombo >= 10) unlock("defense_10_combo");
+  if (stats.defenseMode?.noMissClears >= 1) unlock("defense_no_miss_1");
+  if (stats.defenseMode?.totalSolved >= 10) unlock("defense_solved_10");
+  if (stats.defenseMode?.totalSolved >= 500) unlock("defense_solved_500");
 
   // ★総プレイ時間
   const totalPlayTime = (stats.regular?.totalGameTime || 0) + 
@@ -617,8 +721,6 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   if (cleared.includes("W1_BOSS")) unlock("clear_world_1");
   if (cleared.includes("W2_BOSS")) unlock("clear_world_2");
   if (cleared.includes("W3_BOSS")) unlock("clear_world_3");
-
-  if (stats.regular?.maxEScore >= 260) unlock("rank_s");
 }
 
 // ================================
@@ -669,6 +771,16 @@ export const ACHIEVEMENTS = [
   { id: "enemy_combo_350", name: "コンボマスター", desc: "最大コンボ350到達" },
   { id: "no_damage_clear_enemy", name: "鉄壁", desc: "エネミーモードでノーダメージクリア" },
 
+  // --- 防衛モード ---
+  { id: "play_defense_1", name: "防衛開始", desc: "防衛モードを初めてプレイ" },//test
+  { id: "play_defense_30", name: "防衛専門家", desc: "防衛モードを30回プレイ" },//ok
+  { id: "play_defense_100", name: "防衛の鬼", desc: "防衛モードを100回プレイ" },//ok
+  { id: "defense_gscore_10k", name: "鉄壁の守護者", desc: "防衛モードでgScore 1万点達成" },//ok
+  { id: "defense_overdrive", name: "オーバードライブ", desc: "防衛モードで251コンボ達成" },//ok
+  //{ id: "defense_10_combo", name: "10コンボ", desc: "防衛モードで10コンボ達成" },//test
+  { id: "defense_no_miss_1", name: "精密防衛", desc: "防衛モードをノーミスクリア" },
+  //{ id: "defense_solved_10", name: "防衛線のタイピスト", desc: "防衛モードで累計10単語解答" },//test
+  { id: "defense_solved_500", name: "防衛線のタイピスト", desc: "防衛モードで累計500単語解答" },//ok
   // --- クエストモード ---
   { id: "quest_clear_10", name: "冒険の始まり", desc: "クエストを10個クリア" },
   { id: "quest_clear_50", name: "ベテラン冒険者", desc: "クエストを50個クリア" },

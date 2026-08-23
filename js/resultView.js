@@ -26,6 +26,7 @@ export function resetResultButtons(mode, options = {}) {
 
   const isEnemy = mode === "enemy_mode";
   const isLongText = mode === "long_text";
+  const isDefense = mode === "defense_mode";
   const hasMissed = (options.missedCount ?? 0) > 0;
 
   // デイリー/フリーモードのリザルトではクエスト関連ボタンは常に非表示
@@ -145,10 +146,9 @@ export function showResult({
     ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
   </div>
 
-  <div id="onlineRanking" class="result-online-ranking"></div>
-
-    <div class="result-badges">
+  <div class="online-ranking-container" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;">
     ${(onlineUpdated && mode !== "miss_practice") ? `<div class="r-badge online-update">ONLINE RECORD UPDATED</div>` : ""}
+    <div id="onlineRanking" class="result-online-ranking"></div>
   </div>
 
   `;

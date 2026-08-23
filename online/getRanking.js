@@ -25,7 +25,7 @@ export async function getRanking(
     query = query
       .order("solved_count", { ascending: false })
       .order("score", { ascending: false });
-  } else {
+  } else { // normal, enemy_mode, defense_mode
     query = query.order("score", { ascending: false });
   }
 
@@ -42,7 +42,7 @@ export async function getRanking(
 }
 
 // ========================================================
-// オンラインでの順位獲得関数　結果で表示する用
+// オンラインでの順位獲得関数 結果で表示する用
 // ========================================================
 export async function renderOnlineRanking(
   currentScore,
@@ -85,10 +85,13 @@ export async function renderOnlineRanking(
     let rankIndex;
 
     if (currentMode === "time_attack") {
-      rankIndex = ranking.findIndex(
-        r => (r.solvedCount || 0) <= currentSolvedCount
-      );
-    } else {
+      // 解答数が同じ場合はスコアも比較する
+      rankIndex = ranking.findIndex(r => {
+        const rSolved = r.solved_count || 0;
+        const rScore = r.score || 0;
+        return rSolved < currentSolvedCount || (rSolved === currentSolvedCount && rScore <= currentScore);
+      });
+    } else { // normal, enemy_mode, defense_mode
       rankIndex = ranking.findIndex(
         r => r.score <= currentScore
       );

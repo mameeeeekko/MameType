@@ -143,4 +143,31 @@ export const STAR_EVALUATORS = {
     return Math.max(stars, 1);
   },
 
+  // =========================
+  // 防衛モード：超過文字数ベース
+  // =========================
+  defenseSurplus: (stats, ctx, config) => {
+    if (stats.failed) return 0;
+
+    const typedChars = stats.countedKeyChars || 0;
+    const targetChars = stats.totalKeyChars || 1;
+    const accuracy = (stats.accuracy ?? 0) / 100; // 0-1
+
+    // 目標に対する超過率 (例: 120文字/100文字 -> 0.2)
+    const surplusRate = (typedChars / targetChars) - 1.0;
+
+    const weights = config.weights || { surplus: 0.7, accuracy: 0.3 };
+
+    // 総合スコアを計算
+    const score = (surplusRate * weights.surplus) + (accuracy * weights.accuracy);
+
+    let stars = 0;
+    config.thresholds.forEach((t, i) => {
+      if (score >= t) {
+        stars = i + 1;
+      }
+    });
+
+    return Math.max(stars, 1); // クリアすれば最低1つは星獲得
+  },
 };

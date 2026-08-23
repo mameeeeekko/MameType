@@ -9,6 +9,7 @@
 
 import { autoSaveQuest } from "./storage.js";
 import { PASSIVE_SKILLS } from "./questSkills.js";
+import { getTotalStars } from "./questProgress.js";
 import { devOverride } from "../dev/devOverride.js";
 
 
@@ -52,8 +53,14 @@ const DEFAULT_STATS = {
     skillTreeProgress: {
         unlockedNodes: ["START"]
         },
-    
-    //クエストモード詳細ステータス
+
+    // ★星で強化したアクティブスキルのレベル
+    starSkillUpgrades: {}, // { skillId: { level: number } }
+
+    // ★星強化の最大レベル
+    starUpgradeMaxLevel: 10,
+
+    // クエストモード詳細ステータス
     questRecord: {
         totalPlayTime: 0,
         totalPlays: 0,
@@ -71,6 +78,7 @@ const DEFAULT_STATS = {
 
         totalStars: 0, //現在取得済みスター数
         maxStars: 0,   //取得できる最大のスター数
+        totalStarsEarned: 0, // ★累計獲得スター数（消費されても減らない）
 
         days: {
         todayCount: 0,
@@ -552,22 +560,22 @@ export function getActiveSkillStockMax() {
 // ===============================
 // Combo Tier
 // ===============================
-export const OVERDRIVE_COMBO = 70;
+export const OVERDRIVE_COMBO = 91;
 export const OVERDRIVE_SPEED = 4.0;
 
 export const COMBO_TIERS = [
     {
         min: 1,
-        max: 20,
+        max: 30,
         cooldownSpeed: 1.00,
     },
     {
-        min: 21,
-        max: 40,
+        min: 31,
+        max: 60,
         cooldownSpeed: 2.0,
     },
     {
-        min: 41,
+        min: 61,
         max: OVERDRIVE_COMBO - 1,
         cooldownSpeed: 3.0,
     },
@@ -857,6 +865,151 @@ export function getEvolutionStage() {
     );
 }
 
+
+// ===============================
+// 累計獲得星数の追跡
+// ===============================
+
+/**
+ * 累計獲得星数を加算します。
+ * @param {number} amount - 加算する星の数
+ */
+export function addTotalStarsEarned(amount) {
+    if (!amount || amount <= 0) return;
+
+    const stats = getPlayerStats();
+    if (!stats.questRecord) stats.questRecord = {};
+    stats.questRecord.totalStarsEarned =
+        (stats.questRecord.totalStarsEarned || 0) + amount;
+    saveStats();
+}
+
+/**
+ * 星強化で消費した星の総数を逆算します。
+ * 各スキルの強化レベルから累計コストを合計します。
+ * @returns {number} 消費済み星数
+ */
+export function getSpentStarsFromUpgrades() {
+    const stats = getPlayerStats();
+    let spent = 0;
+
+    for (const upgrade of Object.values(stats.starSkillUpgrades || {})) {
+        const level = upgrade?.level || 0;
+        for (let l = 1; l <= level; l++) {
+            spent += getStarUpgradeCost(l);
+        }
+    }
+
+    return spent;
+}
+
+/**
+ * Star Upgrade で使用できる残り星数を取得します。
+ * 利用可能星数 = 獲得した星の総数 − 強化で消費した星数
+ * ※ questStars データ自体は消費されないため、ノード表示やHUDには影響しない
+ * @returns {number} 利用可能な星数
+ */
+export function getAvailableStars() {
+    return Math.max(0, getTotalStars() - getSpentStarsFromUpgrades());
+}
+
+/**
+ * 累計獲得星数を取得します。
+ * 未記録の旧セーブデータの場合は、
+ * 「現在の星数 + 強化で消費した星数」から自動移行します。
+ * ※ questStars は消費されない設計のため、通常は現在の星数と一致する
+ * @returns {number} 累計獲得星数
+ */
+export function getTotalStarsEarned() {
+    const stats = getPlayerStats();
+    const earned = stats.questRecord?.totalStarsEarned;
+
+    // ★移行処理：旧セーブデータ（totalStarsEarned 未記録）の場合
+    // （旧仕様で questStars が直接消費されていたデータに対応）
+    if (earned === undefined || earned === null) {
+        const current = getTotalStars();
+        const spent = getSpentStarsFromUpgrades();
+        const migrated = current + spent;
+
+        if (migrated > 0) {
+            if (!stats.questRecord) stats.questRecord = {};
+            stats.questRecord.totalStarsEarned = migrated;
+            saveStats();
+        }
+
+        return migrated;
+    }
+
+    return earned;
+}
+
+// ===============================
+// 星でアクティブスキルのクールダウンを強化
+// ===============================
+
+// 最大強化レベル
+export const STAR_UPGRADE_MAX_LEVEL = 10;
+
+// 各レベルで短縮されるクールダウン率（%）
+export const STAR_UPGRADE_REDUCTION_PER_LEVEL = 0.05; // 5%
+
+/**
+ * 指定レベルの強化に必要な星の数を計算します。
+ * 累進式: 5 + (level-1)*3 + floor((level-1)^2 / 2)
+ * @param {number} level - 次のレベル（1〜10）
+ * @returns {number} 必要星数
+ */
+export function getStarUpgradeCost(level) {
+    if (level < 1 || level > STAR_UPGRADE_MAX_LEVEL) return Infinity;
+    return 5 + (level - 1) * 3 + Math.floor(Math.pow(level - 1, 2) / 2);
+}
+
+/**
+ * 指定スキルの現在の強化レベルを取得します。
+ * @param {string} skillId - アクティブスキルID
+ * @returns {number} 強化レベル（0〜10）
+ */
+export function getStarUpgradeLevel(skillId) {
+    const stats = getPlayerStats();
+    if (!stats.starSkillUpgrades) stats.starSkillUpgrades = {};
+    return stats.starSkillUpgrades[skillId]?.level || 0;
+}
+
+/**
+ * 指定スキルのクールダウン短縮率（乗算係数）を取得します。
+ * 例: Lv.3 → 1.15（15%速くチャージ）
+ * @param {string} skillId - アクティブスキルID
+ * @returns {number} 短縮係数（1.0 = 強化なし）
+ */
+export function getStarUpgradeCooldownMultiplier(skillId) {
+    const level = getStarUpgradeLevel(skillId);
+    return 1 + level * STAR_UPGRADE_REDUCTION_PER_LEVEL;
+}
+
+/**
+ * 指定スキルを星で強化します。
+ * ※ questStars データ自体は消費せず、starSkillUpgrades のレベルアップのみで表現する
+ *   （ノードの星表示・HUD・詳細ステータスは獲得総数のまま維持される）
+ * @param {string} skillId - アクティブスキルID
+ * @returns {boolean} 強化に成功したかどうか
+ */
+export function upgradeStarSkill(skillId) {
+    const stats = getPlayerStats();
+    if (!stats.starSkillUpgrades) stats.starSkillUpgrades = {};
+
+    const currentLevel = stats.starSkillUpgrades[skillId]?.level || 0;
+    if (currentLevel >= STAR_UPGRADE_MAX_LEVEL) return false;
+
+    const nextLevel = currentLevel + 1;
+    const cost = getStarUpgradeCost(nextLevel);
+
+    // ★利用可能な星数で判定（questStars は消費しない）
+    if (getAvailableStars() < cost) return false;
+
+    stats.starSkillUpgrades[skillId] = { level: nextLevel };
+    saveStats();
+    return true;
+}
 
 // ===============================
 // リセット（デバッグ用）

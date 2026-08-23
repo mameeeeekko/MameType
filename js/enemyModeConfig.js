@@ -90,10 +90,16 @@ export const ENEMY_MODE_CONFIG = {
 //
 //================================
 
-export function buildEndText(end, playerConfig = null) {
+export function buildEndText(end, playerConfig = null, defenseConfig = null) {
   const lines = [];
-  if (!end) return lines;
 
+  // ★ 防衛モードの場合、専用の終了条件を表示
+  if (defenseConfig) {
+    lines.push(`制限時間: ${defenseConfig.timeLimit || '-'}秒`);
+    return lines;
+  }
+
+  if (!end) return lines;
   if (end.hpZero) {
     lines.push("HPが0になると終了");
   }
@@ -125,24 +131,32 @@ export function buildEndText(end, playerConfig = null) {
   return lines;
 }
 
-export function buildClearText(clear) {
+export function buildClearText(clear, defenseConfig = null) {
   const lines = [];
-  if (!clear) return lines;
+  // 明示的にクリア条件が定義されている場合は、まずそれを処理します。
+  // そうでない場合、防衛モードでは defenseConfig がクリア条件の主要なソースとなります。
+  if (clear) {
+    if (clear.killCount != null) {
+      lines.push(`敵を${clear.killCount}体倒せ`);
+    }
 
-  if (clear.killCount != null) {
-    lines.push(`敵を${clear.killCount}体倒せ`);
+    if (clear.noMiss) {
+      lines.push("ノーミスでクリアせよ");
+    }
+
+    if (clear.timerMs != null) {
+      lines.push(`${Math.round(clear.timerMs / 1000)}秒以内にクリア`);
+    }
+
+    if (clear.survive != null) {
+      lines.push(`生き残れ`);
+    }
   }
 
-  if (clear.noMiss) {
-    lines.push("ノーミスでクリアせよ");
-  }
-
-  if (clear.timerMs != null) {
-    lines.push(`${Math.round(clear.timerMs / 1000)}秒以内にクリア`);
-  }
-
-  if (clear.survive != null) {
-    lines.push(`生き残れ`);
+  // defenseConfig が提供されている場合、常に防衛モード固有のクリア条件を追加します。
+  // これにより、'clear' が null/undefined であっても防衛モードのクリア条件が表示されます。
+  if (defenseConfig && defenseConfig.totalCharsToType != null) {
+    lines.push(`目標文字数: ${defenseConfig.totalCharsToType}`);
   }
 
   return lines;
@@ -196,6 +210,14 @@ export function buildStarText(star = {}) {
     case "hpRemaining":
       t.forEach((v, i) => {
         lines.push(`★${i+1}: 残りHP ${Math.round(v*100)}%以上`);
+      });
+      break;
+
+    case "defenseSurplus":
+      t.forEach((v, i) => {
+        const surplusWeight = Math.round((star.weights?.surplus ?? 0.7) * 100);
+        const accuracyWeight = Math.round((star.weights?.accuracy ?? 0.3) * 100);
+        lines.push(`★${i+1}: 総合評価 (タイピング量 ${surplusWeight}% + 正確性 ${accuracyWeight}%) ${Math.round(v * 100)}%以上`);
       });
       break;
   }
@@ -1530,6 +1552,34 @@ export const STAGES = {
     star: { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
   },
 
+  // ========================================================
+  // 防衛戦モード (クエスト用)
+  // =========================================================
+  DEFENSE_1: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    bgImage: "battle_red",
+    bgm: "bgm_boss2",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 50,
+      timeLimit: 30, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 4,
+      maxLength: 8,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+
 // ========================================================
 // test
 // =========================================================
@@ -1653,5 +1703,4 @@ export const STAGES = {
     }
   },
 
-  
 };

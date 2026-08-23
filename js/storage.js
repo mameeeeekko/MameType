@@ -228,6 +228,8 @@ export function addRankingEntry(entry) {
     beforeTopScore = ranking[0]?.solvedCount ?? -Infinity;
   } else if (mode === "enemy_mode") {
     beforeTopScore = ranking[0]?.gScore ?? -Infinity;
+  } else if (mode === "defense_mode") {
+    beforeTopScore = ranking[0]?.gScore ?? -Infinity;
   } else {
     beforeTopScore = ranking[0]?.eScore ?? -Infinity;
   }
@@ -240,6 +242,8 @@ export function addRankingEntry(entry) {
       if (mode === "time_attack") {
         return (b.solvedCount ?? 0) - (a.solvedCount ?? 0);
       } else if (mode === "enemy_mode") {
+        return (b.gScore ?? 0) - (a.gScore ?? 0);
+      } else if (mode === "defense_mode") {
         return (b.gScore ?? 0) - (a.gScore ?? 0);
       } else {
         return (b.eScore ?? 0) - (a.eScore ?? 0);
@@ -267,6 +271,8 @@ export function addRankingEntry(entry) {
     if (mode === "time_attack") {
       isNewRecord = (rec.solvedCount ?? 0) > beforeTopScore;
     } else if (mode === "enemy_mode") {
+      isNewRecord = (rec.gScore ?? 0) > beforeTopScore;
+    } else if (mode === "defense_mode") {
       isNewRecord = (rec.gScore ?? 0) > beforeTopScore;
     } else {
       isNewRecord = (rec.eScore ?? 0) > beforeTopScore;
@@ -371,6 +377,8 @@ export async function importRanking(file) {
     if(mode === "time_attack"){
       return (b.solvedCount ?? 0) - (a.solvedCount ?? 0);
     }else if(mode === "enemy_mode"){
+      return (b.gScore ?? 0) - (a.gScore ?? 0);
+    }else if(mode === "defense_mode"){
       return (b.gScore ?? 0) - (a.gScore ?? 0);
     }else{
       return (b.eScore ?? 0) - (a.eScore ?? 0);

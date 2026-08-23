@@ -1,7 +1,7 @@
 // service-worker.js
 
 // キャッシュの名前。バージョンを更新すると、古いキャッシュが削除されます。
-const CACHE_NAME = "mametype-v1.1";
+const CACHE_NAME = "mametype-v1.0.0";
 
 // インストール時にキャッシュするファイルのリスト
 // ゲームの起動に必須なコアファイルや、頻繁にアクセスされるファイルを指定します。
@@ -12,6 +12,7 @@ const CORE_ASSETS = [
   "./js/main.js",
   "./js/gameCore.js",
   "./js/enemyCore.js",
+  "./js/defenseCore.js",
   "./js/inputCore.js",
   "./js/renderer.js",
   "./js/assetsLoader.js",

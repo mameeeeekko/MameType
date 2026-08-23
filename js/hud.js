@@ -1,6 +1,6 @@
 import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEMENTS } from "./playerStats.js";
 import { savePlayerStats } from "./storage.js";
-import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
+import { getPlayerStatsForEnemy, getStarUpgradeLevel, getStarUpgradeCooldownMultiplier, STAR_UPGRADE_MAX_LEVEL } from "./questPlayerStats.js";
 import { getClearedStageCount, getTotalStars, getAvailableMaxStars, hasSeenTrueEnding } from "./questProgress.js";
 import { PASSIVE_SKILLS, ACTIVE_SKILLS, getSkillById } from "./questSkills.js";
 import { QUEST_MAP } from "./questMap.js";
@@ -318,8 +318,8 @@ function updateQuestHud() {
   : 0;
 
   if (clearEl) {
-    const crown = hasSeenTrueEnding() ? ' C' : '';
-    clearEl.textContent = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%) 　 ${crown}`;
+    const crownBadge = hasSeenTrueEnding() ? '<span style="display: inline-block; background-color: #fadb14; color: #1c1c1c; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: bold; margin-left: 4px; vertical-align: middle;">C</span>' : '';
+    clearEl.innerHTML = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%) 　 ${crownBadge}`;
   }
 }
 
@@ -327,9 +327,40 @@ function updateNormalHud(stats) {
   const normal = stats.regular || {};
   const free   = stats.freeMode || {};
   const enemy  = stats.enemyMode || {};
+  const defense = stats.defenseMode || {};
 
-  const avgSpeed = normal.avgSpeed || 0;
-  const avgAcc   = normal.avgAccuracy || 0;
+  // --- 平均KPMの計算 ---
+  const kpmValues = [];
+  // 各モードのプレイ回数が0より大きい場合のみ計算に含める
+  if (normal.totalPlays > 0 && normal.avgSpeed > 0) {
+    kpmValues.push(normal.avgSpeed);
+  }
+  if (enemy.totalPlays > 0 && enemy.avgGKpm > 0) {
+    kpmValues.push(enemy.avgGKpm);
+  }
+  if (defense.totalPlays > 0 && defense.avgGKpm > 0) {
+    kpmValues.push(defense.avgGKpm);
+  }
+  // プレイしたモードの平均KPMをさらに平均する
+  const avgSpeed = kpmValues.length > 0
+    ? kpmValues.reduce((sum, val) => sum + val, 0) / kpmValues.length
+    : 0;
+
+  // --- 平均正確率の計算 ---
+  const accValues = [];
+  if (normal.totalPlays > 0 && normal.avgAccuracy > 0) {
+    accValues.push(normal.avgAccuracy);
+  }
+  if (enemy.totalPlays > 0 && enemy.avgAccuracy > 0) {
+    accValues.push(enemy.avgAccuracy);
+  }
+  if (defense.totalPlays > 0 && defense.avgAccuracy > 0) {
+    accValues.push(defense.avgAccuracy);
+  }
+  const avgAcc = accValues.length > 0
+    ? accValues.reduce((sum, val) => sum + val, 0) / accValues.length
+    : 0;
+
   const maxSpeed = normal.maxSpeed || 0;
 
   // 1. 値の更新
@@ -354,7 +385,7 @@ function updateNormalHud(stats) {
   if (speedBar) speedBar.style.width = Math.min(avgSpeed / 600, 1) * 100 + "%";
   if (accBar)   accBar.style.width   = Math.min(avgAcc / 100, 1) * 100 + "%";
   
-  const totalTime = (normal.totalGameTime || 0) + (free.totalTime || 0) + (enemy.totalPlayTime || 0);
+  const totalTime = (normal.totalGameTime || 0) + (free.totalTime || 0) + (enemy.totalPlayTime || 0) + (defense.totalPlayTime || 0);
   const el = document.getElementById("totalPlayTime");
   if (el) el.textContent = formatPlayTime(totalTime);
 
@@ -462,7 +493,7 @@ function renderQuestStatsModal() {
 
         <div class="quest-skill-row">
           <span>COOLDOWN</span>
-          ${renderQuestStatBar(skillStats.cooldownSpeed, 'multiplier_special')}
+          ${renderQuestStatBarForValue(skillStats.cooldownSpeed, 'multiplier_special')}
           <span>x${skillStats.cooldownSpeed.toFixed(2)}</span>
         </div>
 
@@ -630,6 +661,11 @@ function renderQuestActiveSkills() {
     const skill = ACTIVE_SKILLS?.[id];
     if (!skill) return;
 
+    // ★星強化の表示
+    const starLevel = getStarUpgradeLevel(id);
+    const starMultiplier = getStarUpgradeCooldownMultiplier(id);
+    const starReduction = Math.round((starMultiplier - 1) * 100);
+
     const item = document.createElement("div");
     item.className = "skill-item equipped active";
 
@@ -644,6 +680,22 @@ function renderQuestActiveSkills() {
         <div class="skill-desc" style="color: #fff;">
           ${skill.desc ?? ""}
         </div>
+
+        ${starLevel > 0 ? `
+          <div class="star-upgrade-badge" style="
+            display: inline-block;
+            margin-top: 6px;
+            background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,180,0,0.1));
+            border: 1px solid rgba(255,215,0,0.4);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: #ffd700;
+            font-weight: bold;
+          ">
+            ★ Lv.${starLevel}/${STAR_UPGRADE_MAX_LEVEL}  (CD短縮 ${starReduction}%)
+          </div>
+        ` : ""}
       </div>
     `;
 
@@ -1058,8 +1110,8 @@ function renderQuestStatBarForValue(value = 0, type = 'addition') {
       break;
     case 'multiplier_special':
       // 例: ITEM SPAWN x0.5 -> delta: -0.5, maxDelta: 1.0 (x0 or x2.0が最大)
-      delta = value;
-      maxDelta = 2.0;
+      delta = value - 1.0;
+      maxDelta = 1.0;
       break;
     case 'percentage':
       // 例: GUARD 20% -> delta: 0.2, maxDelta: 1.0 (100%が最大)
@@ -1094,119 +1146,157 @@ function renderStatsModal(sArg) {
   const s = sArg ?? getPlayerStats() ?? {};
   const e = s.enemyMode ?? {};
   const n = s.regular ?? {};
+  const d = s.defenseMode ?? {};
   const f = s.freeMode ?? {};
 
-  const AllTime = f.totalTime + n.totalGameTime + e.totalPlayTime;
-  const basicTotalPlays = n.totalPlays + e.totalPlays
+  // --- 平均KPMの計算 (3モード平均) ---
+  const kpmValues = [];
+  if (n.totalPlays > 0 && n.avgSpeed > 0) {
+    kpmValues.push(n.avgSpeed);
+  }
+  if (e.totalPlays > 0 && e.avgGKpm > 0) {
+    kpmValues.push(e.avgGKpm);
+  }
+  if (d.totalPlays > 0 && d.avgGKpm > 0) {
+    kpmValues.push(d.avgGKpm);
+  }
+  const avgOverallKpm = kpmValues.length > 0
+    ? kpmValues.reduce((sum, val) => sum + val, 0) / kpmValues.length
+    : 0;
+
+  // --- 平均正確率の計算 (3モード平均) ---
+  const accValues = [];
+  if (n.totalPlays > 0 && n.avgAccuracy > 0) {
+    accValues.push(n.avgAccuracy);
+  }
+  if (e.totalPlays > 0 && e.avgAccuracy > 0) {
+    accValues.push(e.avgAccuracy);
+  }
+  if (d.totalPlays > 0 && d.avgAccuracy > 0) {
+    accValues.push(d.avgAccuracy);
+  }
+  const avgOverallAcc = accValues.length > 0
+    ? accValues.reduce((sum, val) => sum + val, 0) / accValues.length
+    : 0;
+
+  const AllTime = (f.totalTime || 0) + (n.totalGameTime || 0) + (e.totalPlayTime || 0) + (d.totalPlayTime || 0);
+  const basicTotalPlays = (n.totalPlays || 0) + (e.totalPlays || 0) + (d.totalPlays || 0);
 
   // ★追加：各モード回数
+  const dModes = d.modes || {};
   const eModes = e.modes || {};
   const nModes = n.modes || {};
   const fModes = f.modes || {};
 
   const nNormalNum = nModes["normal"] || 0;
-  const nAttackNum = nModes["time_attack"] || 0;
-  const nLongNum   = nModes["long_text"] || 0;
-  const nMissNum   = nModes["miss_practice"] || 0;
-  const eEnemyNum  = eModes["enemy_mode"] || 0;
+  const nAttackNum = nModes["time_attack"] || 0; // eslint-disable-line no-unused-vars
+  const nLongNum   = nModes["long_text"] || 0; // eslint-disable-line no-unused-vars
+  const nMissNum   = nModes["miss_practice"] || 0; // eslint-disable-line no-unused-vars
+  const eEnemyNum = eModes["daily_enemy"] || 0;
+  const dDefenseNum = dModes["daily_defense"] || 0;
 
   const fNormalNum = fModes["normal"] || 0;
-  const fAttackNum = fModes["time_attack"] || 0;
-  const fLongNum   = fModes["long_text"] || 0;
-  const fMissNum   = fModes["miss_practice"] || 0;
-  const fEnemyNum  = fModes["enemy_mode"] || 0;
+  const fAttackNum = fModes["time_attack"] || 0; // eslint-disable-line no-unused-vars
+  const fLongNum   = fModes["long_text"] || 0; // eslint-disable-line no-unused-vars
+  const fMissNum   = fModes["miss_practice"] || 0; // eslint-disable-line no-unused-vars
+  const fEnemyNum  = fModes["free_enemy"] || 0;
+  const fDefenseNum = fModes["free_defense"] || 0;
 
   const NormalNum = nNormalNum + fNormalNum
-  const AttackNum = nAttackNum + fAttackNum
-  const LongNum = nLongNum + fLongNum
-  const MissNum = nMissNum + fMissNum
+  const AttackNum = nAttackNum + fAttackNum;
+  const LongNum = nLongNum + fLongNum;
+  const MissNum = nMissNum + fMissNum;
   const EnemyNum = eEnemyNum + fEnemyNum;
+  const DefenseNum = dDefenseNum + fDefenseNum;
 
   const content = document.getElementById("statsContent");
 
   content.innerHTML = `
-    <div class="daily-stats-grid">
-      <div class="daily-stats-card">
-        <div class="daily-stats-section">入力（ベーシック）</div>
-        <div class="daily-stats-row"><span>平均KPM</span><span>${(n.avgSpeed || 0).toFixed(0)}</span></div>
-        <div class="daily-stats-row"><span>平均正確率</span><span>${(n.avgAccuracy || 0).toFixed(1)}%</span></div>
-        <div class="daily-stats-row">
-          <span>最高KPM</span><span>
-            ${n.maxSpeed || 0}
-            ${n.maxSpeedDate ? `(${formatDateOnly(n.maxSpeedDate)})` : ""}
-          </span>
+    <div class="daily-stats-grid new-layout" style="display: flex; flex-direction: column; gap: 10px;">
+      <!-- 上段 -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+        <div class="daily-stats-card">
+            <div class="daily-stats-section">総合</div>
+            <div class="daily-stats-row"><span>平均KPM</span><span>${avgOverallKpm.toFixed(0)}</span></div>
+            <div class="daily-stats-row"><span>平均正確率</span><span style="text-align: right;">${avgOverallAcc.toFixed(1)}%</span></div>
+            <div class="daily-stats-row"><span>最大eScore</span><span></span></div>
+              <div class="daily-stats-row sub"><span>ベーシック</span><span style="text-align: right; color: #f0f6fc; font-size: 13px;">${n.maxEScore || 0}${n.maxEScoreDate ? `<br><span class="sub-date" style="color: #8b949e;">(${formatDateOnly(n.maxEScoreDate)})</span>` : ""}</span></div>
+            <div class="daily-stats-row"><span>最大gScore</span><span></span></div>
+              <div class="daily-stats-row sub"><span>エネミー</span><span style="text-align: right; color: #f0f6fc; font-size: 13px;">${e.maxGScore || 0}${e.maxGScoreDate ? `<br><span class="sub-date" style="color: #8b949e;">(${formatDateOnly(e.maxGScoreDate)})</span>` : ""}</span></div>
+              <div class="daily-stats-row sub"><span>防衛</span><span style="text-align: right; color: #f0f6fc; font-size: 13px;">${d.maxGScore || 0}${d.maxGScoreDate ? `<br><span class="sub-date" style="color: #8b949e;">(${formatDateOnly(d.maxGScoreDate)})</span>` : ""}</span></div>
         </div>
-        <div class="daily-stats-row"><span>累計タイプ数</span><span>${n.totalTyped || 0}</span></div>
-        <div class="daily-stats-row"><span>累計ミス数</span><span>${n.totalMiss || 0}</span></div>
-      </div>
-
-      <div class="daily-stats-card">
-        <div class="daily-stats-section">入力（エネミー）</div>
-        <div class="daily-stats-row"><span>平均KPM</span><span>${(e.avgGKpm || 0).toFixed(0)}</span></div>
-        <div class="daily-stats-row"><span>平均正確率</span><span>${(e.avgAccuracy || 0).toFixed(1)}%</span></div>
-        <div class="daily-stats-row">
-          <span>最高KPM</span><span>
-            ${e.maxGKpm || 0}
-            ${e.maxGKpmDate ? `(${formatDateOnly(e.maxGKpmDate)})` : ""}
-          </span>
+        <div class="daily-stats-card">
+            <div class="daily-stats-section">入力（ベーシック）</div>
+            <div class="daily-stats-row"><span>平均KPM</span><span>${(n.avgSpeed || 0).toFixed(0)}</span></div>
+            <div class="daily-stats-row"><span>平均正確率</span><span style="text-align: right;">${(n.avgAccuracy || 0).toFixed(1)}%</span></div>
+            <div class="daily-stats-row"><span>最大KPM</span><span style="text-align: right;">${n.maxSpeed || 0}${n.maxSpeedDate ? `<br><span class="sub-date">(${formatDateOnly(n.maxSpeedDate)})</span>` : ""}</span></div>
+            <div class="daily-stats-row"><span>累計タイプ数</span><span>${n.totalTyped || 0}</span></div>
+            <div class="daily-stats-row"><span>累計ミス数</span><span>${n.totalMiss || 0}</span></div>
         </div>
-        <div class="daily-stats-row"><span>最大チェイン</span><span>${e.maxChain || 0}</span></div>
-        <div class="daily-stats-row"><span>最大コンボ</span><span>${e.maxCombo || 0}</span></div>  
-        
-        <div class="daily-stats-row"><span>累計タイプ数</span><span>${e.totalTyped || 0}</span></div>
-        <div class="daily-stats-row"><span>累計ミス数</span><span>${e.totalMiss || 0}</span></div>
-        <div class="daily-stats-row"><span>敵撃破数</span><span>${e.totalKills || 0}</span></div>
-      </div>
-
-      <div class="daily-stats-card">
-        <div class="daily-stats-section">総合</div>
-        <div class="daily-stats-row"><span>最高eScore</span><span>
-        ${n.maxEScore || 0}
-        ${n.maxEScoreDate ? `(${formatDateOnly(n.maxEScoreDate)})` : ""}
-        </span></div>
-        <div class="daily-stats-row">
-          <span>最高gScore</span><span>
-            ${e.maxGScore || 0}
-            ${e.maxGScoreDate ? `(${formatDateOnly(e.maxGScoreDate)})` : ""}
-          </span>
+        <div class="daily-stats-card">
+            <div class="daily-stats-section">入力（エネミー）</div>
+            <div class="daily-stats-row"><span>平均KPM</span><span>${(e.avgGKpm || 0).toFixed(0)}</span></div>
+            <div class="daily-stats-row"><span>平均正確率</span><span style="text-align: right;">${(e.avgAccuracy || 0).toFixed(1)}%</span></div>
+            <div class="daily-stats-row"><span>最大KPM</span><span style="text-align: right;">${e.maxGKpm || 0}${e.maxGKpmDate ? `<br><span class="sub-date">(${formatDateOnly(e.maxGKpmDate)})</span>` : ""}</span></div>
+            <div class="daily-stats-row"><span>最大チェイン</span><span>${e.maxChain || 0}</span></div>
+            <div class="daily-stats-row"><span>最大コンボ</span><span>${e.maxCombo || 0}</span></div>
+            <div class="daily-stats-row"><span>累計タイプ数</span><span>${e.totalTyped || 0}</span></div>
+            <div class="daily-stats-row"><span>累計ミス数</span><span>${e.totalMiss || 0}</span></div>
+            <div class="daily-stats-row"><span>敵撃破数</span><span>${e.totalKills || 0}</span></div>
         </div>
-        <div class="daily-stats-row"><span>プレイ時間</span><span>${formatPlayTime(AllTime || 0)}</span></div>
-        <div class="daily-stats-row"><span>プレイ回数</span><span>${s.totalPlays || 0}</span></div>
-        <div class="daily-stats-row sub"><span>スタンダード</span><span>${NormalNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>タイムアタック</span><span>${AttackNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>長文</span><span>${LongNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>エネミー</span><span>${EnemyNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>ミス練習</span><span>${MissNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>最多プレイ回数／日</span><span>${s.days?.maxPerDay || 0}</span></div>
-        <div class="daily-stats-row sub"><span>今日のプレイ回数</span><span>${s.days?.todayCount || 0}</span></div>
+        <div class="daily-stats-card">
+            <div class="daily-stats-section">入力（防衛）</div>
+            <div class="daily-stats-row"><span>平均KPM</span><span>${(d.avgGKpm || 0).toFixed(0)}</span></div>
+            <div class="daily-stats-row"><span>平均正確率</span><span style="text-align: right;">${(d.avgAccuracy || 0).toFixed(1)}%</span></div>
+            <div class="daily-stats-row"><span>最大KPM</span><span style="text-align: right;">${d.maxGKpm || 0}${d.maxGKpmDate ? `<br><span class="sub-date">(${formatDateOnly(d.maxGKpmDate)})</span>` : ""}</span></div>
+            <div class="daily-stats-row"><span>最大コンボ</span><span>${d.maxCombo || 0}</span></div>
+            <div class="daily-stats-row"><span>累計タイプ数</span><span>${d.totalTyped || 0}</span></div>
+            <div class="daily-stats-row"><span>累計ミス数</span><span>${d.totalMiss || 0}</span></div>
+            <div class="daily-stats-row"><span>累計解答数</span><span>${d.totalSolved || 0}</span></div>
+        </div>
       </div>
-        
-      <div class="daily-stats-card">
-        <div class="daily-stats-section">デイリー</div>
-        <div class="daily-stats-row"><span>プレイ時間</span><span>${formatPlayTime((n.totalGameTime || 0) + (e.totalPlayTime || 0))}</span></div>
-        <div class="daily-stats-row"><span>プレイ回数</span><span>${basicTotalPlays || 0}</span></div>
-        <div class="daily-stats-row sub"><span>スタンダード</span><span>${nNormalNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>タイムアタック</span><span>${nAttackNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>長文</span><span>${nLongNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>エネミー</span><span>${eEnemyNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>ミス練習</span><span>${nMissNum || 0}</span></div>
-      </div>
-
-      <div class="daily-stats-card">
-        <div class="daily-stats-section">フリーモード</div>
-        <div class="daily-stats-row"><span>プレイ時間</span><span>${formatPlayTime(f.totalTime || 0)}</span></div>
-        <div class="daily-stats-row"><span>プレイ回数</span><span>${f.totalPlays || 0}</span></div>
-        <div class="daily-stats-row sub"><span>スタンダード</span><span>${fNormalNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>タイムアタック</span><span>${fAttackNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>長文</span><span>${fLongNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>エネミー</span><span>${fEnemyNum || 0}</span></div>
-        <div class="daily-stats-row sub"><span>ミス練習</span><span>${fMissNum || 0}</span></div>
-      </div>
-
-      <div class="daily-stats-card">
-        <div class="daily-stats-section">日数</div>
-        <div class="daily-stats-row"><span>プレイ日数</span><span>${s.days?.unique || 0}</span></div>
-        <div class="daily-stats-row"><span>連続日数</span><span>${s.days?.streak || 0}</span></div>
+      <!-- 下段 -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+        <div class="daily-stats-card">
+            <div class="daily-stats-section">プレイ統計</div>
+            <div class="daily-stats-row"><span>プレイ時間</span><span>${formatPlayTime(AllTime || 0)}</span></div>
+            <div class="daily-stats-row"><span>プレイ回数</span><span>${s.totalPlays || 0}</span></div>
+            <div class="daily-stats-row sub"><span>スタンダード</span><span>${NormalNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>タイムアタック</span><span>${AttackNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>長文</span><span>${LongNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>エネミー</span><span>${EnemyNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>防衛</span><span>${DefenseNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>ミス練習</span><span>${MissNum || 0}</span></div>
+        </div>
+        <div class="daily-stats-card">
+            <div class="daily-stats-section">デイリー</div>
+            <div class="daily-stats-row"><span>プレイ時間</span><span>${formatPlayTime((n.totalGameTime || 0) + (e.totalPlayTime || 0) + (d.totalPlayTime || 0))}</span></div>
+            <div class="daily-stats-row"><span>プレイ回数</span><span>${basicTotalPlays || 0}</span></div>
+            <div class="daily-stats-row sub"><span>スタンダード</span><span>${nNormalNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>タイムアタック</span><span>${nModes["time_attack"] || 0}</span></div>
+            <div class="daily-stats-row sub"><span>長文</span><span>${nModes["long_text"] || 0}</span></div>
+            <div class="daily-stats-row sub"><span>エネミー</span><span>${eEnemyNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>防衛</span><span>${dDefenseNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>ミス練習</span><span>${nModes["miss_practice"] || 0}</span></div>
+        </div>
+        <div class="daily-stats-card">
+            <div class="daily-stats-section">フリーモード</div>
+            <div class="daily-stats-row"><span>プレイ時間</span><span>${formatPlayTime(f.totalTime || 0)}</span></div>
+            <div class="daily-stats-row"><span>プレイ回数</span><span>${f.totalPlays || 0}</span></div>
+            <div class="daily-stats-row sub"><span>スタンダード</span><span>${fNormalNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>タイムアタック</span><span>${fModes["time_attack"] || 0}</span></div>
+            <div class="daily-stats-row sub"><span>長文</span><span>${fModes["long_text"] || 0}</span></div>
+            <div class="daily-stats-row sub"><span>エネミー</span><span>${fEnemyNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>防衛</span><span>${fDefenseNum || 0}</span></div>
+            <div class="daily-stats-row sub"><span>ミス練習</span><span>${fModes["miss_practice"] || 0}</span></div>
+        </div>
+        <div class="daily-stats-card">
+            <div class="daily-stats-section">日数</div>
+            <div class="daily-stats-row"><span>プレイ日数</span><span>${s.days?.unique || 0}</span></div>
+            <div class="daily-stats-row"><span>連続日数</span><span>${s.days?.streak || 0}</span></div>
+            <div class="daily-stats-row"><span>最多プレイ回数／日</span><span>${s.days?.maxPerDay || 0}</span></div>
+            <div class="daily-stats-row"><span>今日のプレイ回数</span><span>${s.days?.todayCount || 0}</span></div>
+        </div>
       </div>
     </div>
   `;

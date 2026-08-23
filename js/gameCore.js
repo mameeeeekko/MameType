@@ -82,14 +82,16 @@ export let isRetrying = false;
 export let isGameActive = false;
 export function setGameActive(v){
   isGameActive = v;
-}
-
+} 
+ 
 export let lastWasEnemyMode = false; //結果画面のもう一度につかう。
-export function setLastWasEnemyMode(v){
+let lastSpecialModeType = null; // "enemy_mode" or "defense_mode"
+export function setLastWasEnemyMode(v, type = null){
   lastWasEnemyMode = v;
+  lastSpecialModeType = type;
 }
-export function wasLastGameEnemyMode() {
-    return lastWasEnemyMode;
+export function getLastSpecialModeInfo() {
+    return { isSpecial: lastWasEnemyMode, type: lastSpecialModeType };
 }
 
 // =====================================================
@@ -373,8 +375,11 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   fullResetGame();
   // ゲーム開始時に、残っている会話ウィンドウを確実に閉じる
   try { closeDialogue(); } catch(e) { /* noop if dialogue module unavailable */ }
-
-  setLastWasEnemyMode(false);
+  
+  // ミス練習モード以外でゲームを開始する場合、特殊モードのフラグをリセットする
+  if (config.mode !== GameModes.MISS_PRACTICE) {
+    setLastWasEnemyMode(false);
+  }
 
   await initAudio();
   if (getSoundEnabled() && getSoundSettings().bgm) {

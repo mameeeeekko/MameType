@@ -50,7 +50,7 @@ function formatSigned(value, digits = 2) {
         : num.toFixed(digits);
 }
 
-export function showQuestResult(stats) {
+export function showQuestResult(stats) { // Already exported, no change needed
 
     const container = document.getElementById("questSkillResult");
     const content = document.getElementById("questSkillResultContent");
@@ -528,7 +528,7 @@ function playCalcAnimationForQuest() {
     }, 50);
 }
 
-function animateExpBarWithLevelUp() {
+export function animateExpBarWithLevelUp() {
 
     const stats = window._lastQuestStats || gameState.questStats;
     if (!stats) return;

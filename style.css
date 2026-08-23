@@ -1322,6 +1322,24 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   to { opacity: 1; transform: translateX(0); }
 }
 
+/* ジャンル複数選択チェックボックス */
+.genre-checkbox-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  flex: 1; /* 残りの幅を埋める */
+}
+
+.genre-checkbox-container label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  flex: initial !important; /* .config-row label のスタイルを上書き */
+  width: auto !important;
+}
 /* ===============================
    Chain UI
 ================================ */
@@ -4674,7 +4692,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   /* ▼タイトルより上 */
   top: -38px;
 
-  font-size: 11px;
+  font-size: 9px;
 
   /* ▼マットな黄色（ギラつき防止） */
   color: #d6c56f;
@@ -4977,6 +4995,34 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .mid-boss-node {
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
     background: #e0e0e0 !important; /* 中ボスは少し明るく */
+}
+
+/* =====================================================
+   防衛モードノードの装飾
+   ===================================================== */
+/* 未クリア時の防衛ノード (薄い色) */
+.map-node.defense-node {
+    background: #4a688c !important; /* 彩度を落とした青 */
+    border-radius: 0; /* clip-path を使うためリセット */
+    clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
+}
+
+/* クリア済みの防衛ノード (鮮やかな色) */
+.map-node.defense-node.cleared {
+    background: #58a6ff !important; /* 鮮やかな青 */
+    box-shadow: 0 0 12px rgba(88, 166, 255, 0.7);
+}
+
+.map-label.defense-label {
+    color: #7792b0 !important; /* 彩度を落とした青系のテキスト色 */
+    font-weight: bold;
+    text-shadow: none;
+}
+
+.map-label.defense-label.cleared {
+    color: #82c0ff !important; /* 鮮やかな青 */
+    text-shadow: 0 0 8px rgba(88, 166, 255, 0.6);
 }
 
 /* =====================================================
@@ -6364,3 +6410,439 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   background-color: #5c9bff;
 }
   
+
+/* defense combo tier wrapper */
+
+#defenseComboTierWrapper {
+  position: absolute;
+  top: 50%;
+  right: 230px; /* 入力文字の右側に配置 */
+  transform: translateY(-50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* =====================================================
+   防衛モード コンボバー (エヴァ風)
+   ===================================================== */
+#defenseComboTierWrapper {
+  position: absolute;
+  left: 50%;
+}
+
+.defense-combo-bar-container {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+}
+
+.defense-combo-bar-block {
+  flex: 1;
+  height: 4px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transform: skewX(-30deg);
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.defense-combo-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%; /* JSで制御 */
+  background-color: #ffe082; /* Lighter Amber -> Even Lighter */
+  transition: width 0.1s linear;
+}
+
+/* --- 状態 --- */
+
+/* 達成済み */
+.defense-combo-bar-block.filled {
+  background-color: #ffc107; /* Lighter Amber Dark -> Amber */
+  border-color: #ffe082;
+}
+
+/* 現在進行中 */
+.defense-combo-bar-block.active {
+  background-color: rgba(255, 193, 7, 0.2);
+  border-color: #ffe082;
+}
+
+/* ティアアップ時のフラッシュ */
+.defense-combo-bar-block.flash {
+  animation: defenseBarFlash 0.4s ease-out;
+}
+
+@keyframes defenseBarFlash {
+  0%, 100% {
+    background-color: #ff8f00;
+    transform: skewX(-30deg) scale(1);
+  }
+  50% {
+    background-color: #ffffff;
+    transform: skewX(-30deg) scale(1.1);
+    box-shadow: 0 0 15px #fff;
+  }
+}
+
+/* オーバードライブ */
+.defense-combo-bar-block.overdrive {
+  background-color: #d50000; /* Red */
+  border-color: #ff5252;
+  animation: defenseOverdrivePulse 0.8s infinite;
+}
+
+.defense-combo-bar-block.overdrive .defense-combo-bar-fill {
+  width: 100% !important;
+  background-color: #ff8a80;
+}
+
+@keyframes defenseOverdrivePulse {
+  0%, 100% {
+    background-color: #d50000;
+    filter: brightness(1);
+  }
+  50% {
+    background-color: #ff1744;
+    filter: brightness(1.5);
+  }
+}
+
+
+/* =====================================================
+   防衛モード コンボバー (六角形)
+   ===================================================== */
+.defense-combo-hex-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.defense-combo-hex-container {
+  position: relative;
+  width: 32px;
+  height: 36px;
+  transition: transform 0.2s ease-out;
+}
+
+.defense-combo-hex {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  transition: background-color 0.3s;
+}
+
+.defense-combo-hex-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0%; /* JSで制御 */
+  background-color: #4dd0e1; /* 明るいシアン */
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  transition: height 0.15s linear, background-color 0.3s;
+}
+
+/* --- 状態 --- */
+
+/* 達成済み */
+.defense-combo-hex-container.filled .defense-combo-hex {
+  background-color: #00acc1; /* 濃いシアン */
+}
+
+/* 現在進行中 */
+.defense-combo-hex-container.active .defense-combo-hex {
+  background-color: rgba(77, 208, 225, 0.3); /* 薄いシアン */
+}
+
+.defense-combo-hex-container.active .defense-combo-hex-fill {
+  box-shadow: 0 0 12px rgba(77, 208, 225, 0.8);
+}
+
+/* ティアアップ時のフラッシュ */
+.defense-combo-hex-container.flash {
+  animation: defenseHexFlash 0.4s ease-out;
+}
+
+@keyframes defenseHexFlash {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.defense-combo-hex-container.flash .defense-combo-hex {
+  animation: defenseHexColorFlash 0.4s ease-out;
+}
+
+@keyframes defenseHexColorFlash {
+  0%, 100% {
+    background-color: #00acc1;
+  }
+  50% {
+    background-color: #ffffff;
+    box-shadow: 0 0 15px #fff;
+  }
+}
+
+/* オーバードライブ */
+.defense-combo-hex-container.overdrive .defense-combo-hex {
+  background-color: #ffca28; /* ゴールド */
+  animation: defenseOverdrivePulse 1.5s infinite ease-in-out;
+}
+
+.defense-combo-hex-container.overdrive .defense-combo-hex-fill {
+  background-color: #ffecb3; /* 薄いゴールド */
+  height: 100% !important; /* 常に満タン */
+}
+
+@keyframes defenseOverdrivePulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+    box-shadow: 0 0 8px rgba(255, 202, 40, 0.5);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.3);
+    box-shadow: 0 0 20px rgba(255, 202, 40, 1);
+  }
+}
+
+/* =====================================================
+   STAR UPGRADE（星でアクティブスキルのクールダウン短縮）
+   ===================================================== */
+
+/* サイドメニューの星表示 */
+.quest-side-star {
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffd700;
+  padding: 8px 10px;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+/* starUpgrade モーダルのサイズ調整
+   ※ quest-modal-box と quest-modal-starUpgrade は同じ要素に付与されるため連結セレクタを使用 */
+.quest-modal-box.quest-modal-starUpgrade {
+  width: min(720px, 92vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 枠からはみ出ないように */
+}
+
+.quest-modal-box.quest-modal-starUpgrade .quest-modal-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* コンテンツ全体はスクロールしない */
+  padding: 16px;
+  min-height: 0;
+  flex: 1;
+}
+
+/* ヘッダー（固定・スクロールしない） */
+.star-upgrade-header {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+}
+
+.star-upgrade-owned {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.star-upgrade-label {
+  font-size: 12px;
+  color: #8b949e;
+  letter-spacing: 1px;
+}
+
+.star-upgrade-value {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.star-upgrade-desc {
+  font-size: 12px;
+  color: #8b949e;
+  line-height: 1.6;
+  padding: 0 4px;
+}
+
+/* スキル一覧（ここだけスクロール） */
+.star-upgrade-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* スクロールバー */
+.star-upgrade-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.star-upgrade-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 3px;
+}
+
+.star-upgrade-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.3);
+  border-radius: 3px;
+}
+
+.star-upgrade-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.5);
+}
+
+.star-upgrade-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: border-color 0.2s;
+  cursor: default;
+}
+
+.star-upgrade-item:hover {
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.star-upgrade-item-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.star-upgrade-skill-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.star-upgrade-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.star-upgrade-item-name {
+  font-size: 14px;
+  font-weight: bold;
+  color: #f0f6fc;
+}
+
+.star-upgrade-item-desc {
+  font-size: 11px;
+  color: #8b949e;
+  margin-top: 2px;
+}
+
+.star-upgrade-item-cooldown {
+  font-size: 11px;
+  color: #a3c8e4;
+  margin-top: 2px;
+}
+
+/* 進行バー */
+.star-upgrade-progress {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.star-upgrade-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffb300, #ffd700);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.star-upgrade-item-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #f0f6fc;
+}
+
+/* アクション */
+.star-upgrade-item-action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 90px;
+}
+
+.star-upgrade-btn {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 180, 0, 0.1));
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.4;
+  transition: all 0.2s;
+}
+
+.star-upgrade-btn:hover:not(.disabled) {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.35), rgba(255, 180, 0, 0.2));
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+}
+
+.star-upgrade-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(60%);
+}
+
+.star-upgrade-maxed {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  letter-spacing: 1px;
+}

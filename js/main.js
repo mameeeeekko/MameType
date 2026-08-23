@@ -16,17 +16,17 @@ import {
   saveQuestSlot,
   loadQuestSlot,
   exportQuestData,
-  importQuestData
+  importQuestData,
 } from "./storage.js";
-import * as Game from './gameCore.js';
-import { gameState , wasLastGameEnemyMode, getPaused, setPaused, backToMenu } from "./gameCore.js";
+import * as Game from "./gameCore.js";
+import { gameState, getLastSpecialModeInfo, getPaused, setPaused, backToMenu } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
-import { getPlayerStats } from "./playerStats.js";
-import { updateHud, initAchievementsUI } from "./hud.js";
+import { getPlayerStats } from "./playerStats.js"; 
+import { updateHud, initAchievementsUI, showHud } from "./hud.js"; export { showHud };
 import { handleKey } from './inputCore.js';
-import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, showHud } from './enemyCore.js';
+import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode } from "./enemyCore.js";
 import { renderQuestMapUI, openQuestMenuModal, closeQuestModal } from "./questMapUI.js";
-import { reloadQuestProgress, resetQuestAll, markTrueEndingSeen, hasSeenTrueEnding } from "./questProgress.js";
+import { reloadQuestProgress, resetQuestAll, markTrueEndingSeen, hasSeenTrueEnding as hasSeenTrueEndingInAutoSave } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId, getRecoveryCode, setRecoveryCode } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
@@ -43,9 +43,9 @@ import {
   getDifficultyDescription,
 } from "./difficulties.js";
 import { playBGM, stopBGM, playSE } from "./effectManager.js";
+import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
 import { supabase } from "../online/supabase.js";
-
-
+import { startDefenseMode } from "./defenseCore.js";
 
 // ================================
 // 🔹DOM参照（グローバル）
@@ -58,15 +58,15 @@ let settingsDiv, gameDiv, resultDiv, recordsDiv;
 let questMapScreen, questSaveMenuDiv, skillTreeDiv;
 let hintDiv;
 let onlineRankingDiv;
-let bgmInfoDisplay; // Add this to cacheDOM
+let bgmInfoDisplay;
 
 let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn, onlineRankingBtn, endingBtn;
 let startMenuBackBtn, freeStartMenuBackBtn, questStartMenuBackBtn;
 let saveToQuestMenuBackBtn, questSaveBtn;
 
-let enemyModeBtn, freeEnemyModeBtn, questStartBtn, questStartBtnFromBeginning;
+let enemyModeBtn, freeEnemyModeBtn, questStartBtn, questStartBtnFromBeginning, freeDefenseModeBtn;
 let startBtn, timeAttackBtn, longTextBtn;
-let freeStartBtn, freeTimeAttackBtn, freeLongTextBtn;
+let freeStartBtn, freeTimeAttackBtn, freeLongTextBtn, defenseModeBtn; // defenseModeBtn を追加
 
 let backBtn, resultBackBtn, recordsBackBtn, rankingBackBtn;
 let gameBackBtn;
@@ -119,7 +119,7 @@ function cacheDOM() {
   onlineRankingDiv = document.getElementById("onlineRankingScreen");
   bgmInfoDisplay = document.getElementById("bgmInfoDisplay"); // Cache the new element
 
-  startMenuBtn = document.getElementById("startMenuBtn");
+  startMenuBtn = document.getElementById("startMenuBtn"); //デイリー
   questMenuBtn = document.getElementById("questMenuBtn");
   freeModeBtn = document.getElementById("freeModeBtn");
   recordsMenuBtn = document.getElementById("recordsMenuBtn");
@@ -137,7 +137,9 @@ function cacheDOM() {
   startBtn = document.getElementById("startBtn");
   timeAttackBtn = document.getElementById("timeAttackBtn");
   longTextBtn = document.getElementById("longTextBtn");
+  defenseModeBtn = document.getElementById("defenseModeBtn"); // defenseModeBtn を取得
   freeStartBtn = document.getElementById("freeStartBtn");
+  freeDefenseModeBtn = document.getElementById("freeDefenseModeBtn"); // freeDefenseModeBtn を取得
   freeTimeAttackBtn = document.getElementById("freeTimeAttackBtn");
   freeLongTextBtn = document.getElementById("freeLongTextBtn");
 
@@ -228,8 +230,24 @@ function hideLoading() {
 }
 
 function hasBossChallengeUnlocked() {
-  // プレイヤー全体の統計情報からクリア済みかチェックする
-  return getPlayerStats().hasSeenTrueEnding;
+  // ★ 修正: オートセーブと全手動セーブスロットを確認する
+
+  // 1. 現在のオートセーブデータで真エンディングを見ているか
+  if (hasSeenTrueEndingInAutoSave()) {
+    return true;
+  }
+
+  // 2. 全ての手動セーブスロットをチェック
+  const slots = loadQuestSlots();
+  for (const slot of slots) {
+    // スロットデータがあり、その中の進行状況データ(progress)で真エンディングフラグがtrueか
+    if (slot?.progress?.hasSeenTrueEnding) {
+      return true;
+    }
+  }
+
+  // どこにもクリアデータがなければfalse
+  return false;
 }
 
 
@@ -266,6 +284,9 @@ export function handleGlobalSoundToggle() {
   // 保存
   saveSettings();
 }
+// defenseRenderer.jsから呼び出せるようにグローバルスコープに公開
+window.handleGlobalSoundToggle = handleGlobalSoundToggle;
+
 
 function updateAllSoundToggleUI(enabled) {
   const icon = enabled ? "./assets/pic/sound1.png" : "./assets/pic/soundmute.png";
@@ -1039,12 +1060,16 @@ function saveFreeModeConfig() {
     lastEnemyPattern: currentEnemyPattern,
     standard: {
       difficulty: getCurrentDifficulty("free-standard").id,
-      genre: document.getElementById("standardGenreSelect")?.value || "all",
+      genres: Array.from(document.querySelectorAll('#standardGenreCheckboxes input[name="standard-genre"]:checked'))
+                   .map(cb => cb.value)
+                   .filter(v => v !== 'all'),
       count: parseInt(document.getElementById("stdCountSlider")?.value) || 20,
     },
     timeAttack: {
       difficulty: getCurrentDifficulty("free-timeattack").id,
-      genre: document.getElementById("timeAttackGenreSelect")?.value || "all",
+      genres: Array.from(document.querySelectorAll('#timeAttackGenreCheckboxes input[name="timeattack-genre"]:checked'))
+                   .map(cb => cb.value)
+                   .filter(v => v !== 'all'),
       time: parseInt(document.getElementById("taTimeSlider")?.value) || 60
     },
     long: {
@@ -1060,6 +1085,15 @@ function saveFreeModeConfig() {
       tier: document.getElementById("freeEnemyTier")?.value || "1",
       typeSet: document.getElementById("freeEnemyTypeSet")?.value || "ENEMY_TIER_BALANCED",
       lv: parseInt(document.getElementById("playerLvRange")?.value) || 1
+    },
+    defense: { // Defense Mode settings for Free Mode
+      totalCharsToType: parseInt(document.getElementById("defenseCharsSlider")?.value) || 300,
+      timeLimit: parseInt(document.getElementById("defenseTimeSlider")?.value) || 120,
+      genres: Array.from(document.querySelectorAll('#defenseGenreCheckboxes input[name="defense-genre"]:checked'))
+                   .map(cb => cb.value)
+                   .filter(v => v !== 'all'), // 'all'は保存しない
+      minLength: parseInt(document.getElementById("defenseMinWordLengthSlider")?.value) || 1,
+      maxLength: parseInt(document.getElementById("defenseMaxWordLengthSlider")?.value) || 10,
     },
     boss: {
       selectedStage: document.getElementById("bossStageSelect")?.value || "W1_WORLD_BOSS",
@@ -1088,9 +1122,15 @@ function loadFreeModeConfig() {
       const el = document.getElementById("stdCountSlider");
       if (el) { el.value = config.standard.count; updateConfigSliderLabel("stdCountSlider", el.value); }
     }
-    if (config.standard?.genre){
-      const el = document.getElementById("standardGenreSelect");
-      if (el) el.value = config.standard.genre;
+    if (config.standard?.genres){
+      const checkboxes = document.querySelectorAll('#standardGenreCheckboxes input[name="standard-genre"]');
+      checkboxes.forEach(cb => {
+        cb.checked = config.standard.genres.includes(cb.value);
+      });
+      // 「すべて」チェックボックスの状態を更新
+      const allCheckbox = document.querySelector('#standardGenreCheckboxes input[value="all"]');
+      const otherCheckboxes = Array.from(checkboxes).filter(cb => cb.value !== 'all');
+      if(allCheckbox) allCheckbox.checked = otherCheckboxes.every(cb => cb.checked);
     }
 
     if (config.timeAttack?.difficulty) {
@@ -1101,9 +1141,15 @@ function loadFreeModeConfig() {
       const el = document.getElementById("taTimeSlider");
       if (el) { el.value = config.timeAttack.time; updateConfigSliderLabel("taTimeSlider", el.value); }
     }
-    if (config.timeAttack?.genre){
-      const el = document.getElementById("timeAttackGenreSelect");
-      if (el) el.value = config.timeAttack.genre;
+    if (config.timeAttack?.genres){
+      const checkboxes = document.querySelectorAll('#timeAttackGenreCheckboxes input[name="timeattack-genre"]');
+      checkboxes.forEach(cb => {
+        cb.checked = config.timeAttack.genres.includes(cb.value);
+      });
+      // 「すべて」チェックボックスの状態を更新
+      const allCheckbox = document.querySelector('#timeAttackGenreCheckboxes input[value="all"]');
+      const otherCheckboxes = Array.from(checkboxes).filter(cb => cb.value !== 'all');
+      if(allCheckbox) allCheckbox.checked = otherCheckboxes.every(cb => cb.checked);
     }
 
     if (config.long?.genre) {
@@ -1166,6 +1212,34 @@ function loadFreeModeConfig() {
         el.value = config.boss.level;
         updateConfigSliderLabel("bossPlayerLvRange", el.value);
       }
+    }
+    // Defense Mode settings for Free Mode
+    if (config.defense) {
+      const charsEl = document.getElementById("defenseCharsSlider");
+      if (charsEl) { charsEl.value = config.defense.totalCharsToType; updateConfigSliderLabel("defenseCharsSlider", charsEl.value); }
+
+      const timeEl = document.getElementById("defenseTimeSlider");
+      if (timeEl) { timeEl.value = config.defense.timeLimit; updateConfigSliderLabel("defenseTimeSlider", timeEl.value); }
+
+      if (config.defense.genres) {
+        const checkboxes = document.querySelectorAll('#defenseGenreCheckboxes input[name="defense-genre"]');
+        checkboxes.forEach(cb => {
+          cb.checked = config.defense.genres.includes(cb.value);
+        });
+        // 「すべて」チェックボックスの状態を更新
+        const allCheckbox = document.querySelector('#defenseGenreCheckboxes input[value="all"]');
+        const otherCheckboxes = Array.from(checkboxes).filter(cb => cb.value !== 'all');
+        if(allCheckbox) allCheckbox.checked = otherCheckboxes.every(cb => cb.checked);
+      }
+      if (config.defense.minLength) {
+        const el = document.getElementById("defenseMinWordLengthSlider");
+        if (el) { el.value = config.defense.minLength; updateConfigSliderLabel("defenseMinWordLengthSlider", el.value); }
+      }
+      if (config.defense.maxLength) {
+        const el = document.getElementById("defenseMaxWordLengthSlider");
+        if (el) { el.value = config.defense.maxLength; updateConfigSliderLabel("defenseMaxWordLengthSlider", el.value); }
+      }
+      switchFreeModeConfig(currentFreeModeId); // Ensure UI updates if Defense was last selected
     }
   } catch (e) {
     console.warn("Failed to load free mode config", e);
@@ -1277,6 +1351,36 @@ function startFreeEnemyMode() {
     enemyTable: enemyTable // Tierと属性セットから生成したテーブルをトップレベルで渡す
   });
 }
+
+/**
+ * フリーモードの防衛戦モードを開始する (UI設定を反映)
+ */
+function startFreeDefenseMode() {
+  hideAllScreens(); // ★追加: UIをリセット
+  const totalCharsToType = parseInt(document.getElementById("defenseCharsSlider")?.value) || 2000;
+  const timeLimit = parseInt(document.getElementById("defenseTimeSlider")?.value) || 180;
+  const genres = Array.from(document.querySelectorAll('#defenseGenreCheckboxes input[name="defense-genre"]:checked'))
+                      .map(cb => cb.value);
+
+  const minLength = parseInt(document.getElementById("defenseMinWordLengthSlider")?.value) || 1;
+  const maxLength = parseInt(document.getElementById("defenseMaxWordLengthSlider")?.value) || 10;
+
+  showMenuBackground(false);
+
+  gameState.isFreeMode = true;
+  gameState.isQuestMode = false;
+
+  startDefenseMode({
+    isFreeMode: true,
+    custom: {
+      totalCharsToType,
+      timeLimit, // 秒単位で渡す
+      genres: genres.length > 0 ? genres : ['empty'], // 標準単語の指定を'empty'に戻す
+      minLength: minLength,
+      maxLength: maxLength,
+    }
+  });
+}
 // =====================================================
 // フリーモード詳細設定のUI制御
 // =====================================================
@@ -1297,7 +1401,7 @@ function initFreeModeConfigUI() {
   });
 
   // スライダー変更時に保存
-  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "playerLvRange", "bossPlayerLvRange"]; // bossPlayerLvRangeを追加
+  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "playerLvRange", "bossPlayerLvRange", "defenseCharsSlider", "defenseTimeSlider", "defenseMinWordLengthSlider", "defenseMaxWordLengthSlider"]; // Defense slidersを追加
   sliders.forEach(id => {
     const el = document.getElementById(id);
     el?.addEventListener("input", () => {
@@ -1317,19 +1421,63 @@ function initFreeModeConfigUI() {
     });
   }
 
-  // ジャンル選択変更時に保存
-  document.getElementById("standardGenreSelect")?.addEventListener("change", () => {
-    saveFreeModeConfig();
+  // スタンダードモードのジャンルチェックボックス変更時に保存
+  const stdGenreCheckboxes = document.querySelectorAll('#standardGenreCheckboxes input[name="standard-genre"]');
+  stdGenreCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const allCheckbox = document.querySelector('#standardGenreCheckboxes input[value="all"]');
+      const otherCheckboxes = Array.from(stdGenreCheckboxes).filter(cb => cb.value !== 'all');
+
+      if (e.target.value === 'all') {
+        otherCheckboxes.forEach(cb => cb.checked = e.target.checked);
+      } else {
+        if (allCheckbox) allCheckbox.checked = otherCheckboxes.every(cb => cb.checked);
+      }
+      saveFreeModeConfig();
+    });
+  });
+
+  // タイムアタックモードのジャンルチェックボックス変更時に保存
+  const taGenreCheckboxes = document.querySelectorAll('#timeAttackGenreCheckboxes input[name="timeattack-genre"]');
+  taGenreCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const allCheckbox = document.querySelector('#timeAttackGenreCheckboxes input[value="all"]');
+      const otherCheckboxes = Array.from(taGenreCheckboxes).filter(cb => cb.value !== 'all');
+
+      if (e.target.value === 'all') {
+        otherCheckboxes.forEach(cb => cb.checked = e.target.checked);
+      } else {
+        if (allCheckbox) allCheckbox.checked = otherCheckboxes.every(cb => cb.checked);
+      }
+      saveFreeModeConfig();
+    });
+  });
+
+  // 防衛モードのジャンルチェックボックス変更時に保存
+  const defenseGenreCheckboxes = document.querySelectorAll('#defenseGenreCheckboxes input[name="defense-genre"]');
+  defenseGenreCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const allCheckbox = document.querySelector('#defenseGenreCheckboxes input[value="all"]');
+      const otherCheckboxes = Array.from(defenseGenreCheckboxes).filter(cb => cb.value !== 'all');
+
+      if (e.target.value === 'all') {
+        // 「すべて」が変更されたら、他のチェックボックスの状態を同期
+        otherCheckboxes.forEach(cb => cb.checked = e.target.checked);
+      } else {
+        // 他のチェックボックスが変更されたら、「すべて」の状態を更新
+        if (allCheckbox) allCheckbox.checked = otherCheckboxes.every(cb => cb.checked);
+      }
+      saveFreeModeConfig();
+    });
   });
 
   // 各設定パネル内の開始ボタンにイベントを登録
   document.getElementById("startStandardFree")?.addEventListener("click", () => {
     const count = parseInt(document.getElementById("stdCountSlider").value);
-    const genre = document.getElementById("standardGenreSelect")?.value || "all";
-    let tags = [];
-
-    if (genre !== "all") {
-      tags.push(genre);
+    const genres = Array.from(document.querySelectorAll('#standardGenreCheckboxes input[name="standard-genre"]:checked')).map(cb => cb.value);
+    let tags = genres.length > 0 ? genres : ['empty'];
+    if (tags.includes('all')) {
+      tags = []; // 'all' は gameCore 側で解釈されないので、空配列にして全単語対象とする
     }
 
     hideAllScreens();
@@ -1342,22 +1490,16 @@ function initFreeModeConfigUI() {
       mode: GameModes.NORMAL,
       isFreeMode: true,
       difficulty: getCurrentDifficulty("free-standard").id,
-      custom: { questionLimit: count, tags: tags}
+      custom: { questionLimit: count, tags: tags }
     });
-  });
-
-  // ジャンル選択変更時に保存
-  document.getElementById("timeAttackGenreSelect")?.addEventListener("change", () => {
-    saveFreeModeConfig();
   });
 
   document.getElementById("startTimeAttackFree")?.addEventListener("click", () => {
     const time = parseInt(document.getElementById("taTimeSlider").value);
-    const genre = document.getElementById("timeAttackGenreSelect")?.value || "all";
-    let tags = [];
-
-    if (genre !== "all") {
-      tags.push(genre);
+    const genres = Array.from(document.querySelectorAll('#timeAttackGenreCheckboxes input[name="timeattack-genre"]:checked')).map(cb => cb.value);
+    let tags = genres.length > 0 ? genres : ['empty'];
+    if (tags.includes('all')) {
+      tags = []; // 'all' は gameCore 側で解釈されないので、空配列にして全単語対象とする
     }
 
     hideAllScreens();
@@ -1370,7 +1512,7 @@ function initFreeModeConfigUI() {
       mode: GameModes.TIME_ATTACK,
       isFreeMode: true,
       difficulty: getCurrentDifficulty("free-timeattack").id,
-      custom: { limitSec: time , tags: tags}
+      custom: { limitSec: time, tags: tags }
     });
   });
 
@@ -1400,42 +1542,82 @@ function initFreeModeConfigUI() {
     });
   });
 
-  document.getElementById("startEnemyFree")?.addEventListener("click", startFreeEnemyMode);
-  document.getElementById("startBossFree")?.addEventListener("click", () => {
-    const selectedStage = document.getElementById("bossStageSelect")?.value || "W1_WORLD_BOSS";
-    const selectedDifficulty = getCurrentDifficulty("free-boss").id; // ボスモードの難易度を取得
-    const selectedLevel = parseInt(document.getElementById("bossPlayerLvRange")?.value) || 1; // ボスモードのプレイヤーレベルを取得
-    hideAllScreens();
-    showMenuBackground(false);
-    gameState.isFreeMode = true;
-    gameState.isQuestMode = false;
-    startEnemyMode({
-      mode: GameModes.ENEMY_MODE,
-      isFreeMode: true,
-      difficulty: selectedDifficulty, // 取得した難易度を渡す
-      level: selectedLevel, // 取得したレベルを渡す
-      stage: selectedStage,
-      bossOnly: true // ボスフェーズのみ実行するフラグ
-    });
-  });
-
   // エネミーモードの開始ボタンを設定パネルの最下部に移動する
   const enemyStartBtn = document.getElementById("startEnemyFree");
   if (enemyStartBtn && configEnemy) {
-    configEnemy.appendChild(enemyStartBtn);
+    configEnemy.appendChild(enemyStartBtn); // 先にDOMに追加
+    enemyStartBtn.addEventListener("click", startFreeEnemyMode); // その後でイベントリスナーを設定
   }
 
+  // 防衛モードの開始ボタンを設定パネルの最下部に移動する
+  const defenseStartBtn = document.getElementById("startDefenseFree");
+  const configDefense = document.getElementById("configDefense");
+  if (defenseStartBtn && configDefense) {
+    configDefense.appendChild(defenseStartBtn);
+  }
+
+  // ★追加: フリーモードの防衛モード開始ボタンにイベントリスナーを設定
+  document.getElementById("startDefenseFree")?.addEventListener("click", startFreeDefenseMode);
+
+  // ★★★ 修正箇所 ★★★
+  // フリーモードのボス戦開始ボタンにイベントリスナーを設定
+  document.getElementById("startBossFree")?.addEventListener("click", () => {
+    const stageId = document.getElementById("bossStageSelect")?.value;
+    const level = parseInt(document.getElementById("bossPlayerLvRange")?.value || "1");
+    if (!stageId) {
+      alert("ボスステージが選択されていません。");
+      return;
+    }
+    hideAllScreens();
+    showMenuBackground(false);
+    startEnemyMode({
+      isFreeMode: true,
+      stage: stageId,
+      bossOnly: true, // ボス戦のみ実行するフラグ
+      level: level, // プレイヤーレベル
+      difficulty: getCurrentDifficulty("free-boss").id,
+    });
+  });
+
+  // --- 防衛モードの単語長範囲スライダーの同期 ---
+  const minSlider = document.getElementById("defenseMinWordLengthSlider");
+  const maxSlider = document.getElementById("defenseMaxWordLengthSlider");
+
+  if (minSlider && maxSlider) {
+    const syncSliders = () => {
+      const minVal = parseInt(minSlider.value);
+      const maxVal = parseInt(maxSlider.value);
+
+      if (minVal > maxVal) {
+        // 最小値が最大値を超えた場合、最大値を最小値に合わせる
+        maxSlider.value = minVal;
+        updateConfigSliderLabel("defenseMaxWordLengthSlider", minVal);
+      }
+      // ラベルを範囲表示に更新
+      updateConfigSliderLabel("defenseWordLengthRange", { min: minSlider.value, max: maxSlider.value });
+    };
+
+    minSlider.addEventListener("input", syncSliders);
+    maxSlider.addEventListener("input", syncSliders);
+
+    // 初期表示
+    syncSliders();
+  }
 }
 
 /**
  * スライダーの値をUIに反映する共通処理
  */
 function updateConfigSliderLabel(id, value) {
-  const valDisplay = document.getElementById(id.replace("Slider", "Value").replace("Range", "Value").replace("playerLv", "enemyLv"));
+  const valDisplay = document.getElementById(id.replace("Slider", "Value").replace("Range", "Value").replace("playerLv", "enemyLv").replace("WordLength", "WordLength"));
   if (!valDisplay) return;
 
   if (id === "enemyIntervalSlider") {
     valDisplay.textContent = (value / 1000).toFixed(1);
+  } else if (id === "defenseWordLengthRange") {
+    // 範囲スライダー用の特別処理
+    const rangeDisplay = document.getElementById("defenseWordLengthValue");
+    if (rangeDisplay) rangeDisplay.textContent = `${value.min} - ${value.max}`;
   } else {
     valDisplay.textContent = value;
   }
@@ -1486,7 +1668,8 @@ function switchFreeModeConfig(modeId) {
     'Standard': freeStartBtn,
     'TimeAttack': freeTimeAttackBtn,
     'Enemy': freeEnemyModeBtn,
-    'Long': freeLongTextBtn,
+    'Long': freeLongTextBtn, // This is already there
+    'Defense': freeDefenseModeBtn, // New button for Defense
     'Boss': document.getElementById('freeBossBtn') // BOSSボタンもマップに追加
   };
 
@@ -1528,8 +1711,14 @@ function updateGameUIVisibility(modeId) {
 // 画面表示制御ユーティリティ
 // =====================================================
 export function hideAllScreens() {
+  // ★ chainUI も非表示対象に追加
   const freeModeConfig = document.getElementById("freeModeConfig");
-  [menuDiv, questMenuDiv, startMenuDiv, freeStartMenuDiv, settingsDiv, gameDiv, resultDiv, recordsDiv, questMapScreen, skillTreeDiv, onlineRankingDiv, freeModeConfig]
+  const chainUI = document.getElementById("chainUI");
+  [
+    menuDiv, questMenuDiv, startMenuDiv, freeStartMenuDiv, settingsDiv, gameDiv,
+    resultDiv, recordsDiv, questMapScreen, skillTreeDiv, onlineRankingDiv,
+    freeModeConfig, chainUI
+  ]
     .forEach(div => { if (div) div.style.display = "none"; });
   // showMenuBackground(false); // メニュー遷移時に背景画像が途切れないように維持
 }
@@ -1812,19 +2001,28 @@ function bindModeStartEvents() {
   startBtn?.addEventListener("click", () => {
     hideAllScreens();
     updateGameUIVisibility(GameModes.NORMAL.id); // UI表示を更新
-    Game.doCountdown({ mode: GameModes.NORMAL, isFreeMode: false, difficulty: "normal" });
+    Game.doCountdown({ mode: GameModes.NORMAL, isFreeMode: false, difficulty: "hard" });
   });
 
   timeAttackBtn?.addEventListener("click", () => {
     hideAllScreens();
     updateGameUIVisibility(GameModes.TIME_ATTACK.id); // UI表示を更新
-    Game.doCountdown({ mode: GameModes.TIME_ATTACK, isFreeMode: false, difficulty: "normal" });
+    Game.doCountdown({ mode: GameModes.TIME_ATTACK, isFreeMode: false, difficulty: "hard" });
   });
 
   longTextBtn?.addEventListener("click", () => {
     hideAllScreens();
     updateGameUIVisibility(GameModes.LONG_TEXT.id); // UI表示を更新
     Game.doCountdown({ mode: GameModes.LONG_TEXT, isFreeMode: false, difficulty: null });
+  });
+
+  defenseModeBtn?.addEventListener("click", () => {
+    hideAllScreens(); // ★追加: UIをリセット
+    showMenuBackground(false);
+    gameState.isFreeMode = false;
+    gameState.isQuestMode = false;
+    // ★ defenseCore.js の関数を呼び出す
+    startDefenseMode({ isFreeMode: false }); // Pass isFreeMode
   });
 
   freeStartBtn?.addEventListener("click", () => {
@@ -1837,6 +2035,14 @@ function bindModeStartEvents() {
 
   freeLongTextBtn?.addEventListener("click", () => {
     switchFreeModeConfig('Long');
+  });
+
+  freeDefenseModeBtn?.addEventListener("click", () => {
+    switchFreeModeConfig('Defense');
+  });
+
+  freeDefenseModeBtn?.addEventListener("click", () => {
+    switchFreeModeConfig('Defense');
   });
 }
 
@@ -1851,12 +2057,17 @@ function bindResultEvents() {
     const lastModeId = Game.getLastGameMode()?.id || GameModes.NORMAL.id;
     updateGameUIVisibility(lastModeId);
 
-    if (wasLastGameEnemyMode()) {
-      // フリーモードのエネミーモードの場合、UIの設定（Tier等）を反映し直して開始する
-      if (gameState.isFreeMode) {
-        startFreeEnemyMode();
-      } else {
-        restartEnemyMode();
+    const specialModeInfo = getLastSpecialModeInfo();
+    if (specialModeInfo.isSpecial) {
+      if (specialModeInfo.type === "defense_mode") {
+        restartDefenseMode();
+      } else { // "enemy_mode" or null (legacy)
+        // フリーモードのエネミーモードの場合、UIの設定（Tier等）を反映し直して開始する
+        if (gameState.isFreeMode) {
+          startFreeEnemyMode();
+        } else {
+          restartEnemyMode();
+        }
       }
     } else {
       Game.restartLastGame();
@@ -1904,6 +2115,20 @@ function bindResultEvents() {
     const modeId = e.currentTarget.dataset.modeId;
     Game.fullResetGame();
     Game.backToMenu();
+
+    // ★ 防衛モードやエネミーモードの画面が残らないように非表示にする
+    const enemyContainer = document.getElementById("enemyModeContainer");
+    const canvas = document.getElementById("enemyModeCanvas");
+    if (enemyContainer) enemyContainer.style.display = "none";
+    if (canvas) canvas.style.display = "none";
+
+    const defenseContainer = document.getElementById("defenseModeContainer");
+    const canvasDef = document.getElementById("defenseModeCanvas");
+    if (defenseContainer) defenseContainer.style.display = "none";
+    if (canvasDef) canvas.style.display = "none";
+    const defenseUiContainer = document.getElementById("defense-ui-container");
+    if (defenseUiContainer) defenseUiContainer.style.display = "none";
+
     hideAllScreens();
     showRecordsView(modeId ?? GameModes.NORMAL.id);
   });
@@ -1919,6 +2144,16 @@ function bindMenuBackEvents() {
   resultBackBtn?.addEventListener("click", () => {
     Game.backToMenu();
     updateHud(null, { isQuestMode: false });
+    showMainMenu();
+  });
+
+  // defenseResult.js からの呼び出しに対応
+  resultBackBtn?.addEventListener("click", () => {
+      showMainMenu();
+  });
+
+  // defenseResult.jsなど、他のモジュールからのメニュー復帰要求をハンドル
+  document.addEventListener("back-to-main-menu", () => {
     showMainMenu();
   });
 
@@ -1950,7 +2185,7 @@ export function backToQuestMap() {
 
 function bindKeyEvents() {
   
-  document.addEventListener("keydown", (e) => {
+  document.addEventListener("keydown", async (e) => {
 
     // 管理者用DEVツール
     if (e.shiftKey && e.key.toLowerCase() === "d") {
@@ -1964,7 +2199,7 @@ function bindKeyEvents() {
     
     if (handleResultKey(e)) return;
     if (handlePauseKey(e)) return;
-    if (handleGameKey(e)) return;
+    if (await handleGameKey(e)) return;
     if (handleMenuKey(e)) return;
   });
 }
@@ -2032,6 +2267,11 @@ function handlePauseKey(e) {
       setPaused(false);
       document.querySelector(".pause-overlay").style.display = "none";
   
+      // ★ 防衛モード
+      if (gameState.currentMode?.id === GameModes.DEFENSE_MODE.id) {
+        restartDefenseMode();
+        return true;
+      }
       if (gameState.enemyMode) {
         if (gameState.isFreeMode) startFreeEnemyMode();
         else restartEnemyMode();
@@ -2052,6 +2292,24 @@ function handlePauseKey(e) {
         openQuestMenuModal("skillTree");
         gameState.currentChallenge.isSkillMode = false;
 
+        return true;
+      }
+
+      // ★ 防衛モード
+      if (gameState.currentMode?.id === GameModes.DEFENSE_MODE.id) {
+        // 中断は失敗扱い
+        gameState.enemyStats.failed = true; 
+
+        const wasQuest = gameState.isQuestMode || !!gameState.currentQuestNode;
+        const wasFree = gameState.isFreeMode;
+
+        restartDefenseMode(true); // `true` を渡して中断処理を強制
+        Game.fullResetGame();
+        gameState.typed = "";
+        // 防衛モードがクエストの一部として開始された場合（現状はフリー/デイリーのみだが将来的な拡張を考慮）
+        if (wasQuest) showQuestMap();
+        else if (wasFree) showFreeStartMenu();
+        else showStartMenu();
         return true;
       }
 
@@ -2085,7 +2343,7 @@ function handlePauseKey(e) {
   return true;
 }
 
-function handleGameKey(e) {
+async function handleGameKey(e) {
 
   const keybinds = loadKeybinds();
 
@@ -2124,17 +2382,38 @@ function handleGameKey(e) {
 
     // ★② クエスト中
     if (gameState.currentQuestNode) {
-      const isQuest = gameState.isQuestMode || true;
-      gameState.enemyStats.failed = true;
-      endEnemyMode();
-      Game.fullResetGame();
-      gameState.typed = "";
-      if (skillTreeDiv) skillTreeDiv.style.display = "none";
-      if (isQuest) showQuestMap();
-      else showMainMenu();
+      // クエスト中の防衛モードかエネミーモードかを判定
+      if (gameState.currentMode?.id === GameModes.DEFENSE_MODE.id) {
+        // 防衛モードの中断処理
+        await restartDefenseMode(true);
+        Game.fullResetGame();
+        gameState.typed = "";
+        showQuestMap();
+        return true; // ★追加: 処理をここで終了させる
+      } else {
+        // エネミーモードの中断処理
+        const isQuest = gameState.isQuestMode || true;
+        gameState.enemyStats.failed = true;
+        endEnemyMode();
+        Game.fullResetGame();
+        gameState.typed = "";
+        if (skillTreeDiv) skillTreeDiv.style.display = "none";
+        if (isQuest) showQuestMap();
+        else showMainMenu();
+      }
       return true;
     }
 
+    // ★③-2 防衛モード (クエスト中かどうかも判定)
+    if (gameState.currentMode?.id === GameModes.DEFENSE_MODE.id) {
+      // フリー/デイリーの防衛モードを中断
+      await restartDefenseMode(true); // 中断処理
+      Game.fullResetGame();
+      gameState.typed = "";
+      if (gameState.isFreeMode) showFreeStartMenu();
+      else showStartMenu();
+      return true;
+    }
     // ★③ エネミーモード
     if (gameState.enemyMode) {
       const isQuest = gameState.isQuestMode;
@@ -2158,11 +2437,13 @@ function handleGameKey(e) {
   }
 
   // 入力処理
-  if (gameState.enemyMode) {
+  if (gameState.currentMode?.id === GameModes.DEFENSE_MODE.id) {
+    handleDefenseKey(e);
+  } else if (gameState.enemyMode) {
     if (e.code === "Tab") e.preventDefault();
     handleEnemyKey(e);
-  } else { // 通常モード
-    handleKey(e);
+  } else { // Normal mode (and other non-enemy/defense modes)
+    handleKey(e, false, gameState, { type: 'romaji' }); // Add combo per romaji character
   }
 
   return true;
@@ -2286,6 +2567,9 @@ function handleMenuKey(e) {
             case "e": // Enemy Mode
                 targetButton = onlineRankingModeButtons.querySelector('button[data-mode="enemy_mode"]');
                 break;
+            case "d": // Defense Mode
+                targetButton = onlineRankingModeButtons.querySelector('button[data-mode="defense_mode"]');
+                break;
         }
         if (targetButton) {
             targetButton.click();
@@ -2318,6 +2602,9 @@ function handleMenuKey(e) {
                 break;
             case "e": // Enemy Mode
                 targetButton = recordsModeButtons.querySelector('button[data-mode="enemy_mode"]');
+                break;
+            case "d": // Defense Mode
+                targetButton = recordsModeButtons.querySelector('button[data-mode="defense_mode"]');
                 break;
         }
         if (targetButton) {
@@ -2356,6 +2643,7 @@ function handleMenuKey(e) {
       case "t": timeAttackBtn?.click(); break;
       case "l": longTextBtn?.click(); break;
       case "e": enemyModeBtn?.click(); break; // Enemy
+      case "d": defenseModeBtn?.click(); break; // Defense
       case "b": startMenuBackBtn?.click(); break;
       case "f": switchToFreeBtn?.click(); break;
       case "a": // Achievements
@@ -2376,6 +2664,7 @@ function handleMenuKey(e) {
       case "t": freeTimeAttackBtn?.click(); break;
       case "l": freeLongTextBtn?.click(); break;
       case "e": freeEnemyModeBtn?.click(); break; // Enemy
+      case "d": freeDefenseModeBtn?.click(); break; // Defense
       case "q": freeBossBtn?.click(); break; // Quest Boss
       case "b": freeStartMenuBackBtn?.click(); break;
       case "n": switchToNormalBtn?.click(); break;
@@ -2427,17 +2716,20 @@ function handleMenuKey(e) {
         case "e": // equip Skill (or "SKILL")
           btn = sideMenu.querySelector("button:nth-child(3)");
           break;
-        case "p": // status (was "i")
+        case "u": // star upgrade
           btn = sideMenu.querySelector("button:nth-child(4)");
+          break;  
+        case "p": // status (was "i")
+          btn = sideMenu.querySelector("button:nth-child(5)");
           break;
         case "l": // log (new)
-          btn = sideMenu.querySelector("button:nth-child(5)");
+          btn = sideMenu.querySelector("button:nth-child(6)");
           break; 
         case "s": // save/load
-          btn = sideMenu.querySelector("button:nth-child(6)");
+          btn = sideMenu.querySelector("button:nth-child(7)");
           break;
         case "b": // Back
-          btn = sideMenu.querySelector("button:nth-child(7)");
+          btn = sideMenu.querySelector("button:nth-child(8)");
           break;
         case "a": // Achievements
           document.getElementById("hudAchievementsBtn")?.click();

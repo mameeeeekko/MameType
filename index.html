@@ -88,6 +88,7 @@
   <button id="timeAttackBtn">TIME ATTACK</button>
   <button id="longTextBtn">LONG TEXT</button>
   <button id="enemyModeBtn">ENEMY</button>
+  <button id="defenseModeBtn">DEFENCE</button>
   <button id="startMenuBackBtn">BACK</button>
 
 </div>
@@ -102,6 +103,7 @@
   <button id="freeTimeAttackBtn">TIME ATTACK</button>
   <button id="freeLongTextBtn">LONG TEXT</button>
   <button id="freeEnemyModeBtn">ENEMY</button>
+  <button id="freeDefenseModeBtn">DEFENCE</button>
   <button id="freeBossBtn" style="display: none;">QUEST BOSS</button>
   <button id="freeStartMenuBackBtn">BACK</button>
 
@@ -117,19 +119,19 @@
 
              <div id="standardDifficultyInfo" class="difficulty-info"></div>
 
-            <div class="config-row">
-              <label>ジャンル</label>
-              <select id="standardGenreSelect">
-                <option value="all">すべて</option>
-                <option value="empty">標準</option>
-                <option value="句読点">句読点</option>
-                <option value="促音">促音</option>
-                <option value="記号">記号、数字</option>
-                <option value="英語">英語</option>
-                <option value="ことわざ">ことわざ</option>
-                <option value="擬音">擬音</option>
-              </select>
-            </div>
+      <div class="config-row">
+        <label>ジャンル</label>
+        <div id="standardGenreCheckboxes" class="genre-checkbox-container">
+          <label><input type="checkbox" name="standard-genre" value="all"> すべて</label>
+          <label><input type="checkbox" name="standard-genre" value="empty" checked> 標準</label>
+          <label><input type="checkbox" name="standard-genre" value="句読点"> 句読点</label>
+          <label><input type="checkbox" name="standard-genre" value="促音"> 促音</label>
+          <label><input type="checkbox" name="standard-genre" value="ことわざ"> ことわざ</label>
+          <label><input type="checkbox" name="standard-genre" value="擬音"> 擬音</label>
+          <label><input type="checkbox" name="standard-genre" value="英語"> 英語</label>
+          <label><input type="checkbox" name="standard-genre" value="記号"> 記号</label>
+        </div>
+      </div>
 
       <div class="config-row">
         <label>問題数</label>
@@ -149,19 +151,19 @@
 
             <div id="timeAttackDifficultyInfo" class="difficulty-info"></div>
 
-            <div class="config-row">
-              <label>ジャンル</label>
-              <select id="timeAttackGenreSelect">
-                <option value="all">すべて</option>
-                <option value="empty">標準</option>
-                <option value="句読点">句読点</option>
-                <option value="促音">促音</option>
-                <option value="記号">記号、数字</option>
-                <option value="英語">英語</option>
-                <option value="ことわざ">ことわざ</option>
-                <option value="擬音">擬音</option>
-              </select>
-            </div>
+      <div class="config-row">
+        <label>ジャンル</label>
+        <div id="timeAttackGenreCheckboxes" class="genre-checkbox-container">
+          <label><input type="checkbox" name="timeattack-genre" value="all"> すべて</label>
+          <label><input type="checkbox" name="timeattack-genre" value="empty" checked> 標準</label>
+          <label><input type="checkbox" name="timeattack-genre" value="句読点"> 句読点</label>
+          <label><input type="checkbox" name="timeattack-genre" value="促音"> 促音</label>
+          <label><input type="checkbox" name="timeattack-genre" value="ことわざ"> ことわざ</label>
+          <label><input type="checkbox" name="timeattack-genre" value="擬音"> 擬音</label>
+          <label><input type="checkbox" name="timeattack-genre" value="英語"> 英語</label>
+          <label><input type="checkbox" name="timeattack-genre" value="記号"> 記号</label>
+        </div>
+      </div>
       <div class="config-row">
         <label>制限時間</label>
         <input type="range" id="taTimeSlider" min="10" max="600" step="5" value="60"
@@ -312,6 +314,54 @@
         </select>
       </div>
       <button id="startBossFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
+    </div>
+
+    <div id="configDefense" class="mode-config-group" style="display: none;">
+      <div class="config-section-title">Defense Mode Config</div>
+      <div class="config-row">
+        <label>目標文字数</label>
+        <input type="range" id="defenseCharsSlider" min="10" max="1000" value="300" step="10"
+               oninput="document.getElementById('defenseCharsValue').innerText = this.value">
+        <span class="config-value" id="defenseCharsValue">300</span>
+      </div>
+      <div class="config-row">
+        <label>制限時間(秒)</label>
+        <input type="range" id="defenseTimeSlider" min="10" max="600" value="120" step="5"
+               oninput="document.getElementById('defenseTimeValue').innerText = this.value">
+        <span class="config-value" id="defenseTimeValue">120</span>
+      </div>
+      <div class="config-row">
+        <label>ジャンル</label>
+        <div id="defenseGenreCheckboxes" class="genre-checkbox-container">
+          <label><input type="checkbox" name="defense-genre" value="all"> すべて</label>
+          <label><input type="checkbox" name="defense-genre" value="empty" checked> 標準</label>
+          <label><input type="checkbox" name="defense-genre" value="句読点"> 句読点</label>
+          <label><input type="checkbox" name="defense-genre" value="促音"> 促音</label>
+          <label><input type="checkbox" name="defense-genre" value="ことわざ"> ことわざ</label>
+          <label><input type="checkbox" name="defense-genre" value="擬音"> 擬音</label>
+          <label><input type="checkbox" name="defense-genre" value="英語"> 英語</label>
+          <label><input type="checkbox" name="defense-genre" value="記号"> 記号</label>
+        </div>
+      </div>
+      <div class="config-row">
+        <label for="defenseMinWordLengthSlider">単語長 min/max:</label>
+        <div class="slider-container">
+          <input type="range" id="defenseMinWordLengthSlider" min="1" max="30" value="1">
+          <input type="range" id="defenseMaxWordLengthSlider" min="1" max="30" value="15">
+        </div>
+        <span id="defenseWordLengthValue" class="slider-value">1 - 15</span>
+      </div>
+      <style>
+        .slider-container input[type="range"] {
+          width: 45%; /* 2つのスライダーが収まるように幅を調整 */
+          margin: 0 2px;
+        }
+        .slider-value {
+          font-size: 0.9em; /* フォントサイズを少し小さく */
+          margin-left: 3px; /* スライダーとの間隔を調整 */
+        }
+      </style>
+      <button id="startDefenseFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
     </div>
   </div>
 
@@ -499,6 +549,7 @@
               <button data-mode="time_attack">TIME ATTACK</button>
               <button data-mode="long_text">LONG TEXT</button>
               <button data-mode="enemy_mode">ENEMY</button>
+              <button data-mode="defense_mode">DEFENCE</button>
             </div>
           </div>
         </div>
@@ -554,6 +605,7 @@
     <button class="ranking-tab" data-mode="time_attack">TIME ATTACK</button>
     <button class="ranking-tab" data-mode="long_text">LONG TEXT</button>
     <button class="ranking-tab" data-mode="enemy_mode">ENEMY</button>
+    <button class="ranking-tab" data-mode="defense_mode">DEFENCE</button>
   </div>
 
   <!-- 自分の順位表示エリア -->
@@ -757,6 +809,21 @@
   </div>
 
 </div>
+
+
+<!-- =====================================================
+  ゲーム画面 防衛モード
+===================================================== -->
+<div id="defenseModeContainer" style="display: none;">
+  <canvas id="defenseModeCanvas" width="1400" height="900"></canvas>
+</div>
+
+<!-- 防衛モード用UIコンテナ（コンボバーのみ） -->
+<!-- ★ defenseModeContainer の外に移動 -->
+<div id="defense-ui-container" class="chain-ui-container" style="display: none;">
+  <div id="defenseComboTierWrapper"></div>
+</div>
+
 <!-- =====================================================
   ゲームモーダル（追加）
 ===================================================== -->

@@ -1,4 +1,5 @@
 // difficulties.js
+import { handleDefenseKey } from "./defenseCore.js"; export { handleDefenseKey };
 export const DIFFICULTIES = {
   easy: {
     id: "easy",
@@ -31,8 +32,8 @@ export const DIFFICULTIES = {
     name: "NORMAL",
 
     basic: {
-      min: 9,
-      max: 20
+      min: 6,
+      max: 14
     },
 
     enemy: {
@@ -55,7 +56,7 @@ export const DIFFICULTIES = {
     name: "HARD",
 
     basic: {
-      min: 12,
+      min: 10,
       max: 999
     },
 

@@ -1,5 +1,6 @@
 // gameModes.js
 import { getDifficulty } from "./difficulties.js";
+import { getWord } from "./target.js";
 import { QUEST_MAP } from "./questMap.js"; export { QUEST_MAP };
 
 // 難易度==========================================
@@ -214,6 +215,36 @@ LONG_TEXT: {
   ENEMY_MODE: {
     id: "enemy_mode",
     name: "Enemyモード",
+  },
+
+  DEFENSE_MODE: {
+    id: "defense_mode",
+    name: "防衛戦モード",
+    bgm: "bgm_boss1", // 緊迫感のあるBGM
+    saveToStats: true, // ★記録保存対象
+    description: "コアを侵食から守り切れ！",
+
+    onStart(state) {
+      const custom = state.modeData.custom;
+      // 防衛戦モード用の設定
+      state.modeData.totalCharsToType = custom?.totalCharsToType ?? 300;
+      state.modeData.timeLimitSec = custom?.timeLimitSec ?? 120;
+      state.modeData.missPenaltySec = custom?.missPenaltySec ?? 1.5;
+    },
+
+    // このモードでは常に1問なので、常にfalseを返す
+    shouldContinue(state) {
+      return false;
+    },
+
+    isFinished(state) {
+      // 終了判定はenemyCore.jsのループに委ねる
+      return false;
+    },
+
+    buildResultExtra(state) {
+      return { mode: "defense_mode" };
+    }
   }
 
 };

@@ -1,7 +1,5 @@
 // enemyCore.js
-
-import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI,
-    showGameMessage,renderSystemMessage,  updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI} from "./enemyRenderer.js";
+import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI, showGameMessage,renderSystemMessage, updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI} from "./enemyRenderer.js";
 import { setupCanvasDPR } from "./canvasUtil.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
@@ -22,10 +20,11 @@ import { addRankingEntry } from "./storage.js";
 import { ENEMY_MODE_CONFIG, STAGES } from "./enemyModeConfig.js";
 import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats,
     applySkillNodeEffect, hasReceivedStageReward, markStageRewardReceived,
-    getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed, addQuestActiveSkillUse, addQuestStageAttempt, getActiveSkillStockMax  } from "./questPlayerStats.js";
+    getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed, addQuestActiveSkillUse, addQuestStageAttempt, getActiveSkillStockMax,
+    getStarUpgradeCooldownMultiplier, addTotalStarsEarned  } from "./questPlayerStats.js";
 import { getCurrentDifficulty, getDifficulty } from "./difficulties.js";
 import { getPlayerStats, updatePlayerStats } from "./playerStats.js";
-import { markCleared, setStar, hasDialogueBeenPlayed, hasSeenTrueEnding } from "./questProgress.js";
+import { markCleared, setStar, getStar, hasDialogueBeenPlayed, hasSeenTrueEnding } from "./questProgress.js";
 import { STAR_EVALUATORS } from "./starEvaluator.js";
 import { submitScore } from "../online/submitScore.js"; 
 import { RANKING_VERSION } from "../js/version.js";
@@ -352,7 +351,7 @@ function gameLoop(timestamp) {
 
     // ===============================
     // Active Skill Charge Update
-    // ===============================
+    // ===============================j
     if (!isPureEnemyMode && !stats.isTransitioning) { // クエストモードかつフェーズ移行中ではない場合のみチャージ
 
         if (gameState.activeSkillStock == null) {
@@ -378,8 +377,10 @@ function gameLoop(timestamp) {
                 const comboSpeed = getCooldownSpeed(combo);
                 // skill補正
                 const skillCooldownSpeed = gameState.enemyStats.cooldownSpeed ?? 1;    
+                // ★星強化によるクールダウン短縮
+                const starCooldownMultiplier = gameState.enemyStats.starCooldownMultiplier ?? 1;
                 // 実時間差分（秒）
-                gameState.activeSkillCooldown -= deltaTime * comboSpeed * skillCooldownSpeed;
+                gameState.activeSkillCooldown -= deltaTime * comboSpeed * skillCooldownSpeed * starCooldownMultiplier;
 
                 if (gameState.activeSkillCooldown < 0) {
                     gameState.activeSkillCooldown = 0;
@@ -424,7 +425,8 @@ function gameLoop(timestamp) {
     renderChainUI(gameState);
     // Combo update
     updateComboTierBar(
-        gameState.enemyStats
+        gameState.enemyStats,
+        gameState.isQuestMode === true // ★クエストモード時のみクールタイム短縮ポップアップを有効化
     );
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1335,7 +1337,7 @@ export function handleEnemyKey(e) {
     
         // ★修正：正規化したkeyを使用して判定に渡す
         // 全角記号の入力で正解判定が失敗し、ロックが固まったり次の敵が選べなくなる問題を解消
-        const inputResult = handleKey(e); // eをそのまま渡す
+        const inputResult = handleKey(e, false, gameState, { type: 'romaji' }); // Pass 'romaji' to add romaji char count to combo
 
         if (!inputResult || inputResult.isMiss) {
             // ミス処理
@@ -1354,7 +1356,7 @@ export function handleEnemyKey(e) {
         }
 
         // 正解入力ならチェイン増加
-        if (inputResult.charCount > 0) { // 1文字以上確定した場合
+        if (inputResult.isComplete) { // Only trigger chain increase on kana completion
 
             const stats = gameState.enemyStats;
 
@@ -1395,13 +1397,6 @@ export function handleEnemyKey(e) {
 
             if (stats.chainBar > stats.chainBarMax) {
                 stats.chainBar = stats.chainBarMax;
-            }
-        }
-        // 総タイプ数
-        if (inputResult.success) {
-            gameState.enemyStats.totalTyped++; // 敵モードの総タイプ数
-            if (inputResult.charCount > 0) {
-                gameState.enemyStats.correctCount += inputResult.charCount; // 敵モードの正解タイプ数
             }
         }
 
@@ -1872,7 +1867,6 @@ export async function startEnemyMode(config = {}) {
 
     const enemyContainer = document.getElementById("enemyModeContainer");
     enemyContainer.style.display = "block";
-    document.getElementById("chainUI").style.display = "block";
 
     // コンボバー初期化
     ensureEnemySoundToggle();
@@ -1979,7 +1973,9 @@ export async function startEnemyMode(config = {}) {
         // cooldown計算用
         lastCooldownUpdate: getNow(),
         //コンボによるアクティブスキルのクールダウン補正
-        cooldownSpeed: playerStats.cooldownSpeed ?? 1, 
+        cooldownSpeed: playerStats.cooldownSpeed ?? 1,
+        // ★星強化によるアクティブスキルのクールダウン短縮倍率
+        starCooldownMultiplier: 1,
         // ★難易度設定をここに含める
         spawnRate: enemyDiff.spawnRate,
         chainDecay: enemyDiff.chainDecay,
@@ -1994,6 +1990,14 @@ export async function startEnemyMode(config = {}) {
     const activeSkill = ACTIVE_SKILLS?.[activeSkillId];
 
     gameState.activeSkillStock = 0;
+
+    // ★星強化によるクールダウン短縮倍率を設定
+    if (activeSkillId) {
+        gameState.enemyStats.starCooldownMultiplier =
+            getStarUpgradeCooldownMultiplier(activeSkillId);
+    } else {
+        gameState.enemyStats.starCooldownMultiplier = 1;
+    }
 
     // cooldown初期化
 
@@ -2265,7 +2269,7 @@ export async function endEnemyMode() {
     gameState._reviveUsed = false;
 
     stopBGM();
-    
+
     const stats = gameState.enemyStats;
     const enemyContainer = document.getElementById("enemyModeContainer");
     const chainUI = document.getElementById("chainUI")
@@ -2276,7 +2280,6 @@ export async function endEnemyMode() {
     enemyContainer.style.display = "none";
     chainUI.style.display = "none";
 
-    // ★完全未入力は無効試合（ESCと同じ扱い）
     stats.correctCount = gameState.correctCount
     stats.mistakeCount = gameState.mistakeCount
     stats.totalTyped = gameState.correctCount + gameState.mistakeCount
@@ -2308,8 +2311,8 @@ export async function endEnemyMode() {
     const enemyDiff = diff.enemy;
 
     // 補正①：正確性
-    const accuracy =
-    stats.correctCount / Math.max(1, stats.totalTyped);
+    // ★ totalTyped を correctCount + mistakeCount で再計算
+    const accuracy = stats.totalTyped > 0 ? stats.correctCount / stats.totalTyped : 0;
     stats.accuracy = accuracy * 100;
     const accuracyBonus = accuracy * sc.accuracyMaxBonus; // 0〜0.5倍のボーナス
 
@@ -2521,8 +2524,14 @@ export async function endEnemyMode() {
 
         // ★星保存
         if (lastEnemyConfig?.isQuestMode && gameState.currentQuestNode) {
-            setStar(gameState.currentQuestNode.id, starCount);
-        }    
+            const nodeId = gameState.currentQuestNode.id;
+            // ★累計獲得星数を差分で加算（最大値更新分のみ）
+            const prevStars = getStar(nodeId);
+            if (starCount > prevStars) {
+                addTotalStarsEarned(starCount - prevStars);
+            }
+            setStar(nodeId, starCount);
+        }
         
         // result用
         gameState.questStats = {

@@ -57,6 +57,8 @@ function renderSummary(records) {
     bestValue = Math.max(...filtered.map(r => r.solvedCount ?? 0));
   } else if (mode === "enemy_mode") {
     bestValue = Math.max(...filtered.map(r => r.gScore ?? 0));
+  } else if (mode === "defense_mode") {
+    bestValue = Math.max(...filtered.map(r => r.gScore ?? 0));
   } else {
     bestValue = Math.max(...filtered.map(r => r.eScore ?? r.score ?? 0));
   }
@@ -208,6 +210,10 @@ function renderRanking(records) {
     sorted = [...filtered]
       .sort((a, b) => (b.gScore ?? 0) - (a.gScore ?? 0))
       .slice(0, MAX_RANKING);
+  } else if (mode === "defense_mode") {
+    sorted = [...filtered]
+      .sort((a, b) => (b.gScore ?? 0) - (a.gScore ?? 0))
+      .slice(0, MAX_RANKING);
   } else {
     sorted = [...filtered]
       .sort((a, b) => (b.eScore ?? 0) - (a.eScore ?? 0))
@@ -218,12 +224,13 @@ function renderRanking(records) {
   let rows;
 
   if (mode === "time_attack") {
-    columns = ["順位", "日時", "解答数", "eScore", "KPM", "正確率"];
+    columns = ["順位", "日時", "解答数", "eScore", "eRank", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
       `<div class="rank-cell">${getNewBadgeHtml(r, new Date(r.date).getTime() === latestTimestamp)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
       r.solvedCount ?? 0,
       r.eScore ?? r.score,
+      r.eRank ?? "-",
       r.kpm,
       r.accuracy + "%"
     ]);
@@ -241,8 +248,21 @@ function renderRanking(records) {
       r.kpm,
       r.accuracy + "%"
     ]);
+  } else if (mode === "defense_mode") {
+    columns = ["順位", "日時", "gScore", "eScore", "eRank", "解答数", "最大コンボ", "KPM", "正確率"];
+    rows = sorted.map((r, i) => [
+      `<div class="rank-cell">${getNewBadgeHtml(r, new Date(r.date).getTime() === latestTimestamp)}<span class="rank-number">${i + 1}</span></div>`,
+      new Date(r.date).toLocaleString(),
+      r.gScore,
+      r.eScore ?? 0,
+      r.rank ?? "-",
+      r.solvedCount ?? 0,
+      r.maxCombo ?? 0,
+      r.kpm,
+      r.accuracy.toFixed(1) + "%"
+    ]);
   } else {
-    columns = ["順位", "日時", "eScore", "ランク", "KPM", "正確率"];
+    columns = ["順位", "日時", "eScore", "eRank", "KPM", "正確率"];
     rows = sorted.map((r, i) => [
       `<div class="rank-cell">${getNewBadgeHtml(r, new Date(r.date).getTime() === latestTimestamp)}<span class="rank-number">${i + 1}</span></div>`,
       new Date(r.date).toLocaleString(),
@@ -301,7 +321,7 @@ function renderHistory(records) {
   // -----------------------------
   let columns, rows;
   if (mode === "time_attack") {
-    columns = ["日時", "解答数", "eScore", "KPM", "正確率", "ミス", "保護"];
+    columns = ["日時", "解答数", "eScore", "eRank", "KPM", "正確率", "ミス", "保護"];
     rows = visible.map(r => {
   const mode = r.mode;
   const mark =
@@ -312,6 +332,7 @@ function renderHistory(records) {
     new Date(r.date).toLocaleString(),
     r.solvedCount ?? 0,
     r.eScore ?? r.score,
+    r.eRank ?? "-",
     r.kpm,
     r.accuracy + "%",
     r.totalMistake,
@@ -342,8 +363,30 @@ function renderHistory(records) {
       mark
     ];
   });
+  
+} else if (mode === "defense_mode") {
+  columns = ["日時", "gScore", "eScore", "eRank", "解答数", "最大コンボ", "KPM", "正確率", "ミス" ,"保護"];
+  rows = visible.map(r => {
+    const mode = r.mode;
+    const mark =
+      (r.userProtectedModes?.[mode] ? "🔒" : "") +
+      (r.rankingProtectedModes?.[mode] ? "👑" : "");
+    return [
+      new Date(r.date).toLocaleString(),
+      r.gScore,
+      r.eScore ?? 0,
+      r.rank ?? "-",
+      r.solvedCount ?? 0,
+      r.maxCombo ?? 0,
+      r.kpm,
+      r.accuracy.toFixed(1) + "%",
+      r.totalMistake,
+      mark
+    ];
+  });
+
 } else {
-    columns = ["日時", "eScore", "ランク", "KPM", "正確率", "ミス", "保護"];
+    columns = ["日時", "eScore", "eRank", "KPM", "正確率", "ミス", "保護"];
   rows = visible.map(r => {
   const mode = r.mode;
   const mark =
@@ -499,6 +542,8 @@ function buildBestTimeline(records, mode) {
     if (mode === "time_attack") {
       value = r.solvedCount ?? 0;
     } else if (mode === "enemy_mode") {
+      value = r.gScore;
+    } else if (mode === "defense_mode") {
       value = r.gScore;
     }else {
       value = r.eScore ?? r.score;
@@ -684,6 +729,8 @@ points.forEach((p, i) => {
   mode === "time_attack"
     ? "解答数"
     : mode === "enemy_mode"
+    ? "gScore"
+    : mode === "defense_mode"
     ? "gScore"
     : "eScore";
 

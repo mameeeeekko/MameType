@@ -47,8 +47,8 @@ const COLOR_PROPS = {
     GREEN:  { name: "Green",  color: "#73d13d", tags: ["句読点"],       baseScore: 55 },
     YELLOW: { name: "Yellow", color: "#fadb14", tags: ["ことわざ"],     baseScore: 50 },
     PINK:   { name: "Pink",   color: "#ff85c0", tags: ["擬音"],         baseScore: 45 },
-    BLUE:   { name: "Blue",   color: "#40a9ff", tags: ["促音"],         baseScore: 40 },
-    PURPLE: { name: "Purple", color: "#b37feb", tags: ["英語"],         baseScore: 35 },
+    PURPLE: { name: "Purple", color: "#b37feb", tags: ["英語"],         baseScore: 40 },
+    BLUE:   { name: "Blue",   color: "#40a9ff", tags: ["促音"],         baseScore: 35 },
     GRAY:   { name: "Gray",   color: "#a4a4a4", tags: [],               baseScore: 30 },
 };
 

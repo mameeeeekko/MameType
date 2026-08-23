@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": 1786508811539,
+  "exportedAt": 1787145859351,
   "questProgress": {
     "unlocked": [
       "W1_Q1"
@@ -9,90 +9,46 @@
     "unlockedWorlds": [
       "WORLD1"
     ],
-    "selectedWorldId": "WORLD3",
-    "hasSeenTrueEnding": false,
+    "selectedWorldId": "WORLD1",
     "playedDialogues": {
       "prologue": true
-    },
-    "playedChoices": {},
-    "hasShownFirstFullClearReward": false,
-    "hasBossChallengeUnlocked": false
+    }
   },
   "questPlayerStats": {
     "level": 1,
-    "exp": 468,
+    "exp": 0,
     "nextExp": 500,
     "maxHp": 35,
     "defense": 0,
     "radius": 15,
     "baseSkillSlot": 2,
     "bonusSkillSlot": 0,
-    "slotHistory": {
-      "totalGained": 0,
-      "rewardGained": 0,
-      "skillTreeGained": 0
-    },
-    "obtainedSlotStages": [],
     "unlockedSkills": [],
     "equippedSkills": [],
-    "activeSkillSlot": 1,
-    "activeSkill": null,
-    "activeSkillCooldown": 0,
-    "cooldownSpeed": 1,
-    "activeSkillStock": 0,
-    "baseActiveSkillStockMax": 1,
-    "bonusActiveSkillStockMax": 0,
-    "stockHistory": {
-      "totalGained": 0,
-      "rewardGained": 0,
-      "skillTreeGained": 0
-    },
     "skillTreeProgress": {
       "unlockedNodes": [
         "START"
       ]
     },
     "questRecord": {
-      "totalPlayTime": 87.289,
-      "totalPlays": 3,
-      "totalKills": 25,
-      "totalTyped": 382,
-      "totalMiss": 16,
-      "itemPickupCount": {},
-      "avgKpm": 262.5760405091134,
-      "avgAccuracy": 95.97989949748744,
-      "maxKpm": 295,
-      "maxKpmDate": "2026-08-12T02:57:12.725Z",
-      "totalStars": 0,
-      "maxStars": 0,
+      "totalPlayTime": 0,
+      "totalPlays": 0,
+      "totalKills": 0,
+      "totalTyped": 0,
+      "totalMiss": 0,
+      "avgKpm": 0,
+      "avgAccuracy": 0,
+      "maxKpm": 0,
+      "maxKpmDate": null,
       "days": {
-        "todayCount": 3,
-        "maxPerDay": 3,
-        "streak": 1,
-        "unique": 1,
-        "_playedDates": {
-          "2026-08-12": 3
-        },
-        "lastPlayDate": "2026-08-12"
-      },
-      "maxCombo": 106,
-      "maxChain": 14,
-      "maxGScore": 2419,
-      "activeSkillUseCount": {},
-      "stageAttemptCount": {
-        "W3_Q83": 1,
-        "W3_Q84": 1,
-        "W3_MiniBoss_8": 1
-      },
-      "skillNodeAttemptCount": {}
-    },
-    "equippedActiveSkills": []
+        "todayCount": 0,
+        "maxPerDay": 0,
+        "streak": 0,
+        "unique": 0
+      }
+    }
   },
-  "questStars": {
-    "W3_Q83": 0,
-    "W3_Q84": 0,
-    "W3_MiniBoss_8": 0
-  },
+  "questStars": {},
   "questSlots": [
     {
       "progress": {
@@ -593,89 +549,56 @@
       "unlockedWorlds": [
         "WORLD1"
       ],
-      "selectedWorldId": "WORLD3",
-      "hasSeenTrueEnding": false,
+      "selectedWorldId": "WORLD1",
       "playedDialogues": {
         "prologue": true
-      },
-      "playedChoices": {},
-      "hasShownFirstFullClearReward": false,
-      "hasBossChallengeUnlocked": false
+      }
     },
     "playerStats": {
       "level": 1,
-      "exp": 468,
+      "exp": 0,
       "nextExp": 500,
       "maxHp": 35,
       "defense": 0,
       "radius": 15,
       "baseSkillSlot": 2,
       "bonusSkillSlot": 0,
-      "slotHistory": {
-        "totalGained": 0,
-        "rewardGained": 0,
-        "skillTreeGained": 0
-      },
-      "obtainedSlotStages": [],
       "unlockedSkills": [],
       "equippedSkills": [],
-      "activeSkillSlot": 1,
-      "activeSkill": null,
-      "activeSkillCooldown": 0,
-      "cooldownSpeed": 1,
-      "activeSkillStock": 0,
-      "baseActiveSkillStockMax": 1,
-      "bonusActiveSkillStockMax": 0,
-      "stockHistory": {
-        "totalGained": 0,
-        "rewardGained": 0,
-        "skillTreeGained": 0
-      },
       "skillTreeProgress": {
         "unlockedNodes": [
           "START"
         ]
       },
       "questRecord": {
-        "totalPlayTime": 87.289,
-        "totalPlays": 3,
-        "totalKills": 25,
-        "totalTyped": 382,
-        "totalMiss": 16,
-        "itemPickupCount": {},
-        "avgKpm": 262.5760405091134,
-        "avgAccuracy": 95.97989949748744,
-        "maxKpm": 295,
-        "maxKpmDate": "2026-08-12T02:57:12.725Z",
-        "totalStars": 0,
-        "maxStars": 0,
+        "totalPlayTime": 0,
+        "totalPlays": 0,
+        "totalKills": 0,
+        "totalTyped": 0,
+        "totalMiss": 0,
+        "avgKpm": 0,
+        "avgAccuracy": 0,
+        "maxKpm": 0,
+        "maxKpmDate": null,
         "days": {
-          "todayCount": 3,
-          "maxPerDay": 3,
-          "streak": 1,
-          "unique": 1,
-          "_playedDates": {
-            "2026-08-12": 3
-          },
-          "lastPlayDate": "2026-08-12"
-        },
-        "maxCombo": 106,
-        "maxChain": 14,
-        "maxGScore": 2419,
-        "activeSkillUseCount": {},
-        "stageAttemptCount": {
-          "W3_Q83": 1,
-          "W3_Q84": 1,
-          "W3_MiniBoss_8": 1
-        },
-        "skillNodeAttemptCount": {}
-      },
-      "equippedActiveSkills": []
+          "todayCount": 0,
+          "maxPerDay": 0,
+          "streak": 0,
+          "unique": 0
+        }
+      }
     },
-    "stars": {
-      "W3_Q83": 0,
-      "W3_Q84": 0,
-      "W3_MiniBoss_8": 0
-    }
+    "stars": {},
+    "summary": {
+      "level": 1,
+      "hp": 35,
+      "def": 0,
+      "stage": "NONE",
+      "cleared": 0,
+      "currentStars": 0,
+      "maxStars": 5,
+      "playTime": 0
+    },
+    "savedAt": 1786026880441
   }
 }
