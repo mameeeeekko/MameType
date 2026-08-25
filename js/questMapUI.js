@@ -27,6 +27,10 @@ import {
     upgradeStarSkill,
     getTotalStarsEarned,
     getAvailableStars,
+    getRebuildTickets,
+    hasUnlimitedRebuild,
+    canRebuild,
+    rebuildStarUpgrades,
 } from "./questPlayerStats.js";
 import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } from "./enemyModeConfig.js";
 import { startDialogue, DIALOGUE_DATA, isDialogueVisible, showLog, showDialoguePlaybackChoicePopup } from "./dialogue.js";
@@ -556,6 +560,7 @@ export function renderQuestMapUI(){
                 const startDefense = () => {
                   startDefenseMode({
                     isQuestMode: true,
+                    bgm: stageData.bgm,
                     custom: stageData.defenseConfig,
                   });
                 };
@@ -1636,6 +1641,48 @@ export function openQuestMenuModal(type = "difficulty") {
             }
 
             renderList();
+
+            // =========================
+            // 振り直し（REBUILD）セクション
+            // =========================
+            const rebuildBox = document.createElement("div");
+            rebuildBox.className = "star-upgrade-rebuild";
+
+            const rebuildTickets = getRebuildTickets();
+            const unlimited = hasUnlimitedRebuild();
+            const canRebuildNow = canRebuild();
+
+            rebuildBox.innerHTML = `
+                <div class="star-upgrade-rebuild-header">
+                    <span class="star-upgrade-rebuild-title">REBUILD（星の振り直し）</span>
+                    <span class="star-upgrade-rebuild-tickets">
+                        ${unlimited ? "∞ UNLIMITED" : `チケット ×${rebuildTickets}`}
+                    </span>
+                </div>
+                <div class="star-upgrade-rebuild-desc">
+                    全アクティブスキルの星強化レベルをリセットし、星を振り直せます。<br>
+                    ${unlimited
+                        ? "全クリア特典により、振り直しは無制限です！"
+                        : "チケットはレベル50到達とWORLD2クリアで各1枚入手できます。"}
+                </div>
+                <button class="star-upgrade-rebuild-btn ${canRebuildNow ? "" : "disabled"}" ${canRebuildNow ? "" : "disabled"}>
+                    REBUILD
+                </button>
+            `;
+
+            if (canRebuildNow) {
+                const btn = rebuildBox.querySelector(".star-upgrade-rebuild-btn");
+                btn.onclick = () => {
+                    const success = rebuildStarUpgrades();
+                    if (success) {
+                        playSE("skill_on");
+                        // 再描画
+                        openQuestMenuModal("starUpgrade");
+                    }
+                };
+            }
+
+            content.appendChild(rebuildBox);
         }
     };
 

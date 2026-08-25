@@ -240,8 +240,17 @@ export function startDefenseMode(config = {}) {
 
   setGameActive(true);
 
+  // ★ 防衛戦BGM
+  // クエスト側から指定されたBGMを最優先し、
+  // 指定がなければ通常のDEFENSE_MODEのBGMを使用する
+  const defenseBgm =
+    config.bgm ??
+    config.custom?.bgm ??
+    GameModes.DEFENSE_MODE.bgm;
+
   if (getSoundEnabled() && getSoundSettings().bgm) {
-    playBGM(GameModes.DEFENSE_MODE.bgm, 1.0);
+    playBGM(defenseBgm, 1.0);
+    gameState.startTime = getNow(); // BGM表示タイマーをリセット
   }
 
   // --- 開始演出 ---
@@ -420,7 +429,7 @@ export function startDefenseEndingSequence(isFailed) {
       if (endingSequence && defenseLoopActive) playSE("chain_break");
     }, 300);
   } else {
-    playSE("guard");
+    playSE("guard", 1, 1, 0, 3);
     setTimeout(() => {
       if (endingSequence && defenseLoopActive) {
         playSE("combo_tier_max");

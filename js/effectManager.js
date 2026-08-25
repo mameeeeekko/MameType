@@ -275,6 +275,7 @@ export function playSE(
     } else {
         source.start(0, startOffset);
     }
+    //console.log("[SE]", name, performance.now());
 }
 
 export function playTypeSound() {

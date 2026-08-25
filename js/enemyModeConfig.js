@@ -617,7 +617,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
     }
 
     // 難易度の緩やかな上昇計算
-    const baseSpawnInterval = 3000; // 基本の出現間隔を3秒に固定
+    const baseSpawnInterval = 5000; // 基本の出現間隔を5秒に固定
     const killGoal = 10 + Math.floor(i / 4); // 討伐目標数
     const timeLimit = 30000 + (i * 1000); // 30秒〜130秒程度
     const maxAlive = Math.min(8, 4 + Math.floor(i / 25)); // 通常ミッションは最大8体までに制限
@@ -1557,8 +1557,128 @@ export const STAGES = {
   // =========================================================
   DEFENSE_1: {
     isDefenseMode: true, // ★防衛モードであることを示すフラグ
-    bgImage: "battle_red",
-    bgm: "bgm_boss2",
+    //bgImage: "battle_red",
+    bgm: "bgm_universe",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 50,
+      timeLimit: 30, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 4,
+      maxLength: 8,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+  DEFENSE_2: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_universe",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 50,
+      timeLimit: 30, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 4,
+      maxLength: 8,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+  DEFENSE_3: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_float",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 50,
+      timeLimit: 30, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 4,
+      maxLength: 8,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+    DEFENSE_4: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_float",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 50,
+      timeLimit: 30, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 4,
+      maxLength: 8,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+    DEFENSE_5: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_aftersummer",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 50,
+      timeLimit: 30, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 4,
+      maxLength: 8,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+    DEFENSE_6: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_aftersummer",
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {

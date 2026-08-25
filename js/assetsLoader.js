@@ -152,6 +152,7 @@ const remainingAssets = [
   { type: "sound", name: "bgm_dance", src: "./assets/sound/bgm/dance_in_the_sun.mp3", composer: "tooone", title: "dance in the sun", volume: 1.0 },
   { type: "sound", name: "bgm_dream", src: "./assets/sound/bgm/dream.mp3", composer: "RYU ITO", title: "Dream", volume: 1.0 },
   { type: "sound", name: "bgm_cracker", src: "./assets/sound/bgm/cracker.mp3", composer: "RYU ITO", title: "Cracker", volume: 1.0 },
+  { type: "sound", name: "bgm_dive", src: "./assets/sound/bgm/dive.mp3", composer: "RYU ITO", title: "Dive", volume: 1.0 },
   { type: "sound", name: "bgm_yakanhikou", src: "./assets/sound/bgm/yakanhikou.mp3", composer: "もえるごみ", title: "夜間飛行", volume: 1.0 },
   { type: "sound", name: "bgm_harunosuisou", src: "./assets/sound/bgm/harunosuisou.mp3", composer: "もえるごみ", title: "はるの水槽", volume: 1.0 },
   { type: "sound", name: "bgm_boss1", src: "./assets/sound/bgm/edm_club_music.mp3", composer: "LudeSoundX", title: "EDM Club Music", volume: 1.0 },
@@ -164,7 +165,10 @@ const remainingAssets = [
   { type: "sound", name: "bgm_sept", src: "./assets/sound/bgm/sept.mp3", composer: "もえるごみ", title: "Sept.", volume: 1.0 },
   { type: "sound", name: "bgm_swim", src: "./assets/sound/bgm/swim.mp3", composer: "もえるごみ", title: "swim", volume: 1.0 },
   { type: "sound", name: "bgm_reika", src: "./assets/sound/bgm/reika.mp3", composer: "もえるごみ", title: "冷夏", volume: 1.0 },
+  { type: "sound", name: "bgm_universe", src: "./assets/sound/bgm/universe.mp3", composer: "もえるごみ", title: "Universe", volume: 1.0 },
   { type: "sound", name: "bgm_soranaka", src: "./assets/sound/bgm/soranaka.mp3", composer: "もえるごみ", title: "Soranaka", volume: 1.0 },
+  { type: "sound", name: "bgm_float", src: "./assets/sound/bgm/floating_city.mp3", composer: "MFP", title: "Floating City", volume: 1.0 },
+  { type: "sound", name: "bgm_aftersummer", src: "./assets/sound/bgm/after_the_summer_fades.mp3", composer: "MFP", title: "After the Summer Fades", volume: 1.0 },
 ];
 
 async function _loadAssetList(assetList, onProgress) {

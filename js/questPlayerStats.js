@@ -11,6 +11,7 @@ import { autoSaveQuest } from "./storage.js";
 import { PASSIVE_SKILLS } from "./questSkills.js";
 import { getTotalStars } from "./questProgress.js";
 import { devOverride } from "../dev/devOverride.js";
+import { playSE } from "./effectManager.js";
 
 
 const DEFAULT_STATS = {
@@ -59,6 +60,13 @@ const DEFAULT_STATS = {
 
     // ★星強化の最大レベル
     starUpgradeMaxLevel: 10,
+
+    // ★星の振り直しチケット（rebuild）
+    rebuildTickets: 0,       // 所持している振り直しチケット数
+    rebuildUnlimited: false, // 全クリア特典：振り直し無制限フラグ
+    rebuildTicketsEarned: 0, // 累計獲得チケット数（表示用）
+    rebuildUsedCount: 0,     // 累計使用回数（表示用）
+    rebuildRewardsClaimed: [], // 獲得済みチケット特典ID（重複防止用）
 
     // クエストモード詳細ステータス
     questRecord: {
@@ -407,7 +415,7 @@ function levelUp() {
 
     // 次の必要経験値（指数カーブ）
     playerStats.nextExp = Math.floor(
-        650 * Math.pow(1.16, playerStats.level - 1)
+        650 * Math.pow(1.08, playerStats.level - 1)
     );
 
     // HP成長（上限999）
@@ -435,8 +443,13 @@ function levelUp() {
     //if (playerStats.level === 30) { playerStats.bonusActiveSkillStockMax++; stockIncrease++;}
     if (playerStats.level === 35) { playerStats.bonusSkillSlot++; slotIncrease++; }
     if (playerStats.level === 70) { playerStats.bonusSkillSlot++; slotIncrease++; }
-    return {slotIncrease, stockIncrease}; 
 
+    // ★レベル50到達で星の振り直しチケット（rebuild）を1枚付与
+    if (playerStats.level === 50) {
+        grantRebuildTicket("level50");
+    }
+
+    return {slotIncrease, stockIncrease}; 
 }
 
 // ===============================
@@ -1007,6 +1020,128 @@ export function upgradeStarSkill(skillId) {
     if (getAvailableStars() < cost) return false;
 
     stats.starSkillUpgrades[skillId] = { level: nextLevel };
+    saveStats();
+    return true;
+}
+
+// ===============================
+// 星の振り直しチケット（rebuild）
+// ===============================
+
+/**
+ * 星の振り直しチケット獲得時のアナウンスを表示します。
+ */
+function showRebuildTicketPopup() {
+    const container = document.createElement("div");
+    container.className = "ach-popup-container";
+    container.style.zIndex = "14000";
+
+    const el = document.createElement("div");
+    el.className = "ach-popup";
+    el.innerHTML = `⭐ 星の振り直しチケットを獲得！`;
+    container.appendChild(el);
+
+    document.body.appendChild(container);
+
+    // 自動消滅
+    setTimeout(() => {
+        container.remove();
+    }, 6000);
+}
+
+/**
+ * 振り直しチケットを1枚付与します。
+ * 同じ特典IDからの重複付与は防止します。
+ * @param {string} rewardId - 特典ID（例: "level50", "world2clear"）
+ * @returns {boolean} 付与に成功したかどうか
+ */
+export function grantRebuildTicket(rewardId) {
+    const stats = getPlayerStats();
+
+    if (!stats.rebuildRewardsClaimed) stats.rebuildRewardsClaimed = [];
+
+    // 重複付与防止
+    if (rewardId && stats.rebuildRewardsClaimed.includes(rewardId)) return false;
+
+    if (rewardId) {
+        stats.rebuildRewardsClaimed.push(rewardId);
+    }
+
+    stats.rebuildTickets = (stats.rebuildTickets || 0) + 1;
+    stats.rebuildTicketsEarned = (stats.rebuildTicketsEarned || 0) + 1;
+    saveStats();
+
+    // ★チケット獲得アナウンス
+    playSE("trophy", 1.0);
+    showRebuildTicketPopup();
+
+    return true;
+}
+
+/**
+ * 現在所持している振り直しチケット数を取得します。
+ * @returns {number} 所持チケット数
+ */
+export function getRebuildTickets() {
+    const stats = getPlayerStats();
+    return stats.rebuildTickets || 0;
+}
+
+/**
+ * 全クリア特典で振り直しが無制限かどうかを取得します。
+ * @returns {boolean} 無制限かどうか
+ */
+export function hasUnlimitedRebuild() {
+    const stats = getPlayerStats();
+    return !!stats.rebuildUnlimited;
+}
+
+/**
+ * 振り直しが可能かどうかを判定します。
+ * 無制限フラグが立っているか、チケットを1枚以上所持している場合に可能。
+ * ただし、星強化を1度も使用していない場合は振り直し不可。
+ * @returns {boolean} 振り直し可能かどうか
+ */
+export function canRebuild() {
+    const stats = getPlayerStats();
+
+    // ★星強化を1度も使用していない場合は振り直し不可
+    const hasStarUpgrades = Object.keys(stats.starSkillUpgrades || {}).length > 0;
+    if (!hasStarUpgrades) return false;
+
+    return hasUnlimitedRebuild() || getRebuildTickets() > 0;
+}
+
+/**
+ * 全クリア特典：振り直しを無制限にします。
+ */
+export function setRebuildUnlimited() {
+    const stats = getPlayerStats();
+    stats.rebuildUnlimited = true;
+    saveStats();
+}
+
+/**
+ * 星の振り直しを実行します。
+ * 全アクティブスキルの星強化レベルをリセットし、チケットを1枚消費します。
+ * 無制限フラグが立っている場合はチケットを消費しません。
+ * @returns {boolean} 振り直しに成功したかどうか
+ */
+export function rebuildStarUpgrades() {
+    const stats = getPlayerStats();
+
+    // 振り直し可能かチェック
+    if (!canRebuild()) return false;
+
+    // 強化レベルをリセット
+    stats.starSkillUpgrades = {};
+
+    // チケット消費（無制限の場合は消費しない）
+    if (!hasUnlimitedRebuild()) {
+        stats.rebuildTickets = Math.max(0, (stats.rebuildTickets || 0) - 1);
+    }
+
+    stats.rebuildUsedCount = (stats.rebuildUsedCount || 0) + 1;
     saveStats();
     return true;
 }

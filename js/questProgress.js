@@ -1,6 +1,7 @@
 // questProgress.js
 import { autoSaveQuest } from "./storage.js";
 import { QUEST_MAP } from "./questMap.js";
+import { grantRebuildTicket, setRebuildUnlimited } from "./questPlayerStats.js";
 
 const DEFAULT_PROGRESS = {
     unlocked: ["W1_Q1"],
@@ -121,6 +122,12 @@ export function markCleared(id, nextList, nextWorldId = null){
         }
     });
 
+    // ★WORLD2クリア（W2_BOSS撃破）で星の振り直しチケットを1枚付与
+    // W2_BOSSのnextWorldは"WORLD3"なので、WORLD3がアンロックされた時がWORLD2クリア
+    if (id === "W2_BOSS" && nextWorldId === "WORLD3") {
+        grantRebuildTicket("world2clear");
+    }
+
     save();
 }
 
@@ -186,6 +193,8 @@ export function markTrueEndingSeen() {
     if (progress) {
         progress.hasSeenTrueEnding = true;
     }
+    // ★全クリア特典：星の振り直しを無制限にする
+    setRebuildUnlimited();
     save();
 }
 // ★ ADDED: Check if true ending has been seen

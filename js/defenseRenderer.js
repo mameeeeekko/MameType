@@ -1,7 +1,7 @@
 // defenseRenderer.js
 
 import { getDisplayFullRoma } from "./typingLogic.js";
-import { getSoundEnabled } from "./gameCore.js";
+import { getSoundEnabled, gameState, getNow } from "./gameCore.js";
 import { DEFENSE_COMBO_TIERS, DEFENSE_OVERDRIVE_COMBO, DEFENSE_SCORE_CONFIG } from "./defenseCore.js";
 import { spawnComboTierUpEffect, playComboTierUpSound } from "./effectManager.js";
 
@@ -114,6 +114,54 @@ export function renderDefenseUI(ctx, state) {
 
   // 8. 終了アニメーション演出（パージウェーブ、パーティクル、フラッシュ等）
   renderEndingEffects(ctx, state);
+
+  // 9. 現在再生中のBGM情報（画面左下）
+  renderBgmInfo(ctx);
+}
+
+/**
+ * 現在再生中のBGM情報を描画する（画面左下）
+ * @param {CanvasRenderingContext2D} ctx - 描画コンテキスト
+ */
+function renderBgmInfo(ctx) {
+    const info = gameState.currentBgmInfo;
+    // startTimeが0（リセット済み）またはinfoがない場合は描画しない
+    if (!info || !gameState.startTime) return;
+
+    const now = getNow();
+
+    // 画面左下に配置
+    const x = 12;
+    const y = ctx.canvas.clientHeight - 12;
+
+    ctx.save();
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+
+    // フェードイン・アウトのためのアルファ値計算
+    // BGMが切り替わってから最初の2秒でフェードイン、最後の2秒でフェードアウト
+    const fadeDuration = 2000;
+    const displayDuration = 15000; // 表示時間
+    const elapsed = now - (gameState.startTime || 0);
+
+    let alpha = 0;
+    if (elapsed < fadeDuration) {
+        alpha = elapsed / fadeDuration; // フェードイン
+    } else if (elapsed < displayDuration - fadeDuration) {
+        alpha = 1; // 表示継続
+    } else if (elapsed < displayDuration) {
+        alpha = (displayDuration - elapsed) / fadeDuration; // フェードアウト
+    }
+
+    ctx.globalAlpha = Math.max(0, alpha);
+
+    // 曲名
+    ctx.font = "bold 14px 'Noto Sans JP', sans-serif";
+    ctx.fillStyle = "#e4e4e4";
+    ctx.fillText(`♪ ${info.title} / ${info.composer}`, x, y);
+
+    ctx.restore();
 }
 /**
  * 攻殻機動隊風のサイバーなグリッド背景を描画します。
@@ -240,41 +288,6 @@ function renderDefenseStats(ctx, state) {
   }
 }
 
-/**
- * ヘルパー関数：ラミエル風のダイヤモンド形状を描画
- */
-function drawDiamond(ctx, x, y, size, color) {
-    const s = size;
-    const pTop = { x: x, y: y - s };
-    const pRight = { x: x + s, y: y };
-    const pBottom = { x: x, y: y + s };
-    const pLeft = { x: x - s, y: y };
-    const pCenter = { x: x, y: y };
-
-    const colors = {
-        topLeft: `rgba(255, 220, 220, ${color.a * 0.8})`,
-        topRight: `rgba(255, 180, 180, ${color.a * 0.6})`,
-        bottomLeft: `rgba(255, 150, 150, ${color.a * 0.4})`,
-        bottomRight: `rgba(255, 120, 120, ${color.a * 0.2})`
-    };
-
-    Object.values(colors).forEach((c, i) => {
-        ctx.beginPath();
-        const points = [[pTop, pLeft, pCenter], [pTop, pRight, pCenter], [pBottom, pLeft, pCenter], [pBottom, pRight, pCenter]][i];
-        ctx.moveTo(points[0].x, points[0].y);
-        ctx.lineTo(points[1].x, points[1].y);
-        ctx.lineTo(points[2].x, points[2].y);
-        ctx.fillStyle = c;
-        ctx.fill();
-    });
-
-    ctx.strokeStyle = `rgba(255, 255, 255, ${color.a * 0.2})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(pTop.x, pTop.y); ctx.lineTo(pRight.x, pRight.y); ctx.lineTo(pBottom.x, pBottom.y); ctx.lineTo(pLeft.x, pLeft.y);
-    ctx.closePath();
-    ctx.stroke();
-}
 
 /**
  * コアの三重装甲光輪「トリニティ・シールド」を描画します。

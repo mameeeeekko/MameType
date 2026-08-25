@@ -30,13 +30,13 @@ import { getUIAnchorPosition } from "./enemyRenderer.js";
     - square   (低速): speed 0.4, rotation 0.01 (Score x0.7)
 
  3. サイズと難易度（大きいほど高ダメージ・長文・高スコア）
-    - Large  (size:28): damage:60, len:12-20 (Score x2.0)
+    - Large  (size:28): damage:60, len:8-15 (Score x2.0)
     - Normal (size:20): damage:30, len:5-10  (Score x1.2)
     - Small  (size:14): damage:15,  len:2-4   (Score x0.8)
 
  4. パターンによる特殊効果
     - ring (同心円): hitCount 2 / knockback 40 / スコア 3倍（強力個体）
-    - stripe (縞々): スピード 1.5倍 / rotationSpeed 1.5倍 / スコア 1.5倍（高速個体）
+    - stripe (縞々): スピード 1.2倍 / rotationSpeed 1.2倍 / スコア 1.5倍（高速個体）
     - null (無地): 標準
 
 */
@@ -59,14 +59,14 @@ const SHAPE_PROPS = {
 };
 
 const SIZE_PROPS = {
-    LARGE:  { name: "Large",  size: 28, damage: 60, minLen: 9, maxLen: 17, scoreMultiplier: 2.0, killSound: 5, killedEffect: "enemy2" },
+    LARGE:  { name: "Large",  size: 28, damage: 60, minLen: 8, maxLen: 15, scoreMultiplier: 2.0, killSound: 5, killedEffect: "enemy2" },
     NORMAL: { name: "Normal", size: 20, damage: 30, minLen: 5,  maxLen: 10, scoreMultiplier: 1.2, killSound: 1, killedEffect: "enemy1" },
     SMALL:  { name: "Small",  size: 12, damage: 15, minLen: 2,  maxLen: 4,  scoreMultiplier: 0.8, killSound: 1, killedEffect: "enemy1" },
 };
 
 const PATTERN_PROPS = {
     RING:   { name: "Ring",   pattern: "ring",   hitCount: 2, knockback: 80, scoreMultiplier: 3.0 },
-    STRIPE: { name: "Stripe", pattern: "stripe", speedMultiplier: 1.3, rotationSpeedMultiplier: 1.5, scoreMultiplier: 1.5 },
+    STRIPE: { name: "Stripe", pattern: "stripe", speedMultiplier: 1.2, rotationSpeedMultiplier: 1.2, scoreMultiplier: 1.5 },
     NULL:   { name: "Null",   pattern: null },
 };
 

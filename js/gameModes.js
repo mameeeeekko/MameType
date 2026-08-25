@@ -220,7 +220,7 @@ LONG_TEXT: {
   DEFENSE_MODE: {
     id: "defense_mode",
     name: "防衛戦モード",
-    bgm: "bgm_boss1", // 緊迫感のあるBGM
+    bgm: "bgm_dive", 
     saveToStats: true, // ★記録保存対象
     description: "コアを侵食から守り切れ！",
 

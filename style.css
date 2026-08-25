@@ -6846,3 +6846,69 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
   letter-spacing: 1px;
 }
+
+/* =========================
+   星の振り直し（REBUILD）
+   ========================= */
+.star-upgrade-rebuild {
+  flex-shrink: 0;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.star-upgrade-rebuild-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.star-upgrade-rebuild-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffd700;
+  letter-spacing: 1px;
+}
+
+.star-upgrade-rebuild-tickets {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.star-upgrade-rebuild-desc {
+  font-size: 10px;
+  color: #a3c8e4;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.star-upgrade-rebuild-btn {
+  width: 100%;
+  padding: 5px 0;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #ffd700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 180, 0, 0.1));
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.star-upgrade-rebuild-btn:hover:not(.disabled) {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.35), rgba(255, 180, 0, 0.2));
+  transform: scale(1.02);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+}
+
+.star-upgrade-rebuild-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(60%);
+}
