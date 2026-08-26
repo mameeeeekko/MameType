@@ -146,7 +146,7 @@ export function renderActiveAttackUI(ctx, player, enemies, lockedTarget, candida
         const mainColor = (isLocked || isCandidate) ? "#ff9100" : "#ff4d4d";
         const romaColor = (isLocked || isCandidate) ? "#ffc107" : "#ff7875";
 
-        ctx.font = "14px sans-serif";
+        ctx.font = "14px 'M PLUS Rounded 1c', sans-serif";
         ctx.fillStyle = mainColor;
         ctx.strokeStyle = "rgba(0,0,0,0.5)";
         ctx.lineWidth = 3;
@@ -158,7 +158,7 @@ export function renderActiveAttackUI(ctx, player, enemies, lockedTarget, candida
         const remainPartRaw = displayRoma.slice(typedLen);
         const remainPart = remainPartRaw.replace(/ /g, '␣');
         
-        ctx.font = "bold 14px monospace";
+        ctx.font = "bold 14px 'Noto Sans Mono', monospace";
         ctx.fillStyle = romaColor;
         ctx.strokeText(remainPart, x, y);
         ctx.fillText(remainPart, x, y);
@@ -234,11 +234,11 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
         ctx.restore();
     }
 
-    ctx.font = "17px 'Inter', 'Noto Sans JP', sans-serif";
+    ctx.font = "17px 'Inter', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc"; // 白系
     ctx.fillText(word, enemy.x, enemy.y - radius - 15);
 
-    ctx.font = "bold 17px monospace";
+    ctx.font = "bold 17px 'Noto Sans Mono', monospace";
     //入力文字の色
     let remainColor = "#a3c8e4"; // より鮮明なシアンに変更
 
@@ -297,7 +297,7 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
 
         const countText = "×" + enemy.hitCount;
 
-        ctx.font = "bold 12px monospace";
+        ctx.font = "bold 12px 'Noto Sans Mono', monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
 
@@ -405,7 +405,7 @@ function drawItemLabel(ctx, enemy){
     ctx.save();
 
     ctx.font =
-        "bold 10px monospace";
+        "bold 10px 'Noto Sans Mono', monospace";
 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -988,7 +988,7 @@ export function renderPlayer(ctx, player, enemyStats) {
 
         const level = player.level ?? 1;
 
-        ctx.font = "bold 12px monospace";
+        ctx.font = "bold 12px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "#c3c3c3";
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom"; // ←重要
@@ -1005,7 +1005,7 @@ export function renderPlayer(ctx, player, enemyStats) {
     const maxHP = player.maxHp ?? 40; //
     const hpRatio = player.hp / maxHP;
 
-    ctx.font = "12px monospace";
+    ctx.font = "12px 'Noto Sans Mono', monospace";
     ctx.fillStyle = "#dbdbdb";
     ctx.textAlign = "center";
 
@@ -2078,7 +2078,7 @@ export function renderScore(ctx, gameState, now) {
     // =========================
     // ① ラベル（小さく）
     // =========================
-    ctx.font = "bold 12px monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
     // 本体
     ctx.fillStyle = "#f0f6fc"; // 左右HUDの文字を明るい白系に統一
     ctx.fillText("SCORE", x, y);
@@ -2088,7 +2088,7 @@ export function renderScore(ctx, gameState, now) {
     // =========================
     const valueY = y + 14;
 
-    ctx.font = "bold 30px monospace";
+    ctx.font = "bold 30px 'Noto Sans Mono', monospace";
 
     // 本体
     ctx.fillStyle = "#f0f6fc";
@@ -2100,10 +2100,10 @@ export function renderScore(ctx, gameState, now) {
     // =========================
     const infoY = valueY + 40;
 
-    ctx.font = "bold 12px monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText("KILL", x, infoY);
-    ctx.font = "bold 20px monospace";
+    ctx.font = "bold 20px 'Noto Sans Mono', monospace";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText(`${stats.defeatedCount}`, x, infoY + 16);
 
@@ -2112,10 +2112,10 @@ export function renderScore(ctx, gameState, now) {
 
     const infoY2 = infoY + 42;
 
-    ctx.font = "bold 12px monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText("TIME", x, infoY2);
-    ctx.font = "bold 20px monospace";
+    ctx.font = "bold 20px 'Noto Sans Mono', monospace";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText(`${elapsedSec}s`, x, infoY2 + 16);
 
@@ -2246,7 +2246,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     let y = 12;
     
     // 🔥 難易度 & フェーズ表示
-    ctx.font = "bold 10px monospace";
+    ctx.font = "bold 10px 'Noto Sans Mono', monospace";
     ctx.fillStyle = "#f0f6fc";
     const diff = getDifficulty(stats.difficulty);
     
@@ -2260,7 +2260,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     y += 25
 
     // SPAWN（単独描画）
-    ctx.font = "bold 12px monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText("SPAWN", x, y);
 
@@ -2269,7 +2269,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     if (spawnDots) {
         drawSpawnDots(ctx, x, y, spawnDots.remaining, spawnAnimState);
     } else {
-        ctx.font = "bold 24px monospace";
+        ctx.font = "bold 24px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "#f0f6fc"; // ♾️を白く表示
         ctx.fillText(spawnText, x, y);
     }
@@ -2278,7 +2278,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     
     // タイトル
     if (lines.length > 0) {
-        ctx.font = "bold 12px monospace";
+        ctx.font = "bold 12px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "#f0f6fc";
         ctx.fillText("OBJECTIVE", x, y);
 
@@ -2290,19 +2290,19 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
             const baseY = y + i * 26;
             // ラベル（小）
             if (item.label) {
-                ctx.font = "bold 16px monospace";
+                ctx.font = "bold 16px 'Noto Sans Mono', monospace";
                 ctx.fillStyle = "#f0f6fc";
                 ctx.fillText(item.label + ":", x, baseY + 5);
             }
             // ラベル（中）
             if (item.label2) {
-                ctx.font = "16px monospace";
+                ctx.font = "16px 'Noto Sans Mono', monospace";
                 ctx.fillStyle = "#f0f6fc";
                 ctx.fillText(item.label2, x, baseY);
             }
             // 値（大）
             if (item.value) {
-                ctx.font = "bold 24px monospace";
+                ctx.font = "bold 24px 'Noto Sans Mono', monospace";
                 ctx.fillStyle = "#f0f6fc";
                 ctx.fillText(item.value, x + 70, baseY);
             }
@@ -2314,7 +2314,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
 
     // タイトル
     if (lines2.length > 0) {
-        ctx.font = "bold 12px monospace";
+        ctx.font = "bold 12px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "#e4e4e4";
         ctx.fillText("CLEAR", x, y);
 
@@ -2327,21 +2327,21 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
 
             // ラベル（小）
             if (item.label) {
-                ctx.font = "bold 16px monospace";
+                ctx.font = "bold 16px 'Noto Sans Mono', monospace";
                 ctx.fillStyle = "#e4e4e4";
                 ctx.fillStyle = itemColor;
                 ctx.fillText(item.label + ":", x, baseY+5);
             }
             // ラベル（中）
             if (item.label2) {
-                ctx.font = "16px monospace";
+                ctx.font = "16px 'Noto Sans Mono', monospace";
                 ctx.fillStyle = "#e4e4e4";
                 ctx.fillStyle = itemColor;
                 ctx.fillText(item.label2, x, baseY);
             }
             // 値（大）
             if (item.value) {
-                ctx.font = "bold 24px monospace";
+                ctx.font = "bold 24px 'Noto Sans Mono', monospace";
                 ctx.fillStyle = item.color ?? "#e4e4e4";
                 ctx.fillStyle = itemColor;
                 ctx.fillText(item.value, x + 70, baseY);
@@ -2388,7 +2388,7 @@ function renderBgmInfo(ctx, gameState, now) {
     ctx.globalAlpha = Math.max(0, alpha);
 
     // 曲名
-    ctx.font = "bold 14px 'Noto Sans JP', sans-serif";
+    ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#e4e4e4";
     ctx.fillText(`♪ ${info.title} / ${info.composer}`, x, y);
 
@@ -2399,7 +2399,7 @@ function renderBgmInfo(ctx, gameState, now) {
 function drawSpawnDots(ctx, x, y, remaining, anim) {
 
     if (remaining === 0) {
-        ctx.font = "bold 16px monospace";
+        ctx.font = "bold 16px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "#e4e4e4";
         ctx.fillText("0", x, y);
         return;
@@ -2419,7 +2419,7 @@ function drawSpawnDots(ctx, x, y, remaining, anim) {
         ctx.save();
         ctx.translate(cursorX, y);
 
-        ctx.font = `${bigSize}px monospace`;
+        ctx.font = `${bigSize}px 'Noto Sans Mono', monospace`;
         ctx.fillStyle = "#e4e4e4";
         ctx.textBaseline = "top";
 
@@ -2428,7 +2428,7 @@ function drawSpawnDots(ctx, x, y, remaining, anim) {
         ctx.restore();
 
         if (remaining >= 20) {
-            ctx.font = "bold 14px monospace";
+            ctx.font = "bold 14px 'Noto Sans Mono', monospace";
             ctx.fillStyle = "#a7a7a7";
             ctx.fillText(`×${bigCount}`, cursorX + 18, y + 14);
         }
@@ -2445,7 +2445,7 @@ function drawSpawnDots(ctx, x, y, remaining, anim) {
 }
 
 function drawSmallDots(ctx, x, y, count, anim) {
-    ctx.font = `14px monospace`;
+    ctx.font = `14px 'Noto Sans Mono', monospace`;
     ctx.fillStyle = "#e4e4e4";
 
     for (let i = 0; i < count; i++) {
@@ -2548,10 +2548,10 @@ function drawCooldownSpeedPopup(ctx, canvas) {
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
 
-    ctx.font = "bold 9px sans-serif";
+    ctx.font = "bold 9px 'M PLUS Rounded 1c', sans-serif";
     const labelWidth = ctx.measureText(labelText).width;
 
-    ctx.font = "bold 14px monospace";
+    ctx.font = "bold 14px 'Noto Sans Mono', monospace";
     const valueWidth = ctx.measureText(valueText).width;
 
     const gap = 5;
@@ -2572,12 +2572,12 @@ function drawCooldownSpeedPopup(ctx, canvas) {
     ctx.stroke();
 
     // ラベル
-    ctx.font = "bold 9px sans-serif";
+    ctx.font = "bold 9px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "rgba(160, 200, 235, 0.85)";
     ctx.fillText(labelText, x + padX, centerY + 0.5 - riseOffset);
 
     // 倍率
-    ctx.font = "bold 14px monospace";
+    ctx.font = "bold 14px 'Noto Sans Mono', monospace";
     ctx.fillStyle = "#bfe3ff";
     ctx.fillText(valueText, x + padX + labelWidth + gap, centerY - riseOffset);
 
@@ -2803,7 +2803,7 @@ function drawSkillTooltip(ctx, skill, x, y) {
 
     ctx.save();
 
-    ctx.font = "12px sans-serif";
+    ctx.font = "12px 'M PLUS Rounded 1c', sans-serif";
 
     const desc = skill.desc ?? "";
     const descWidth = w - padding * 2;
@@ -2843,12 +2843,12 @@ function drawSkillTooltip(ctx, skill, x, y) {
     ctx.textBaseline = "top";
 
     // スキル名
-    ctx.font = "bold 14px sans-serif";
+    ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#e7f3ff";
     ctx.fillText(skill.name, x + padding, y + 8);
 
     // 説明
-    ctx.font = "12px sans-serif";
+    ctx.font = "12px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "rgba(220,235,255,0.7)";
 
     lines.forEach((text, i) => {
@@ -2892,8 +2892,8 @@ function drawSkillStockNumber(ctx, x, y, stock) {
 
     // 数字
     ctx.font = text.length >= 2
-        ? "bold 9px sans-serif"
-        : "bold 11px sans-serif";
+        ? "bold 9px 'M PLUS Rounded 1c', sans-serif"
+        : "bold 11px 'M PLUS Rounded 1c', sans-serif";
 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -3028,7 +3028,7 @@ export function renderSystemMessage(
     ctx.textBaseline = "middle";
 
     // 小さめ
-    ctx.font = "bold 9px sans-serif";
+    ctx.font = "bold 9px 'M PLUS Rounded 1c', sans-serif";
 
     const metrics = ctx.measureText(text);
 
@@ -3097,12 +3097,12 @@ export function renderPhaseWarning(ctx, stats, canvas) {
     const alpha = 0.7 + Math.sin(performance.now() * 0.01) * 0.3;
     ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
     
-    ctx.font = "bold 32px sans-serif";
+    ctx.font = "bold 32px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText(stats.transitionMsg, cw / 2, ch / 2 - 10);
 
     // 次の目標を表示
     if (stats.nextPhaseGoal) {
-        ctx.font = "16px monospace";
+        ctx.font = "16px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
         ctx.fillText(stats.nextPhaseGoal, cw / 2, ch / 2 + 30);
     }

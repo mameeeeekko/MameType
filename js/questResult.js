@@ -1,7 +1,7 @@
 // questResult.js
 
 import { gameState, setGameActive, fullResetGame } from "./gameCore.js";
-import { updateHud } from "./hud.js";
+import { updateHud, showHud } from "./hud.js";
 import { getPlayerStats, updateAchievements, savePlayerStats, showAchievementPopup } from "./playerStats.js";
 import { closeDialogue, startDialogue, startTrueEndingSequence, showClearRewardPopup, showSaveConfirmPopup } from "./dialogue.js";
 import { backToQuestMap } from "./main.js";
@@ -24,6 +24,9 @@ export function showEnemyEndIntro(text, onFinish) {
     // 表示
     intro.style.display = "flex";
 
+    // ★ イントロ中は右上HUDを非表示
+    showHud(false);
+
     // ★1フレーム待ってからshow付ける（超重要）
     requestAnimationFrame(() => {
         intro.classList.add("show");
@@ -37,6 +40,7 @@ export function showEnemyEndIntro(text, onFinish) {
 
         setTimeout(() => {
             intro.style.display = "none";
+            showHud(true); // ★ HUDを再表示
             onFinish();
         }, 600); // ← CSSのopacity時間と合わせる
 

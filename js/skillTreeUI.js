@@ -3,7 +3,7 @@ import { getSkillById, ACTIVE_SKILLS } from "./questSkills.js";
 import { applySkillNodeEffect, getPlayerStats } from "./questPlayerStats.js";
 import { closeQuestModal, openQuestMenuModal } from "./questMapUI.js";
 import { backToMenu, exitSkillMode } from "./gameCore.js";
-import { backToQuestMap } from "./main.js";
+import { backToQuestMap, showHud } from "./main.js";
 import { devOverride } from "../dev/devOverride.js";
 import { setupCanvasDPR } from "./canvasUtil.js";
 import { images } from "./assetsLoader.js";
@@ -315,7 +315,7 @@ export function renderSkillTreeUI(container){
                 ? "#ffdbd6"   // アクティブスキル
                 : "#ffffff";  // パッシブスキル
 
-            ctx.font = "10px sans-serif";
+            ctx.font = "10px 'M PLUS Rounded 1c', sans-serif";
             ctx.textAlign = "center";
             ctx.fillText(skill.name, x, y + 28);
 
@@ -665,6 +665,9 @@ export function showSkillIntro(node, onStart, onCancel) {
 
   document.body.appendChild(overlay);
 
+  // ★ イントロ中は右上HUDを非表示
+  showHud(false);
+
   function start(e) {
     const key = e.key;
 
@@ -676,6 +679,7 @@ export function showSkillIntro(node, onStart, onCancel) {
     if (key === "Enter" || key === " ") {
         document.removeEventListener("keydown", start);
         overlay.remove();
+        showHud(true); // ★ HUDを再表示
         onStart();
         return;
     }
@@ -684,6 +688,7 @@ export function showSkillIntro(node, onStart, onCancel) {
     if (key === "Escape" || key.toLowerCase() === "b") {
         document.removeEventListener("keydown", start);
         overlay.remove();
+        showHud(true); // ★ HUDを再表示
         onCancel && onCancel();
         return;
     }
@@ -718,6 +723,9 @@ export function showSkillResultIntro(node, isClear, onNext) {
 
   document.body.appendChild(overlay);
 
+  // ★ イントロ中は右上HUDを非表示
+  showHud(false);
+
   // =========================
   // ⏱ 自動遷移（ここが重要）
   // =========================
@@ -726,6 +734,7 @@ export function showSkillResultIntro(node, isClear, onNext) {
 
     setTimeout(() => {
       overlay.remove();
+      showHud(true); // ★ HUDを再表示
       onNext();
     }, 400); // フェードアウト時間
   }, 1200); // 表示時間（調整ポイント）

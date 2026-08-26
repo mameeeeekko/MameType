@@ -22,6 +22,10 @@ function loadImage(name, src) {
   });
 }
 
+// ======================================================================
+// bgm imgを追加したら、かならずservice-worker.jsのキャッシュリストにも追加すること
+// ======================================================================
+
 const coreAssets = [
   // UI
   { type: "img", name: "title_menu", src: "./assets/pic/title_menu.png" },

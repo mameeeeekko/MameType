@@ -1562,8 +1562,8 @@ export const STAGES = {
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {
-      totalCharsToType: 50,
-      timeLimit: 30, // 秒
+      totalCharsToType: 100,
+      timeLimit: 60, // 秒
       genres: ['empty'], // 標準単語
       minLength: 4,
       maxLength: 8,
@@ -1586,8 +1586,8 @@ export const STAGES = {
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {
-      totalCharsToType: 50,
-      timeLimit: 30, // 秒
+      totalCharsToType: 170,
+      timeLimit: 90, // 秒
       genres: ['empty'], // 標準単語
       minLength: 4,
       maxLength: 8,
@@ -1610,8 +1610,8 @@ export const STAGES = {
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {
-      totalCharsToType: 50,
-      timeLimit: 30, // 秒
+      totalCharsToType: 230,
+      timeLimit: 120, // 秒
       genres: ['empty'], // 標準単語
       minLength: 4,
       maxLength: 8,
@@ -1634,8 +1634,8 @@ export const STAGES = {
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {
-      totalCharsToType: 50,
-      timeLimit: 30, // 秒
+      totalCharsToType: 290,
+      timeLimit: 150, // 秒
       genres: ['empty'], // 標準単語
       minLength: 4,
       maxLength: 8,
@@ -1658,8 +1658,8 @@ export const STAGES = {
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {
-      totalCharsToType: 50,
-      timeLimit: 30, // 秒
+      totalCharsToType: 370,
+      timeLimit: 180, // 秒
       genres: ['empty'], // 標準単語
       minLength: 4,
       maxLength: 8,
@@ -1682,11 +1682,11 @@ export const STAGES = {
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {
-      totalCharsToType: 50,
-      timeLimit: 30, // 秒
+      totalCharsToType: 400,
+      timeLimit: 180, // 秒
       genres: ['empty'], // 標準単語
       minLength: 4,
-      maxLength: 8,
+      maxLength: 10,
     },
     // ★ 防衛モード用の星評価ロジックに変更
     star: { 
@@ -1820,6 +1820,30 @@ export const STAGES = {
     star: {
       type: "accuracy",
       thresholds: [0.2, 0.4, 0.6, 0.8, 0.9]
+    }
+  },
+
+  DEFENSE_TEST: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_universe",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 50,
+      timeLimit: 30, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 4,
+      maxLength: 8,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
     }
   },
 

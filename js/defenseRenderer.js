@@ -157,7 +157,7 @@ function renderBgmInfo(ctx) {
     ctx.globalAlpha = Math.max(0, alpha);
 
     // 曲名
-    ctx.font = "bold 14px 'Noto Sans JP', sans-serif";
+    ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#e4e4e4";
     ctx.fillText(`♪ ${info.title} / ${info.composer}`, x, y);
 
@@ -237,7 +237,7 @@ function renderDefenseStats(ctx, state) {
   const cw = ctx.canvas.clientWidth;
   const ch = ctx.canvas.clientHeight;
 
-  ctx.font = "bold 18px monospace";
+  ctx.font = "bold 18px 'Noto Sans Mono', monospace";
   ctx.textAlign = "center";
 
   // 残り時間
@@ -265,20 +265,20 @@ function renderDefenseStats(ctx, state) {
   ctx.save();
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
-  ctx.font = "bold 12px monospace";
+  ctx.font = "bold 12px 'Noto Sans Mono', monospace";
   ctx.fillStyle = "#f0f6fc";
   ctx.fillText("SCORE", scoreX, scoreY + 25);
-  ctx.font = "bold 30px monospace";
+  ctx.font = "bold 30px 'Noto Sans Mono', monospace";
   ctx.fillText(score.toLocaleString(), scoreX, scoreY + 25 + 14);
 
   // --- 右上のコンボ数表示 ---
   const combo = state.currentCombo || 0;
   const comboY = scoreY + 25 + 14 + 45; // スコアの下に配置（さらに距離を離す）
 
-  ctx.font = "bold 12px monospace";
+  ctx.font = "bold 12px 'Noto Sans Mono', monospace";
   ctx.fillStyle = "#f0f6fc";
   ctx.fillText("COMBO", scoreX, comboY);
-  ctx.font = "bold 30px monospace";
+  ctx.font = "bold 30px 'Noto Sans Mono', monospace";
   ctx.fillText(combo.toLocaleString(), scoreX, comboY + 14);
 
   ctx.restore();
@@ -565,7 +565,7 @@ function renderWordList(ctx, state) {
 
     // --- 日本語（漢字交じり）表示 ---
     const jpX = cw - 180; // 少し左にずらす
-    ctx.font = isCurrent ? "bold 22px 'Noto Sans JP', sans-serif" : "18px 'Noto Sans JP', sans-serif";
+    ctx.font = isCurrent ? "bold 22px 'M PLUS Rounded 1c', sans-serif" : "18px 'M PLUS Rounded 1c', sans-serif";
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom"; // 下揃えにして、ローマ字との位置関係を安定させる
     ctx.fillStyle = isCurrent ? "#e0e0e0" : "#4a4a4a";
@@ -584,7 +584,7 @@ function renderWordList(ctx, state) {
 
       // --- ローマ字表示 ---
       const romaX = jpX + 15;
-      ctx.font = "16px monospace";
+      ctx.font = "16px 'Noto Sans Mono', monospace";
       ctx.textAlign = "left";
       ctx.textBaseline = "bottom";
 

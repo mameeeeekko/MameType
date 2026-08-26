@@ -124,6 +124,10 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/se/combo_tier1.mp3",
   "./assets/sound/se/combo_tier_max.mp3",
   "./assets/sound/se/chain_break.mp3",
+  "./assets/sound/se/trophy.mp3",
+  "./assets/sound/se/skillon.mp3",
+  "./assets/sound/se/skilloff.mp3",
+
   // BGM
   "./assets/sound/bgm/rojiura.mp3",
   "./assets/sound/bgm/flashback.mp3",
@@ -147,7 +151,10 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/bgm/rainy.mp3",
   "./assets/sound/bgm/swim.mp3",
   "./assets/sound/bgm/reika.mp3",
+  "./assets/sound/bgm/universe.mp3",
   "./assets/sound/bgm/soranaka.mp3",
+  "./assets/sound/bgm/floating_city.mp3",
+  "./assets/sound/bgm/after_the_summer_fades.mp3",
 ];
 
 // 重複を排除して最終的なキャッシュリストを作成

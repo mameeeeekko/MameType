@@ -9,6 +9,7 @@
 
   <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./assets/fonts/fonts.css">
   
 </head>
 
@@ -458,6 +459,28 @@
         </label>
       </fieldset>
 
+      <!-- 描画品質設定 -->
+      <fieldset>
+        <legend>GRAPHICS</legend>
+        <div class="setting-row">
+          <div class="setting-item-title">描画品質</div>
+          <select id="renderQualitySelect" class="quality-select">
+            <option value="auto">Auto（おまかせ / 最高画質）</option>
+            <option value="high">High（高画質）</option>
+            <option value="medium">Medium（標準）</option>
+            <option value="low">Low（軽量 / 低スペック向け）</option>
+          </select>
+        </div>
+        <div class="setting-description">
+          ディスプレイの解像度や拡大率（Retina・Windowsの125%/150%表示など）に応じて、
+          ゲーム内グラフィックの鮮明さを調整します。
+          <br>
+          動作が重い場合は「Low」、最もきれいに表示したい場合は「Auto」を選択してください。
+          <br>
+          変更は次にゲームを開始したときから反映されます。
+        </div>
+      </fieldset>
+
     </div>
 
     <div class="settings-column">
@@ -721,45 +744,67 @@
 <!--  クエストステータス-->
 <div id="questStatsModal" class="quest-stats-modal">
 
-  <div class="quest-stats-hud">
+  <!-- コンテンツボックス（✕・ページバー・各ページの基準枠） -->
+  <div class="quest-stats-box">
+
     <button id="statsCloseQuest">✕</button>
-    <!-- 左 -->
-    <div class="hud-panel left">
-      <div class="connector-ring"></div>
-      <div id="questBasicStats"></div>
-    </div>
 
-    <!-- 中央 -->
-    <div class="hud-center">
-      <div class="hex-grid"></div>
-      <div class="cyber-core-dot"></div>
+    <nav class="quest-page-nav">
+      <button class="quest-page-btn active" data-page="main">MAIN</button>
+      <button class="quest-page-btn" data-page="status">STATUS</button>
+      <button class="quest-page-btn" data-page="progression">PROGRESSION</button>
+      <button class="quest-page-btn" data-page="skill">SKILL</button>
+    </nav>
 
-      <!-- ここに今の円とかプレイヤー表示 -->
-      <canvas id="questCoreCanvas"></canvas>
-    </div>
+    <!-- MAIN：従来のクエスト詳細（上部HUD） -->
+    <div id="questPageMain" class="quest-page active">
 
-    <!-- 右 -->
-    <div class="hud-panel right">
+      <div class="quest-stats-hud">
 
-      <!-- Active -->
-      <div class="stock-row">
-        <div class="stock-label">STOCKS</div>
-        <div id="questActiveStock"></div>
+        <!-- 左 -->
+        <div class="hud-panel left">
+          <div class="connector-ring"></div>
+          <div id="questBasicStats"></div>
+        </div>
+
+        <!-- 中央 -->
+        <div class="hud-center">
+          <div class="hex-grid"></div>
+          <div class="cyber-core-dot"></div>
+
+          <!-- ここに今の円とかプレイヤー表示 -->
+          <canvas id="questCoreCanvas"></canvas>
+        </div>
+
+        <!-- 右 -->
+        <div class="hud-panel right">
+
+          <!-- Active -->
+          <div class="stock-row">
+            <div class="stock-label">STOCKS</div>
+            <div id="questActiveStock"></div>
+          </div>
+
+          <div id="questActiveSkills"></div>
+
+          <!-- Passive -->
+          <div id="questRight"></div>
+
+        </div>
+
       </div>
 
-      <div id="questActiveSkills"></div>
-
-      <!-- Passive -->
-      <div id="questRight"></div>
-
     </div>
 
-    <!-- 下 -->
-    <div id="questBottom" class="quest-bottom"></div>
+    <!-- STATUS / PROGRESSION / SKILL の各ページ（中身は hud.js が描画） -->
+    <div id="questPageStatus" class="quest-page quest-bottom"></div>
+    <div id="questPageProgression" class="quest-page quest-bottom"></div>
+    <div id="questPageSkill" class="quest-page quest-bottom"></div>
 
   </div>
 
 </div>
+
 
 <div id="achModal" class="modal">
     <div class="ach-modal-content">

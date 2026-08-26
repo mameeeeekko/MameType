@@ -34,6 +34,7 @@ import { APP_VERSION } from "./version.js";
 import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed, showDisclaimer } from "./dialogue.js";
 import { loadCoreAssets, loadRemainingAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
+import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
@@ -445,7 +446,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initFreeModeConfigUI();
   bindKeyEvents();
   initSettingsUI();
-  initHudControls(); 
+  initHudControls();
+  ensureFullscreenButtons();
 
   // =====================================================
   // プレイヤーネーム処理
@@ -848,6 +850,48 @@ function createDifficultySelector(
 // =====================================================
 // 設定UI
 // =====================================================
+/**
+ * 敵モード / 防衛モード用のフルスクリーン切替ボタンを生成する。
+ * コンテナが非表示のときは一緒に隠れるため、表示制御は不要。
+ */
+function ensureFullscreenButtons() {
+  ["enemyModeContainer", "defenseModeContainer"].forEach((id) => {
+    const container = document.getElementById(id);
+    if (!container || document.getElementById(id + "FsBtn")) return;
+
+    const btn = document.createElement("button");
+    btn.id = id + "FsBtn";
+    btn.className = "enemy-sound-toggle fs-toggle-btn sound-toggle-btn";
+    btn.type = "button";
+    btn.title = "フルスクリーン切替";
+
+    const toggleFullscreen = () => {
+      try {
+        if (document.fullscreenElement) {
+          if (document.exitFullscreen) document.exitFullscreen();
+        } else {
+          const el = document.documentElement;
+          if (el.requestFullscreen) el.requestFullscreen();
+        }
+      } catch (err) {
+        console.warn("fullscreen toggle failed:", err);
+      }
+    };
+
+    btn.onclick = (e) => {
+      e.stopPropagation(); // タイピング入力等に影響させない
+      toggleFullscreen();
+    };
+
+    // フルスクリーン状態の変化でラベルを更新
+    document.addEventListener("fullscreenchange", () => {
+      btn.textContent = document.fullscreenElement ? "⛶ EXIT" : "⛶ FULL";
+    });
+
+    container.appendChild(btn);
+  });
+}
+
 function initSettingsUI() {
 
   settingsBtn?.addEventListener("click", (e) => {
@@ -947,6 +991,17 @@ function initSettingsUI() {
       valDisplay.textContent = labels[level] || "Normal";
     }
   });
+
+  // 描画品質（いろいろな画面環境に対応）
+  const renderQualitySelect = document.getElementById("renderQualitySelect");
+  if (renderQualitySelect) {
+    // 現在の設定を反映
+    renderQualitySelect.value = getRenderQuality();
+    renderQualitySelect.addEventListener("change", () => {
+      setRenderQuality(renderQualitySelect.value);
+      playSE("select");
+    });
+  }
 
 
   // 音量リセットボタンのイベント
@@ -1714,10 +1769,12 @@ export function hideAllScreens() {
   // ★ chainUI も非表示対象に追加
   const freeModeConfig = document.getElementById("freeModeConfig");
   const chainUI = document.getElementById("chainUI");
+  // ★ クエストステータスモーダルも対象
+  const questStatsModalEl = document.getElementById("questStatsModal");
   [
     menuDiv, questMenuDiv, startMenuDiv, freeStartMenuDiv, settingsDiv, gameDiv,
     resultDiv, recordsDiv, questMapScreen, skillTreeDiv, onlineRankingDiv,
-    freeModeConfig, chainUI
+    freeModeConfig, chainUI, questStatsModalEl
   ]
     .forEach(div => { if (div) div.style.display = "none"; });
   // showMenuBackground(false); // メニュー遷移時に背景画像が途切れないように維持
@@ -2316,7 +2373,7 @@ function handlePauseKey(e) {
       // ★ クエストモード
       if (gameState.currentQuestNode) {
         if (skillTreeDiv) skillTreeDiv.style.display = "none";
-        endEnemyMode();
+        endEnemyMode(true); // ★中断: 記録を残さない
         gameState.typed = "";
         Game.fullResetGame();
         showQuestMap();
@@ -2324,7 +2381,7 @@ function handlePauseKey(e) {
       }
 
       if (gameState.enemyMode) {
-        endEnemyMode();
+        endEnemyMode(true); // ★中断: 記録を残さない
         gameState.typed = "";
         Game.fullResetGame();
       }  
@@ -2394,7 +2451,7 @@ async function handleGameKey(e) {
         // エネミーモードの中断処理
         const isQuest = gameState.isQuestMode || true;
         gameState.enemyStats.failed = true;
-        endEnemyMode();
+        endEnemyMode(true); // ★ESC中断: 記録を残さない
         Game.fullResetGame();
         gameState.typed = "";
         if (skillTreeDiv) skillTreeDiv.style.display = "none";
@@ -2418,7 +2475,7 @@ async function handleGameKey(e) {
     if (gameState.enemyMode) {
       const isQuest = gameState.isQuestMode;
       gameState.enemyStats.failed = true;
-      endEnemyMode();
+      endEnemyMode(true); // ★ESC中断: 記録を残さない
       Game.fullResetGame();
       gameState.typed = "";
       if (isQuest) showQuestMap();

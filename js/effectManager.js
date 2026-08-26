@@ -2331,7 +2331,7 @@ export function renderScorePopups(ctx) {
         // =====================
         // スコア本体
         // =====================
-        ctx.font = "bold 20px monospace";
+        ctx.font = "bold 20px 'Noto Sans Mono', monospace";
         ctx.textAlign = "center";
 
         // 白系に変更し、視認性向上のために軽い影を追加
@@ -2345,7 +2345,7 @@ export function renderScorePopups(ctx) {
         // 倍率（1.0以外）
         // =====================
         if (p.multiplier > 1) {
-            ctx.font = "bold 14px monospace";
+            ctx.font = "bold 14px 'Noto Sans Mono', monospace";
             ctx.fillStyle = "#c9d1d9";
             ctx.fillText(
                 `x${p.multiplier.toFixed(1)}`,
@@ -2388,7 +2388,7 @@ export function renderDamagePopups(ctx) {
         ctx.save();
         ctx.globalAlpha = p.alpha;
 
-        ctx.font = "bold 20px monospace";
+        ctx.font = "bold 20px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "#ff4d4d"; // 🔥赤ダメージ
 
         ctx.textAlign = "center";
@@ -2458,7 +2458,7 @@ export function renderTimeBonusPopups(ctx) {
 
         ctx.save();
         ctx.globalAlpha = Math.max(0, p.alpha); // alphaは0-1の範囲で変動
-        ctx.font = "bold 16px monospace"; // さらに小さく
+        ctx.font = "bold 16px 'Noto Sans Mono', monospace"; // さらに小さく
         ctx.fillStyle = "#15dd03"; // より緑がかった薄い色に変更
         ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
         ctx.shadowBlur = 5;

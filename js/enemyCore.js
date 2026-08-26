@@ -1,6 +1,6 @@
 // enemyCore.js
 import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI, showGameMessage,renderSystemMessage, updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI} from "./enemyRenderer.js";
-import { setupCanvasDPR } from "./canvasUtil.js";
+import { fitCanvasToContainerFill } from "./canvasUtil.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
     renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBreakEffect, playLoopSE, stopLoopSE,
@@ -95,6 +95,21 @@ function updateUISafeTop() {
  */
 export function getUISafeTop() {
     return uiSafeTop;
+}
+
+/**
+ * ウィンドウリサイズ時にキャンバスを再フィットし、UIセーフエリアを再計算する。
+ */
+function onEnemyResize() {
+    const containerEl = document.getElementById("enemyModeContainer");
+    if (!containerEl || containerEl.style.display === "none") return;
+    const c = canvas.getContext("2d");
+    // 画面いっぱいに再フィット（レターボックスなし）
+    fitCanvasToContainerFill(canvas, containerEl, c);
+    // リサイズ後もプレイヤーが画面中央に来るように補正
+    player.x = canvas.clientWidth / 2;
+    player.y = canvas.clientHeight / 2;
+    updateUISafeTop();
 }
 
 // ===============================
@@ -1866,7 +1881,7 @@ export async function startEnemyMode(config = {}) {
     showHud(false);
 
     const enemyContainer = document.getElementById("enemyModeContainer");
-    enemyContainer.style.display = "block";
+    enemyContainer.style.display = "flex";
 
     // コンボバー初期化
     ensureEnemySoundToggle();
@@ -2112,17 +2127,17 @@ export async function startEnemyMode(config = {}) {
     
     if (canvas && container) {
         canvas.style.display = "block";
-        container.style.display = "block";
+        container.style.display = "flex";
 
         // 安定してサイズ取得
         const ctx = canvas.getContext("2d");
-        // ★DPR初期化（これだけで全部揃う）
-        canvasSize = setupCanvasDPR(canvas, container, ctx);
+        // ★画面いっぱいにフィット（レターボックスなし・フルスクリーン/任意サイズ対応）
+        canvasSize = fitCanvasToContainerFill(canvas, container, ctx);
         // ★UIセーフエリアを計算
         updateUISafeTop();
         // ★ウィンドウリサイズ時にも再計算
-        window.removeEventListener("resize", updateUISafeTop); // 多重登録防止
-        window.addEventListener("resize", updateUISafeTop);
+        window.removeEventListener("resize", onEnemyResize); // 多重登録防止
+        window.addEventListener("resize", onEnemyResize);
     }
 
     //player初期化 (計算済みの playerStats をそのまま渡す)
@@ -2262,7 +2277,7 @@ export function restartEnemyMode() {
 // ===============================
 // Enemyモード終了処理
 // ===============================
-export async function endEnemyMode() {
+export async function endEnemyMode(isAbort = false) {
 
     gameState.enemyMode = false;
     // 戦闘終了時に「一度だけ復活」フラグをリセットする
@@ -2405,6 +2420,14 @@ export async function endEnemyMode() {
     showHud(true);
     resetCandidates();
     renderState();
+
+    // ★★★ ESC等による中断（isAbort）は、記録・報酬・経験値などを一切残さない ★★★
+    if (isAbort) {
+        resetGameState();
+        fullResetInput();
+        endingSequence = false;
+        return null;
+    }
    
     // ===============================
     // クエストモード処理

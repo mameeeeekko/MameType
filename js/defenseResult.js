@@ -151,7 +151,7 @@ function _renderStandardDefenseResult(stats, isFreeMode, rankingInfo) {
             <div class="result-stats-grid">
                 <div class="r-row"><span class="result-label">PlayTime</span><span class="result-value">${((stats.endTime - stats.startTime) / 1000).toFixed(1)}s</span></div>
                 <div class="r-row"><span class="result-label">Solved</span><span class="result-value">${stats.solvedCount ?? 0}</span></div>
-                <div class="r-row"><span class="result-label">TotalChars</span><span class="result-value">${totalKeyChars}</span></div>
+                <div class="r-row"><span class="result-label">TotalChars</span><span class="result-value">${stats.countedTypedChars ?? 0} / ${totalKeyChars}</span></div>
                 <div class="r-row"><span class="result-label">TotalKeystrokes</span><span class="result-value">${stats.totalKeystrokes}</span></div>
                 <div class="r-row"><span class="result-label">CorrectKeys</span><span class="result-value">${stats.correctCount}</span></div>
                 <div class="r-row"><span class="result-label">Misses</span><span class="result-value">${mistakeCount}</span></div>

@@ -9,6 +9,7 @@
 
 import { RECORDS_KEY, loadRecords, clearRecords, clearRanking, MAX_RANKING, syncRankingProtection } from "./storage.js";
 import { GameModes } from "./gameModes.js";
+import { applyCanvasDPR } from "./canvasUtil.js";
 
 
 // =====================================================
@@ -587,19 +588,22 @@ function renderTimelineGraph(container, timeline, mode) {
 
   const canvas = document.createElement("canvas");
   const padding = { left: 70, right: 40, top: 40, bottom: 100 };
-  canvas.width  = Math.max(points.length * 110, 720);
-  canvas.height = container.clientHeight || 380;
+
+  // 論理サイズ（CSS px）を決めてからHi-DPIでバッキングを作る
+  const logicalW = Math.max(points.length * 110, 720);
+  const logicalH = container.clientHeight || 380;
   container.appendChild(canvas);
+  applyCanvasDPR(canvas, logicalW, logicalH);
 
   const ctx = canvas.getContext("2d");
-  const w = canvas.width - padding.left - padding.right;
-  const h = canvas.height - padding.top - padding.bottom;
+  const w = logicalW - padding.left - padding.right;
+  const h = logicalH - padding.top - padding.bottom;
 
   // ───── サイバーダーク背景 ─────
   ctx.fillStyle = "#010409";
   ctx.strokeStyle = "rgba(164, 164, 164, 0.2)";
   ctx.lineWidth = 1;
-  roundRect(ctx, 10, 10, canvas.width - 20, canvas.height - 20, 16);
+  roundRect(ctx, 10, 10, logicalW - 20, logicalH - 20, 16);
   ctx.fill();
   ctx.stroke();
   ctx.shadowBlur = 0;
@@ -688,7 +692,7 @@ function renderTimelineGraph(container, timeline, mode) {
 
 
 // ───── 数値ラベル ────
-ctx.font = "bold 12px sans-serif";
+ctx.font = "bold 12px 'M PLUS Rounded 1c', sans-serif";
 ctx.textAlign = "center";
 ctx.textBaseline = "bottom";
 
@@ -708,7 +712,7 @@ points.forEach((p, i) => {
 });
 
   // ───── X軸ラベル ─────
-  ctx.font = "11px sans-serif";
+  ctx.font = "11px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillStyle = "#8b949e";
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
@@ -743,7 +747,7 @@ points.forEach((p, i) => {
   ctx.fill();
 
   ctx.fillStyle = "#a4a4a4";
-  ctx.font = "bold 11px sans-serif";
+  ctx.font = "bold 11px 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(label, 0, 0);

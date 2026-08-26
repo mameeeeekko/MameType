@@ -359,7 +359,7 @@ function createDialogueUI() {
             padding: 0;
             border-radius: 0;
             box-shadow: none;
-            font-family: 'monospace', 'Courier New', Courier;
+            font-family: 'Noto Sans Mono', 'Courier New', monospace;
             text-shadow: none;
         }
     `;

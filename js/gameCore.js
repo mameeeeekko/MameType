@@ -19,7 +19,7 @@ import { closeDialogue } from './dialogue.js';
 import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, playTestSound as playTestSoundEffect } from "./effectManager.js";
 import { GameModes} from "./gameModes.js";
 import { updatePlayerStats, getPlayerStats} from "./playerStats.js";
-import { updateHud} from "./hud.js";
+import { updateHud, showHud } from "./hud.js";
 import { resetCandidates, candidates, fullResetInput } from './inputCore.js';
 import { showResult } from "./resultView.js";
 import { getCurrentDifficulty, getDifficultyById } from "./difficulties.js";
@@ -1059,6 +1059,9 @@ function showGameEndIntro(message = "FINISHED", duration = 1200) {
     // 表示開始
     intro.style.display = "flex";
 
+    // ★ イントロ中は右上HUDを非表示
+    showHud(false);
+
     // 🔥 ここが最重要
     requestAnimationFrame(() => {
       intro.classList.add("show");
@@ -1069,6 +1072,7 @@ function showGameEndIntro(message = "FINISHED", duration = 1200) {
 
       setTimeout(() => {
         intro.style.display = "none";
+        showHud(true); // ★ HUDを再表示
         resolve();
       }, 400);
 

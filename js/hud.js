@@ -10,6 +10,7 @@ import { handleGlobalSoundToggle } from "./main.js";
 import { getSoundEnabled } from "./gameCore.js";
 import { images } from "./assetsLoader.js";
 import { devOverride } from "../dev/devOverride.js";
+import { applyCanvasDPR } from "./canvasUtil.js";
 
 function formatDateOnly(dateStr){
   if(!dateStr) return "";
@@ -237,11 +238,22 @@ function setupStatsModal(options = {}) {
   if (modalQuest) {
     modalQuest.style.justifyContent = "center";
     // コンテンツが画面を超える場合にスクロールできるようにし、
-    // 常に上端から表示されるようにする
+    // 常に上端から表示されるようにする。
+    // stretch にして内側のボックス（.quest-stats-box）が縦に伸びることで、
+    // STATUS / PROGRESSION / SKILL ページも MAIN と同じ高さになる。
     modalQuest.style.overflowY = "auto";
-    modalQuest.style.alignItems = "flex-start";
+    modalQuest.style.alignItems = "stretch";
     modalQuest.style.paddingTop = "2rem";
   }
+
+  // ==========================================================
+  // ページ切替（MAIN / STATUS / PROGRESSION / SKILL）
+  // ==========================================================
+  document.querySelectorAll(".quest-page-btn").forEach(b => {
+    b.addEventListener("click", () => {
+      showQuestPage(b.dataset.page);
+    });
+  });
 
   //詳細ステータス分岐
   btn.onclick = () => {
@@ -522,69 +534,40 @@ function renderQuestStatsModal() {
   // 中央リング
   renderQuestRing(s, totalStars, maxStars);
 
-  // 下
-  const bottom = document.getElementById("questBottom");
+  // ==========================================================
+  // STATUS / PROGRESSION / SKILL の各ページへ描画
+  // （旧・下部タブ。ページ切替は上部の quest-page-nav が担当）
+  // ==========================================================
+  const statusPage = document.getElementById("questPageStatus");
+  const progressionPage = document.getElementById("questPageProgression");
+  const skillPage = document.getElementById("questPageSkill");
 
-  if (bottom) {
+  // ※ r（s.questRecord）は関数冒頭（414行目付近）で宣言済みのため、ここでは再宣言しない
 
-    const r = s.questRecord || {};
+  // スクロール可能にするためのスタイルを適用
+  const logContainerStyle = ``; // このスタイルはカード個別に適用するため、ここでは不要
+  // 2つのカードを均等に並べるためのスタイル
+  const gridContainerStyle = `display: grid; grid-template-columns: 1fr 1fr; gap: 10px;`;
+  const cardStyle = `min-height: 220px; display: flex; flex-direction: column;`; // 高さはページに合わせて最下部まで伸縮
+  const cardContentStyle = `flex-grow: 1; overflow-y: auto; margin-top: 8px; padding-right: 10px; min-height: 0;`;
 
-    // スクロール可能にするためのスタイルを適用
-    const logContainerStyle = ``; // このスタイルはカード個別に適用するため、ここでは不要
-    // 2つのカードを均等に並べるためのスタイル
-    const gridContainerStyle = `display: grid; grid-template-columns: 1fr 1fr; gap: 10px;`;
-    const cardStyle = `height: 145px; display: flex; flex-direction: column;`; //ボトムのカードの高さ調整
-    const cardContentStyle = `flex-grow: 1; overflow-y: auto; margin-top: 8px; padding-right: 10px; min-height: 0;`;
-
-    bottom.innerHTML = `
-  
-      <div class="quest-log">
-
-        <!-- ======================================================
-          TAB BUTTONS
-          ・ここで表示カテゴリを切り替える
-          ・UIの意味を分けるのが目的
-        ====================================================== -->
-        <div class="quest-tabs">
-
-          <!-- STATUS = ステータス・活動系 -->
-          <button class="quest-tab active" data-tab="status">
-            STATUS
-          </button>
-
-          <!-- PROGRESSION = ステージ・ノード進行ログ -->
-          <button class="quest-tab" data-tab="progression">
-            PROGRESSION
-          </button>
-
-          <!-- SKILL = スキル使用履歴 -->
-          <button class="quest-tab" data-tab="skill">
-            SKILL
-          </button>
-
-        </div>
-
-        <!-- ======================================================
-          STATUS TAB
-          ・旧 RECORD + ACTIVITY を統合
-          ・プレイヤーの現在状態 + 行動統計
-        ====================================================== -->
-       <div class="quest-tab-content-wrapper">
-        <div class="quest-tab-content" id="tab-status" style="display: block;">
-          ${renderStatusTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal)}
-        </div>
-        <div class="quest-tab-content" id="tab-progression" style="display: none;">
-          ${renderProgressionTabContent(r, gridContainerStyle, cardStyle, cardContentStyle)}
-        </div>
-        <div class="quest-tab-content" id="tab-skill" style="display: none;">
-          ${renderSkillTabContent(r, gridContainerStyle, cardStyle, cardContentStyle, unlockedNodes)}
-        </div>
-      </div>
-    `;
+  if (statusPage) {
+    statusPage.innerHTML =
+      renderStatusTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal);
   }
 
-  // DOM生成後に初期化
-  initQuestTabs();
+  if (progressionPage) {
+    progressionPage.innerHTML =
+      renderProgressionTabContent(r, gridContainerStyle, cardStyle, cardContentStyle);
+  }
+
+  if (skillPage) {
+    skillPage.innerHTML =
+      renderSkillTabContent(r, gridContainerStyle, cardStyle, cardContentStyle, unlockedNodes);
+  }
+
+  // 開いたときは必ず MAIN ページから表示する
+  showQuestPage("main");
 }
 
 function renderQuestEquipmentSkills() {
@@ -732,8 +715,10 @@ function renderQuestRing(s) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const w = canvas.width = 280;
-  const h = canvas.height = 280;
+  // Hi-DPI対応：論理280×280の座標系のまま、実効DPR倍の解像度で描画する
+  const size = applyCanvasDPR(canvas, 280, 280);
+  const w = size.width;
+  const h = size.height;
 
   const cx = w / 2;
   const cy = h / 2;
@@ -788,7 +773,7 @@ function renderQuestRing(s) {
      中央 EXP%
   ========================= */
   // ctx.fillStyle = "#9ff";
-  // ctx.font = "bold 24px monospace";
+  // ctx.font = "bold 24px 'Noto Sans Mono', monospace";
   // ctx.textAlign = "center";
   // ctx.fillText(`${Math.floor(ratio * 100)}%`, cx, cy + 8);
 
@@ -799,13 +784,13 @@ function renderQuestRing(s) {
 
   /* Lvラベル */
   ctx.fillStyle = "rgba(130,220,255,0.75)";
-  ctx.font = "14px monospace";
+  ctx.font = "14px 'Noto Sans Mono', monospace";
   ctx.textAlign = "right";
   ctx.fillText("Lv", cx - 4, levelY);
 
   /* 数字 */
   ctx.fillStyle = "rgba(180,255,255,0.98)";
-  ctx.font = "bold 22px monospace";
+  ctx.font = "bold 22px 'Noto Sans Mono', monospace";
   ctx.textAlign = "left";
   ctx.fillText(String(level), cx + 4, levelY);
 
@@ -960,13 +945,15 @@ function renderQuestRing(s) {
 
     const rect = canvas.getBoundingClientRect();
 
+    // 描画は論理座標系（w×h）で行っているため、
+    // クライアント座標を論理座標へ変換する（DPRは打ち消される）
     const mx =
       (e.clientX - rect.left) *
-      (canvas.width / rect.width);
+      (w / rect.width);
 
     const my =
       (e.clientY - rect.top) *
-      (canvas.height / rect.height);
+      (h / rect.height);
 
     const hovering =
       isSkillSlotHit(mx, my);
@@ -985,13 +972,14 @@ function renderQuestRing(s) {
 
     const rect = canvas.getBoundingClientRect();
 
+    // hover と同じく論理座標へ変換
     const mx =
       (e.clientX - rect.left) *
-      (canvas.width / rect.width);
+      (w / rect.width);
 
     const my =
       (e.clientY - rect.top) *
-      (canvas.height / rect.height);
+      (h / rect.height);
 
     const hit =
       isSkillSlotHit(mx, my);
@@ -1317,25 +1305,24 @@ function findQuestNode(id) {
   return null;
 }
 
-function initQuestTabs() {
-  const tabs = document.querySelectorAll(".quest-tab");
-  const contents = document.querySelectorAll(".quest-tab-content");
+/**
+ * クエストステータスのページを切り替える（MAIN / STATUS / PROGRESSION / SKILL）
+ * @param {string} name - "main" | "status" | "progression" | "skill"
+ */
+function showQuestPage(name) {
+  const targetId = "questPage" + name.charAt(0).toUpperCase() + name.slice(1);
 
-  tabs.forEach(tab => {
-    tab.addEventListener("click", () => {
-      // Deactivate all tabs and contents
-      tabs.forEach(t => t.classList.remove("active"));
-      contents.forEach(c => c.style.display = "none");
-
-      // Activate the clicked tab and corresponding content
-      tab.classList.add("active");
-      const contentId = "tab-" + tab.dataset.tab;
-      const activeContent = document.getElementById(contentId);
-      if (activeContent) {
-        activeContent.style.display = "block";
-      }
-    });
+  document.querySelectorAll(".quest-page").forEach(p => {
+    p.classList.toggle("active", p.id === targetId);
   });
+
+  document.querySelectorAll(".quest-page-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.page === name);
+  });
+
+  // 切替時はスクロール位置を上端へ戻す
+  const modal = document.getElementById("questStatsModal");
+  if (modal) modal.scrollTop = 0;
 }
 
 function renderStatusTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal) {

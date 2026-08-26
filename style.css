@@ -3,17 +3,32 @@
 style.css
    ・ページ全体のフォント / 背景 / 基本色
    ===================================================== */
+/* 全OSで共通表示するためのフォント変数
+   （assets/fonts/fonts.css で self-host したフォントを使用） */
+:root {
+  /* 英字UI（ラテン）用 */
+  --font-ui: 'Inter', 'Noto Sans JP', 'Hiragino Maru Gothic ProN',
+             'Yu Gothic UI', system-ui, sans-serif;
+  /* 日本語UI・タイピング表示用（丸ゴ寄りで統一） */
+  --font-ja: 'M PLUS Rounded 1c', 'Noto Sans JP', 'Hiragino Maru Gothic ProN',
+             'Yu Gothic UI', system-ui, sans-serif;
+  /* 数字・等幅表示用 */
+  --font-mono: 'Noto Sans Mono', 'Consolas', 'Courier New', monospace;
+}
 html {
   height: 100%;
 }
 body {
   text-align: center;
-  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  font-family: var(--font-ja);
   background: #05080a;   /* より深い漆黒 */
   color: #a3c8e4;        /* R-TYPE風の淡いブルー */
   margin: 0;
   overflow: hidden;
   height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* R-TYPE風タクティカル背景 */
@@ -414,14 +429,47 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   border-radius: 14px;
   padding: 28px 32px;
 
-  width: 95vw;
-  max-width: 900px;
-  max-height: 95vh;
+  /* コンパクト設計：内容にフィットさせ、大きくなりすぎないよう上限のみ制約する。
+     （16:9固定の大きな枠ではなく、タイピングUIのサイズに合わせて収まる） */
+  box-sizing: border-box;
+  width: min(94vw, 820px);
+  max-height: calc(100dvh - 60px);
   overflow: auto;
 
   border: 1px solid rgba(88, 166, 255, 0.4);
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(88, 166, 255, 0.05);
+
+  /* タイピング入力画面（STANDARD / TIME ATTACK 等）を上下中央に配置するため縦flexに */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 入力UI一式（#game）をカード内の上下中央に配置。
+   上下 auto マージン方式なので、内容がカードより大きい場合は
+   マージンが 0 になり上詰め表示＋スクロールで対処できる（はみ出し安全）。 */
+.game-modal-content > #game {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/* 様々な画面サイズ / アスペクト比に対応：
+   ノートPCや低解像度・縦長ウィンドウでは余白を詰めて内容を優先表示する */
+@media (max-width: 960px), (max-height: 720px) {
+  .game-modal-content {
+    padding: 18px 20px;
+    border-radius: 10px;
+    width: min(94vw, 720px);
+  }
+}
+
+@media (max-width: 640px), (max-height: 520px) {
+  .game-modal-content {
+    /* 極端に小さい画面では幅を優先し、はみ出しはスクロールで対処 */
+    width: 96vw;
+    max-height: 94dvh;
+    padding: 14px 16px;
+  }
 }
 
 /* モーダル内テキスト色調整 */
@@ -627,7 +675,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .result-header-item .r-value.big {
     font-size: 36px;
     font-weight: bold;
-    font-family: 'Inter', monospace;
+    font-family: var(--font-mono);
 }
 
 .result-header-item .accent {
@@ -729,10 +777,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
    フォント（日本語表示系を丸ゴ寄りに統一）
    ===================================================== */
 #word, #word-long, #jp, #roma, #kana-scroll, #roma-scroll, #progress-text, #timeLeft  {
-  font-family: "Hiragino Maru Gothic ProN",
-               "Noto Sans JP",
-               system-ui,
-               sans-serif;
+  font-family: var(--font-ja);
 }
 
 /* =====================================================
@@ -1011,7 +1056,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   justify-content: center;
   align-items: center;
 
-  font-family: sans-serif;
+  font-family: var(--font-ja);
   transform: scale(0.6);   /* ← 全体を縮小 */
   transform-origin: center;
 }
@@ -1299,7 +1344,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .config-value {
   flex: 0 0 55px;
   text-align: right;
-  font-family: 'Inter', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   color: #58a6ff;
   font-weight: bold;
@@ -1691,10 +1736,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   box-shadow: 0 8px 32px rgba(0,0,0,0.6); /* Shadow from stats-window */
   position: relative;
 
-  font-family: "Hiragino Maru Gothic ProN",
-               "Noto Sans JP",
-               system-ui,
-               sans-serif;
+  font-family: var(--font-ja);
 }
 /* Backdrop filter for settings screen */
 
@@ -1703,6 +1745,25 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   grid-template-columns: 1fr 1fr;
   gap: 12px; /* 狭く */
   margin-bottom: 5px; /* 狭く */
+}
+
+/* 描画品質セレクト（いろいろな画面環境に対応） */
+.quality-select {
+  width: 100%;
+  max-width: 340px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  background: #0d1117;
+  color: #f0f6fc;
+  font-family: var(--font-ja);
+  font-size: 13px;
+  cursor: pointer;
+}
+.quality-select:focus {
+  outline: none;
+  border-color: #58a6ff;
+  box-shadow: 0 0 8px rgba(88, 166, 255, 0.35);
 }
 
 #settings h2 {
@@ -1811,7 +1872,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .sound-value {
   flex: 0 0 45px;
   text-align: right;
-  font-family: 'Inter', monospace; /* 等幅フォントで数字の揺れを防止 */
+  font-family: var(--font-mono); /* 等幅フォントで数字の揺れを防止 */
   font-size: 0.8rem;
   color: #58a6ff;
   text-shadow: 0 0 10px rgba(88, 166, 255, 0.5);
@@ -2038,7 +2099,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   flex-grow: 1;
   padding: 6px 8px;
   font-size: 11px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   background: #0d1117;
   color: #8b949e;
   border: 1px solid #30363d;
@@ -2103,7 +2164,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   inset: 0;
   overflow-y: auto;
   /* z-index: 10550; */ /* → 画面階層セクションへ移動 */
-  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  font-family: var(--font-ja);
   color: #d1d5db;
   background: #05080a; /* bodyの背景色に合わせる */
   background-image: 
@@ -2979,6 +3040,22 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   height: 12px;
 }
 
+/* フルスクリーン切替ボタン（サウンドトグルの左隣に配置） */
+.fs-toggle-btn {
+  right: 118px;
+  cursor: pointer;
+  color: #e4e4e4;
+  letter-spacing: 0.5px;
+  /* <button> のデフォルトスタイルをリセットしてサウンドトグルと外観を揃える */
+  margin: 0;
+  border: none;
+  line-height: 1.2;
+}
+.fs-toggle-btn:hover {
+  background: rgba(88, 166, 255, 0.25);
+}
+
+
 /* ===============================
    HUD縮小ボタン
 ================================ */
@@ -3058,11 +3135,19 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   align-items: center;
   justify-content: center;
 
-  background: rgba(0,0,0,0.75);
+  /* 背景を濃くして（透明度を下げて）中身を見やすく */
+  background: rgba(0, 0, 0, 0.88);
+
+  padding-bottom: 2rem;
 }
 
 .hud-panel.right {
   padding-top: 28px;
+
+  /* Equip skills / Passive skills のリストが長い場合、
+     パネル内部でスクロールさせて収める（はみ出し防止） */
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .stats-window {
@@ -3093,9 +3178,9 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 #statsCloseQuest {
   position: absolute;
-  top: 4px;
-  right: 10px;
-  /* z-index: 20; */ /* → 画面階層セクションへ移動 */
+  top: 12px;
+  right: 14px;
+  z-index: 5;
 
   border: none;
   background: transparent;
@@ -3250,11 +3335,14 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   position: relative;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  grid-template-rows: auto;
+
+  /* 行をコンテナの高さに固定する。
+     （auto のままでは装備スキル等の長いリストで行が伸び、
+       下端が overflow:hidden により切れてしまうため） */
+  grid-template-rows: minmax(0, 1fr);
+
   width: min(1000px, 95vw);
   height: 90vh;
-  /* スクロール */
-  overflow-y: auto; 
 
   background: rgba(10,10,15,0.97);
   border: 1px solid rgba(0,255,255,0.15);
@@ -3565,6 +3653,98 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   min-height: 0; /* flexアイテムが縮みすぎるのを防ぐ */
   overflow-y: auto;
 }
+
+/* =====================================================
+   クエストステータス ページ切替
+   （MAIN / STATUS / PROGRESSION / SKILL）
+   ・モーダルのサイズは従来のメインと同じまま、中身だけ切替える
+   ===================================================== */
+
+/* 上部ページ切替バー */
+.quest-page-nav {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+
+  display: flex;
+  gap: 6px;
+}
+
+.quest-page-btn {
+  padding: 6px 16px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+
+  background: #111;
+  border: 1px solid rgba(0, 255, 255, 0.25);
+  border-radius: 6px;
+  color: #9ab;
+
+  cursor: pointer;
+}
+
+.quest-page-btn:hover {
+  color: #cfe;
+}
+
+.quest-page-btn.active {
+  color: #0ff;
+  border-color: #0ff;
+  background: rgba(0, 255, 255, 0.08);
+}
+
+/* 各ページ共通（active のものだけ表示。縦flexで高さを親に揃える） */
+.quest-page {
+  display: none;
+}
+
+.quest-page.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* コンテンツボックス：✕・ページバー・各ページの基準枠 */
+.quest-stats-box {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  width: min(1000px, 95vw);
+  margin: 0 auto;
+}
+
+/* MAINページ：従来どおりのHUDカードを中央に */
+#questPageMain .quest-stats-hud {
+  margin: 56px auto 0;
+}
+
+/* STATUS / PROGRESSION / SKILL ページ：
+   ボックス幅いっぱい＋MAINと同じ高さまで引き伸ばす */
+.quest-page.quest-bottom {
+  flex: 1 1 auto;
+
+  margin: 56px 14px 18px;
+
+  border: 1px solid rgba(0, 255, 255, 0.18);
+  border-radius: 12px;
+}
+
+/* ページ内のカードグリッド（RECORD / ACTIVITY / STAGE LOG 等）を
+   ページ最下部まで伸ばす。行は高さを均等分割し、
+   内容が多いカードは内部スクロールで対処する */
+.quest-page.quest-bottom.active > .quest-bottom-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+
 /* EXPバー関連 クエストステータス */
 .quest-exp-wrap {
   margin: 6px 0 14px;
@@ -3987,9 +4167,19 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
    ===================================================== */
 #enemyModeContainer{
   display:none;
-  position:relative;
-  /* display:flex; */
+  position:fixed;
+  inset:0;
+  align-items:center;
   justify-content:center;
+}
+
+#defenseModeContainer{
+  display:none;
+  position:fixed;
+  inset:0;
+  align-items:center;
+  justify-content:center;
+  background:#020a17;
 }
 
 #enemyModeCanvas{
@@ -4474,6 +4664,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   inset: 0;          /* 画面全体に広げる */
   width: 100%;
   height: 100vh;
+  height: 100dvh;    /* モバイル/Windows のブラウザUI分も考慮 */
 }
 
 #mapContainer{
@@ -5088,6 +5279,29 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 /* =====================================================
    クエストモードスキル関連
    ===================================================== */
+
+/* =====================================================
+   EQUIP SKILLS モーダル（quest-modal-skill）
+   ・ボックス(max-height:90vh)を縦flexにし、
+     コンテンツ領域が内部スクロールするようにして
+     下端の見切れ・はみ出しを防ぐ
+   ===================================================== */
+.quest-modal-box.quest-modal-skill {
+  display: flex;
+  flex-direction: column;
+}
+
+.quest-modal-box.quest-modal-skill .quest-modal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 左カラム（ステータス/装備/オートスキル）も長い場合は内部スクロール */
+.quest-modal-box.quest-modal-skill .skill-left-column {
+  min-height: 0;
+  overflow-y: auto;
+}
 
 .skill-wrapper {
   /* display: flex; は2カラムレイアウト側で再定義 */
@@ -6047,6 +6261,17 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 /* =====================================================
    モバイル調整
    ===================================================== */
+/* 中間幅（グリッドが2カラムに折り返す範囲）では、
+   行の高さ固定を行わずパネル全体をスクロールで収める */
+@media (min-width: 601px) and (max-width: 980px) {
+  .quest-stats-hud {
+    grid-template-rows: none;
+    height: auto;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
 @media (max-width: 600px) {
   h1 {
     font-size: 2rem;
@@ -6076,6 +6301,9 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   /* クエストHUDをスマホでは縦並びに */
   .quest-stats-hud {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    height: auto;
+    max-height: 90vh;
     overflow-y: auto;
   }
 
@@ -6233,7 +6461,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   align-items: flex-end;
   overflow: hidden;
   z-index: 30000;
-  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  font-family: var(--font-ja);
   opacity: 1;
   transition: opacity 1.5s ease-out;
 }
@@ -6298,7 +6526,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   align-items: flex-end;
   overflow: hidden;
   z-index: 29000; /* スタッフロールより手前 */
-  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  font-family: var(--font-ja);
   opacity: 1;
   transition: opacity 1.5s ease-out;
 }
@@ -6358,7 +6586,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .true-ending-message-overlay p {
   color: #fff;
   font-size: 22px;
-  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  font-family: var(--font-ja);
   letter-spacing: 1.5px;
 }
 

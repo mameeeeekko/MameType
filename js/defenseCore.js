@@ -2,7 +2,7 @@
 
 import { renderDefenseUI, initDefenseComboTierBar, updateDefenseComboTierBar, ensureDefenseSoundToggle } from "./defenseRenderer.js";
 import { renderSystemMessage, renderPhaseWarning } from "./enemyRenderer.js";
-import { setupCanvasDPR } from "./canvasUtil.js";
+import { fitCanvasToContainerFill } from "./canvasUtil.js";
 import { handleKey, fullResetInput } from "./inputCore.js";
 import { gameState, setGameActive, getPaused, setPaused, getNow, getERank, getSoundEnabled, getSoundSettings, renderState } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
@@ -48,6 +48,15 @@ let defenseState = { // gameState.enemyStats として扱われる
   comboTierUsed: [], // タイム延長ボーナス使用済みフラグ
 };
 let lastDefenseConfig = {};
+
+/**
+ * ウィンドウリサイズ時に防衛モードのキャンバスを画面いっぱいに再フィットする。
+ */
+function onDefenseResize() {
+    const c = document.getElementById("defenseModeContainer");
+    if (!c || c.style.display === "none") return;
+    fitCanvasToContainerFill(canvas, c, ctx);
+}
 
 // ===============================
 // 防衛モード専用コンボ設定
@@ -131,26 +140,50 @@ export function startDefenseMode(config = {}) {
       }
   }
 
-  // 最初に50個の単語を生成する
-  let generatedWord = "";
-  let generatedText = "";
-  const initialWordCount = 50;
-  // ★ シャッフルして重複を防ぐ
-  const shuffledPool = [...wordPool].sort(() => 0.5 - Math.random());
+    // ==========================================
+  // 防衛モード用ワードプールを初期化
+  // ==========================================
+
+  // 現在のワードプールをシャッフル
+  let shuffledPool = [...wordPool].sort(() => Math.random() - 0.5);
   let poolIndex = 0;
 
-  for (let i = 0; i < initialWordCount; i++) {
-    // ★ プールが尽きたらリセットして再度シャッフル
+  // ワードを1つ取得する関数
+  // プールを使い切ったら、同じ単語を再利用して再シャッフルする
+  const getNextDefenseWord = () => {
+    // プールを使い切ったら再シャッフル
     if (poolIndex >= shuffledPool.length) {
-        poolIndex = 0;
-        // 再シャッフル
-        shuffledPool.sort(() => 0.5 - Math.random());
+      shuffledPool = [...wordPool].sort(() => Math.random() - 0.5);
+      poolIndex = 0;
     }
-    const word = shuffledPool[poolIndex] || { word: "タイピング", text: "たいぴんぐ" };
+
+    const word = shuffledPool[poolIndex];
+
+    if (!word) {
+      console.error("Defense Mode: Failed to get word from pool.");
+      return {
+        word: "タイピング",
+        text: "たいぴんぐ"
+      };
+    }
+
+    poolIndex++;
+    return word;
+  };
+
+  // 最初に50個の単語を生成
+  let generatedWord = "";
+  let generatedText = "";
+
+  const initialWordCount = 50;
+
+  for (let i = 0; i < initialWordCount; i++) {
+    const word = getNextDefenseWord();
+
     generatedWord += word.word + " ";
     generatedText += word.text + " ";
-    poolIndex++;
   }
+
   // ★ 現在のプールとインデックスをstateに保存
   defenseState.wordPool = shuffledPool;
   defenseState.poolIndex = poolIndex;
@@ -218,7 +251,7 @@ export function startDefenseMode(config = {}) {
   clearAllEffects();
 
   const defenseContainer = document.getElementById("defenseModeContainer");
-  defenseContainer.style.display = "block";
+  defenseContainer.style.display = "flex";
   canvas.style.display = "block";
   
   // 防衛モード用UIコンテナを表示
@@ -234,7 +267,10 @@ export function startDefenseMode(config = {}) {
   if (enemyUiContainer) enemyUiContainer.style.display = "none";
 
 
-  setupCanvasDPR(canvas, defenseContainer, ctx);
+  fitCanvasToContainerFill(canvas, defenseContainer, ctx);
+  // ★ウィンドウリサイズ時に再フィット
+  window.removeEventListener("resize", onDefenseResize);
+  window.addEventListener("resize", onDefenseResize);
   initDefenseComboTierBar(); // ★防衛モード用のコンボバーを初期化
   ensureDefenseSoundToggle(); // ★サウンドトグルUIを初期化
 
@@ -695,51 +731,169 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
         defenseState.solvedCount++;
         // 次の入力時に、新しい currentWord が取得される。
 
+        // =========================================================
+    // ★ 単語が尽きそうなら補充する
     // =========================================================
-    // ★ フリーモードで単語が尽きそうなら補充する
-    // =========================================================
-    // 残りの単語数を計算
-    const remainingWords = fullText.substring(defenseState.typedChars).split(' ').filter(w => w).length;
 
-    // 残り単語数が5未満になったら新しい単語を追加
+    const remainingWords =
+        fullText
+            .substring(defenseState.typedChars)
+            .split(" ")
+            .filter(w => w).length;
+
+    // 残り20単語未満になったら50単語追加
     if (remainingWords < 20) {
-      let genres = lastDefenseConfig.custom?.genres || ['']; // 'empty' -> '' に修正
-      const minLength = lastDefenseConfig.custom?.minLength || 1;
-      const maxLength = lastDefenseConfig.custom?.maxLength || 10;
 
-      if (genres.includes('all')) {
-        const allTags = new Set(TARGETS.flatMap(t => t.tags));
-        genres = ['empty', ...Array.from(allTags)];
-      }
+        let genres =
+            lastDefenseConfig.custom?.genres || ["empty"];
 
-      let wordPool = TARGETS.filter(t => {
-        if (t.text.length < minLength || t.text.length > maxLength) return false;
-        if (genres.includes('') && (!t.tags || t.tags.length === 0)) return true;
-        return t.tags.some(tag => genres.includes(tag));
-      });
+        const minLength =
+            lastDefenseConfig.custom?.minLength || 1;
 
-      // ★ 補充用の単語プールをシャッフル
-      const shuffledPool = [...wordPool].sort(() => 0.5 - Math.random());
-      let poolIndex = 0;
+        const maxLength =
+            lastDefenseConfig.custom?.maxLength || 10;
 
-      let newWords = "";
-      let newTexts = "";
-      const wordsToAdd = 50;
-      for (let i = 0; i < wordsToAdd; i++) {
-          if (poolIndex >= shuffledPool.length) {
-              poolIndex = 0;
-              shuffledPool.sort(() => 0.5 - Math.random());
-          }
-          const word = shuffledPool[poolIndex] || { word: "タイピング", text: "たいぴんぐ" };
-          newWords += " " + word.word;
-          newTexts += " " + word.text;
-          poolIndex++;
-      }
-      defenseState.wordList[0].word += newWords;
-      defenseState.wordList[0].text += newTexts;
-      // ★ 更新されたプールとインデックスを保存
-      defenseState.wordPool = shuffledPool;
-      defenseState.poolIndex = poolIndex;
+        // 「すべて」
+        if (genres.includes("all")) {
+            const allTags = new Set(
+                TARGETS.flatMap(t => t.tags || []).filter(Boolean)
+            );
+
+            genres = ["empty", ...Array.from(allTags)];
+        }
+
+        // -----------------------------------------------------
+        // 単語プールを作成
+        // -----------------------------------------------------
+
+        let wordPool = TARGETS.filter(t => {
+
+            // 文字数
+            if (
+                t.text.length < minLength ||
+                t.text.length > maxLength
+            ) {
+                return false;
+            }
+
+            // タグなし
+            if (
+                genres.includes("empty") &&
+                (!t.tags || t.tags.length === 0)
+            ) {
+                return true;
+            }
+
+            // ジャンル一致
+            return (
+                t.tags &&
+                t.tags.some(tag => genres.includes(tag))
+            );
+        });
+
+        // -----------------------------------------------------
+        // ★ 万一プールが空でも「タイピング」固定にしない
+        // -----------------------------------------------------
+
+        if (wordPool.length === 0) {
+
+            console.warn(
+                "Defense Mode: word pool is empty during refill. " +
+                "Falling back to all words within length constraints."
+            );
+
+            wordPool = TARGETS.filter(t =>
+                t.text.length >= minLength &&
+                t.text.length <= maxLength
+            );
+        }
+
+        // -----------------------------------------------------
+        // ★ それでも空なら最後の非常用
+        // -----------------------------------------------------
+
+        if (wordPool.length === 0) {
+
+            console.error(
+                "Defense Mode: No valid words available."
+            );
+
+            wordPool = [
+                {
+                    word: "タイピング",
+                    text: "たいぴんぐ"
+                }
+            ];
+        }
+
+        // -----------------------------------------------------
+        // ★ 既存プールを優先して使う
+        //
+        // 「全単語を使い切る → 再シャッフル → 再利用」
+        // -----------------------------------------------------
+
+        let currentPool = defenseState.wordPool || [];
+        let currentIndex = defenseState.poolIndex || 0;
+
+        // 現在のプールが存在しない場合
+        if (currentPool.length === 0) {
+            currentPool = [...wordPool].sort(
+                () => Math.random() - 0.5
+            );
+            currentIndex = 0;
+        }
+
+        let newWords = "";
+        let newTexts = "";
+
+        const wordsToAdd = 50;
+
+        for (let i = 0; i < wordsToAdd; i++) {
+
+            // -------------------------------------------------
+            // ★ 現在のプールを使い切った
+            // → 元の単語リストから再構築して再シャッフル
+            // -------------------------------------------------
+
+            if (currentIndex >= currentPool.length) {
+
+                currentPool = [...wordPool].sort(
+                    () => Math.random() - 0.5
+                );
+
+                currentIndex = 0;
+            }
+
+            const word =
+                currentPool[currentIndex];
+
+            // 念のため
+            if (!word) {
+                console.warn(
+                    "Defense Mode: Invalid word encountered."
+                );
+                continue;
+            }
+
+            newWords += " " + word.word;
+            newTexts += " " + word.text;
+
+            currentIndex++;
+        }
+
+        // -----------------------------------------------------
+        // ★ 本文に追加
+        // -----------------------------------------------------
+
+        defenseState.wordList[0].word += newWords;
+        defenseState.wordList[0].text += newTexts;
+
+        // -----------------------------------------------------
+        // ★ 次回のために現在位置を保存
+        // -----------------------------------------------------
+
+        defenseState.wordPool = currentPool;
+        defenseState.poolIndex = currentIndex;
     }
         // -----------------------------------------------------
 
@@ -1041,7 +1195,7 @@ export function restartDefenseMode(isAbort = false) {
         // コンテナを再表示する (前回修正)
         const defenseContainer = document.getElementById("defenseModeContainer");
         if (defenseContainer) {
-            defenseContainer.style.display = "block";
+            defenseContainer.style.display = "flex";
         }
         // ★ UIコンテナも再表示する (今回の修正)
         const uiContainer = document.getElementById("defense-ui-container");

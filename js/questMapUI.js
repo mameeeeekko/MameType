@@ -6,7 +6,7 @@ import { startEnemyMode } from "./enemyCore.js";
 import { startDefenseMode } from "./defenseCore.js";
 import { gameState } from "./gameCore.js";
 import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
-import { backToQuestMenu, backToQuestMap } from "./main.js";
+import { backToQuestMenu, backToQuestMap, showHud } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
 import { getSkillById, ACTIVE_SKILLS } from "./questSkills.js";
@@ -38,6 +38,7 @@ import { devOverride } from "../dev/devOverride.js";
 import { images } from "./assetsLoader.js";
 import { playSE } from "./effectManager.js";
 import { hideAllScreens, showMenuBackground } from "./main.js";
+import { getEffectiveDPR } from "./canvasUtil.js";
 
 export function renderQuestMapUI(){
 
@@ -50,8 +51,8 @@ export function renderQuestMapUI(){
     const world = QUEST_MAP[worldId] || QUEST_MAP.WORLD1;
 
     const rect = container.getBoundingClientRect();
-    // canvasサイズ同期（DPR対応）
-    const dpr = window.devicePixelRatio || 1;
+    // canvasサイズ同期（描画品質設定を反映したDPRを使用）
+    const dpr = getEffectiveDPR();
 
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
@@ -1886,6 +1887,9 @@ function showStageIntro(stage, node, onStart, onCancel, startGameFunction) {
 
   document.body.appendChild(overlay);
 
+  // ★ イントロ中は右上HUDを非表示
+  showHud(false);
+
   function start(e) {
     const key = e.key;
 
@@ -1894,6 +1898,7 @@ function showStageIntro(stage, node, onStart, onCancel, startGameFunction) {
         e.preventDefault();  
         document.removeEventListener("keydown", start);
         overlay.remove(); // ★ onStart() の前に overlay を削除
+        showHud(true); // ★ HUDを再表示
         onStart();
         return;
     }
@@ -1906,6 +1911,7 @@ function showStageIntro(stage, node, onStart, onCancel, startGameFunction) {
 
         document.removeEventListener("keydown", start);
         overlay.remove();
+        showHud(true); // ★ HUDを再表示
         onCancel && onCancel();
         return;
     }
