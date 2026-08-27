@@ -5038,6 +5038,34 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
     background:#ffc15d; /* アクティブはちょい明るく */
 }
 
+.quest-difficulty-list{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+}
+
+.quest-side-difficulty-btn{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    line-height:1.2;
+}
+
+.quest-side-difficulty-title{
+    font-size:12px;      /* 他ボタン(.quest-side-btn)と同じ */
+    font-weight:normal;  /* 他ボタンと揃える */
+    color:inherit;       /* 他ボタンと同じ文字色 */
+}
+
+.quest-side-difficulty-val{
+    font-size:10px;
+    font-weight:bold;
+    color:#ffb84d;
+    letter-spacing:0.5px;
+}
+
 .quest-modal-btn:active{
     transform:scale(0.95);
 }
@@ -6594,48 +6622,406 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
    更新通知UI
    ===================================================== */
 
+/* =====================================================
+   MameType Update Notification
+   ===================================================== */
+
 .update-notification {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #2a2a2a;
-  color: #fff;
-  padding: 15px 20px;
-  border-radius: 8px;
-  border: 1px solid #444;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  z-index: 99999;
+  inset: 0;
+
+  z-index: 999999;
+
   display: flex;
+
   align-items: center;
-  gap: 15px;
+  justify-content: center;
+
+  background:
+    rgba(0, 0, 0, 0.72);
+
   opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+
+  transition:
+    opacity 0.25s ease;
+
+  pointer-events: none;
 }
+
+
+/* -----------------------------------------------------
+   表示状態
+   ----------------------------------------------------- */
 
 .update-notification.show {
   opacity: 1;
-  transform: translateY(0);
+
+  pointer-events: auto;
 }
 
-.update-notification p {
-  margin: 0;
+
+/* -----------------------------------------------------
+   Dialog
+   ----------------------------------------------------- */
+
+.update-dialog {
+
+  width: min(440px, calc(100vw - 40px));
+
+  box-sizing: border-box;
+
+  padding: 30px 28px 24px;
+
+  border:
+    1px solid
+    rgba(120, 220, 255, 0.45);
+
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(20, 30, 42, 0.98),
+      rgba(8, 14, 22, 0.98)
+    );
+
+  box-shadow:
+    0 0 35px
+    rgba(0, 0, 0, 0.65),
+
+    0 0 25px
+    rgba(80, 190, 255, 0.12);
+
+  color: #fff;
+
+  text-align: center;
+
+  transform:
+    translateY(10px)
+    scale(0.98);
+
+  transition:
+    transform 0.25s ease;
+}
+
+
+.update-notification.show
+.update-dialog {
+
+  transform:
+    translateY(0)
+    scale(1);
+
+}
+
+
+/* -----------------------------------------------------
+   Title
+   ----------------------------------------------------- */
+
+.update-title {
+
+  margin-bottom: 16px;
+
+  font-size: 21px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.12em;
+
+}
+
+
+/* -----------------------------------------------------
+   Message
+   ----------------------------------------------------- */
+
+.update-message {
+
+  margin-bottom: 22px;
+
   font-size: 14px;
+
+  line-height: 1.7;
+
+  color:
+    rgba(255, 255, 255, 0.88);
+
 }
 
-.update-notification button {
-  background-color: #377dff;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 5px;
+
+/* -----------------------------------------------------
+   Progress wrapper
+   ----------------------------------------------------- */
+
+.update-progress-wrapper {
+
+  margin:
+    18px 0 24px;
+
+}
+
+
+/* -----------------------------------------------------
+   Progress track
+   ----------------------------------------------------- */
+
+.update-progress-track {
+
+  width: 100%;
+
+  height: 10px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 255, 255, 0.10);
+
+}
+
+
+/* -----------------------------------------------------
+   Progress bar
+   ----------------------------------------------------- */
+
+.update-progress-bar {
+
+  height: 100%;
+
+  width: 0%;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #42d9ff,
+      #7df5c8
+    );
+
+  box-shadow:
+    0 0 12px
+    rgba(66, 217, 255, 0.45);
+
+  transition:
+    width 0.15s ease;
+
+}
+
+
+/* -----------------------------------------------------
+   Percentage
+   ----------------------------------------------------- */
+
+.update-progress-text {
+
+  margin-top: 9px;
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.05em;
+
+}
+
+
+/* -----------------------------------------------------
+   File count
+   ----------------------------------------------------- */
+
+.update-file-text {
+
+  margin-top: 6px;
+
+  min-height: 20px;
+
+  font-size: 12px;
+
+  color:
+    rgba(255, 255, 255, 0.60);
+
+  word-break: break-all;
+
+}
+
+
+/* -----------------------------------------------------
+   Buttons
+   ----------------------------------------------------- */
+
+.update-buttons {
+
+  display: flex;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  margin-top: 8px;
+
+}
+
+
+.update-button {
+
+  min-width: 130px;
+
+  padding:
+    11px 20px;
+
+  border-radius: 7px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.20);
+
+  font-size: 13px;
+
+  font-weight: 700;
+
   cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s;
+
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    background 0.15s ease;
+
 }
 
-.update-notification button:hover {
-  background-color: #5c9bff;
+
+.update-button:hover {
+
+  transform:
+    translateY(-1px);
+
+}
+
+
+.update-button:active {
+
+  transform:
+    translateY(0);
+
+}
+
+
+.update-button:disabled {
+
+  opacity: 0.5;
+
+  cursor: default;
+
+  transform: none;
+
+}
+
+
+/* -----------------------------------------------------
+   Primary
+   ----------------------------------------------------- */
+
+.update-button-primary {
+
+  background:
+    rgba(66, 190, 230, 0.18);
+
+  border-color:
+    rgba(66, 217, 255, 0.55);
+
+  color: #fff;
+
+}
+
+
+.update-button-primary:hover {
+
+  background:
+    rgba(66, 190, 230, 0.30);
+
+}
+
+
+/* -----------------------------------------------------
+   Secondary
+   ----------------------------------------------------- */
+
+.update-button-secondary {
+
+  background:
+    rgba(255, 255, 255, 0.06);
+
+  color:
+    rgba(255, 255, 255, 0.72);
+
+}
+
+
+.update-button-secondary:hover {
+
+  background:
+    rgba(255, 255, 255, 0.11);
+
+}
+
+
+/* -----------------------------------------------------
+   Note
+   ----------------------------------------------------- */
+
+.update-note {
+
+  margin-top: 18px;
+
+  font-size: 10px;
+
+  line-height: 1.5;
+
+  color:
+    rgba(255, 255, 255, 0.38);
+
+}
+
+
+/* -----------------------------------------------------
+   Mobile
+   ----------------------------------------------------- */
+
+@media (max-width: 480px) {
+
+  .update-dialog {
+
+    width:
+      calc(100vw - 28px);
+
+    padding:
+      24px 20px 20px;
+
+  }
+
+
+  .update-title {
+
+    font-size: 18px;
+
+  }
+
+
+  .update-buttons {
+
+    flex-direction: column;
+
+  }
+
+
+  .update-button {
+
+    width: 100%;
+
+  }
+
 }
   
 

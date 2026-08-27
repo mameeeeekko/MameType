@@ -1,14 +1,22 @@
-// service-worker.js
+// =====================================================
+// MameType Service Worker
+// =====================================================
 
-// キャッシュの名前。バージョンを更新すると、古いキャッシュが削除されます。
-const CACHE_NAME = "mametype-v1.0.0";
+// -----------------------------------------------------
+// キャッシュバージョン
+// version.js の APP_VERSION と合わせる
+// -----------------------------------------------------
+const CACHE_NAME = "mametype-v1.0.1";
 
-// インストール時にキャッシュするファイルのリスト
-// ゲームの起動に必須なコアファイルや、頻繁にアクセスされるファイルを指定します。
+// =====================================================
+// コアアセット
+// =====================================================
+
 const CORE_ASSETS = [
-  "./", // ルート
+  "./",
   "./index.html",
   "./style.css",
+
   "./js/main.js",
   "./js/gameCore.js",
   "./js/enemyCore.js",
@@ -28,83 +36,116 @@ const CORE_ASSETS = [
   "./js/romaUtils.js",
   "./js/typingLogic.js",
   "./js/version.js",
+
   "./assets/pic/title_menu.png",
   "./assets/pic/quest_menu.png",
   "./assets/pic/sound1.png",
   "./assets/pic/soundmute.png",
 ];
 
-// assetsLoader.jsに記載されているすべてのアセットをキャッシュ対象とします。
-// 手動でリストアップするのは大変なので、ここでは代表的なものだけを例として挙げています。
-// 本来はビルドツールでこのリストを自動生成するのが理想的です。
+// =====================================================
+// 動的アセット
+// =====================================================
+
 const DYNAMIC_ASSETS = [
+
+  // ---------------------------------------------------
   // passiveスキル画像
+  // ---------------------------------------------------
+
   "./assets/pic/skill/chain_up_1.png",
   "./assets/pic/skill/chain_up_2.png",
   "./assets/pic/skill/chain_up_3.png",
   "./assets/pic/skill/chain_up_4.png",
+
   "./assets/pic/skill/chain_bonus_1.png",
   "./assets/pic/skill/chain_bonus_2.png",
   "./assets/pic/skill/chain_bonus_3.png",
   "./assets/pic/skill/chain_bonus_4.png",
+
   "./assets/pic/skill/chain_decay_1.png",
   "./assets/pic/skill/chain_decay_2.png",
   "./assets/pic/skill/chain_decay_3.png",
   "./assets/pic/skill/chain_decay_4.png",
+
   "./assets/pic/skill/glass_1.png",
   "./assets/pic/skill/glass_2.png",
   "./assets/pic/skill/glass_3.png",
   "./assets/pic/skill/glass_4.png",
+
   "./assets/pic/skill/kb_1.png",
   "./assets/pic/skill/kb_2.png",
   "./assets/pic/skill/kb_3.png",
   "./assets/pic/skill/kb_4.png",
+
   "./assets/pic/skill/hpup_1.png",
   "./assets/pic/skill/hpup_2.png",
   "./assets/pic/skill/hpup_3.png",
+
   "./assets/pic/skill/defup_1.png",
   "./assets/pic/skill/defup_2.png",
   "./assets/pic/skill/defup_3.png",
+
   "./assets/pic/skill/expup_1.png",
   "./assets/pic/skill/expup_2.png",
   "./assets/pic/skill/expup_3.png",
+
   "./assets/pic/skill/negate_1.png",
   "./assets/pic/skill/negate_2.png",
   "./assets/pic/skill/negate_3.png",
+
   "./assets/pic/skill/revive_1.png",
   "./assets/pic/skill/revive_2.png",
   "./assets/pic/skill/revive_3.png",
+
   "./assets/pic/skill/item_1.png",
   "./assets/pic/skill/item_2.png",
   "./assets/pic/skill/item_3.png",
+
   "./assets/pic/skill/skillslot_1.png",
   "./assets/pic/skill/stock_1.png",
+
+  // ---------------------------------------------------
   // activeスキル画像
+  // ---------------------------------------------------
+
   "./assets/pic/skill/guard_1.png",
   "./assets/pic/skill/guard_2.png",
   "./assets/pic/skill/guard_3.png",
+
   "./assets/pic/skill/freeze_1.png",
   "./assets/pic/skill/freeze_2.png",
   "./assets/pic/skill/freeze_3.png",
+
   "./assets/pic/skill/recover_1.png",
   "./assets/pic/skill/recover_2.png",
   "./assets/pic/skill/recover_3.png",
+
   "./assets/pic/skill/kill_1.png",
   "./assets/pic/skill/kill_near.png",
-  "./assets.pic/skill/kill_random.png",
+  "./assets/pic/skill/kill_random.png",
   "./assets/pic/skill/kill_all.png",
   "./assets/pic/skill/knockback.png",
+
+  // ---------------------------------------------------
   // 背景画像
+  // ---------------------------------------------------
+
   "./assets/pic/battle_field_green.png",
   "./assets/pic/battle_field_gray.png",
   "./assets/pic/battle_field_blue.png",
   "./assets/pic/battle_field_red.png",
   "./assets/pic/battle_field_purple.png",
+
   "./assets/pic/map_field_blue.png",
   "./assets/pic/map_field_purple.png",
   "./assets/pic/map_field_red.png",
   "./assets/pic/map_field_gray.png",
+
+  // ---------------------------------------------------
   // SE
+  // ---------------------------------------------------
+
   "./assets/sound/se/select.mp3",
   "./assets/sound/se/kill1.mp3",
   "./assets/sound/se/kill2.mp3",
@@ -128,7 +169,10 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/se/skillon.mp3",
   "./assets/sound/se/skilloff.mp3",
 
+  // ---------------------------------------------------
   // BGM
+  // ---------------------------------------------------
+
   "./assets/sound/bgm/rojiura.mp3",
   "./assets/sound/bgm/flashback.mp3",
   "./assets/sound/bgm/yamiyonikakeru.mp3",
@@ -157,92 +201,315 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/bgm/after_the_summer_fades.mp3",
 ];
 
-// 重複を排除して最終的なキャッシュリストを作成
-const ALL_ASSETS_TO_CACHE = [...new Set([...CORE_ASSETS, ...DYNAMIC_ASSETS])];
+// =====================================================
+// 重複除去
+// =====================================================
 
-// 1. Service Workerのインストール
+const ALL_ASSETS_TO_CACHE = [
+  ...new Set([
+    ...CORE_ASSETS,
+    ...DYNAMIC_ASSETS
+  ])
+];
+
+// =====================================================
+// クライアントへ進捗を送信
+// =====================================================
+
+async function notifyClients(message) {
+  const clients = await self.clients.matchAll({
+    type: "window",
+    includeUncontrolled: true
+  });
+
+  clients.forEach(client => {
+    client.postMessage(message);
+  });
+}
+
+// =====================================================
+// インストール
+// =====================================================
+
 self.addEventListener("install", event => {
-  console.log("Service Worker: Install");
+
+  console.log(
+    "Service Worker: Install",
+    CACHE_NAME
+  );
+
   event.waitUntil(
+
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log("Service Worker: Caching all assets for offline use...");
-        // すべてのアセットをインストール時にキャッシュします。
-        // これにより、インストール完了後は完全にオフラインで動作します。
-        // 注意: ファイル数が多い場合、インストールに時間がかかったり、失敗するリスクがあります。
-        return cache.addAll(ALL_ASSETS_TO_CACHE);
-      })
-      .catch(error => {
-        console.error("Service Worker: Failed to cache all assets:", error);
-      })
-  );
-  // self.skipWaiting(); // ユーザーに更新を通知するため、即時有効化をコメントアウト
-});
 
-// 2. Service Workerの有効化と古いキャッシュの削除
-self.addEventListener("activate", event => {
-  console.log("Service Worker: Activate");
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          // 現在のキャッシュ名と異なるものは削除
-          if (cacheName !== CACHE_NAME) {
-            console.log("Service Worker: Deleting old cache:", cacheName);
-            return caches.delete(cacheName);
+      .then(async cache => {
+
+        const total = ALL_ASSETS_TO_CACHE.length;
+
+        let completed = 0;
+
+        console.log(
+          `Service Worker: Updating ${total} assets`
+        );
+
+        // ---------------------------------------------
+        // 進捗を開始
+        // ---------------------------------------------
+
+        await notifyClients({
+          type: "UPDATE_PROGRESS",
+          status: "start",
+          current: 0,
+          total: total,
+          percent: 0
+        });
+
+        // ---------------------------------------------
+        // 1ファイルずつ取得
+        // ---------------------------------------------
+
+        for (const asset of ALL_ASSETS_TO_CACHE) {
+
+          try {
+
+            const request = new Request(
+              asset,
+              {
+                cache: "no-cache"
+              }
+            );
+
+            const response = await fetch(request);
+
+            if (!response.ok) {
+              throw new Error(
+                `HTTP ${response.status}: ${asset}`
+              );
+            }
+
+            await cache.put(
+              request,
+              response.clone()
+            );
+
+            completed++;
+
+            const percent = Math.floor(
+              (completed / total) * 100
+            );
+
+            console.log(
+              `Service Worker: ${completed}/${total}`,
+              asset
+            );
+
+            // -----------------------------------------
+            // 進捗送信
+            // -----------------------------------------
+
+            await notifyClients({
+              type: "UPDATE_PROGRESS",
+              status: "progress",
+              current: completed,
+              total: total,
+              percent: percent,
+              file: asset
+            });
+
+          } catch (error) {
+
+            console.error(
+              "Service Worker: Failed to cache:",
+              asset,
+              error
+            );
+
+            // -----------------------------------------
+            // 1ファイル失敗しても全体を止めない
+            // -----------------------------------------
+
+            await notifyClients({
+              type: "UPDATE_PROGRESS",
+              status: "file-error",
+              current: completed,
+              total: total,
+              percent: Math.floor(
+                (completed / total) * 100
+              ),
+              file: asset
+            });
           }
-        })
-      );
-    })
+        }
+
+        // ---------------------------------------------
+        // 完了
+        // ---------------------------------------------
+
+        await notifyClients({
+          type: "UPDATE_PROGRESS",
+          status: "complete",
+          current: total,
+          total: total,
+          percent: 100
+        });
+
+        console.log(
+          "Service Worker: Asset update complete."
+        );
+
+      })
   );
-  // 新しいService Workerを即座に有効化
-  return self.clients.claim();
+
+  // -----------------------------------------------
+  // ここでは skipWaiting しない
+  // ユーザーが「今すぐ更新」を押したときに実行
+  // -----------------------------------------------
+
 });
 
-// 3. リクエストのインターセプト
+// =====================================================
+// Activate
+// =====================================================
+
+self.addEventListener("activate", event => {
+
+  console.log(
+    "Service Worker: Activate",
+    CACHE_NAME
+  );
+
+  event.waitUntil(
+
+    caches.keys()
+      .then(cacheNames => {
+
+        return Promise.all(
+
+          cacheNames.map(cacheName => {
+
+            if (cacheName !== CACHE_NAME) {
+
+              console.log(
+                "Service Worker: Deleting old cache:",
+                cacheName
+              );
+
+              return caches.delete(cacheName);
+            }
+
+            return null;
+          })
+
+        );
+
+      })
+
+      .then(() => {
+        return self.clients.claim();
+      })
+
+  );
+});
+
+// =====================================================
+// Fetch
+// =====================================================
+
 self.addEventListener("fetch", event => {
-  // Cache-First戦略
+
+  // GET以外はそのまま
+  if (event.request.method !== "GET") {
+    return;
+  }
+
   event.respondWith(
+
     caches.match(event.request)
       .then(cachedResponse => {
-        // キャッシュにあればそれを返す
+
+        // ---------------------------------------------
+        // キャッシュ優先
+        // ---------------------------------------------
+
         if (cachedResponse) {
           return cachedResponse;
         }
 
-        // キャッシュになければネットワークにリクエスト
-        return fetch(event.request).then(
-          networkResponse => {
-            // ネットワークから正常に取得できた場合
-            if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+        // ---------------------------------------------
+        // キャッシュにない場合はネットワーク
+        // ---------------------------------------------
+
+        return fetch(event.request)
+
+          .then(networkResponse => {
+
+            if (
+              !networkResponse ||
+              networkResponse.status !== 200 ||
+              networkResponse.type !== "basic"
+            ) {
               return networkResponse;
             }
 
-            // レスポンスをクローンして片方をキャッシュに保存
-            const responseToCache = networkResponse.clone();
+            const responseToCache =
+              networkResponse.clone();
 
             caches.open(CACHE_NAME)
               .then(cache => {
-                // 動的にキャッシュに追加
-                cache.put(event.request, responseToCache);
+
+                cache.put(
+                  event.request,
+                  responseToCache
+                );
+
+              })
+              .catch(error => {
+
+                console.error(
+                  "Service Worker: cache.put failed:",
+                  error
+                );
+
               });
 
             return networkResponse;
-          }
-        ).catch(error => {
-          // ネットワークエラー（オフラインなど）
-          console.log('Service Worker: Fetch failed; returning offline page instead.', error);
-          // ここでオフライン用の代替ページを返すこともできます。
-          // return caches.match('./offline.html');
-        });
+
+          })
+
+          .catch(error => {
+
+            console.error(
+              "Service Worker: Fetch failed:",
+              error
+            );
+
+            // オフラインかつキャッシュにもない場合
+            throw error;
+
+          });
+
       })
+
   );
+
 });
 
-// 4. クライアントからのメッセージを待つ
-self.addEventListener('message', (event) => {
-  // クライアントから 'SKIP_WAITING' メッセージを受け取ったら、新しいService Workerを有効化する
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+// =====================================================
+// Message
+// =====================================================
+
+self.addEventListener("message", event => {
+
+  if (
+    event.data &&
+    event.data.type === "SKIP_WAITING"
+  ) {
+
+    console.log(
+      "Service Worker: SKIP_WAITING received"
+    );
+
     self.skipWaiting();
   }
+
 });

@@ -6,6 +6,7 @@ import { fitCanvasToContainerFill } from "./canvasUtil.js";
 import { handleKey, fullResetInput } from "./inputCore.js";
 import { gameState, setGameActive, getPaused, setPaused, getNow, getERank, getSoundEnabled, getSoundSettings, renderState } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
+import { getCurrentDifficulty } from "./difficulties.js"; // ★クエスト防衛戦の難易度取得用
 import { STAGES, getStageConfig } from "./enemyModeConfig.js";
 import { playSE, stopBGM, playBGM, clearAllEffects, playErrorSound, playDialogueSound } from "./effectManager.js";
 import { showDefenseResult } from "./defenseResult.js";
@@ -104,9 +105,19 @@ export function startDefenseMode(config = {}) {
   };
   const stageConfig = STAGES["DEFENSE_STAGE"];
   // Use custom config for totalCharsToType and timeLimit if provided (from free mode or quest mode)
-  const totalChars = config.custom?.totalCharsToType ?? 300;
+  let totalChars = config.custom?.totalCharsToType ?? 300;
   const timeLimitMs = (config.custom?.timeLimit ?? 120) * 1000; // Assume seconds if not specified, then convert
   const missPenaltyMs = (config.custom?.missPenalty ?? 1.5) * 1000; // Allow custom miss penalty
+
+  // ★ クエストモードでは難易度に応じてクリア必要文字数とスコア倍率を反映する
+  //   EASY: 0.8倍 / NORMAL: 1.0倍 / HARD: 1.2倍
+  let difficultyScoreMultiplier = 1.0; // スコア倍率
+  if (lastDefenseConfig.isQuestMode) {
+    const questDiff = getCurrentDifficulty("quest");
+    const def = questDiff.defense || { clearCharsMultiplier: 1.0, scoreMultiplier: 1.0 };
+    totalChars = Math.round(totalChars * (def.clearCharsMultiplier ?? 1.0));
+    difficultyScoreMultiplier = def.scoreMultiplier ?? 1.0;
+  }
 
   // 設定からジャンル配列と文字数範囲を取得
   let genres = config.custom?.genres || ['empty']; // デフォルトは '標準'
@@ -222,6 +233,8 @@ export function startDefenseMode(config = {}) {
     overdriveCharCount: 0, 
   awardedOverdriveBonuses: 0, // 授与済みのオーバードライブボーナス回数
     gScore: 0, // ★スコア
+    // ★難易度によるスコア倍率（クエスト防衛戦用）
+    difficultyScoreMultiplier,
     // コンボ関連
     currentCombo: 0,
     maxCombo: 0,
@@ -629,7 +642,7 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
                 break;
             }
         }
-        const gainedScore = Math.floor(scoreConfig.baseScorePerChar * multiplier * result.charCount);
+        const gainedScore = Math.floor(scoreConfig.baseScorePerChar * multiplier * result.charCount * (defenseState.difficultyScoreMultiplier ?? 1.0));
         defenseState.gScore += gainedScore;
 
         // ★ オーバードライブ中のタイムボーナス (カウンターはリセットしない)

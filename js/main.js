@@ -615,43 +615,736 @@ document.addEventListener("DOMContentLoaded", () => {
 // =====================================================
 // Service Worker 更新通知処理
 // =====================================================
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./service-worker.js').then(registration => {
-    console.log('Service Worker registered with scope:', registration.scope);
 
-    // 更新が見つかった場合
-    registration.onupdatefound = () => {
-      const installingWorker = registration.installing;
-      if (installingWorker) {
+let currentServiceWorkerRegistration = null;
+let updateControllerChangeHandler = null;
+let updateProgressReceived = false;
+
+
+// =====================================================
+// Service Worker登録
+// =====================================================
+
+if ("serviceWorker" in navigator) {
+
+  navigator.serviceWorker
+    .register("./service-worker.js")
+    .then(registration => {
+
+      currentServiceWorkerRegistration = registration;
+
+      console.log(
+        "Service Worker registered with scope:",
+        registration.scope
+      );
+
+      // -----------------------------------------------
+      // 新しいService Workerが見つかった
+      // -----------------------------------------------
+
+      registration.onupdatefound = () => {
+
+        const installingWorker =
+          registration.installing;
+
+        if (!installingWorker) {
+          return;
+        }
+
+        console.log(
+          "Service Worker: New worker detected."
+        );
+
         installingWorker.onstatechange = () => {
-          // 新しいワーカーがインストールされ、待機状態になった
-          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            console.log('New content is available and will be used when all tabs for this scope are closed. Or click update button.');
-            showUpdateNotification(registration);
+
+          console.log(
+            "Service Worker state:",
+            installingWorker.state
+          );
+
+          // -------------------------------------------
+          // 新しいSWのインストール開始
+          // -------------------------------------------
+
+          if (
+            installingWorker.state === "installing"
+          ) {
+
+            showUpdateProgressPreparing();
+
           }
+
+          // -------------------------------------------
+          // インストール完了
+          // -------------------------------------------
+
+          if (
+            installingWorker.state === "installed" &&
+            navigator.serviceWorker.controller
+          ) {
+
+            console.log(
+              "Service Worker: New version is ready."
+            );
+
+            showUpdateNotification(
+              registration
+            );
+          }
+
         };
+
+      };
+
+      // -----------------------------------------------
+      // 登録済みSWの更新チェック
+      // -----------------------------------------------
+
+      registration.update()
+        .catch(error => {
+
+          console.warn(
+            "Service Worker update check failed:",
+            error
+          );
+
+        });
+
+    })
+
+    .catch(error => {
+
+      console.error(
+        "Service Worker registration failed:",
+        error
+      );
+
+    });
+
+
+  // ===================================================
+  // Service Workerからのメッセージ
+  // ===================================================
+
+  navigator.serviceWorker.addEventListener(
+    "message",
+    event => {
+
+      const data = event.data;
+
+      if (!data || !data.type) {
+        return;
       }
-    };
-  }).catch(error => {
-    console.error('Service Worker registration failed:', error);
-  });
+
+      // -----------------------------------------------
+      // アップデート進捗
+      // -----------------------------------------------
+
+      if (
+        data.type === "UPDATE_PROGRESS"
+      ) {
+
+        handleUpdateProgress(data);
+      }
+
+    }
+  );
+
 }
 
-function showUpdateNotification(registration) {
-  const notification = document.getElementById('update-notification');
-  const updateButton = document.getElementById('update-now-btn');
 
-  if (!notification || !updateButton) return;
+// =====================================================
+// 更新準備中画面
+// =====================================================
 
-  notification.style.display = 'flex';
-  setTimeout(() => notification.classList.add('show'), 10);
+function showUpdateProgressPreparing() {
 
-  updateButton.onclick = () => {
-    registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      window.location.reload();
-    });
-  };
+  const notification =
+    document.getElementById(
+      "update-notification"
+    );
+
+  const title =
+    document.getElementById(
+      "update-title"
+    );
+
+  const message =
+    document.getElementById(
+      "update-message"
+    );
+
+  const progressWrapper =
+    document.getElementById(
+      "update-progress-wrapper"
+    );
+
+  const progressBar =
+    document.getElementById(
+      "update-progress-bar"
+    );
+
+  const progressText =
+    document.getElementById(
+      "update-progress-text"
+    );
+
+  const fileText =
+    document.getElementById(
+      "update-file-text"
+    );
+
+  const updateButton =
+    document.getElementById(
+      "update-now-btn"
+    );
+
+  const laterButton =
+    document.getElementById(
+      "update-later-btn"
+    );
+
+
+  if (!notification) {
+    return;
+  }
+
+
+  // -----------------------------------------------
+  // 表示
+  // -----------------------------------------------
+
+  notification.style.display = "flex";
+
+  requestAnimationFrame(() => {
+    notification.classList.add("show");
+  });
+
+
+  if (title) {
+    title.textContent = "MameType UPDATE";
+  }
+
+  if (message) {
+    message.textContent =
+      "新しいバージョンを準備しています...";
+  }
+
+  if (progressWrapper) {
+    progressWrapper.style.display = "block";
+  }
+
+  if (progressBar) {
+    progressBar.style.width = "0%";
+  }
+
+  if (progressText) {
+    progressText.textContent = "0%";
+  }
+
+  if (fileText) {
+    fileText.textContent =
+      "アップデートを準備しています...";
+  }
+
+  // -----------------------------------------------
+  // 準備中は更新ボタンを無効化
+  // -----------------------------------------------
+
+  if (updateButton) {
+    updateButton.style.display = "none";
+  }
+
+  if (laterButton) {
+    laterButton.style.display = "none";
+  }
+
+}
+
+
+// =====================================================
+// 更新進捗処理
+// =====================================================
+
+function handleUpdateProgress(data) {
+
+  const notification =
+    document.getElementById(
+      "update-notification"
+    );
+
+  if (!notification) {
+    return;
+  }
+
+
+  // -----------------------------------------------
+  // 更新開始
+  // -----------------------------------------------
+
+  if (data.status === "start") {
+
+    updateProgressReceived = true;
+
+    updateProgressUI(
+      0,
+      data.current || 0,
+      data.total || 0,
+      "アップデートを開始しています..."
+    );
+
+    return;
+  }
+
+
+  // -----------------------------------------------
+  // 更新中
+  // -----------------------------------------------
+
+  if (data.status === "progress") {
+
+    updateProgressReceived = true;
+
+    updateProgressUI(
+      data.percent || 0,
+      data.current || 0,
+      data.total || 0,
+      data.file || "ファイルを更新しています..."
+    );
+
+    return;
+  }
+
+
+  // -----------------------------------------------
+  // ファイルエラー
+  // -----------------------------------------------
+
+  if (data.status === "file-error") {
+
+    updateProgressReceived = true;
+
+    updateProgressUI(
+      data.percent || 0,
+      data.current || 0,
+      data.total || 0,
+      `一部のファイルをスキップしました`
+    );
+
+    return;
+  }
+
+
+  // -----------------------------------------------
+  // 全ファイル完了
+  // -----------------------------------------------
+
+  if (data.status === "complete") {
+
+    updateProgressReceived = true;
+
+    updateProgressUI(
+      100,
+      data.total || 0,
+      data.total || 0,
+      "アップデートの準備が完了しました"
+    );
+
+    setTimeout(() => {
+
+      showUpdateReady();
+
+    }, 400);
+
+  }
+
+}
+
+
+// =====================================================
+// プログレスUI更新
+// =====================================================
+
+function updateProgressUI(
+  percent,
+  current,
+  total,
+  file
+) {
+
+  const progressBar =
+    document.getElementById(
+      "update-progress-bar"
+    );
+
+  const progressText =
+    document.getElementById(
+      "update-progress-text"
+    );
+
+  const fileText =
+    document.getElementById(
+      "update-file-text"
+    );
+
+
+  const safePercent =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Number(percent) || 0
+      )
+    );
+
+
+  if (progressBar) {
+
+    progressBar.style.width =
+      `${safePercent}%`;
+
+  }
+
+
+  if (progressText) {
+
+    progressText.textContent =
+      `${safePercent}%`;
+
+  }
+
+
+  if (fileText) {
+
+    if (total > 0) {
+
+      fileText.textContent =
+        `${current} / ${total} files`;
+
+    } else {
+
+      fileText.textContent =
+        file || "";
+
+    }
+
+  }
+
+}
+
+
+// =====================================================
+// 更新準備完了
+// =====================================================
+
+function showUpdateReady() {
+
+  const title =
+    document.getElementById(
+      "update-title"
+    );
+
+  const message =
+    document.getElementById(
+      "update-message"
+    );
+
+  const updateButton =
+    document.getElementById(
+      "update-now-btn"
+    );
+
+  const laterButton =
+    document.getElementById(
+      "update-later-btn"
+    );
+
+  const fileText =
+    document.getElementById(
+      "update-file-text"
+    );
+
+
+  if (title) {
+
+    title.textContent =
+      "MameType UPDATE";
+
+  }
+
+
+  if (message) {
+
+    message.textContent =
+      "新しいバージョンの準備が完了しました。";
+
+  }
+
+
+  if (fileText) {
+
+    fileText.textContent =
+      "アップデートを適用できます。";
+
+  }
+
+
+  if (updateButton) {
+
+    updateButton.style.display =
+      "inline-flex";
+
+    updateButton.disabled = false;
+
+  }
+
+
+  if (laterButton) {
+
+    laterButton.style.display =
+      "inline-flex";
+
+  }
+
+}
+
+
+// =====================================================
+// 更新通知
+// =====================================================
+
+function showUpdateNotification(
+  registration
+) {
+
+  const notification =
+    document.getElementById(
+      "update-notification"
+    );
+
+  const updateButton =
+    document.getElementById(
+      "update-now-btn"
+    );
+
+  const laterButton =
+    document.getElementById(
+      "update-later-btn"
+    );
+
+  const title =
+    document.getElementById(
+      "update-title"
+    );
+
+  const message =
+    document.getElementById(
+      "update-message"
+    );
+
+
+  if (!notification) {
+    return;
+  }
+
+
+  // -----------------------------------------------
+  // 更新準備完了
+  // -----------------------------------------------
+
+  if (title) {
+
+    title.textContent =
+      "MameType UPDATE";
+
+  }
+
+
+  if (message) {
+
+    message.textContent =
+      "新しいバージョンがあります。";
+
+  }
+
+
+  notification.style.display =
+    "flex";
+
+
+  requestAnimationFrame(() => {
+
+    notification.classList.add("show");
+
+  });
+
+
+  // -----------------------------------------------
+  // 更新ボタン
+  // -----------------------------------------------
+
+  if (updateButton) {
+
+    updateButton.style.display =
+      "inline-flex";
+
+    updateButton.disabled = false;
+
+
+    updateButton.onclick = () => {
+
+      updateButton.disabled = true;
+
+      if (laterButton) {
+        laterButton.style.display = "none";
+      }
+
+
+      const progressWrapper =
+        document.getElementById(
+          "update-progress-wrapper"
+        );
+
+      const fileText =
+        document.getElementById(
+          "update-file-text"
+        );
+
+      const message =
+        document.getElementById(
+          "update-message"
+        );
+
+
+      if (progressWrapper) {
+        progressWrapper.style.display = "block";
+      }
+
+
+      if (message) {
+
+        message.textContent =
+          "アップデートを適用しています...";
+
+      }
+
+
+      if (fileText) {
+
+        fileText.textContent =
+          "MameTypeを再起動しています...";
+
+      }
+
+
+      // -------------------------------------------
+      // controllerchangeを先に登録
+      // -------------------------------------------
+
+      if (
+        updateControllerChangeHandler
+      ) {
+
+        navigator.serviceWorker.removeEventListener(
+          "controllerchange",
+          updateControllerChangeHandler
+        );
+
+      }
+
+
+      let refreshing = false;
+
+
+      updateControllerChangeHandler = () => {
+
+        if (refreshing) {
+          return;
+        }
+
+        refreshing = true;
+
+        console.log(
+          "Service Worker: Controller changed. Reloading..."
+        );
+
+        window.location.reload();
+
+      };
+
+
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        updateControllerChangeHandler
+      );
+
+
+      // -------------------------------------------
+      // 待機中SWへSKIP_WAITING
+      // -------------------------------------------
+
+      if (registration.waiting) {
+
+        registration.waiting.postMessage({
+          type: "SKIP_WAITING"
+        });
+
+      } else {
+
+        console.warn(
+          "Service Worker: No waiting worker found."
+        );
+
+        // 念のため更新
+        registration.update()
+          .catch(error => {
+
+            console.error(
+              "Service Worker update failed:",
+              error
+            );
+
+          });
+
+      }
+
+    };
+
+  }
+
+
+  // -----------------------------------------------
+  // 後で
+  // -----------------------------------------------
+
+  if (laterButton) {
+
+    laterButton.style.display =
+      "inline-flex";
+
+    laterButton.disabled = false;
+
+
+    laterButton.onclick = () => {
+
+      console.log(
+        "Service Worker update postponed."
+      );
+
+      notification.classList.remove("show");
+
+
+      setTimeout(() => {
+
+        notification.style.display =
+          "none";
+
+      }, 250);
+
+    };
+
+  }
+
 }
 
 // ================================

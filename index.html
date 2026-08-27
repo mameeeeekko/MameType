@@ -1207,9 +1207,105 @@
 <!-- =====================================================
   更新通知UI
 ===================================================== -->
-<div id="update-notification" class="update-notification" style="display: none;">
-  <p>新しいバージョンが利用可能です。</p>
-  <button id="update-now-btn">今すぐ更新</button>
+<!-- =====================================================
+     MameType Update Notification
+     ===================================================== -->
+
+<div
+  id="update-notification"
+  class="update-notification"
+  style="display: none;"
+>
+
+  <div class="update-dialog">
+
+    <div
+      id="update-title"
+      class="update-title"
+    >
+      MameType UPDATE
+    </div>
+
+
+    <div
+      id="update-message"
+      class="update-message"
+    >
+      新しいバージョンがあります。
+    </div>
+
+
+    <!-- -----------------------------------------------
+         Progress
+         ----------------------------------------------- -->
+
+    <div
+      id="update-progress-wrapper"
+      class="update-progress-wrapper"
+      style="display: none;"
+    >
+
+      <div class="update-progress-track">
+
+        <div
+          id="update-progress-bar"
+          class="update-progress-bar"
+          style="width: 0%;"
+        ></div>
+
+      </div>
+
+
+      <div
+        id="update-progress-text"
+        class="update-progress-text"
+      >
+        0%
+      </div>
+
+
+      <div
+        id="update-file-text"
+        class="update-file-text"
+      >
+        アップデートを準備しています...
+      </div>
+
+    </div>
+
+
+    <!-- -----------------------------------------------
+         Buttons
+         ----------------------------------------------- -->
+
+    <div class="update-buttons">
+
+      <button
+        id="update-now-btn"
+        class="update-button update-button-primary"
+        style="display: none;"
+      >
+        今すぐ更新
+      </button>
+
+
+      <button
+        id="update-later-btn"
+        class="update-button update-button-secondary"
+        style="display: none;"
+      >
+        後で
+      </button>
+
+    </div>
+
+
+    <div class="update-note">
+      アップデート後、自動的に再起動します。
+    </div>
+
+  </div>
+
 </div>
 
 

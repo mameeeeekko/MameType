@@ -24,6 +24,12 @@ export const DIFFICULTIES = {
         noMissBonus: 0.2,  // +0.20倍
         noDamageBonus: 0.1  // +0.10倍
       }
+    },
+
+    // 防衛モード（クエスト防衛戦）専用
+    defense: {
+      clearCharsMultiplier: 0.8, // クリア必要文字数の倍率
+      scoreMultiplier: 0.8       // スコア倍率
     }
   },
 
@@ -48,6 +54,12 @@ export const DIFFICULTIES = {
         noMissBonus: 0.4,  // +0.40倍 (基準値)
         noDamageBonus: 0.2  // +0.20倍 (基準値)
       }
+    },
+
+    // 防衛モード（クエスト防衛戦）専用
+    defense: {
+      clearCharsMultiplier: 1.0, // クリア必要文字数の倍率
+      scoreMultiplier: 1.0       // スコア倍率
     }
   },
 
@@ -72,6 +84,12 @@ export const DIFFICULTIES = {
         noMissBonus: 0.6,  // +0.60倍
         noDamageBonus: 0.3  // +0.30倍
       }
+    },
+
+    // 防衛モード（クエスト防衛戦）専用
+    defense: {
+      clearCharsMultiplier: 1.2, // クリア必要文字数の倍率
+      scoreMultiplier: 1.2       // スコア倍率
     }
   }
 };

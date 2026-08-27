@@ -484,7 +484,7 @@ export function renderQuestMapUI(){
                 // フェーズがある場合は最初のフェーズの条件、なければトップレベルの条件を参照
                 const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
                 
-                const clearText = buildClearText(stage.clearConditions, stage.defenseConfig);
+                const clearText = buildClearText(stage.clearConditions, getQuestAdjustedDefenseConfig(stage.defenseConfig));
                 const endText   = buildEndText(endConditions, stage.player, stage.defenseConfig);
                 const starText  = buildStarText(stage.star);
 
@@ -703,7 +703,13 @@ function renderQuestSideMenu(container){
         return btn;
     }
 
-    menu.appendChild(createBtn("DIFFICULTY", () => openQuestMenuModal("difficulty")));
+    // DIFFICULTYボタン（ボタン内の2行目に現在の難易度を表示）
+    const difficultyBtn = createBtn("", () => openQuestMenuModal("difficulty"));
+    difficultyBtn.id = "questDifficultySideLabel";
+    difficultyBtn.classList.add("quest-side-difficulty-btn");
+    // ★ menuがまだDOMツリーに未接続でも動くよう、直接 innerHTML を設定
+    setQuestDifficultyButtonLabel(difficultyBtn);
+    menu.appendChild(difficultyBtn);
     menu.appendChild(createBtn("SKILL TREE (T)", () => openQuestMenuModal("skillTree")));
     menu.appendChild(createBtn("EQUIP SKILLS", () => openQuestMenuModal("skill")));
     menu.appendChild(createBtn("UPGRADE", () => openQuestMenuModal("starUpgrade")));
@@ -713,6 +719,19 @@ function renderQuestSideMenu(container){
     menu.appendChild(createBtn("BACK", () => backToQuestMenu()));
 
     container.appendChild(menu);
+}
+
+// ★ サイドメニューのDIFFICULTYボタン内の現在の難易度表示を更新する
+function setQuestDifficultyButtonLabel(btn) {
+    if (!btn) return;
+    // 1行目: ボタン名 / 2行目: 現在の難易度
+    btn.innerHTML = `<span class="quest-side-difficulty-title">DIFFICULTY</span><span class="quest-side-difficulty-val">${getCurrentDifficulty("quest").name}</span>`;
+}
+
+// ★ サイドメニューのDIFFICULTYボタン表示を更新（モーダルクローズ時など）
+function updateQuestDifficultySideLabel() {
+    const btn = document.getElementById("questDifficultySideLabel");
+    setQuestDifficultyButtonLabel(btn);
 }
 
 // ====================================
@@ -785,6 +804,8 @@ export function openQuestMenuModal(type = "difficulty") {
     function closeModal() {
         document.removeEventListener("keydown", onKeyDown);
         overlay.remove();
+        // ★ モーダルを閉じた際にサイドメニューの現在の難易度表示を更新
+        updateQuestDifficultySideLabel();
     }
 
     function onKeyDown(e) {
@@ -848,25 +869,33 @@ export function openQuestMenuModal(type = "difficulty") {
 
                 const e = diff.enemy || {};
                 const sb = e.scoreBonus || {};
+                const d = diff.defense || {};
 
                 desc.innerHTML = `
                     <div style="font-weight:700; margin-bottom:6px;">${diff.name} の設定</div>
                     <br>
                     <div style="font-weight: bold; margin-bottom: 4px;">[敵関連]</div>
                     <div style="display: flex; flex-direction: column; gap: 6px; margin-left: 1em; text-indent: -1em;">
-                        <div style="display:flex; justify-content: space-between;"><span>・敵出現間隔 (spawnRate):</span> <span>${e.spawnRate ?? '-'} 倍</span></div>
-                        <div style="display:flex; justify-content: space-between;"><span>・敵速度 (enemySpeed):</span> <span>${e.enemySpeed ?? '-'} 倍</span></div>
-                        <div style="display:flex; justify-content: space-between;"><span>・敵ダメージ倍率 (damageMultiplier):</span> <span>${e.damageMultiplier ?? '-'} 倍</span></div>
-                        <div style="display:flex; justify-content: space-between;"><span>・チェイン減衰 (chainDecay):</span> <span>${e.chainDecay ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・敵出現間隔:</span> <span>${e.spawnRate ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・敵速度:</span> <span>${e.enemySpeed ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・ダメージ:</span> <span>${e.damageMultiplier ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・チェイン減衰:</span> <span>${e.chainDecay ?? '-'} 倍</span></div>
                     </div>
                     <br>
-                    <div style="font-weight: bold; margin-bottom: 4px; margin-top:8px;">[スコア関連]</div>
+                    <div style="font-weight: bold; margin-bottom: 4px; margin-top:8px;">[通常スコア関連]</div>
                     <div style="display: flex; flex-direction: column; gap: 6px; margin-left: 1em; text-indent: -1em;">
-                        <div style="display:flex; justify-content: space-between;"><span>・スコア倍率 (scoreMultiplier):</span> <span>${e.scoreMultiplier ?? '-'} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・スコア:</span> <span>${e.scoreMultiplier ?? '-'} 倍</span></div>
                         <div style="display:flex; justify-content: space-between;"><span>・クリアボーナス:</span> <span>+${Math.round((sb.clearBonus ?? 0) * 100)}%</span></div>
                         <div style="display:flex; justify-content: space-between;"><span>・ノーミスボーナス:</span> <span>+${Math.round((sb.noMissBonus ?? 0) * 100)}%</span></div>
                         <div style="display:flex; justify-content: space-between;"><span>・被ダメージなしボーナス:</span> <span>+${Math.round((sb.noDamageBonus ?? 0) * 100)}%</span></div>
                     </div>
+                    <br>
+                    <div style="font-weight: bold; margin-bottom: 4px; margin-top:8px;">[防衛戦関連]</div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-left: 1em; text-indent: -1em;">
+                        <div style="display:flex; justify-content: space-between;"><span>・クリア必要文字数:</span> <span>${(d.clearCharsMultiplier ?? 1.0)} 倍</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>・スコア:</span> <span>${(d.scoreMultiplier ?? 1.0)} 倍</span></div>
+                    </div>
+
                 `;
             }
             function update(){
@@ -1791,6 +1820,19 @@ function showSkillTooltip(skill, event) {
 // =========================
 // クエストスタート前情報表示
 // =========================
+// ★ クエスト難易度を考慮した防衛設定を返すヘルパー
+//   defenseCore.js と同じ計算（Math.round で整数化）で目標文字数を補正する。
+function getQuestAdjustedDefenseConfig(defenseConfig) {
+  if (!defenseConfig || defenseConfig.totalCharsToType == null) return defenseConfig;
+  const diff = getCurrentDifficulty("quest");
+  const def = diff.defense || {};
+  const mult = def.clearCharsMultiplier ?? 1.0;
+  return {
+    ...defenseConfig,
+    totalCharsToType: Math.round(defenseConfig.totalCharsToType * mult),
+  };
+}
+
 function showStageIntro(stage, node, onStart, onCancel, startGameFunction) {
 
   if (!stage) {
@@ -1802,7 +1844,7 @@ function showStageIntro(stage, node, onStart, onCancel, startGameFunction) {
   overlay.className = "stage-intro";
 
   const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
-  const clearText = buildClearText(stage.clearConditions, stage.defenseConfig);
+  const clearText = buildClearText(stage.clearConditions, getQuestAdjustedDefenseConfig(stage.defenseConfig));
   let endText = [];
   // ★防衛モード用の説明を追加
   if (stage.isDefenseMode) {
