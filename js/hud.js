@@ -240,14 +240,14 @@ function setupStatsModal(options = {}) {
     // コンテンツが画面を超える場合にスクロールできるようにし、
     // 常に上端から表示されるようにする。
     // stretch にして内側のボックス（.quest-stats-box）が縦に伸びることで、
-    // STATUS / PROGRESSION / SKILL ページも MAIN と同じ高さになる。
+    // RECORD / PROGRESSION / SKILL ページも MAIN と同じ高さになる。
     modalQuest.style.overflowY = "auto";
     modalQuest.style.alignItems = "stretch";
     modalQuest.style.paddingTop = "2rem";
   }
 
   // ==========================================================
-  // ページ切替（MAIN / STATUS / PROGRESSION / SKILL）
+  // ページ切替（MAIN / RECORD / PROGRESSION / SKILL）
   // ==========================================================
   document.querySelectorAll(".quest-page-btn").forEach(b => {
     b.addEventListener("click", () => {
@@ -535,10 +535,10 @@ function renderQuestStatsModal() {
   renderQuestRing(s, totalStars, maxStars);
 
   // ==========================================================
-  // STATUS / PROGRESSION / SKILL の各ページへ描画
+  // RECORD / PROGRESSION / SKILL の各ページへ描画
   // （旧・下部タブ。ページ切替は上部の quest-page-nav が担当）
   // ==========================================================
-  const statusPage = document.getElementById("questPageStatus");
+  const recordPage = document.getElementById("questPageRecord");
   const progressionPage = document.getElementById("questPageProgression");
   const skillPage = document.getElementById("questPageSkill");
 
@@ -551,9 +551,9 @@ function renderQuestStatsModal() {
   const cardStyle = `min-height: 220px; display: flex; flex-direction: column;`; // 高さはページに合わせて最下部まで伸縮
   const cardContentStyle = `flex-grow: 1; overflow-y: auto; margin-top: 8px; padding-right: 10px; min-height: 0;`;
 
-  if (statusPage) {
-    statusPage.innerHTML =
-      renderStatusTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal);
+  if (recordPage) {
+    recordPage.innerHTML =
+      renderRecordTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal);
   }
 
   if (progressionPage) {
@@ -1306,8 +1306,8 @@ function findQuestNode(id) {
 }
 
 /**
- * クエストステータスのページを切り替える（MAIN / STATUS / PROGRESSION / SKILL）
- * @param {string} name - "main" | "status" | "progression" | "skill"
+ * クエストステータスのページを切り替える（MAIN / RECORD / PROGRESSION / SKILL）
+ * @param {string} name - "main" | "record" | "progression" | "skill"
  */
 function showQuestPage(name) {
   const targetId = "questPage" + name.charAt(0).toUpperCase() + name.slice(1);
@@ -1325,7 +1325,53 @@ function showQuestPage(name) {
   if (modal) modal.scrollTop = 0;
 }
 
-function renderStatusTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal) {
+// ==========================================================
+// RECORD タブ: アイテム使用回数の表示用ヘルパー
+// ==========================================================
+// questRecord.itemPickupCount に { itemId: 使用回数 } で蓄積される
+const QUEST_ITEM_NAMES = {
+  // 回復
+  heal_small: "小回復",
+  heal_medium: "中回復",
+  heal_large: "大回復",
+  heal_full: "全回復",
+  // 攻撃
+  kill_small: "ボム",
+  kill_medium: "メガボム",
+  kill_large: "大ボム",
+  kill_all: "殲滅",
+  // 補助（凍結）
+  freeze_small: "プチ凍結",
+  freeze_medium: "フリーズ",
+  freeze_large: "大凍結",
+  // 補助（冷却短縮・ストック）
+  cooldown_small: "プチ短縮",
+  cooldown_medium: "短縮",
+  cooldown_large: "大短縮",
+  cooldown_stock: "ストック",
+};
+
+// どのアイテムをどれだけ使用したかを、使用回数の多い順に描画する
+function renderItemUseRows(pickupCount) {
+  const entries = Object.entries(pickupCount || {})
+    .sort((a, b) => b[1] - a[1]);
+
+  if (entries.length === 0) {
+    return `<div class="quest-bottom-row"><span class="quest-bottom-label">ITEM USED</span><span class="quest-bottom-value">NONE</span></div>`;
+  }
+
+  return entries.map(([id, count]) => {
+    const name = QUEST_ITEM_NAMES[id] || id;
+    return `
+      <div class="quest-bottom-row">
+        <span class="quest-bottom-label item-use-sub">- ${name}</span>
+        <span class="quest-bottom-value">${count}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderRecordTabContent(r, cardStyle, cardContentStyle, totalStars, maxStars, itemPickupTotal) {
   const starsPercent = maxStars > 0 ? Math.floor(totalStars / maxStars * 100) : 0;
   return `
     <div class="quest-bottom-grid">
@@ -1338,6 +1384,7 @@ function renderStatusTabContent(r, cardStyle, cardContentStyle, totalStars, maxS
           <div class="quest-bottom-row"><span class="quest-bottom-label">PLAY</span><span class="quest-bottom-value">${r.totalPlays || 0}</span></div>
           <div class="quest-bottom-row"><span class="quest-bottom-label">KILL</span><span class="quest-bottom-value">${r.totalKills || 0}</span></div>
           <div class="quest-bottom-row"><span class="quest-bottom-label">ITEM</span><span class="quest-bottom-value">${itemPickupTotal}</span></div>
+          ${renderItemUseRows(r.itemPickupCount)}
           <div class="quest-bottom-row"><span class="quest-bottom-label">TIME</span><span class="quest-bottom-value">${formatPlayTime(r.totalPlayTime || 0)}</span></div>
           <div class="quest-bottom-row"><span class="quest-bottom-label">TYPED</span><span class="quest-bottom-value">${r.totalTyped || 0}</span></div>
           <div class="quest-bottom-row"><span class="quest-bottom-label">MISS</span><span class="quest-bottom-value">${r.totalMiss || 0}</span></div>

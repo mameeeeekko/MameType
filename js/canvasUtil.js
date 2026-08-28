@@ -8,43 +8,22 @@
 // いろいろな画面環境で最適な画質になるようにする。
 // =============================================
 
-const QUALITY_STORAGE_KEY = "typing_game_quality";
+// 描画品質レベルの管理と実効DPR判定は performance.js に一元化した。
+// 旧API（getRenderQuality / setRenderQuality）は既存呼び出し互換のため再エクスポートする。
+import { getDprCap } from "./performance.js";
 
-// 各品質レベルにおけるDPR（devicePixelRatio）の上限
-//   auto   : 端末のdprをそのまま使う（最大3まで）＝最もきれい
-//   high   : 最大2倍まで（4K/Retina向け）
-//   medium : 最大1.5倍まで（標準）
-//   low    : 等倍（1倍）＝最も軽い
-const QUALITY_DPR_CAPS = {
-    auto: 3,
-    high: 2,
-    medium: 1.5,
-    low: 1
-};
+export { getRenderQuality, setRenderQuality } from "./performance.js";
 
-/** 現在の描画品質設定を取得する */
-export function getRenderQuality() {
-    try {
-        const q = localStorage.getItem(QUALITY_STORAGE_KEY);
-        return QUALITY_DPR_CAPS[q] !== undefined ? q : "auto";
-    } catch (e) {
-        return "auto";
-    }
-}
-
-/** 描画品質設定を保存する */
-export function setRenderQuality(level) {
-    const q = QUALITY_DPR_CAPS[level] !== undefined ? level : "auto";
-    try {
-        localStorage.setItem(QUALITY_STORAGE_KEY, q);
-    } catch (e) { /* localStorage不可の環境は無視 */ }
-    return getRenderQuality();
-}
-
-/** 品質設定を反映した実効DPRを返す（最低1は保証） */
+/**
+ * 品質プロファイルが許すDPR上限を用いた実効DPRを返す（最低1は保証）。
+ * - high/medium/low : 固定上限（2 / 1.5 / 1）
+ * - auto            : アダプティブ制御により段階的に上限が下がる
+ *                     （未劣化の間は端末dprをそのまま使用）
+ */
 export function getEffectiveDPR() {
     const raw = window.devicePixelRatio || 1;
-    const cap = QUALITY_DPR_CAPS[getRenderQuality()];
+    const cap = getDprCap();
+    if (cap === null || cap === undefined) return Math.max(1, raw);
     return Math.max(1, Math.min(raw, cap));
 }
 

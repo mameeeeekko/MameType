@@ -35,6 +35,7 @@ import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed, show
 import { loadCoreAssets, loadRemainingAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
+import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
 import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
@@ -333,6 +334,9 @@ export function applyTitleMenuBackground() {
 // DOM 取得・初期化
 // =====================================================
 document.addEventListener("DOMContentLoaded", () => {
+  // ★描画品質に応じた「グロー影」の一括制御を有効化（起動時）
+  enableAdaptiveShadowControl();
+
   cacheDOM();
 
   // ゲーム中の意図しないテキスト選択（青いハイライト）を防止
@@ -348,7 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  if (checkMobile()) return; // モバイルなら初期化を中断
+  checkMobile(); // 警告を表示するだけで、ゲームの初期化はブロックしない
 
   showBootScreen();
 
@@ -1690,8 +1694,21 @@ function initSettingsUI() {
   if (renderQualitySelect) {
     // 現在の設定を反映
     renderQualitySelect.value = getRenderQuality();
+
+    // 実効プロファイル（Autoの自動調整状況など）を設定UIに表示
+    const qualityStatus = document.getElementById("renderQualityStatus");
+    const updateQualityStatus = () => {
+      if (qualityStatus) {
+        qualityStatus.textContent = `現在のプロファイル: ${getProfile().label}`;
+      }
+    };
+    updateQualityStatus();
+    // Auto適応制御による段階変化でも表示を更新
+    window.addEventListener("mametype-quality-changed", updateQualityStatus);
+
     renderQualitySelect.addEventListener("change", () => {
       setRenderQuality(renderQualitySelect.value);
+      updateQualityStatus();
       playSE("select");
     });
   }
@@ -2946,7 +2963,34 @@ function bindKeyEvents() {
         panel.style.display === "none" ? "block" : "none";
     
     }
-    
+
+    // ★クエストステータスモーダル表示中のタブ切替（MAIN / RECORD / PROGRESSION / SKILL）
+    // ゲーム中・ポーズ中でも handleGameKey / handlePauseKey に奪われないよう、先に処理する
+    const questStatsModalNow = document.getElementById("questStatsModal");
+    if (
+      questStatsModalNow &&
+      window.getComputedStyle(questStatsModalNow).display !== "none" &&
+      !e.ctrlKey &&
+      !e.metaKey
+    ) {
+      const tabPage = {
+        m: "main",
+        r: "record",
+        p: "progression",
+        s: "skill",
+      }[e.key.toLowerCase()];
+      if (tabPage) {
+        const questNavBtn = document.querySelector(
+          `.quest-page-nav button[data-page="${tabPage}"]`
+        );
+        if (questNavBtn) {
+          e.preventDefault();
+          questNavBtn.click();
+          return;
+        }
+      }
+    }
+
     if (handleResultKey(e)) return;
     if (handlePauseKey(e)) return;
     if (await handleGameKey(e)) return;
@@ -3282,6 +3326,33 @@ function handleMenuKey(e) {
       e.preventDefault();
       document.getElementById("statsCloseQuest")?.click();
       return true; // モーダルを閉じたので処理を終了
+    }
+
+    // タブ切り替え（MAIN / RECORD / PROGRESSION / SKILL）
+    if (!e.ctrlKey && !e.metaKey) { // 修飾キー（Ctrl/Cmd + キー）は除外
+      const questPageBtn = document.querySelector(".quest-page-nav");
+      if (questPageBtn) {
+        let targetButton = null;
+        switch (key) {
+          case "m": // MAIN
+            targetButton = questPageBtn.querySelector('button[data-page="main"]');
+            break;
+          case "r": // RECORD
+            targetButton = questPageBtn.querySelector('button[data-page="record"]');
+            break;
+          case "p": // PROGRESSION
+            targetButton = questPageBtn.querySelector('button[data-page="progression"]');
+            break;
+          case "s": // SKILL
+            targetButton = questPageBtn.querySelector('button[data-page="skill"]');
+            break;
+        }
+        if (targetButton) {
+          targetButton.click();
+          e.preventDefault();
+          return true; // タブを切り替えたので処理を終了
+        }
+      }
     }
   }
 
@@ -3654,38 +3725,45 @@ if (enemyCanvas) {
 
 /**
  * モバイルデバイスの判定と警告表示
+ *
+ * 【判定基準の緩和】
+ *  - タッチ対応のWindowsノートPC（navigator.maxTouchPoints > 0）や
+ *    小さいブラウザウィンドウでは警告を出さないよう、『モバイルUAのみ』で判定する。
+ *  - これにより、普通のWindows PC / Mac では警告が表示されない。
+ *
+ * 【ゲームをブロックしない】
+ *  - 警告は表示するだけ。続行ボタンで閉じればそのままプレイできる。
  */
 function checkMobile() {
-  // 1. 判定基準の強化（iPad等のデスクトップモードも考慮）
-  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const isSmallScreen = window.innerWidth <= 1024 || window.innerHeight <= 600;
-  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // 1. 判定：スマホ/タブレットのUser-Agentのみを対象とする
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Windows Phone/i.test(navigator.userAgent);
+  if (!isMobileUA) return false;
 
-  if (isTouchDevice || isSmallScreen || isMobileUA) {
-    // 2. 警告を出す前に、BootScreen や Loading 画面を含め全てのUIを「強制消去」する
-    hideAllScreens();
-    if (bootScreen) bootScreen.style.setProperty("display", "none", "important");
-    if (loadingScreen) loadingScreen.style.setProperty("display", "none", "important");
-
-    // 3. 警告画面を取得、なければ作成して最前面に表示
-    let warning = document.getElementById("mobileWarning");
-    if (!warning) {
-      warning = document.createElement("div");
-      warning.id = "mobileWarning";
-      document.body.appendChild(warning);
-    }
-
-    warning.style.setProperty("display", "flex", "important");
-    warning.innerHTML = `
-      <div>
-        <h2>PC Only Game</h2>
-        <p>このゲームはPCおよび物理キーボード専用です。<br>
-        スマートフォンやタブレットには対応しておりません。</p>
-        <p style="margin-top:20px; color:#888;">PCからアクセスしてプレイしてください。</p>
-      </div>
-    `;
+  // 2. 警告画面を取得、なければ作成
+  let warning = document.getElementById("mobileWarning");
+  if (!warning) {
+    warning = document.createElement("div");
+    warning.id = "mobileWarning";
     document.body.appendChild(warning);
-    return true;
   }
-  return false;
+
+  warning.style.setProperty("display", "flex", "important");
+  warning.innerHTML = `
+    <div>
+      <h2>PC Only Game</h2>
+      <p>このゲームはPCおよび物理キーボードを推奨しています。<br>
+      スマートフォンやタブレットでは操作が難しい場合があります。</p>
+      <button id="mobileWarningContinue">このままプレイする</button>
+    </div>
+  `;
+
+  // 3. 続行ボタンで警告を閉じる（ゲームはブロックせず続行可能）
+  const continueBtn = document.getElementById("mobileWarningContinue");
+  if (continueBtn) {
+    continueBtn.addEventListener("click", () => {
+      warning.style.setProperty("display", "none", "important");
+    });
+  }
+
+  return true;
 }

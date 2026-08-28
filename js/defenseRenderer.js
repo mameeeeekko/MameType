@@ -524,17 +524,23 @@ function renderWordList(ctx, state) {
   const cw = ctx.canvas.clientWidth;
   const ch = ctx.canvas.clientHeight;
 
-  const fullWord = state.wordList[0].word; // 表示用の原文
-  const fullText = state.wordList[0].text; // 判定用のひらがな
-  const words = fullWord.split(' ');
-  const textWords = fullText.split(' '); // ひらがなも単語に分割
+  const list = state.wordList[0];
+  // ★ 表示は「ターゲット（スペースを含む1文字列）」ごとに行を分ける。
+  //    targets が無い場合は従来どおり split(" ") でフォールバック。
+  const words = list.targets
+    ? list.targets.map(t => t.word)
+    : list.word.split(' ');
+  const textWords = list.targets
+    ? list.targets.map(t => t.text)
+    : list.text.split(' ');
   let charCount = 0;
   let currentWordIndex = -1;
 
   // 現在どの単語をタイピングしているか判定
+  // （ターゲット内のスペースは wordLength に含まれるため分割されない）
   for (let i = 0; i < textWords.length; i++) {
     const wordLength = textWords[i].length; // ひらがなの文字数で判定
-    if (state.typedChars < charCount + wordLength + 1) { // +1 for space (スペース分)
+    if (state.typedChars < charCount + wordLength + 1) { // +1 for space (ターゲット間の区切り)
       currentWordIndex = i;
       break;
     }

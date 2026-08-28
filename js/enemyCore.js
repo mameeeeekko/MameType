@@ -31,6 +31,7 @@ import { RANKING_VERSION } from "../js/version.js";
 import { loadKeybinds } from "./keybinds.js";
 import { devOverride, applyOverride } from "../dev/devOverride.js";
 import { activateSkill, ACTIVE_SKILLS } from "./questSkills.js";
+import { shouldRunFrame, recordFrame } from "./performance.js";
 
 import { closeDialogue, startDialogue, DIALOGUE_DATA, showDialoguePlaybackChoicePopup } from "./dialogue.js";
 let currentStage = "STAGE1";
@@ -111,6 +112,9 @@ function onEnemyResize() {
     player.y = canvas.clientHeight / 2;
     updateUISafeTop();
 }
+
+// Auto品質の適応制御などにより実効DPRが変わったときも再フィットさせる
+window.addEventListener("mametype-quality-changed", onEnemyResize);
 
 // ===============================
 // Chain System Config
@@ -313,6 +317,17 @@ function gameLoop(timestamp) {
 
         // ポーズ中も現在時刻を同期
         gameState._lastFrameTime = timestamp;
+        loopId = requestAnimationFrame(gameLoop);
+        return;
+    }
+
+    // ★低スペック向け対応（2段構え）。ポーズ復帰直後の計測歪みを避けるため
+    // ポーズ分岐より後で行う:
+    //   1) recordFrame : 生のrAF間隔を記録（Auto品質の自動調整の入力）
+    //   2) shouldRunFrame : Low/Auto低位ステージ時は描画フレームを間引く
+    // （updateはdeltaTime加算方式のためスキップしてもゲーム速度は変わらない）
+    recordFrame(timestamp);
+    if (!shouldRunFrame(timestamp)) {
         loopId = requestAnimationFrame(gameLoop);
         return;
     }

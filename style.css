@@ -297,17 +297,43 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   margin-bottom: 40px; /* ←ここで間隔調整 */
 }
 
-/* タイトル */
-#menu h1,
-#startMenu h2, #freeStartMenu h2, #questMenu h2 {
-  font-size: 3.5rem;
-  margin-top: 0;      /* ブラウザデフォルトの余白をリセットして位置を固定 */
-  margin-bottom: 5px;
-  font-weight: 900;
-  font-style: italic;
-  color: #a3c8e4; /* タイトルの文字色を抑え、常に白く光るのを防ぐ */
+/* タイトルロゴ（でっかいロゴ風）--- フォントは self-host(Inter)で全OS共通表示 */
+#menu h1 {
+  font-family: var(--font-ui);       /* Inter → 全OS共通 */
+  font-size: clamp(2.2rem, 5.5vw, 4.5rem); /* 大きく */
+  margin: 0 0 6px 0;
+  font-weight: 800;
+  font-style: italic; 
+  color: #e1edff;
   text-align: left;
-  letter-spacing: -2px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;               /* 1行で保持し、右へ伸びる大きなロゴとして表示 */
+  text-transform: uppercase;
+  text-shadow:
+    0 0 3px rgba(88, 166, 255, 0.7),
+    0 0 18px rgba(88, 166, 255, 0.45),
+    0 0 55px rgba(88, 166, 255, 0.25),
+    3px 3px 0 rgba(0, 0, 0, 0.55);
+}
+
+#startMenu h2, #freeStartMenu h2, #questMenu h2 {
+  font-family: var(--font-ui);       /* Inter → 全OS共通 */
+  font-size: clamp(2.1rem, 5vw, 4rem);
+  margin-top: 0;                     /* ブラウザデフォルトの余白をリセットして位置を固定 */
+  margin-bottom: 5px;
+  font-weight: 800;
+  font-style: italic;
+  color: #e1edff;
+  text-align: left;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;               /* 切替アイコンと1行に保持 */
+  text-shadow:
+    0 0 3px rgba(88, 166, 255, 0.7),
+    0 0 16px rgba(88, 166, 255, 0.4),
+    0 0 45px rgba(88, 166, 255, 0.22),
+    2px 2px 0 rgba(0, 0, 0, 0.55);
 }
 
 #menu h1,
@@ -3575,6 +3601,13 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   gap:4px;
 }
 
+/* RECORDタブ: アイテム使用回数の内訳（インデント付きサブ行） */
+.quest-bottom-label.item-use-sub {
+  color: #6c8798;
+  font-size: 11px;
+  padding-left: 10px;
+}
+
 /* 右数値 */
 .quest-bottom-value {
   font-weight: 700;
@@ -6454,7 +6487,7 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
   justify-content: center;
   align-items: center;
   padding: 30px;
-  /* z-index: 999999; */ /* 何よりも前面に */
+  z-index: 999999; /* 何よりも前面に */
   text-align: center;
 }
 
@@ -6467,6 +6500,22 @@ body::after               { z-index: -1; }    /* 背景: ヘックスパター�
 #mobileWarning p {
   line-height: 1.6;
   font-size: 14px;
+}
+
+#mobileWarning button {
+  margin-top: 24px;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #111;
+  background: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#mobileWarning button:hover {
+  background: #ddd;
 }
 
 #devPanel hr {

@@ -21,7 +21,7 @@ export const ENEMY_MODE_CONFIG = {
     // 敵スポーン
     // ===============================
     spawn: {
-        interval: 2500,   // 出現間隔(ms)
+        interval: 4000,   // 出現間隔(ms)
         limit: null,      // 出現上限（null = 無限）
         maxAlive: null,   // 同時出現上限（null = 無限）
         immediateOnClear: false // 敵が全滅した際に即座に次を出すか
@@ -47,22 +47,22 @@ export const ENEMY_MODE_CONFIG = {
     // チェインシステム
     // ===============================
     chain: {
-        maxBar: 5000,
-        decayRate: 0.9, // 1msあたり減少割合
+        maxBar: 5500,
+        decayRate: 1.0, // 1msあたり減少割合
         gainOnKill: 1500, // 敵撃破で増える量
-        missPenalty: 600, // ミス1回で減る量
-        gainOnType: 300, // 1文字あたりの増加量
+        missPenalty: 500, // ミス1回で減る量
+        gainOnType: 250, // 1文字あたりの増加量
 
         // チェイン倍率テーブル（上から評価）
         multipliers: [
-            { count: 100, value: 4.0 },
-            { count: 80, value: 3.0 },
-            { count: 60, value: 2.5 },
-            { count: 50, value: 2.0 },
-            { count: 45, value: 1.9 },
-            { count: 40, value: 1.8 },
-            { count: 35, value: 1.7 },
-            { count: 30, value: 1.6 },
+            { count: 100, value: 5.0 },
+            { count: 80, value: 3.5 },
+            { count: 60, value: 3.0 },
+            { count: 50, value: 2.7 },
+            { count: 45, value: 2.4 },
+            { count: 40, value: 2.2 },
+            { count: 35, value: 2.0 },
+            { count: 30, value: 1.8 },
             { count: 25, value: 1.5 },
             { count: 20, value: 1.4 },
             { count: 15, value: 1.3 },
@@ -617,7 +617,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
     }
 
     // 難易度の緩やかな上昇計算
-    const baseSpawnInterval = 5000; // 基本の出現間隔を5秒に固定
+    const baseSpawnInterval = 4000; // 基本の出現間隔を4秒に固定
     const killGoal = 10 + Math.floor(i / 4); // 討伐目標数
     const timeLimit = 30000 + (i * 1000); // 30秒〜130秒程度
     const maxAlive = Math.min(8, 4 + Math.floor(i / 25)); // 通常ミッションは最大8体までに制限

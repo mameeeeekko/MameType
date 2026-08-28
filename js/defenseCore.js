@@ -22,6 +22,7 @@ import { scoreToExp, addExp, getPlayerStatsForEnemy, updateQuestStats } from "./
 import { addRankingEntry } from "./storage.js";
 import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "./version.js";
+import { shouldRunFrame, recordFrame } from "./performance.js";
 
 const canvas = document.getElementById("defenseModeCanvas");
 const ctx = canvas.getContext("2d");
@@ -58,6 +59,9 @@ function onDefenseResize() {
     if (!c || c.style.display === "none") return;
     fitCanvasToContainerFill(canvas, c, ctx);
 }
+
+// Auto品質の適応制御などにより実効DPRが変わったときも再フィットさせる
+window.addEventListener("mametype-quality-changed", onDefenseResize);
 
 // ===============================
 // 防衛モード専用コンボ設定
@@ -185,6 +189,9 @@ export function startDefenseMode(config = {}) {
   // 最初に50個の単語を生成
   let generatedWord = "";
   let generatedText = "";
+  const initialTargets = [];      // 各ターゲット（スペースを含む1文字列）を連結順に保持
+  const initialSpans = [];        // 連結テキスト上での各ターゲットの [start, end) 位置
+  let initialSpanPos = 0;
 
   const initialWordCount = 50;
 
@@ -193,6 +200,13 @@ export function startDefenseMode(config = {}) {
 
     generatedWord += word.word + " ";
     generatedText += word.text + " ";
+
+    initialTargets.push(word);
+    initialSpans.push({
+      start: initialSpanPos,
+      end: initialSpanPos + word.text.length,
+    });
+    initialSpanPos += word.text.length + 1; // ターゲット間の区切りスペース1文字分
   }
 
   // ★ 現在のプールとインデックスをstateに保存
@@ -201,7 +215,9 @@ export function startDefenseMode(config = {}) {
 
   const longText = {
     word: generatedWord.trim(),
-    text: generatedText.trim()
+    text: generatedText.trim(),
+    targets: initialTargets,       // ★ ターゲット単位（スペースを含む1文字列ごと）
+    targetSpans: initialSpans,     // ★ 連結上の各ターゲットの文字位置
   };
 
   // ★ defenseStateをgameState.enemyStatsとして初期化
@@ -332,6 +348,17 @@ function gameLoop(timestamp) {
     if (defenseState.startTime != null) defenseState.startTime += deltaMs;
     if (defenseState.endingAnimation?.active) defenseState.endingAnimation.startTime += deltaMs;
     gameState._lastFrameTime = timestamp;
+    loopId = requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  // ★低スペック向け対応（2段構え）。ポーズ復帰直後の計測歪みを避けるため
+  // ポーズ分岐より後で行う:
+  //   1) recordFrame : 生のrAF間隔を記録（Auto品質の自動調整の入力）
+  //   2) shouldRunFrame : Low/Auto低位ステージ時は描画フレームを間引く
+  // （remainingTimeはdeltaTime減算方式のためスキップしても時間がずれない）
+  recordFrame(timestamp);
+  if (!shouldRunFrame(timestamp)) {
     loopId = requestAnimationFrame(gameLoop);
     return;
   }
@@ -495,6 +522,36 @@ export function startDefenseEndingSequence(isFailed) {
   }, duration + 100);
 }
 
+// =========================================================
+// ★ ターゲット（スペースを含む1文字列）と連結テキスト内の文字位置
+// =========================================================
+
+/**
+ * 位置 pos が「ターゲット間の区切りスペース」かどうか判定する。
+ * ターゲット（=TARGETSの1エントリ）の内部なら false（そのスペースは入力対象）、
+ * いずれのターゲットにも属さない（=境界）のスペースなら true。
+ */
+function isTargetSeparator(list, pos) {
+  if (!list || !list.targetSpans) return false;
+  for (const sp of list.targetSpans) {
+    if (pos >= sp.start && pos < sp.end) return false; // ターゲット内部
+  }
+  return true; // ターゲット間の区切り
+}
+
+/**
+ * 位置 pos が属するターゲットのインデックスを返す。見つからなければ -1。
+ */
+function getTargetIndexAt(list, pos) {
+  const spans = list.targetSpans || [];
+  for (let i = 0; i < spans.length; i++) {
+    const sp = spans[i];
+    if (pos >= sp.start && pos < sp.end) return i;
+    if (pos < sp.start) return -1;
+  }
+  return -1;
+}
+
 export function handleDefenseKey(e, isRecursiveCall = false) {
     if (endingSequence || getPaused()) return;
 
@@ -519,37 +576,31 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
     // ★コンボアニメーションのために、キー入力前のコンボ数を保存
     gameState.enemyStats.prevCombo = gameState.enemyStats.currentCombo;
 
-    // ========================================================= 
-    // ★ 現在位置のスペースを自動でスキップ
+    // =========================================================
+    // ★ 「文字列（ターゲット）」が切り替わる位置のスペースは自動でスキップ。
+    //    ターゲット間はスペースを押すことなく次へ進める。
+    //    一方ターゲット内のスペース（例:「Hello World」）は打つ必要がある。
     // =========================================================
 
-    while (fullText[defenseState.typedChars] === " ") {
+    while (
+        fullText[defenseState.typedChars] === " " &&
+        isTargetSeparator(defenseState.wordList[0], defenseState.typedChars)
+    ) {
         defenseState.typedChars++;
     }
 
-    // ========================================================= 
-    // ★ 再帰呼び出しの場合
-    // スペースを飛ばしたところで終了
+    // =========================================================
+    // ★ 現在のターゲット（スペースを含む1文字列）を取得
     // =========================================================
 
-    if (isRecursiveCall) {
-        return;
-    }
+    const targetIndex = getTargetIndexAt(
+        defenseState.wordList[0],
+        defenseState.typedChars
+    );
+    const target = defenseState.wordList[0].targets?.[targetIndex];
+    if (!target) return;
 
-    // ========================================================= 
-    // 現在の単語を取得
-    // =========================================================
-
-    const remainingText =
-        fullText.substring(defenseState.typedChars);
-
-    const spaceIndex =
-        remainingText.indexOf(" ");
-
-    const currentWord =
-        spaceIndex === -1
-            ? remainingText
-            : remainingText.substring(0, spaceIndex);
+    const currentWord = target.text; // 判定用かな（ターゲット内のスペースも含む）
 
     // ========================================================= 
     // inputCoreへ渡す
@@ -731,18 +782,14 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
         playSE("select", 0.8);
 
         // -----------------------------------------------------
-        // ★ 次の単語へ移動するために、元テキスト上の文字数を進める
+        // ★ 次のターゲットの先頭へ移動するため、元テキスト上の位置を進める。
+        //    ターゲットを打ち終えたら「ターゲット長 + 区切りスペース1文字分」進める。
+        //    区切りスペースは次回のキー入力時に自動スキップされる。
         // -----------------------------------------------------
-        defenseState.typedChars += charsToAdd + 1; // 単語の文字数 + スペース1文字分
-
-        // -----------------------------------------------------
-        // ★ 次の単語へ移動
-        //
-        // ここではキーイベントを再利用しない。
+        defenseState.typedChars += charsToAdd + 1; // ターゲットの文字数 + 区切りスペース1文字分
 
         // ★単語数をカウント
         defenseState.solvedCount++;
-        // 次の入力時に、新しい currentWord が取得される。
 
         // =========================================================
     // ★ 単語が尽きそうなら補充する
@@ -858,6 +905,11 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
 
         let newWords = "";
         let newTexts = "";
+        const appendedTargets = [];
+        const appendedSpans = [];
+        // 追加前のテキスト末尾は区切りスペースを含まないため、
+        // 1つ目の追加ターゲットの先頭位置は (現在の長さ + 1)
+        let spanPos = defenseState.wordList[0].text.length + 1;
 
         const wordsToAdd = 50;
 
@@ -891,6 +943,14 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
             newWords += " " + word.word;
             newTexts += " " + word.text;
 
+            // ★ターゲットと位置情報を追加
+            appendedTargets.push(word);
+            appendedSpans.push({
+                start: spanPos,
+                end: spanPos + word.text.length,
+            });
+            spanPos += word.text.length + 1; // ターゲット間の区切りスペース1文字分
+
             currentIndex++;
         }
 
@@ -900,6 +960,8 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
 
         defenseState.wordList[0].word += newWords;
         defenseState.wordList[0].text += newTexts;
+        defenseState.wordList[0].targets.push(...appendedTargets);
+        defenseState.wordList[0].targetSpans.push(...appendedSpans);
 
         // -----------------------------------------------------
         // ★ 次回のために現在位置を保存

@@ -14,6 +14,7 @@ export let missGain = null; // Exported
 
 export let laserEffects = [];
 import { gameState } from "./gameCore.js";
+import { scaledParticleCount } from "./performance.js";
 const loopingSounds = {};
 export let comboTierUpEffects = [];
 const playerDamageEffects = [];
@@ -588,7 +589,7 @@ export function spawnPlayerDamageEffect(x, y) {
         particles: []
     };
 
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < scaledParticleCount(25); i++) {
 
         const angle = Math.random() * Math.PI * 2;
         const speed = 2 + Math.random() * 5;
@@ -624,7 +625,7 @@ export function spawnPlayerNegateEffect(
         particles: []
     };
 
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < scaledParticleCount(25); i++) {
 
         const angle = Math.random() * Math.PI * 2;
         const speed = 2 + Math.random() * 5;
@@ -1134,7 +1135,7 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
     // =====================================
     if (effect === "enemy1") {
 
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < scaledParticleCount(12); i++) {
 
             particles.push({
                 type: "enemy1",
@@ -1157,7 +1158,7 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
     // =====================================
     else if (effect === "enemy2") {
         // 多めのパーティクル
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < scaledParticleCount(20); i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 2 + Math.random() * 6;
             particles.push({
@@ -1185,7 +1186,7 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
     // =====================================
     else if (effect === "midboss1") {
         // 多めのパーティクル
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < scaledParticleCount(40); i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 3 + Math.random() * 7;
             particles.push({
@@ -1239,7 +1240,7 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
     // =====================================
     else if (effect === "boss2") {
         // 大量のパーティクル
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < scaledParticleCount(50); i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 4 + Math.random() * 10;
             particles.push({
@@ -1274,7 +1275,7 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
             life: 30, maxLife: 30
         });
         // 回転する光の柱
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < scaledParticleCount(8); i++) {
             particles.push({
                 type: "boss2_pillar",
                 x, y,
@@ -1293,7 +1294,7 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
     else if (effect === "bullet") {
 
         // 火花
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < scaledParticleCount(8); i++) {
 
             const angle =
                 Math.random() * Math.PI * 2;
@@ -1357,7 +1358,7 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
     else if (effect === "boss1") {
 
         // 中央爆発
-        for (let i = 0; i < 24; i++) {
+        for (let i = 0; i < scaledParticleCount(24); i++) {
 
             const angle = Math.random() * Math.PI * 2;
             const speed = 2 + Math.random() * 5;
@@ -1396,7 +1397,15 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
 
 export function renderEnemyEffects(ctx) {
 
-    particles = particles.filter(p => p.life > 0);
+    // 毎フレームの filter() による新配列生成（GC負荷）を避け、インプレースで詰める
+    let writeIndex = 0;
+    for (let readIndex = 0; readIndex < particles.length; readIndex++) {
+        const p = particles[readIndex];
+        if (p.life > 0) {
+            particles[writeIndex++] = p;
+        }
+    }
+    particles.length = writeIndex;
 
     for (const p of particles) {
 
@@ -2236,7 +2245,7 @@ export function playChainBreakSound() {
 
 export function spawnChainBreakEffect(x, y) {
     // 破片パーティクルを生成
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < scaledParticleCount(30); i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 2 + Math.random() * 6;
         chainBreakEffects.push({

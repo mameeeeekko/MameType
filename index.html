@@ -58,7 +58,7 @@
   「クエスト」サブメニュー
 ===================================================== -->
 <div id="questMenu" style="display:none; margin-top:20px;">
-  <h2>QUEST MENU</h2>
+  <h2>QUEST MODE</h2>
   
   <button id="questStartBtn">CONTINUE</button>
   <button id="questSaveBtn">SAVE／LOAD</button>
@@ -83,7 +83,7 @@
   「デイリー」サブメニュー
 ===================================================== -->
 <div id="startMenu" style="display:none; margin-top:20px;">
-  <h2>DAILY MENU<span id="switchToFreeBtn" title="モード切替">🔄</span></h2>
+  <h2>DAILY MODE<span id="switchToFreeBtn" title="モード切替">🔄</span></h2>
   
   <button id="startBtn">STANDARD</button>
   <button id="timeAttackBtn">TIME ATTACK</button>
@@ -259,7 +259,7 @@
       <div class="config-section-title" style="margin-top: 40px;">Spawn Settings</div>
       <div class="config-row">
         <label>スポーン間隔: <span id="enemyIntervalValue">2.0</span>s</label>
-        <input type="range" id="enemyIntervalSlider" min="500" max="5000" step="100" value="2000"
+        <input type="range" id="enemyIntervalSlider" min="500" max="10000" step="100" value="3000"
                oninput="document.getElementById('enemyIntervalValue').innerText = (this.value / 1000).toFixed(1)">
       </div>
 
@@ -465,7 +465,7 @@
         <div class="setting-row">
           <div class="setting-item-title">描画品質</div>
           <select id="renderQualitySelect" class="quality-select">
-            <option value="auto">Auto（おまかせ / 最高画質）</option>
+            <option value="auto">Auto（おまかせ / 自動最適化）</option>
             <option value="high">High（高画質）</option>
             <option value="medium">Medium（標準）</option>
             <option value="low">Low（軽量 / 低スペック向け）</option>
@@ -477,8 +477,12 @@
           <br>
           動作が重い場合は「Low」、最もきれいに表示したい場合は「Auto」を選択してください。
           <br>
+          「Auto」は負荷が高いときだけグロー影のオフや粒子数の削減などを自動で行い、
+          余裕が戻ると元に戻ります（High/Medium/Low は固定です）。
+          <br>
           変更は次にゲームを開始したときから反映されます。
         </div>
+        <div id="renderQualityStatus" class="setting-description" aria-live="polite"></div>
       </fieldset>
 
     </div>
@@ -706,10 +710,10 @@
 
     <div class="hud-row">
       <span>EXP</span>
+      <span id="hudExp" class="hud-value"></span>
     </div>
     <div class="hud-bar-wrap">
       <div class="hud-bar"><div id="hudExpBar" class="hud-bar-fill exp"></div></div>
-      <span id="hudExp" class="hud-value"></span>
     </div>
 
     <div class="hud-row" style="margin-top:10px;">
@@ -751,7 +755,7 @@
 
     <nav class="quest-page-nav">
       <button class="quest-page-btn active" data-page="main">MAIN</button>
-      <button class="quest-page-btn" data-page="status">STATUS</button>
+      <button class="quest-page-btn" data-page="record">RECORD</button>
       <button class="quest-page-btn" data-page="progression">PROGRESSION</button>
       <button class="quest-page-btn" data-page="skill">SKILL</button>
     </nav>
@@ -796,8 +800,8 @@
 
     </div>
 
-    <!-- STATUS / PROGRESSION / SKILL の各ページ（中身は hud.js が描画） -->
-    <div id="questPageStatus" class="quest-page quest-bottom"></div>
+    <!-- RECORD / PROGRESSION / SKILL の各ページ（中身は hud.js が描画） -->
+    <div id="questPageRecord" class="quest-page quest-bottom"></div>
     <div id="questPageProgression" class="quest-page quest-bottom"></div>
     <div id="questPageSkill" class="quest-page quest-bottom"></div>
 

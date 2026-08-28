@@ -8,9 +8,9 @@ import { buildBaseRomaji } from "./typingLogic.js";
 // =====================================================
 // スポーン設定定数
 // =====================================================
-const SPAWN_RADIUS_BASE = 400;     // スポーンを試みる基本半径
-const SPAWN_DISTANCE_MIN = 300;    // プレイヤーからの最低保証距離
-const SECONDS_PER_CHAR_BASE = 0.45; // 1文字あたりの許容入力時間（秒）: 0.35 -> 0.45
+const SPAWN_RADIUS_BASE = 500;     // スポーンを試みる基本半径 400 -> 500
+const SPAWN_DISTANCE_MIN = 400;    // プレイヤーからの最低保証距離 300 -> 400
+const SECONDS_PER_CHAR_BASE = 0.5; // 1文字あたりの許容入力時間（秒）: 0.35 -> 0.5
 
 // =====================================================
 // 共通：weight抽選

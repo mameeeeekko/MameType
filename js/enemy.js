@@ -53,9 +53,9 @@ const COLOR_PROPS = {
 };
 
 const SHAPE_PROPS = {
-    PINWHEEL: { name: "Pinwheel", shape: "pinwheel", speed: 0.7, rotationSpeed: 0.05, scoreMultiplier: 1.5 },
-    CIRCLE:   { name: "Circle",   shape: "circle",   speed: 0.5, rotationSpeed: 0.02, scoreMultiplier: 1.0 },
-    SQUARE:   { name: "Square",   shape: "square",   speed: 0.35, rotationSpeed: 0.01, scoreMultiplier: 0.7 },
+    PINWHEEL: { name: "Pinwheel", shape: "pinwheel", speed: 0.75, rotationSpeed: 0.05, scoreMultiplier: 1.5 },
+    CIRCLE:   { name: "Circle",   shape: "circle",   speed: 0.6, rotationSpeed: 0.02, scoreMultiplier: 1.0 },
+    SQUARE:   { name: "Square",   shape: "square",   speed: 0.4, rotationSpeed: 0.01, scoreMultiplier: 0.7 },
 };
 
 const SIZE_PROPS = {
@@ -1429,51 +1429,51 @@ export const ItemTypes = {
     // --- HEAL (緑系 / KillSound 7) ---
     // 小回復: 標準タグ、短文
     HEAL_SMALL: {
-        id: "heal_small", name: "小回復", effect: "heal", value: 20,
+        id: "heal_small", name: "プチヒール", effect: "heal", value: 20,
         killSound: 7, killedEffect: "item1", tags: [], minLen: 2, maxLen: 3, lifetime: 6,
         size: 12, speed: 0, color: "#4ade80", shape: "hexagon", pattern: null,
     },
     // 中回復: 句読点タグ、中難度
     HEAL_MEDIUM: {
-        id: "heal_medium", name: "中回復", effect: "heal", value: 50,
+        id: "heal_medium", name: "ヒール", effect: "heal", value: 80,
         killSound: 7, killedEffect: "item1", tags: ["句読点"], minLen: 5, maxLen: 8, lifetime: 10,
         size: 14, speed: 0, color: "#22c55e", shape: "hexagon", pattern: null,
     },
     // 大回復: 句読点タグ、長文
     HEAL_LARGE: {
-        id: "heal_large", name: "大回復", effect: "heal", value: 100,
+        id: "heal_large", name: "メガヒール", effect: "heal", value: 200,
         killSound: 7, killedEffect: "item1", tags: ["句読点"], minLen: 10, maxLen: 16, lifetime: 16,
         size: 16, speed: 0, color: "#16a34a", shape: "hexagon", pattern: null,
     },
     // 全回復: 句読点タグ、最長文
     HEAL_FULL: {
-        id: "heal_full", name: "全回復", effect: "heal", value: "full",
+        id: "heal_full", name: "フルヒール", effect: "heal", value: "full",
         killSound: 7, killedEffect: "item1", tags: ["句読点"], minLen: 12, maxLen: 20, lifetime: 18,
         size: 16, speed: 0, color: "#14532d", shape: "hexagon", pattern: null,
     },
 
     // --- KILL (赤系 / KillSound 4) ---
-    // ボム: 標準タグ、短文
+    // プチボム: 標準タグ、短文
     KILL_SMALL: {
-        id: "kill_small", name: "ボム", effect: "kill", value: 1,
+        id: "kill_small", name: "プチボム", effect: "kill", value: 1,
         killSound: 4, killedEffect: "item1", tags: [], minLen: 2, maxLen: 3, lifetime: 6,
         size: 12, speed: 0, color: "#f87171", shape: "hexagon", pattern: null,
     },
-    // メガボム: 記号タグ、中難度
+    // ボム: 記号タグ、中難度
     KILL_MEDIUM: {
-        id: "kill_medium", name: "メガボム", effect: "kill", value: 3,
+        id: "kill_medium", name: "ボム", effect: "kill", value: 3,
         killSound: 4, killedEffect: "item1", tags: ["記号"], minLen: 6, maxLen: 10, lifetime: 12,
         size: 14, speed: 0, color: "#ef4444", shape: "hexagon", pattern: null,
     },
-    // 大ボム: 記号タグ、長文
+    // メガボム: 記号タグ、長文
     KILL_LARGE: {
-        id: "kill_large", name: "大ボム", effect: "kill", value: 5,
+        id: "kill_large", name: "メガボム", effect: "kill", value: 5,
         killSound: 4, killedEffect: "item1", tags: ["記号"], minLen: 12, maxLen: 20, lifetime: 18,
         size: 16, speed: 0, color: "#b91c1c", shape: "hexagon", pattern: null,
     },
-    // 殲滅: 記号タグ、最長文
+    // パージ: 記号タグ、最長文
     KILL_ALL: {
-        id: "kill_all", name: "殲滅", effect: "kill", value: "all",
+        id: "kill_all", name: "パージ", effect: "kill", value: "all",
         killSound: 4, killedEffect: "item1", tags: ["記号"], minLen: 15, maxLen: 25, lifetime: 20,
         size: 16, speed: 0, color: "#991b1b", shape: "hexagon", pattern: null,
     },
@@ -1481,19 +1481,19 @@ export const ItemTypes = {
     // --- FREEZE (青系 / KillSound 7) ---
     // プチ凍結: 標準タグ、短文
     FREEZE_SMALL: {
-        id: "freeze_small", name: "プチ凍結", effect: "freeze", value: 2,
+        id: "freeze_small", name: "プチフリーズ", effect: "freeze", value: 4,
         killSound: 7, killedEffect: "item1", tags: [], minLen: 2, maxLen: 3, lifetime: 6,
         size: 12, speed: 0, color: "#60a5fa", shape: "hexagon", pattern: null,
     },
     // フリーズ: 促音タグ、中難度
     FREEZE_MEDIUM: {
-        id: "freeze_medium", name: "フリーズ", effect: "freeze", value: 4,
+        id: "freeze_medium", name: "フリーズ", effect: "freeze", value: 7,
         killSound: 7, killedEffect: "item1", tags: ["促音"], minLen: 5, maxLen: 9, lifetime: 11,
         size: 14, speed: 0, color: "#3b82f6", shape: "hexagon", pattern: null,
     },
     // 大凍結: 促音タグ、長文
     FREEZE_LARGE: {
-        id: "freeze_large", name: "大凍結", effect: "freeze", value: 6,
+        id: "freeze_large", name: "メガフリーズ", effect: "freeze", value: 10,
         killSound: 7, killedEffect: "item1", tags: ["促音"], minLen: 10, maxLen: 16, lifetime: 16,
         size: 16, speed: 0, color: "#1d4ed8", shape: "hexagon", pattern: null,
     },
@@ -1501,19 +1501,19 @@ export const ItemTypes = {
     // --- COOLDOWN (紫系 / KillSound 7) ---
     // プチ短縮: 標準タグ、短文
     COOLDOWN_SMALL: {
-        id: "cooldown_small", name: "プチ短縮", effect: "cooldown", value: 5,
+        id: "cooldown_small", name: "プチブースター", effect: "cooldown", value: 10,
         killSound: 7, killedEffect: "item1", tags: [], minLen: 2, maxLen: 3, lifetime: 6,
         size: 12, speed: 0, color: "#c084fc", shape: "hexagon", pattern: null,
     },
     // 短縮: 英語タグ、中難度
     COOLDOWN_MEDIUM: {
-        id: "cooldown_medium", name: "短縮", effect: "cooldown", value: 15,
+        id: "cooldown_medium", name: "ブースター", effect: "cooldown", value: 20,
         killSound: 7, killedEffect: "item1", tags: ["英語"], minLen: 5, maxLen: 10, lifetime: 12,
         size: 14, speed: 0, color: "#a855f7", shape: "hexagon", pattern: null,
     },
     // 大短縮: 英語タグ、長文
     COOLDOWN_LARGE: {
-        id: "cooldown_large", name: "大短縮", effect: "cooldown", value: 30,
+        id: "cooldown_large", name: "メガブースター", effect: "cooldown", value: 40,
         killSound: 7, killedEffect: "item1", tags: ["英語"], minLen: 12, maxLen: 20, lifetime: 18,
         size: 16, speed: 0, color: "#7e22ce", shape: "hexagon", pattern: null,
     },

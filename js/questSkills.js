@@ -577,7 +577,7 @@ export const PASSIVE_SKILLS = {
   // =====================
   cooldown_speed_1: {
     name: "高速詠唱Ⅰ",
-    icon: "cooldown_1", // TODO: アイコンを後で差し替える
+    icon: "cooldown_1", 
     desc: "スキルのクールダウン速度が10%上昇",
     equipable: true,
     apply: (p) => {
@@ -588,7 +588,7 @@ export const PASSIVE_SKILLS = {
 
   cooldown_speed_2: {
     name: "高速詠唱Ⅱ",
-    icon: "cooldown_2", // TODO: アイコンを後で差し替える
+    icon: "cooldown_2", 
     desc: "スキルのクールダウン速度が15%上昇",
     equipable: true,
     apply: (p) => {
@@ -598,7 +598,7 @@ export const PASSIVE_SKILLS = {
 
   cooldown_speed_3: {
     name: "高速詠唱Ⅲ",
-    icon: "cooldown_3", // TODO: アイコンを後で差し替える
+    icon: "cooldown_3", 
     desc: "スキルのクールダウン速度が20%上昇",
     equipable: true,
     apply: (p) => {
@@ -753,47 +753,47 @@ export const ACTIVE_SKILLS = {
   heal_medium: {
     name: "キュア",
     icon: "recover_2",
-    desc: "HPを60回復",
+    desc: "HPを80回復",
     cooldown: 100, //sec
     type: "heal",
-    value: 60,
+    value: 80,
   },
 
   heal_high: {
     name: "リカバー",
     icon: "recover_3",
-  desc: "HPを100回復",
+  desc: "HPを200回復",
     cooldown: 160, //sec
     type: "heal",
-    value: 100,
+    value: 200,
   },
   
   //freeze 
   freeze_light: {
     name: "フリーズ3",
     icon: "freeze_1",
-    desc: "敵を3秒間停止",
+    desc: "敵を5秒間停止",
     cooldown: 50,
     type: "freeze",
-    value: 3, // seconds
+    value: 5, // seconds
   },
 
   freeze_medium: {
     name: "フリーズ5",
     icon: "freeze_2",
-    desc: "敵を5秒間停止",
+    desc: "敵を8秒間停止",
     cooldown: 100,
     type: "freeze",
-    value: 5, // seconds
+    value: 8, // seconds
   },
 
   freeze_heavy: {
     name: "フリーズ8",
     icon: "freeze_3",
-    desc: "敵を8秒間停止",
+    desc: "敵を12秒間停止",
     cooldown: 170,
     type: "freeze",
-    value: 8, // seconds
+    value: 12, // seconds
   },
 
 
@@ -812,12 +812,12 @@ export const ACTIVE_SKILLS = {
   kill_random: {
     name: "熱線",
     icon: "kill_random",
-    desc: "ランダムで敵を4体撃破",
-    cooldown: 130, //160
+    desc: "ランダムで敵を5体撃破",
+    cooldown: 140, //160
     type: "kill",
     value: {
       mode: "random",
-      count: 4,
+      count: 5,
     }
   },
 
@@ -825,7 +825,7 @@ export const ACTIVE_SKILLS = {
     name: "光線",
     icon: "kill_near",
     desc: "最も近い敵を4体撃破",
-    cooldown: 150, //200
+    cooldown: 140, //200
     type: "kill",
     value: {
       mode: "nearest",
@@ -860,28 +860,28 @@ export const ACTIVE_SKILLS = {
   invincible_short: {
     name: "シールド",
     icon: "guard_1",
-    desc: "3秒間無敵になる",
+    desc: "5秒間無敵になる",
     cooldown: 100, //120
     type: "invincible",
-    value: 3
+    value: 5
   },
 
   invincible_medium: {
     name: "ウォール",
     icon: "guard_2",
-    desc: "5秒間無敵になる",
+    desc: "8秒間無敵になる",
     cooldown: 150,
     type: "invincible",
-    value: 5
+    value: 8
   },
 
   invincible_long: {
     name: "バリア",
     icon: "guard_3",
-    desc: "8秒間無敵になる",
+    desc: "12秒間無敵になる",
     cooldown: 190,//240
     type: "invincible",
-    value: 8
+    value: 12
   }
 
 };
