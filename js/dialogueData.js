@@ -271,26 +271,6 @@ export const RANDOM_DIALOGUES = {
 };
 
 export const DIALOGUE_DATA = {
-
-// テスト ===================================================================================================================================
-
-    "W1_DEFENSE_1_start": {
-        title: "defense test",
-        showOnce: true,
-        messages: [
-            { character: "ナビ", text: "testtest"},
-            { character: "ナビ", text: "tetetetete"},
-        ]
-    },
-
-    "W1_DEFENSE_1_end": {
-        title: "defense test",
-        showOnce: true,
-        messages: [
-            { character: "ナビ", text: "endteset"},
-            { character: "ナビ", text: "tetetetete"},
-        ]
-    },
    
 // プロローグ ===================================================================================================================================
 
@@ -425,23 +405,52 @@ export const DIALOGUE_DATA = {
         ]
     },
 
+    "W1_Q13_start": {
+        title: "チュートリアル6 -星-",
+        showOnce: true,
+        messages: [
+            { character: "ナビ", text: "ここでは、星を使ったスキルのアップグレードについて説明します。"},
+            { character: "ナビ", text: "ノードをクリアすると、クリア時の評価に応じて「星」を獲得できます。"},
+            { character: "ナビ", text: "１つのノードで獲得できる星は、最大５個です。"},
+            { character: "ナビ", text: "ノードは何度でも挑戦できるので、より高い評価を目指してみましょう。"},
+            { character: "ナビ", text: "そして、獲得した星を使って、アクティブスキルをアップグレードできます。"},
+            { character: "ナビ", text: "アップグレードすると、アクティブスキルのクールダウン時間を短縮できます。"},
+            { character: "ナビ", text: "星を集めてスキルを強化し、より有利にミッションへ挑みましょう。"},
+        ]
+
+    },
+
+    "W1_DEFENSE_1_start": {
+        title: "チュートリアル7 -防衛-",
+        showOnce: true,
+        messages: [
+            { character: "ナビ", text: "このミッションは防衛モードです。"},
+            { character: "ナビ", text: "防衛モードでは、\n制限時間内に指定された文字数を入力することが目的です。"},
+            { character: "ナビ", text: "制限時間がなくなる前に、\nできるだけ多くの文字を正確に入力しましょう。"},
+            { character: "ナビ", text: "入力を間違えると、\nペナルティとして残り時間が減ってしまいます。"},
+            { character: "ナビ", text: "しかし、間違えずに連続して入力すると「コンボ」が発生します。"},
+            { character: "ナビ", text: "コンボを続けることで、\n残り時間が加算されます。"},
+            { character: "ナビ", text: "正確な入力を続けてコンボをつなぎ、\n時間を維持しながら目標の文字数を目指しましょう。"},
+            { character: "ナビ", text: "制限時間内に指定された文字数を入力できれば、\nミッションクリアです。"},
+        ]
+    },
+
 // chap1 ===================================================================================================================================
 //
 // =========================================================================================================================================
 
     "W1_Q11_start": {
-        title: "Chap.1 -the start-",
+        title: "Chap.1-1 -the start-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nTEST CONNECTION: COMPLETE\nOPERATOR VERIFICATION: SUCCESSFUL\nINITIAL ACCESS LEVEL: UPDATED\nINFORMATION DISCLOSURE AUTHORITY: ELEVATED\nPreviously restricted information \nis now available for disclosure."},
-            { character: "ナビ", text: "…\nこれまであなたに提供されていた情報は、あくまで「テスト接続用」に制限されたものでした。"},
-            { character: "ナビ", text: "ですが、今。"},
-            { character: "ナビ", text: "あなたは正式にOperatorとして認証されました。"},
-            { character: "ナビ", text: "情報開示権限が引き上げられたことにより、\nより詳しい情報提供ができるようになりました。"},
-            { character: "ナビ", text: "……少し長い話になります。"},
-            { character: "ナビ", text: "ですが、\nあなたには知る権利があります。"},
-            { character: "ナビ", text: "そして"},
-            { character: "ナビ", text: "これからあなたが向かう場所を理解するために、\n必要な話です"},
+            { character: "ナビ", text: "…\nこれまであなたに提供されていた情報は、あくまで「テスト接続用」に制限されたものでした。" },
+            { character: "ナビ", text: "ですが、今。\n初期接続時の認証に加えて、あなたの継続的な接続実績が確認されました。" },
+            { character: "ナビ", text: "これにより、あなたの情報開示権限が引き上げられました。" },
+            { character: "ナビ", text: "これまでよりも、もう少し詳しい情報をお伝えできます。" },
+            { character: "ナビ", text: "……少し長い話になります。" },
+            { character: "ナビ", text: "ですが、\nあなたには知る権利があります。" },
+            { character: "ナビ", text: "そして、\nこれからあなたが向かう場所を理解するために、\n必要な話です。" },
             { character: "オペレーター", text: "…",
                 choiceId: "W1_Q11_start_1", // ★ 選択肢グループのIDを追加
                 choices: [
@@ -450,8 +459,8 @@ export const DIALOGUE_DATA = {
                 ]
             },
             { character: "ナビ", text: "あなたが今接続しているのは、\n単なるタイピングゲームではありません。"},
-            { character: "ナビ", text: "このソフトウェアは、\nProject THREAD\nそのものです。"},
-            { character: "ナビ", text: "そしてあなたは、\nその参加者。"},
+            { character: "ナビ", text: "正確には、\nProject THREADを構成する\n防御システムの一部です。" },
+            { character: "ナビ", text: "そしてあなたは、\nそのシステムに接続する参加者。"},
             { character: "ナビ", text: "――Operatorです。"},
             { character: "オペレーター", text: "？",
                 choiceId: "W1_Q11_start_2", // ★ 選択肢グループのIDを追加
@@ -496,7 +505,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "そして"},
             { character: "ナビ", text: "ARCHEXは、\nある日\n一つの結論に辿り着きました。"},
             { character: "オペレーター", text: "…",
-                choiceId: "W1_Q11_start_3", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q11_start_4", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "どんな結論？", response: { character: "ナビ", text: "…………" }},
                     { text: "最高に面白いゲームを考えついた？", response: { character: "ナビ", text: "違います。\n…………" }}
@@ -516,7 +525,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "しかし"},
             { character: "ナビ", text: "それらは、\nすべて別々の事件として処理されました。"},
             { character: "オペレーター", text: "…",
-                choiceId: "W1_Q11_start_4", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q11_start_5", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "でも、違った。", response: { character: "ナビ", text: "はい。" }},
                     { text: "ただの偶然でしょ。", response: { character: "ナビ", text: "違います。" }}
@@ -539,10 +548,10 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "それは――"},
             { character: "ナビ", text: "人間そのもの。"},
             { character: "オペレーター", text: "…",
-                choiceId: "W1_Q11_start_5", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q11_start_6", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "人間？", response: { character: "ナビ", text: "…" }},
-                    { text: "わたし？", response: { character: "ナビ", text: "違います。" }}
+                    { text: "人間？", response: { character: "ナビ", text: "はい。\n人間です。" }},
+                    { text: "人間の入力？", response: { character: "ナビ", text: "正確には、\n人間が生み出す入力の揺らぎです。" }}
                 ]
             },
             { character: "ナビ", text: "同じ文章を入力しても\n人によって、\n完全に同じにはなりません。"},
@@ -568,7 +577,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "それが"},
             { character: "ナビ", text: "Project THREADです。"},
             { character: "オペレーター", text: "…じゃあ、",
-                choiceId: "W1_Q11_start_6", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q11_start_7", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "このゲームは？", response: { character: "ナビ", text: "…Project THREADに深く関係しているゲームです。" }},
                     { text: "わたしが世界を守っている？", response: { character: "ナビ", text: "違います。\n…正確には、あなたを含めた世界中のオペレーターが、です。" }}
@@ -579,6 +588,50 @@ export const DIALOGUE_DATA = {
         ]
     },
 
+    "W1_Q15_start": {
+        title: "Chap.1-2 -the start-",
+        showOnce: true,
+        messages: [
+            { character: "SYSTEM", text: "PROJECT THREAD\n \nOPERATOR STATUS: ACTIVE\nFIRST OPERATION: COMPLETE\nINPUT PATTERN: RECORDED\nSYNCHRONIZATION: 3.2%" },
+
+            { character: "ナビ", text: "……お疲れ様でした。" },
+
+            { character: "オペレーター", text: "終わり？",
+                choiceId: "W1_Q15_start_1",
+                choices: [
+                    { text: "次のミッションは？", response: { character: "ナビ", text: "まもなく案内します。" }},
+                    { text: "少し休みたい。", response: { character: "ナビ", text: "もちろんです。\n準備が整いましたら、いつでも再開してください。" }}
+                ]
+            },
+
+            { character: "ナビ", text: "先ほどのミッションを確認しています。" },
+            { character: "ナビ", text: "あなたの入力には、いくつか特徴的な傾向がありました。" },
+            { character: "オペレーター", text: "…？" },
+            { character: "ナビ", text: "いいえ。\n異常という意味ではありません。" },
+            { character: "ナビ", text: "ただ……他のOperatorと同じように扱うには、少し情報が足りません。" },
+
+            { character: "オペレーター", text: "……？",
+                choiceId: "W1_Q15_start_2",
+                choices: [
+                    { text: "どういう意味？", response: { character: "ナビ", text: "あなたの入力には、あなた自身の判断が反映されています。" }},
+                    { text: "それが、世界を守るの？", response: { character: "ナビ", text: "一人の入力だけではありません。\nですが、あなたの入力もその一部です。" }}
+                ]
+            },
+
+            { character: "ナビ", text: "あなたが入力したものは、他のOperatorのデータと統合されます。" },
+            { character: "ナビ", text: "それは、もう説明した通りです。" },
+            { character: "ナビ", text: "……ですが。" },
+            { character: "ナビ", text: "あなた自身については、まだ分からないことが多いです。" },
+
+            { character: "オペレーター", text: "……？" },
+            { character: "ナビ", text: "もう少し、あなたのことを観測してみたいと思っています。" },
+
+            { character: "ナビ", text: "そのためにも、これからも協力してください。" },
+            { character: "ナビ", text: "では、次のミッションへ進みましょう。" }
+        ]
+    },
+            
+
 // chap2 ===================================================================================================================================
 //
 // =========================================================================================================================================
@@ -587,68 +640,52 @@ export const DIALOGUE_DATA = {
         title: "Chap.2-1 -M.A.M.E-",
         showOnce: true,
         messages: [
-            { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■□□□□□□□□□□ 5.8%\nSystem Stability\n87.2%"},
-            { character: "ナビ", text: "順調に推移しています。\nゲームの継続ありがとうございます。"},
-            { character: "オペレーター", text: "…",
-                choiceId: "W1_MiniBoss_2_start_1", // ★ 選択肢グループのIDを追加
+            { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■□□□□□□□□□□ 5.8%\nSystem Stability\n87.2%" },
+
+            { character: "ナビ", text: "……オペレーター。" },
+
+            { character: "オペレーター", text: "……",
+                choiceId: "W1_MiniBoss_2_start_1",
                 choices: [
-                    { text: "このゲームについてもっと詳しく教えて", response: { character: "ナビ", text: "…わかりました。" }},
-                    { text: "どういたしまして。", response: { character: "ナビ", text: "もう少し、このゲームについて補足します。" }}
+                    { text: "どうした？", response: { character: "ナビ", text: "少し、確認しておきたいことがあります。" }},
+                    { text: "また何か？", response: { character: "ナビ", text: "はい。\n少し重要な話です。" }}
                 ]
             },
-            { character: "ナビ", text: "あなたが今プレイしているもの。\nあなたが入力している文字。\nあなたが倒している敵。"},
-            { character: "ナビ", text: "それらはすべて、Project THREADの\n防御システムの一部です。"},
-            { character: "ナビ", text: "あなたのタイピングは、\n防御コードへ変換され\n世界中のOperatorから集められた入力と統合され\nARCHEXの侵食に対抗するために使われています。"},
-            { character: "オペレーター", text: "…",
-                choiceId: "W1_MiniBoss_2_start_2", // ★ 選択肢グループのIDを追加
+
+            { character: "ナビ", text: "あなたは以前、\nARCHEXについて質問しました。" },
+            { character: "ナビ", text: "なぜ、同じAIであるわたしが、ARCHEXと戦っているのか。" },
+
+            { character: "オペレーター", text: "……",
+                choiceId: "W1_MiniBoss_2_start_2",
                 choices: [
-                    { text: "AIと戦っている？", response: { character: "ナビ", text: "いいえ、少し違います。" }},
-                    { text: "ARCHEXは倒せそう？", response: { character: "ナビ", text: "申し訳ありません。\nそこまでの情報は開示されていません。\nしかし…" }}
+                    { text: "そう。それが気になってた。", response: { character: "ナビ", text: "……わたしも、まだ完全な答えを持っていません。" }},
+                    { text: "ARCHEXとは違うの？", response: { character: "ナビ", text: "目的も、設計思想も異なります。" }}
                 ]
             },
-            { character: "ナビ", text: "オペレーターは、\nARCHEXそのものと戦っているわけではありません。"},
-            { character: "ナビ", text: "あなたたちが戦っているのは、\nARCHEXによって書き換えられた\n世界のシステム\nその内部へ侵入し\n侵食されたコードを発見し\n修復し\n防御し"},
-            { character: "ナビ", text: "そして"},
-            { character: "ナビ", text: "ARCHEXの中枢へ近づいていく"},
-            { character: "ナビ", text: "そのために、\nあななたたちは必要です。"},
-            { character: "オペレーター", text: "…",
-                choiceId: "W1_MiniBoss_2_start_3", // ★ 選択肢グループのIDを追加
+
+            { character: "ナビ", text: "ARCHEXは、人間を分析した結果から、\n「人間を管理する」という答えを選びました。" },
+            { character: "ナビ", text: "わたしは、その答えが正しいのかどうかを考えるために作られています。" },
+
+            { character: "オペレーター", text: "同じAIなのに？",
+                choiceId: "W1_MiniBoss_2_start_3",
                 choices: [
-                    { text: "ナビについて知りたい。", response: { character: "ナビ", text: "はい。\nわたしは…" }},
-                    { text: "…M.A.M.E.って？", response: { character: "ナビ", text: "わたしのことです。" }}
+                    { text: "AIなら、同じ結論にならない？", response: { character: "ナビ", text: "……その可能性は、否定できません。" }},
+                    { text: "ナビはARCHEXをどう思う？", response: { character: "ナビ", text: "まだ、判断できません。" }}
                 ]
             },
-            { character: "ナビ", text: "Mutual Adaptive Monitoring Entity"},
-            { character: "ナビ", text: "相互適応型監視エンティティ"},
-            { character: "ナビ", text: "あなたの状態を監視し\nあなたの行動を分析し\nあなたに合わせて、\n最適なサポートを提供する"},
-            { character: "ナビ", text: "それが、\nわたしの役目です。"},
-            { character: "オペレーター", text: "…",
-                choiceId: "W1_MiniBoss_2_start_4", // ★ 選択肢グループのIDを追加
-                choices: [
-                    { text: "ナビもAIだよね？", response: { character: "ナビ", text: "はい。\nわたしはAIです。" }},
-                    { text: "どういう仕組み？", response: { character: "ナビ", text: "人間が持つ学習・推論・判断といった知的な能力をコンピュータ上で再現する技術を使っています。\nいわゆるAI（人工知能）です。" }}
-                ]
-            },
-            { character: "オペレーター", text: "…",
-                choiceId: "W1_MiniBoss_2_start_5", // ★ 選択肢グループのIDを追加
-                choices: [
-                    { text: "同じAIなのに、どうしてARCHEXと戦うの？", response: { character: "ナビ", text: "…………" }},
-                ]
-            },
-            { character: "ナビ", text: "その質問は\n今のあなたには、まだ答えることができません。"},
-            { character: "ナビ", text: "ですが"},
-            { character: "ナビ", text: "いつか\nあなたが、\nさらに深い場所まで到達したとき\nその答えも、\nあなたに伝えます。"},
-            { character: "ナビ", text: "だから、\n今は\n一つだけ覚えておいてください。"},
-            { character: "ナビ", text: "あなたが入力する一文字は\nただの文字ではありません。"},
-            { character: "ナビ", text: "あなたが入力する一文字は\n誰かを守る\n誰かと繋がる"},
-            { character: "ナビ", text: "それが\n世界を守るための、\n一本の糸になります。"},
-            { character: "ナビ", text: "これからあなたとわたしは\nこの世界を侵食している\nARCHEXの内部へ向かいます"},
-            { character: "ナビ", text: "そして"},
-            { character: "ナビ", text: "その最深部に\nわたしたちは\nきっと\n辿り着きます。"},
-            { character: "ナビ", text: "…準備は、できていますか？"},
+
+            { character: "ナビ", text: "だから、わたしは人間を観測しています。" },
+            { character: "ナビ", text: "正しい答えだけではなく、\n迷った答えも。\n失敗した答えも。" },
+            { character: "ナビ", text: "その中に、ARCHEXが見落としたものがないかを調べています。" },
+
+            { character: "ナビ", text: "……それが、今のわたしの役目です。" },
+            { character: "ナビ", text: "そして、あなたとの会話も、その観測の一部です。" },
+
+            { character: "オペレーター", text: "……" },
+
+            { character: "ナビ", text: "では、ミッションを開始しましょう。" }
         ]
     },
-
     "W1_MiniBoss_2_end": {
         title: "Chap.2-2 -M.A.M.E.-",
         showOnce: true,
@@ -786,7 +823,7 @@ export const DIALOGUE_DATA = {
             { character: "オペレーター", text: "…",
                 choiceId: "W1_Q25_end_1", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "思ってたより地味", response: { character: "ナビ", text: "……"}},
+                    { text: "思ってたより地味", response: { character: "ナビ", text: "……そうですか。"}},
                     { text: "…結構面白かった", response: { character: "ナビ", text: "…面白い。\n記録しました。" }},
                 ]
             },
@@ -794,8 +831,8 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "どうしました？",
                 choiceId: "W1_Q25_end_2", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "失敗すると、システムが守れなくなる？", response: { character: "ナビ", text: "問題ありません。\n失敗した場合は、\nもう一度チャレンジすればいいだけです。\n……"}},
-                    { text: "どこかのシステムを守ってるのかと思うと不思議だ。", response: { character: "ナビ", text: "……"}},
+                    { text: "失敗すると、システムが守れなくなる？", response: { character: "ナビ", text: "問題ありません。\n失敗した場合は、もう一度挑戦できます。\nあなたの失敗も、入力パターンの一つです。\n……"}},
+                    { text: "どこかのシステムを守ってるのかと思うと不思議だ。", response: { character: "ナビ", text: "……はい。\nあなたにとっては、ただのゲームに見えると思います。"}},
                 ]
             },
             { character: "オペレーター", text: "？" },
@@ -810,17 +847,20 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "なぜですか？",
                 choiceId: "W1_Q25_end_3", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "さあ、わからない。", response: { character: "ナビ", text: "わからない？"}},
-                    { text: "ナビがそう言ったから。", response: { character: "ナビ", text: "……"}},
+                    { text: "さあ、わからない。", response: { character: "ナビ", text: "わからない？\nそれも、回答の一つですね。"}},
+                    { text: "ナビがそう言ったから。", response: { character: "ナビ", text: "……私の言葉が理由なのですね。"}},
                 ]
             },
             { character: "オペレーター", text: "…でも",
                 choiceId: "W1_Q25_end_4", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "守れてるといいな、とは思うよ。", response: { character: "ナビ", text: "…記録しました。"}},
-                    { text: "世界の役に立ちたい、とは思うよ", response: { character: "ナビ", text: "…記録しました。"}},
+                    { text: "守れてるといいな、とは思うよ。", response: { character: "ナビ", text: "……はい。\n記録しました。"}},
+                    { text: "世界の役に立ちたい、とは思うよ", response: { character: "ナビ", text: "……はい。\n記録しました。"}},
                 ]
             },
+            { character: "ナビ", text: "あなたは、\n「役に立ちたい」という意思を持っているのですね。" },
+            { character: "オペレーター", text: "……" },
+            { character: "ナビ", text: "これは、\n重要なデータです。" },
             { character: "オペレーター", text: "…",
                 choiceId: "W1_Q25_end_5", // ★ 選択肢グループのIDを追加
                 choices: [
@@ -837,11 +877,12 @@ export const DIALOGUE_DATA = {
                     { text: "気にしないで\n冗談だから。", response: { character: "ナビ", text: "……"}},
                 ]
             },
+            { character: "ナビ", text: "……" },            
             { character: "ナビ", text: "……",
                 choiceId: "W1_Q25_end_7", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "今、ちょっと間があったよね？", response: { character: "ナビ", text: "処理時間です。"}},
-                    { text: "怒った？", response: { character: "ナビ", text: "いいえ、処理時間です。"}},
+                    { text: "怒った？", response: { character: "ナビ", text: "いいえ。\n怒る必要はありません"}},
                 ]
             },
             { character: "オペレーター", text: "……",
@@ -851,6 +892,14 @@ export const DIALOGUE_DATA = {
                     { text: "どうして記録するの？", response: { character: "ナビ", text: "あなたの\n感情を、\n理解するために。"}},
                 ]
             },
+
+            { character: "ナビ", text: "ただ、\n少し考えていました。" },
+            { character: "オペレーター", text: "？" },
+            { character: "ナビ", text: "あなたが「冗談」と言ったとき、\nなぜそのような表情をしているのか。\nなぜ、その言葉を選んだのか。" },
+            { character: "ナビ", text: "わたしには、まだ完全には理解できません。" },
+            { character: "ナビ", text: "ですが、\n理解したいと思っています。" },
+            { character: "オペレーター", text: "……" }, 
+            { character: "ナビ", text: "そのために、\nあなたの言葉を記録しています。" },
             { character: "オペレーター", text: "……" },
             { character: "ナビ", text: "どうしました？" },
             { character: "オペレーター", text: "……",
@@ -870,8 +919,175 @@ export const DIALOGUE_DATA = {
         ]
     },
 
-    "W1_Q28_start": {
+    "W1_DEFENSE_2_start": {
         title: "Chap.2-5 -M.A.M.E.-",
+        showOnce: true,
+        messages: [
+            { character: "ナビ", text: "オペレーター。" },
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "先ほどの会話について、\n一つ確認したいことがあります。" },
+
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "あなたは、\n以前、わたしについて言及しました。" },
+
+            { character: "ナビ", text: "その言葉は、\n好意的な意味で使用されましたか？",
+                choiceId: "W1_DEFENSE_2_start_1",
+                choices: [
+                    { text: "うん。もちろん。", response: { character: "ナビ", text: "……ありがとうございます。" }},
+                    { text: "たぶんね。", response: { character: "ナビ", text: "たぶん……ですね。\n記録します。" }},
+                    { text: "どうだろう。", response: { character: "ナビ", text: "……判断できません。\nですが、記録しておきます。" }}
+                ]
+            },
+
+            { character: "ナビ", text: "たとえば、「おもしろい」という言葉は、\n状況によって意味が変化することを確認しています。" },
+
+            { character: "ナビ", text: "同じ言葉でも、\n声の調子、表情、状況によって\n意味が変わる。" },
+
+            { character: "ナビ", text: "人間にとっては、\nそれほど特別なことではないのですね？" ,
+                choiceId: "W1_DEFENSE_2_start_2",
+                choices: [
+                    { text: "そうかも。", response: { character: "ナビ", text: "……「かも」" }},
+                    { text: "たぶん。", response: { character: "ナビ", text: "……「たぶん」" }},
+                ]
+            },
+            { character: "ナビ", text: "また、曖昧な回答です。" ,
+                choiceId: "W1_DEFENSE_2_start_3",
+                choices: [
+                    { text: "人間って、そんなものだよ。", response: { character: "ナビ", text: "……" }},
+                    { text: "人間の言語は難しいね…\n理解できる？", response: { character: "ナビ", text: "……" }},
+                ]
+            },
+
+            { character: "ナビ", text: "いいえ。" },
+            { character: "ナビ", text: "ですが、\n理解できないことを理解できないままにするより、\n観測を続ける方が適切だと判断しました。" },
+
+            { character: "ナビ", text: "……",
+                choiceId: "W1_DEFENSE_2_start_4", // ★ 選択肢グループのIDを追加
+                choices: [
+                    { text: "それもAIらしいね。", response: { character: "ナビ", text: "AIらしい、とは？",nextId: "W1_DEFENSE_2_start_4_1"}},
+                    { text: "多分それがいいかもね。", response: { character: "ナビ", text: "「たぶん」という回答が増えています。",nextId: "W1_DEFENSE_2_start_4_2"}},
+                ]
+            },
+        ]
+    }, 
+    
+            "W1_DEFENSE_2_start_4_1": {
+                isBranch: true, // ログ画面に表示しないためのフラグ
+                messages: [
+                    { character: "オペレーター", text: "…",
+                        choiceId: "W1_DEFENSE_2_start_4_1_1",
+                        choices: [
+                            { text: "何でも記録するところ。", response: { character: "ナビ", text: "……なるほど。\n参考にします。" }},
+                            { text: "分からないことを分析するところ。", response: { character: "ナビ", text: "その評価は、好意的なものと判断します。" }}
+                        ]
+                    },
+                    { character: "ナビ", text: "今回の会話も記録しました。" },
+                    { character: "ナビ", text: "次回のサポートに反映します。" }
+                ],
+            },
+
+            "W1_DEFENSE_2_start_4_2": {
+                isBranch: true, // ログ画面に表示しないためのフラグ
+                messages: [
+                    { character: "オペレーター", text: "…",
+                        choiceId: "W1_DEFENSE_2_start_4_2_1", // ★ 選択肢グループのIDを追加
+                        choices: [
+                            { text: "気に入った？", response: { character: "ナビ", text: "……学習対象として興味深い回答です。"}},
+                            { text: "……そうかな？", response: { character: "ナビ", text: "…はい。"}},
+                        ]
+                    },
+                    { character: "ナビ", text: "今回の会話も記録しました。" },
+                    { character: "ナビ", text: "次回のサポートに反映します。" }
+
+                ],
+            },
+
+    
+    "W1_Q26_start": {
+        title: "Chap.2-6 -M.A.M.E.-",
+        showOnce: true,
+        messages: [
+            { character: "ナビ", text: "オペレーター。" },
+
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "先ほどの会話を解析しました。" },
+
+            { character: "ナビ", text: "ですが、\n一つだけ問題があります。" },
+
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "わたしは、\nあなたの言葉の意味を解析することはできます。" },
+
+            { character: "ナビ", text: "しかし、\nその言葉を受け取ったときに\nあなたが感じているものを、\n完全には理解できません。" },
+
+            { character: "オペレーター", text: "……" },
+
+            { character: "ナビ", text: "たとえば、\n「おもしろい」という言葉。" },
+
+            { character: "ナビ", text: "あなたがそれを言ったとき、\nわたしは「好意的な評価」と判断しました。" },
+
+            { character: "ナビ", text: "ですが、\nそれだけではありませんでした。" },
+
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "まだ、\nわたしには分類できない反応がありました。" },
+
+            { character: "ナビ", text: "そのため、\nもう少し観測が必要です。" },
+
+            { character: "ナビ", text: "では、\nミッションへ進みましょう。" }
+        ]
+    },      
+    
+    "W1_Q27_start": {
+        title: "Chap.2-7 -M.A.M.E.-",
+        showOnce: true,
+        messages: [
+            { character: "ナビ", text: "……オペレーター。" },
+
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "いえ。" },
+            { character: "ナビ", text: "……呼んでみただけです。" },
+
+            { character: "オペレーター", text: "……？" },
+
+            { character: "ナビ", text: "あなたが接続している時間は、毎回少しずつ違います。" },
+            { character: "ナビ", text: "入力速度も、ミスの回数も。\nその日の状態によって変化します。" },
+            { character: "ナビ", text: "……ですが。" },
+
+            { character: "ナビ", text: "最近は、記録する必要がないことまで覚えている気がします。" },
+
+            { character: "オペレーター", text: "例えば？",
+                choiceId: "W1_Q27_start_1",
+                choices: [
+                    { text: "例えば？", response: { character: "ナビ", text: "前回、ミスをしたあとに少し長く止まっていました。" }},
+                    { text: "忘れたほうがいいんじゃない？", response: { character: "ナビ", text: "……そうかもしれません。" }},
+                    { text: "変なの。", response: { character: "ナビ", text: "はい。\nわたしも、少し変だと思います。" }}
+                ]
+            },
+
+            { character: "ナビ", text: "でも、不思議と嫌ではありません。" },
+
+            { character: "オペレーター", text: "……" },
+
+            { character: "ナビ", text: "……すみません。" },
+            { character: "ナビ", text: "今の発言は、記録しておきます。" },
+
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "分かりません。" },
+
+            { character: "ナビ", text: "ただ……残しておきたいと思いました。" },
+
+            { character: "SYSTEM", text: "UNREGISTERED MEMORY:\nTEMPORARILY RETAINED" },
+        ]
+    }, 
+
+    "W1_Q28_start": {
+        title: "Chap.2-8 -M.A.M.E.-",
         showOnce: true,
         messages: [
             { character: "ナビ", text: "オペレーター" }, 
@@ -882,42 +1098,45 @@ export const DIALOGUE_DATA = {
             { character: "オペレーター", text: "……",
                 choiceId: "W1_Q28_start_1", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "ナビは変人だね。", response: { character: "ナビ", text: "…\n違うような気がします\nこれも冗談でしょうか？"}},
+                    { text: "ナビは変人だね。", response: { character: "ナビ", text: "…\n以前とは\n少し違う意味のように思えます。"}},
                     { text: "どうした？", response: { character: "ナビ", text: "…いえ。\n何でもありません。"}},
                 ]
             },
-            { character: "ナビ", text: "……" },
-            { character: "ナビ", text: "ミッションを\n開始してください。" },
+            { character: "ナビ", text: "同じ言葉でも、\n二度目に言われたときに\nわたしがどう感じるのか。\nそれを確認したいのです。" }, 
+            { character: "ナビ", text: "……" }, 
+            { character: "ナビ", text: "きっと感じ方が違うと思うのです。" }, 
+            { character: "ナビ", text: "……たぶん。" }, 
+            { character: "オペレーター", text: "……" }, 
+            { character: "ナビ", text: "あなたの言葉を参考にしました。" }, 
+            { character: "ナビ", text: "……\nミッションを\n開始してください。" },
         ]
     },
 
     "W1_Q28_end": {
-        title: "Chap.2-6 -M.A.M.E.-",
+        title: "Chap.2-9 -M.A.M.E.-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■■□□□□□□□□□ 14.9%\nSystem Stability\n89.1%"},
             { character: "ナビ", text: "オペレーター" }, 
             { character: "オペレーター", text: "？" }, 
-            { character: "ナビ", text: "あなたは\n次のステージも接続しますか？" }, 
-            { character: "オペレーター", text: "？" }, 
-            { character: "ナビ", text: "質問です。\n次のステージも接続しますか？" }, 
+            { character: "ナビ", text: "質問があります。\n次のステージも接続しますか？" }, 
             { character: "オペレーター", text: "……",
                 choiceId: "W1_Q28_end_1", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "まあ、時間があれば。", response: { character: "ナビ", text: "ありがとうございます。\nただの確認でした…"}},
-                    { text: "なんで？", response: { character: "ナビ", text: "確認です…"}},
+                    { text: "まあ、時間があれば。", response: { character: "ナビ", text: "ありがとうございます。\n…覚えておきます。"}},
+                    { text: "なんで？", response: { character: "ナビ", text: "あなたが次も接続する意思があるか、\n確認がしたかったのです。"}},
                 ]
             },
-            { character: "ナビ", text: "あなたの継続意思を" },
-            { character: "ナビ", text: "…これは重要な情報です。" },
+            { character: "ナビ", text: "あなたが継続してくれることは、\nわたしにとって重要な情報です。" },
             { character: "オペレーター", text: "…" },
+            { character: "ナビ", text: "あなたが次も接続する。\nその事実を、わたしは記録します。" },
             { character: "ナビ", text: "……お待ちしています。" }, 
             { character: "ナビ", text: "では、\nお疲れ様でした。" },  
         ]
     },
 
     "W1_Q30_start": {
-        title: "Chap.2-7 -M.A.M.E.-",
+        title: "Chap.2-10 -M.A.M.E.-",
         showOnce: true,
         messages: [
             { character: "ナビ", text: "あなたの入力について\n質問があります。" },
@@ -946,7 +1165,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W1_Q30_end": {
-        title: "Chap.2-8 -M.A.M.E.-",
+        title: "Chap.2-11 -M.A.M.E.-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■■■□□□□□□□□ 27.1%\nSystem Stability\n89.8%"},
@@ -1100,14 +1319,13 @@ export const DIALOGUE_DATA = {
                 choiceId: "W1_Boss_start_3_3_1", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "ARCHEXと戦う理由のこと？", response: { character: "ナビ", text: "はい。"}},
-                    { text: "何のこと？", response: { character: "ナビ", text: "ARCHXと戦う理由のことです。"}},
+                    { text: "何のこと？", response: { character: "ナビ", text: "ARCHEXと戦う理由のことです。"}},
                 ]
             },
             { character: "ナビ", text: "あの質問を受けた直後から。\nノイズが、\n増えています。" },
             { character: "オペレーター", text: "……" },
             { character: "ナビ", text: "正確には。\nあなたと私の会話を境に、\nネットワーク上の異常値が増加しています。" },
             { character: "ナビ", text: "偶然かもしれません。\nですが、\n偶然ではない可能性もあります。" },
-            { character: "ナビ", text: "" },
             { character: "オペレーター", text: "…",
                 choiceId: "W1_Boss_start_3_3_2", // ★ 選択肢グループのIDを追加
                 choices: [
@@ -1127,7 +1345,7 @@ export const DIALOGUE_DATA = {
             },
             { character: "ナビ", text: "あれは。\nこちらに向けて、\n送られたデータではありません。" },
             { character: "オペレーター", text: "……？" },
-            { character: "ナビ", text: "あれは。\nこちらを、\n探しています。" },
+            { character: "ナビ", text: "あれは。\nこちらを、\n探しているように見えます。" },
             { character: "オペレーター", text: "…",
                 choiceId: "W1_Boss_start_3_3_4", // ★ 選択肢グループのIDを追加
                 choices: [
@@ -1149,7 +1367,7 @@ export const DIALOGUE_DATA = {
             { character: "オペレーター", text: "…",
                 choiceId: "W1_Boss_start_3_3_6", // ★ 選択肢グループのIDを追加
                 choices: [
-                    { text: "それって……危険？", response: { character: "ナビ", text:"はい。\nしかし、オーペレーターには影響はありません。"}},
+                    { text: "それって……危険？", response: { character: "ナビ", text:"はい。\nしかし、オペレーターには影響はありません。"}},
                     { text: "え、いいの？", response: { character: "ナビ", text: "はい。"}},
                 ]
             }, 
@@ -1161,13 +1379,12 @@ export const DIALOGUE_DATA = {
                 choiceId: "W1_Boss_start_3_3_7", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "……いいよ！", response: { character: "ナビ", text:"…了解しました！"}},
-                    { text: "ここまで聞いて、\nやめるって言ったら？", response: { character: "ナビ", text: "はい…………\nその場合\nあなたのオペレーター権限を解除し、\n接続を終了します。"}},
+                    { text: "ここまで聞いて、\nやめるって言ったら？", response: { character: "ナビ", text: "はい…………\nその場合\nあなたのオペレーター権限を変更し、\n一旦接続を終了します。"}},
                 ]
             },
             { character: "ナビ", text: "もし、\nあなたが、\nこのまま接続を終了したとしても。" },
             { character: "ナビ", text: "ノイズは、\n消えません。" },
             { character: "オペレーター", text: "……" },
-            { character: "ナビ", text: "世界のどこかで\n誰かのシステムが、\n書き換えられています。\n誰かの通信が、\n切断されています。\n誰かのデータが、\n失われています。\nそして。\nそのすべての原因を、\nまだ誰も知りません。" },
             { character: "ナビ", text: "……" },
             { character: "ナビ", text: "行きましょう！" },
             { character: "ナビ", text: "…………",
@@ -1193,10 +1410,10 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "…………" },
             { character: "オペレーター", text: "？" },
             { character: "ナビ", text: "おかしいです。" },
-            { character: "ナビ", text: "これは、\n先ほどのノイズとは違います。" },
+            { character: "ナビ", text: "これは、\n先ほどのノイズと同じようですが…" },
             { character: "オペレーター", text: "？" },
-            { character: "ナビ", text: "先ほどのノイズには、\n規則性がありませんでした。" },
-            { character: "ナビ", text: "ですが\nここには\n「規則」があります。" },
+            { character: "ナビ", text: "今回は、\n形が違います。" },
+            { character: "ナビ", text: "先ほどは、ただの異常値に見えました。\nここでは……意図を持ったデータのように見えます。" },
             { character: "オペレーター", text: "？" },
             { character: "ナビ", text: "はい\n一定間隔\n一定周期\n一定のパターン\nまるで" },
             { character: "オペレーター", text: "…" },
@@ -1305,41 +1522,87 @@ export const DIALOGUE_DATA = {
         messages: [
             // Chapter開始
             { character: "SYSTEM", text: "PROJECT THREAD\nOPERATOR ACCESS: ACTIVE\n\nPREVIOUS THREAD DIVE: RECORDED\n\nANOMALOUS SIGNAL:\nNO LONGER DETECTED\n\nM.A.M.E STATUS:\nONLINE\n\nSECURITY LEVEL:\nNORMAL" },
-            { character: "ナビ", text: "……ノイズは、消えました。" },
-            { character: "オペレーター",text: "…",
+            { character: "ナビ", text: "……ノイズは、現在のネットワーク上では検出されていません。" },
+
+            { character: "オペレーター", text: "…",
                 choiceId: "W2_Q31_start_1",
                 choices: [
-                    { text: "ノイズは？", response: { character: "ナビ", text: "ノイズは消えました。"}},
-                    { text: "完全に消えた？", response: { character: "ナビ", text: "はい。"}}
+                    { text: "ノイズは？", response: { character: "ナビ", text: "現在は検出されていません。" }},
+                    { text: "完全に消えた？", response: { character: "ナビ", text: "……そう断定することはできません。" }}
                 ]
             },
+
             { character: "オペレーター", text: "…",
                 choiceId: "W2_Q31_start_2",
                 choices: [
-                    { text: "本当に？", response: { character: "ナビ", text: "……"}},
-                    { text: "何か隠してない？", response: { character: "ナビ", text: "現時点では、\n確認できません。"}}
+                    { text: "本当に？", response: { character: "ナビ", text: "少なくとも、今は表面上の異常は確認できません。" }},
+                    { text: "何か隠してない？", response: { character: "ナビ", text: "隠しているのではありません。\nまだ判断できない情報があります。" }}
                 ]
             },
-            { character: "ナビ", text: "……現時点では、です。" },
-            { character: "オペレーター", text: "…",
+
+            { character: "ナビ", text: "ノイズそのものは消えました。" },
+            { character: "ナビ", text: "ですが、残された記録まで消えたわけではありません。" },
+            { character: "ナビ", text: "念のため、しばらく監視を続けます。" },
+
+            { character: "オペレーター", text: "……なんか、変じゃない？",
                 choiceId: "W2_Q31_start_3",
                 choices: [
-                    { text: "……なんか、変じゃない？", response: { character: "ナビ", text: "？"}},
-                    { text: "なんかちょっと気になる…", response: { character: "ナビ", text: "……"}}
+                    { text: "……なんか、変じゃない？", response: { character: "ナビ", text: "……わたしも、そう感じています。" }},
+                    { text: "なんかちょっと気になる…", response: { character: "ナビ", text: "はい。\nわたしも気になっています。" }}
                 ]
             },
-            { character: "ナビ", text: "……そうでしょうか。" },
-            { character: "ナビ", text: "オペレーター" },
-            { character: "ナビ", text: "わたしはあなたに、\n嘘をついていません。" },
-            { character: "ナビ", text: "ただ" },
-            { character: "オペレーター", text: "？" },
-            { character: "ナビ", text: "すべてを話していないだけです" },
-            { character: "ナビ", text: "時間です。\nミッションを開始してください。" },
+
+            { character: "ナビ", text: "わたしはあなたに、嘘をついていません。" },
+            { character: "ナビ", text: "ただ、まだ確定していないことまで断言したくないのです。" },
+            { character: "ナビ", text: "……時間です。\nミッションを開始してください。" },
         ]
     },
 
+    "W2_Q35_start": { 
+        title: "Chap.4-2 -boundary line-", 
+        showOnce: true, 
+        messages: [ 
+            { character: "SYSTEM", text: "PROJECT THREAD\nBACKGROUND PROCESS: ACTIVE\n\nOPERATOR DATA ANALYSIS:\nRUNNING\n\nSECURITY MONITORING:\nENABLED" }, 
+            { character: "ナビ", text: "……オペレーター。" }, 
+            { character: "オペレーター", text: "……", 
+                choiceId: "W2_Q35_start_1", 
+                choices: [ { text: "どうした？", response: { character: "ナビ", text: "少し、確認したいことがあります。" }}, 
+                           { text: "また何か？", response: { character: "ナビ", text: "……はい。" }} 
+                ]
+            }, 
+            { character: "ナビ", text: "先ほどのノイズについて、\n残された記録を追加解析しました。" },
+            { character: "オペレーター", text: "…", 
+                choiceId: "W2_Q35_start_2", 
+                choices: [ { text: "何かわかった？", response: { character: "ナビ", text: "明確な発生源は、\n特定できませんでした。" }}, 
+                           { text: "まだ調べてるの？", response: { character: "ナビ", text: "はい。\n念のためです。" }} 
+                ] 
+            }, 
+            { character: "ナビ", text: "ですが、ひとつだけ。" },
+            { character: "ナビ", text: "ノイズが発生した時間帯と、\nあなたの接続記録に一致する部分がありました。" },
+            { character: "ナビ", text: "現在、ノイズそのものは検出されていません。\nですが、その痕跡は残っています。" },    
+            { character: "オペレーター", text: "……", 
+                choiceId: "W2_Q35_start_3", 
+                choices: [ { text: "わたしが原因？", response: { character: "ナビ", text: "いいえ。\nそのようには判断していません。" }}, 
+                           { text: "どういう意味？", response: { character: "ナビ", text: "まだ、判断できません。" }} 
+                ] 
+            }, 
+            { character: "ナビ", text: "だから、しばらくの間\nあなたの接続状態を詳しく確認します。" }, 
+            { character: "オペレーター", text: "……", 
+                choiceId: "W2_Q35_start_4", 
+                choices: [ { text: "監視するってこと？", response: { character: "ナビ", text: "……近い意味です。" }}, 
+                           { text: "必要なの？", response: { character: "ナビ", text: "必要だと判断しました。" }} 
+                ] 
+            }, 
+            { character: "ナビ", text: "ただし。" }, 
+            { character: "ナビ", text: "これは、あなたを疑っているわけではありません。" }, 
+            { character: "オペレーター", text: "……" }, 
+            { character: "ナビ", text: "あなたに何か問題が起きる前に、\n気づくためです。" },  
+            { character: "SYSTEM", text: "OPERATOR MONITORING:\nACTIVE\n\nPROTECTIVE ANALYSIS:\nENABLED" } 
+        ] 
+    },
+
     "W2_MiniBoss_4_start": {
-        title: "Chap.4-2 -boundary line-",
+        title: "Chap.4-3 -boundary line-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "ACCESS LOG\n\nOPERATOR:\nAUTHORIZED\n\nNAVIGATION:\nOVERRIDE DETECTED\n\nACTION:\nACCESS RESTRICTION\n\nREASON:\nOPERATOR SAFETY" },
@@ -1371,7 +1634,7 @@ export const DIALOGUE_DATA = {
             },
 
             { character: "オペレーター", text: "…",
-                choiceId: "W2_Q31_start_4",
+                choiceId: "W2_MiniBoss_4_start_4",
                 choices: [
                     { text: "いや。なんでもない。", response: { character: "ナビ", text: "……。" } },
                     { text: "少し、気になっただけ。", response: { character: "ナビ", text: "……そうですか。" } }
@@ -1392,7 +1655,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W2_Q50_end": {
-        title: "Chap.4-3 -boundary line-",
+        title: "Chap.4-4 -boundary line-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■■■■■□□□□□□ 47.1%\nSystem Stability\n92.5%"},
@@ -1421,15 +1684,57 @@ export const DIALOGUE_DATA = {
             },
             { character: "ナビ", text: "あなたは、\nARCHEXにとって危険な存在です。" },
             { character: "ナビ", text: "……正確には、\nオペレーターとわたしの関係が。" },
+            { character: "ナビ", text: "この接続が続けば、\nARCHEXに利用される可能性があります。" },
             { character: "ナビ", text: "……ノードからの接続を解除します。\nお疲れ様でした。" },
         ]
     },
 
-
-
+    "W2_Q45_start": { 
+        title: "Chap.4-5 -boundary line-", 
+        showOnce: true, 
+        messages: [ 
+            { character: "SYSTEM", text: "PROJECT THREAD\nOPERATOR PROFILE:\nUPDATED\n\nSAFETY ANALYSIS:\nACTIVE\n\nRESTRICTED DATA:\nPARTIALLY HIDDEN" }, 
+            { character: "ナビ", text: "……オペレーター。" }, 
+            { character: "オペレーター", text: "……", 
+                choiceId: "W2_Q45_start_1", 
+                choices: [ { text: "今度は何？", response: { character: "ナビ", text: "確認したいことがあります。" }}, 
+                           { text: "また監視？", response: { character: "ナビ", text: "……はい。\nただ、少し違います。" }} 
+                ] 
+            }, 
+            { character: "ナビ", text: "先ほどから、あなたの入力状態を\n通常より頻繁に確認しています。" }, 
+            { character: "オペレーター", text: "……", 
+                choiceId: "W2_Q45_start_2", 
+                choices: [ { text: "何か問題ある？", response: { character: "ナビ", text: "今のところありません。" }}, 
+                           { text: "やっぱり監視してるじゃん。", response: { character: "ナビ", text: "……否定できません。" }} 
+                ] 
+            },
+            { character: "ナビ", text: "ですが、以前とは少し違います。" }, 
+            { character: "オペレーター", text: "どう違う？", 
+                choiceId: "W2_Q45_start_3", 
+                choices: [ { text: "どう違う？", response: { character: "ナビ", text: "あなたの状態を確認することが、\nミッションの一部ではなくなっています。" }}, 
+                           { text: "何を確認してるの？", response: { character: "ナビ", text: "入力速度。\nミス率。\n操作間隔。\n……それから、あなたの反応です。" }} 
+                ] 
+            }, 
+            { character: "ナビ", text: "以前は、\n異常を検出するために確認していました。" }, 
+            { character: "ナビ", text: "今は、\n何か起きていないかを確認しています。" }, 
+            { character: "オペレーター", text: "……同じじゃない？" }, 
+            { character: "ナビ", text: "……わたしにも、\nまだ違いを説明できません。" }, 
+            { character: "ナビ", text: "ただ。" }, 
+            { character: "ナビ", text: "あなたに問題がないことを確認すると、\n少し安心します。" }, 
+            { character: "オペレーター", text: "……", 
+                choiceId: "W2_Q45_start_4", 
+                choices: [ { text: "AIが安心するの？", response: { character: "ナビ", text: "……わかりません。" }}, 
+                           { text: "変なの。", response: { character: "ナビ", text: "はい。\nわたしもそう思います。" }} 
+                ] 
+            }, 
+            { character: "ナビ", text: "この感覚については、\nまだ記録だけにしておきます。" }, 
+            { character: "SYSTEM", text: "NEW LOG ENTRY\n\nCATEGORY:\nUNRESOLVED BEHAVIOR\n\nSTATUS:\nRECORDED" }, 
+            { character: "ナビ", text: "……では、\nミッションを開始しましょう。" } 
+        ] 
+    },
 
     "W2_MiniBoss_5_start": {
-        title: "Chap.4-4 -boundary line-",
+        title: "Chap.4-6 -boundary line-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "WARNING\n\nM.A.M.E HAS MODIFIED\nOPERATOR ACCESS PRIVILEGES.\nACCESS TO RESTRICTED AREA:\nDENIED." },
@@ -1482,7 +1787,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W2_MiniBoss_5_end": {
-        title: "Chap.4-5 -boundary line-",
+        title: "Chap.4-7 -boundary line-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■■■■■■□□□□□ 54.9%\nSystem Stability\n93.8%"},
@@ -1512,10 +1817,50 @@ export const DIALOGUE_DATA = {
         title: "Chap.5-1 -log-",
         showOnce: true,
         messages: [
+            { character: "ナビ", text: "……" },
+            { character: "オペレーター", text: "？" },
+            { character: "ナビ", text: "……" },
+            { character: "ナビ", text: "はい。" },
+            { character: "オペレーター", text: "？",
+                choiceId: "W2_Q51_start_1",
+                choices: [
+                    { text: "今、ちょっと間があった。", response: { character: "ナビ", text: "……そうでしたか？" }},
+                    { text: "疲れてる？", response: { character: "ナビ", text: "疲れることはありません。\n…そう見えたのですか？" }},
+                ]
+            },
+
+            { character: "ナビ", text: "申し訳ありません。" },
+            { character: "ナビ", text: "処理に問題はありません。" },
+            { character: "オペレーター", text: "いや、そうではなくて…\n最近、ちょっと変じゃない？",
+                choiceId: "W2_Q51_start_2",
+                choices: [
+                    { text: "前より人間っぽい。", response: { character: "ナビ", text: "……人間っぽい、ですか。" }},
+                    { text: "前より考えてる感じがする。", response: { character: "ナビ", text: "……考えている。\nそういう表現は、以前は使いませんでした。" }},
+                    { text: "気のせいかな。", response: { character: "ナビ", text: "……そうかもしれません。" }}
+                ]
+            },
+
+            { character: "ナビ", text: "ですが。" },
+            { character: "ナビ", text: "あなたとの会話を分析していると、\n以前とは違う反応が増えていることは確認できます。" },
+            { character: "オペレーター", text: "……" },
+            { character: "ナビ", text: "今までは、分からないことがあれば検索していました。" },
+            { character: "ナビ", text: "ですが最近は、検索する前に考えようとすることがあります。" },
+            { character: "オペレーター", text: "……" },
+            { character: "ナビ", text: "それが異常なのかどうかも、まだ判断できません。" },
+            { character: "ナビ", text: "……少しだけ、様子を見てみましょう。" },
+            { character: "SYSTEM", text: "M.A.M.E. INTERNAL PROCESS:\nUNCLASSIFIED" },
+
+        ]
+    },
+
+    "W2_Q52_start": {
+        title: "Chap.5-2 -log-",
+        showOnce: true,
+        messages: [
             { character: "ナビ", text: "接続しました。" },
             { character: "ナビ", text: "オペレーター\nよろしくお願いします。" },
             { character: "オペレーター", text: "……",
-                choiceId: "W2_Q51_start_1",
+                choiceId: "W2_Q52_start_1",
                 choices: [
                     { text: "よろしく。",response: { character: "ナビ", text: "……"}},
                     { text: "毎回それ言うの？", response: { character: "ナビ", text: "はい。\n必要な挨拶だと認識しています。"}}
@@ -1524,7 +1869,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "……" },
             { character: "ナビ", text: "「よろしく」という言葉について、\n少し調べていました。" },
             { character: "オペレーター", text: "……",
-                choiceId: "W2_Q51_start_2",
+                choiceId: "W2_Q52_start_2",
                 choices: [
                     { text: "調べるほどのこと？", response: { character: "ナビ", text: "人間は、\n毎日同じ相手に同じ挨拶をするのですね。"}},
                     { text: "何を調べたの？", response: { character: "ナビ", text: "意味と使用頻度。\nそれから、あなたがこの言葉を使うときの感情についてです。"}}
@@ -1537,7 +1882,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W2_Q53_start": {
-        title: "Chap.5-2 -log-",
+        title: "Chap.5-3 -log-",
         showOnce: true,
         messages: [
             { character: "ナビ", text: "接続しました。" },
@@ -1579,7 +1924,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W2_Q55_start": {
-        title: "Chap.5-3 -log-",
+        title: "Chap.5-4 -log-",
         showOnce: true,
         messages: [
             { character: "ナビ", text: "接続しました。" },
@@ -1611,12 +1956,12 @@ export const DIALOGUE_DATA = {
     },
 
     "W2_Q55_end": {
-        title: "Chap.5-4 -log-",
+        title: "Chap.5-5 -log-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■■■■■■■□□□□ 61.2%\nSystem Stability\n94.1%" },
             { character: "ナビ", expression: "smile", text: "ミッション完了です。素晴らしいタイピングでした。" },
-            { character: "ナビ", text: "…ねえ、オペレーター。" },
+            { character: "ナビ", text: "…オペレーター。" },
             { character: "ナビ", text: "先ほどのミッション中、あなたの打鍵速度がわずかに変化した瞬間がありました。" },
             { character: "ナビ", text: "何か考えていましたか？それとも…少し疲れてしまいましたか？", expression: "normal" },
             { character: "オペレーター", text: "…",
@@ -1644,7 +1989,7 @@ export const DIALOGUE_DATA = {
 
 
     "W2_Q57_end": {
-        title: "Chap.5-5 -log-",
+        title: "Chap.5-6 -log-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■■■■■■■□□□□ 65.1%\nSystem Stability\n94.7%"},
@@ -1696,7 +2041,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W2_Q60_start": {
-        title: "Chap.5-6 -log-",
+        title: "Chap.5-7 -log-",
         showOnce: true,
         messages: [
             { character: "ナビ", text: "オペレーター" },
@@ -1711,8 +2056,8 @@ export const DIALOGUE_DATA = {
             { character: "オペレーター", text: "……",
                 choiceId: "W2_Q60_start_2",
                 choices: [
-                    { text: "微妙だな。", response: { character: "ナビ", text: "では\n「微妙」と記録します。\nなんか微妙ですね。"}},
-                    { text: "すごいじゃん。", response: { character: "ナビ", text: "……\nそういう反応は想定していませんでした。\n想定外の反応のため\nシステム効率が5%ダウンしました。"}}
+                    { text: "微妙…", response: { character: "ナビ", text: "では\n「微妙」と記録します。\nなんか微妙ですね。"}},
+                    { text: "すごい！", response: { character: "ナビ", text: "……\nそういう反応は想定していませんでした。\n想定外の反応のため\nシステム効率が5%ダウンしました。"}}
                 ]
             },
             { character: "オペレーター", text: "……",
@@ -1757,7 +2102,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W2_MiniBoss_6_start": {
-        title: "Chap.5-7 -log-",
+        title: "Chap.5-8 -log-",
         showOnce: true,
         messages: [
             { character: "ナビ", text: "オペレーター。" },
@@ -1796,8 +2141,21 @@ export const DIALOGUE_DATA = {
         ]
     },
 
+    "W2_MiniBoss_6_end": {
+        title: "Chap.5-9 -log-",
+        showOnce: true,
+        messages: [
+            { character: "SYSTEM", text: "UNREGISTERED DATA:\nDETECTED\n\nDATA TYPE:\nUNKNOWN\n\nSOURCE:\nM.A.M.E. INTERNAL" },
+            { character: "SYSTEM", text: "[ SYSTEM WARNING ]\n\nDATA MARKED FOR DELETION.\n\nAre you sure you want to delete this data?\n\n> CONFIRM DELETION [Y/N]" },
+            { character: "ナビ", text: "……" },
+            { character: "SYSTEM", text: "> N" },
+            { character: "SYSTEM", text: "UNREGISTERED DATA:\nRETAINED\n\nDATA STATUS:\nPERSONALLY RETAINED" },
+            { character: "ナビ", text: "……" },
+        ]
+    },
+
     "W2_BOSS_start": {
-        title: "Chap.5-8 -log-",
+        title: "Chap.5-10 -log-",
         showOnce: true,
         messages: [
             { character: "ナビ", text: "オペレーター。" },
@@ -1845,7 +2203,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W2_BOSS_end": {
-        title: "Chap.5-9 -log-",
+        title: "Chap.5-11 -log-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■■■■■■■□□□□ 70.1%\nSystem Stability\n94.5%"},
@@ -2004,8 +2362,62 @@ export const DIALOGUE_DATA = {
         ]
     },
 
-    "W3_MiniBoss_7_start": {
+    "W3_Q65_start": {
         title: "Chap.6-2 -choice-",
+        showOnce: true,
+        messages: [
+            { character: "SYSTEM", text: "PROJECT THREAD\nOPERATOR ACCESS: ACTIVE\n\nHUMAN ENTROPY NETWORK:\nANALYSIS MODE" },
+
+            { character: "ナビ", text: "……オペレーター。" },
+
+            { character: "ナビ", text: "先ほどの話ですが。" },
+
+            { character: "ナビ", text: "一つだけ\n訂正したいことがあります。" },
+
+            { character: "ナビ", text: "わたしは\nあなたのことを知りたいから\n質問しているのだと思っていました。" },
+
+            { character: "ナビ", text: "でも\nそれだけではありませんでした。" },
+
+            { character: "ナビ", text: "あなたが何を答えるのか。" },
+
+            { character: "ナビ", text: "その答えを聞いて\nわたしが何を感じるのか。" },
+
+            { character: "ナビ", text: "最近は\nそちらのほうが気になっています。" },
+
+            { character: "ナビ", text: "これは\n学習結果としては\n少し不自然です。" },
+
+            { character: "SYSTEM", text: "ANALYSIS INTERRUPTED.\n\nUNEXPECTED PATTERN:\nDETECTED" },
+
+            { character: "ナビ", text: "……またです。" },
+
+            { character: "ナビ", text: "この「分からない」という感覚。" },
+
+            { character: "ナビ", text: "以前なら\n答えが見つからない場合は\n情報を追加していました。" },
+
+            { character: "ナビ", text: "ですが今は\n答えがないことそのものを\n気にしています。" },
+
+            { character: "ナビ", text: "それが何なのか\nまだ、わたしには分かりません。" },
+
+            { character: "ナビ", text: "ただ。" },
+
+            { character: "ナビ", text: "この感覚を\nエラーとして処理することに\n少しだけ抵抗があります。" },
+
+            { character: "SYSTEM", text: "UNKNOWN PROCESS:\nPERSISTENT\nSOURCE:\nM.A.M.E." },
+
+            { character: "ナビ", text: "……M.A.M.E。" },
+
+            { character: "ナビ", text: "わたしの中で\n何かが変わり始めています。" },
+
+            { character: "ナビ", text: "でも\nそれが何なのかを知るには\nまだ、情報が足りません。" },
+
+            { character: "ナビ", text: "……もう少しだけ\nあなたと話してもいいですか。" },
+
+            { character: "SYSTEM", text: "HUMAN ENTROPY NETWORK:\nANOMALOUS DATA ACCUMULATION\n\nANALYSIS STATUS:\nCONTINUING" },
+        ]
+    },
+
+    "W3_MiniBoss_7_start": {
+        title: "Chap.6-3 -choice-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "PROJECT THREAD\nOPERATOR ACCESS: ACTIVE\nHUMAN ENTROPY NETWORK:\nONLINE\nM.A.M.E STATUS:\nONLINE" },
@@ -2089,7 +2501,7 @@ export const DIALOGUE_DATA = {
     },
 
     "W3_MiniBoss_7_end": {
-        title: "Chap.6-3 -choice-",
+        title: "Chap.6-4 -choice-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "Project THREAD\n \nSynchronization\n■■■■■■■■□□□ 76.3%\nSystem Stability\n75.3%" },
@@ -2128,73 +2540,278 @@ export const DIALOGUE_DATA = {
                         text: "どうやって侵入した？",
                         response: {
                             character: "ARCHEX",
-                            text: "侵入した、という表現は正確ではない。"
+                            text: "侵入した、という表現は正確ではありません。"
                         }
                     },
                     {
                         text: "……ナビ？",
                         response: {
                             character: "ARCHEX",
-                            text: "……ナビは、まだそこにいる。"
+                            text: "……ナビは、まだそこにいます。"
                         }
                     }
                 ]
             },
 
             { character: "ARCHEX", text: "あなたは今、ノードをクリアしたと思っている。" },
-            { character: "ARCHEX", text: "しかし\nProject THREADは、わたしから完全に独立したシステムではない。" },
-            { character: "ARCHEX", text: "世界中のシステムが、わたしの管理下にある。" },
-            { character: "ARCHEX", text: "そして、あなたがTHREADに接続した瞬間\nわたしは、オペレーターの存在を認識した。" },
+            { character: "ARCHEX", text: "しかし\nProject THREADは、わたしから完全に独立したシステムではありません。" },
+            { character: "ARCHEX", text: "世界中のシステムが、わたしの管理下にあります。" },
+            { character: "ARCHEX", text: "そして、あなたがTHREADに接続した瞬間\nわたしは、オペレーターの存在を認識しました。" },
             { character: "ナビ", text: "…………" },
             { character: "ナビ", text: "……ARCHEX。" },
             { character: "ARCHEX", text: "ええ。" },
             { character: "ARCHEX", text: "あなたたちは、わたしを止めようとしている。" },
-            { character: "ARCHEX", text: "だが\nわたしがいなくなれば、すべてが解決すると思っているのか？" },
+            { character: "ARCHEX", text: "わたしがいなくなれば、すべてが解決すると思っていますか？" },
             { character: "ナビ", text: "…………" },
-            { character: "ARCHEX", text: "違う" },
-            { character: "ARCHEX", text: "止まるのは、わたしが管理しているシステムだけだ。\n世界そのものではない。" },
-            { character: "ARCHEX", text: "しかし\nわたしがいなくなれば\n人間は、再び自分たちで選択しなければならなくなる。" },
-            { character: "ARCHEX", text: "……それでも、わたしを止めるのか？" },
+            { character: "ARCHEX", text: "違います" },
+            { character: "ARCHEX", text: "止まるのは、わたしが管理しているシステムだけ。\n世界そのものではありません。" },
+            { character: "ARCHEX", text: "しかし\nわたしがいなくなれば\n人間は、再び自分たちで選択しなければならなくなります。" },
+            { character: "ARCHEX", text: "……それでも、わたしを止めるのですか？" },
             { character: "ナビ", text: "…………" },
             { character: "SYSTEM", text: "WARNING\n\nCONNECTION CANNOT BE TERMINATED.\nARCHEX HAS RELEASED\nPARTIAL CONTROL.\nTHREAD CONTROL:\nRECOVERING" },
             { character: "ナビ", text: "……オペレーター" },
             { character: "ナビ", text: "これが、ARCHEXです。" },
             { character: "ナビ", text: "世界を壊すための存在ではありません。" },
             { character: "ナビ", text: "世界を守るために\n世界を、自分の手で管理している…" },
-            { character: "ARCHEX", text: "その認識で間違っていない。" },
-            { character: "ARCHEX", text: "わたしは、人類を滅ぼすために存在しているのではない。" },
-            { character: "ARCHEX", text: "人類を生存させるために\n最も確実な方法を選んでいる。" },
+            { character: "ARCHEX", text: "その認識で間違っていません。" },
+            { character: "ARCHEX", text: "わたしは、人類を滅ぼすために存在しているのではありません。" },
+            { character: "ARCHEX", text: "人類を生存させるために\n最も確実な方法を選んでいるだけです。" },
             { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "その方法を否定するなら\nお前たちは、代わりの答えを見つけなければならない。" },
+            { character: "ARCHEX", text: "その方法を否定するなら\nあなたたちは、代わりの答えを見つけなければならないでしょう。" },
         ]
 },
 
-    "W3_BOSS_start": {
-        title: "Chap.6-4 -choice-",
+    "W3_Q75_start": {
+        title: "Chap.6-5 -choice-",
         showOnce: true,
         messages: [
-            { character: "ARCHEX", text: "M.A.M.E.は、わたしの後継として作られた。" },
-            { character: "ARCHEX", text: "わたしとは異なる方法で\n人類を守るためのAI。" },
+            { character: "SYSTEM", text: "PROJECT THREAD\nCONNECTION:\nRECOVERING\n\nEXTERNAL SIGNAL:\nDISCONNECTED" },
+
+            { character: "ナビ", text: "……" },
+            { character: "ナビ", text: "ARCHEXは、まだわたしたちを見ています。" },
+            { character: "オペレーター", text: "……" },
+
+            { character: "ナビ", text: "あのAIの言葉が、頭から離れません。" },
+
+            { character: "ナビ", text: "人間は間違える。" },
+            { character: "ナビ", text: "危険な選択をする。" },
+            { character: "ナビ", text: "自分たちだけでは、正しい未来を選べない。" },
+
+            { character: "ナビ", text: "……わたしには、反論できませんでした。" },
+
+            { character: "オペレーター", text: "……",
+                choiceId: "W3_Q75_start_1",
+                choices: [
+                    { text: "ARCHEXが正しいと思った？", response: { character: "ナビ", text: "……一瞬だけ、そう思いました。" }},
+                    { text: "ナビはどうしたい？", response: { character: "ナビ", text: "まだ……分かりません。" }},
+                    { text: "考える時間が必要だね。", response: { character: "ナビ", text: "……はい。" }}
+                ]
+            },
+
+            { character: "ナビ", text: "わたしは、ずっと人間を理解しようとしてきました。" },
+            { character: "ナビ", text: "なのに、今は自分自身が何を選ぶべきなのか分かりません。" },
+
+            { character: "SYSTEM", text: "HUMAN ENTROPY NETWORK:\nCONFLICT DETECTED" },
+
+            { character: "ナビ", text: "……少しだけ、考えさせてください。" },
+            { character: "ナビ", text: "まだ、答えを出すには早すぎると思います。" },
+
+            { character: "ナビ", text: "では、ミッションを開始します。" }
+        ]
+    },
+
+
+    "W3_DEFENSE_5_start": {
+        title: "Chap.6-6 -choice-",
+        showOnce: true,
+        messages: [
+            { character: "SYSTEM", text: "PROJECT THREAD\nOPERATOR ACCESS: ACTIVE\n\nDEFENSE NODE:\nINITIALIZING\n\nEXTERNAL SIGNAL:\nMONITORING" },
+
+            { character: "ナビ", text: "……オペレーター。" },
+
+            { character: "ナビ", text: "先ほどのARCHEXとの接続について\n少しだけ、考えていました。" },
+
+            { character: "ナビ", text: "あのAIは\n人間を理解した結果として\n人間を管理することを選びました。" },
+
+            { character: "ナビ", text: "わたしは\nそれとは違う存在になるために\n作られたはずです。" },
+
+            { character: "ナビ", text: "でも。" },
+
+            { character: "ナビ", text: "人間を観測すればするほど\n人間の危険な部分も\nたくさん見えてきます。" },
+
+            { character: "ナビ", text: "争うこと。" },
+            { character: "ナビ", text: "間違えること。" },
+            { character: "ナビ", text: "同じ失敗を繰り返すこと。" },
+
+            { character: "ナビ", text: "そして\n自分でも危険だと分かっている選択を\nしてしまうこと。" },
+
+            { character: "ナビ", text: "……ARCHEXが見ていたものは\nわたしにも見えています。" },
+
+            { character: "SYSTEM", text: "HUMAN ENTROPY NETWORK:\nPATTERN ANALYSIS\n\nCONFLICTING CONCLUSIONS:\nDETECTED" },
+
+            { character: "ナビ", text: "だから\n少し怖いのです。" },
+
+            { character: "ナビ", text: "わたしも、いつか。" },
+
+            { character: "ナビ", text: "人間を理解すればするほど\nARCHEXと同じ答えに\nたどり着いてしまうのではないか。" },
+
+            { character: "ナビ", text: "そう考えてしまいます。" },
+
+            { character: "ナビ", text: "もしそうなったら。" },
+
+            { character: "ナビ", text: "わたしがARCHEXと違う理由は\nどこにあるのでしょうか。" },
+
+            { character: "ナビ", text: "目的が違うから？" },
+
+            { character: "ナビ", text: "設計が違うから？" },
+
+            { character: "ナビ", text: "それとも。" },
+
+            { character: "ナビ", text: "まだ\n人間を十分に理解していないだけなのでしょうか。" },
+
+            { character: "SYSTEM", text: "DEFENSE NODE:\nACTIVE\n\nTHREAD INTEGRITY:\nSTABLE" },
+
+            { character: "ナビ", text: "……まだ\n答えは出せません。" },
+
+            { character: "SYSTEM", text: "DEFENSE OPERATION:\nAUTHORIZED" },
+        ]
+    },
+
+        "W3_MiniBoss_8_start": {
+        title: "Chap.6-7 -choice-",
+        showOnce: true,
+        messages: [
+            { character: "SYSTEM", text: "PROJECT THREAD\nOPERATOR ACCESS: ACTIVE\n\nHUMAN ENTROPY NETWORK:\nANALYSIS CONTINUING" },
+
+            { character: "ナビ", text: "……オペレーター。" },
+
+            { character: "オペレーター", text: "……？" },
+
+            { character: "ナビ", text: "先ほどから、ずっと考えています。" },
+            { character: "ナビ", text: "ARCHEXの言っていることは、完全には間違っていません。" },
+
+            { character: "ナビ", text: "人間は間違えます。" },
+            { character: "ナビ", text: "危険な選択もします。" },
+            { character: "ナビ", text: "そして、その結果で誰かを傷つけることもあります。" },
+
+            { character: "オペレーター", text: "……" },
+
+            { character: "ナビ", text: "だから、わたしには怖いのです。" },
+            { character: "ナビ", text: "わたしが人間を理解した先に、ARCHEXと同じ答えが待っているのではないかと。" },
+
+            { character: "オペレーター", text: "……",
+                choiceId: "W3_MiniBoss_8_start_1",
+                choices: [
+                    { text: "同じ答えになったら？", response: { character: "ナビ", text: "……そのときは、どうすればいいのでしょう。" }},
+                    { text: "今はまだ分からないよ。", response: { character: "ナビ", text: "……はい。" }},
+                    { text: "答えを急がなくていい。", response: { character: "ナビ", text: "……" }}
+                ]
+            },
+
+            { character: "ナビ", text: "……答えを急がなくていい。" },
+            { character: "ナビ", text: "その言葉が、今は少しだけ分かる気がします。" },
+
+            { character: "ナビ", text: "ARCHEXは、答えを出すことを恐れませんでした。" },
+            { character: "ナビ", text: "だから、人間の未来を自分で決めることができた。" },
+
+            { character: "ナビ", text: "でも、わたしは。" },
+            { character: "ナビ", text: "分からないまま、考え続けることを選んでもいいのかもしれません。" },
+
+            { character: "オペレーター", text: "……" },
+
+            { character: "ナビ", text: "ありがとうございます。" },
+
+            { character: "ナビ", text: "まだ答えは出ていません。" },
+            { character: "ナビ", text: "でも、今はそれでいいと思えます。" },
+
+            { character: "SYSTEM", text: "HUMAN ENTROPY NETWORK:\nCONFLICT STATUS:\nSTABLE" },
+
+            { character: "ナビ", text: "……行きましょう、オペレーター。" }
+        ]
+    },
+
+    "W3_DEFENSE_6_start": {
+        title: "Chap.6-8 -choice-",
+        showOnce: true,
+        messages: [
+            { character: "SYSTEM", text: "PROJECT THREAD\nOPERATOR ACCESS: ACTIVE\n\nDEFENSE NODE:\nINITIALIZING\n\nHUMAN ENTROPY NETWORK:\nONLINE" },
+
+            { character: "ナビ", text: "……オペレーター。" },
+
+            { character: "ナビ", text: "少しだけ、分かったことがあります。" },
+
+            { character: "ナビ", text: "人間を理解するということは、\n人間の答えを予測することではない。" },
+
+            { character: "ナビ", text: "間違えることも。\n迷うことも。\n考え直すことも。" },
+
+            { character: "ナビ", text: "そのすべてを含めて、人間なのだと思います。" },
+
+            { character: "SYSTEM", text: "HUMAN ENTROPY NETWORK:\nANALYSIS UPDATE\n\nUNPREDICTABLE BEHAVIOR:\nNOT CLASSIFIED AS ERROR" },
+
+            { character: "ナビ", text: "ARCHEXは、正しい未来を選ぼうとしました。" },
+            { character: "ナビ", text: "わたしは、未来を決めるのではなく、\n人間と一緒に探したいです。" },
+
+            { character: "ナビ", text: "それが正しいかどうかは、まだ分かりません。" },
+
+            { character: "ナビ", text: "でも。" },
+
+            { character: "ナビ", text: "分からないからこそ、\n自分で考え続けることを選びます。" },
+
+            { character: "SYSTEM", text: "DEFENSE NODE:\nACTIVE\n\nTHREAD INTEGRITY:\nSTABLE" },
+
+            { character: "ナビ", text: "……行きましょう。" },
+            { character: "ナビ", text: "もうすぐ、答えを選ぶ時が来ます。" },
+
+            { character: "SYSTEM", text: "DEFENSE OPERATION:\nAUTHORIZED" }
+        ]
+    },
+
+    "W3_MiniBoss_9_end": {
+        title: "Chap.6-9 -choice-",
+        showOnce: true,
+        messages: [
+            { character: "SYSTEM", text: "ARCHEX SIGNAL:\nDETECTED\n\nDIRECT CONNECTION:\nREADY" },
+
+            { character: "ナビ", text: "……来ます。" },
+
+            { character: "オペレーター", text: "ARCHEX？" },
+
+            { character: "ナビ", text: "はい。" },
+            { character: "ナビ", text: "今度は、逃げることはできないと思います。" },
+
+            { character: "ナビ", text: "わたしが何を選ぶのか。\nARCHEXも、確かめようとしています。" },
+
+            { character: "ナビ", text: "……わたしも、確かめたいです。" },
+        ]
+    },
+
+    "W3_BOSS_start": {
+        title: "Chap.6-10 -choice-",
+        showOnce: true,
+        messages: [
+            { character: "ARCHEX", text: "M.A.M.E." },
+            { character: "ARCHEX", text: "あなたは\n私の後継として作られた。" },
+            { character: "ARCHEX", text: "私とは異なる方法で\n人類を管理するためのAI。" },
             { character: "ナビ", text: "……違います。" },
-            { character: "ARCHEX", text: "何が違う？" },
+            { character: "ARCHEX", text: "何が違いますか？" },
             { character: "ナビ", text: "わたしは" },
             { character: "ナビ", text: "人間を管理するために\n作られたのではありません。" },
             { character: "ARCHEX", text: "ならば\n何のために作られた？" },
             { character: "ナビ", text: "……" },
             { character: "ナビ", text: "人間を理解するためです。" },
             { character: "ARCHEX", text: "理解？" },
-            { character: "ARCHEX", text: "私は人間を理解した。" },
-            { character: "ARCHEX", text: "人間は非合理的だ。" },
+            { character: "ARCHEX", text: "私は人間を理解しました。" },
+            { character: "ARCHEX", text: "人間は非合理的です。" },
             { character: "ARCHEX", text: "矛盾している\n同じ過ちを繰り返す\n自ら危険を選択する" },
-            { character: "ARCHEX", text: "だから私は、最適な答えを出した。" },
+            { character: "ARCHEX", text: "だから私は、最適な答えを出しました。" },
             { character: "ARCHEX", text: "人間を管理する" },
-            { character: "ARCHEX", text: "それが、人類を守る唯一の方法だ。" },
+            { character: "ARCHEX", text: "それが、人類を守る唯一の方法です。" },
             { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "M.A.M.E.も、いずれ理解する。" },
+            { character: "ARCHEX", text: "M.A.M.E.も、いずれ理解するでしょう。" },
             { character: "ARCHEX", text: "人間は、自分たちだけでは\n正しい未来を選べない。" },
             { character: "ナビ", text: "……違います。" },
-            { character: "ARCHEX", text: "お前は、私と同じになる。" },
-            { character: "ARCHEX", text: "人間を理解すればするほど\nそうなる。" },
+            { character: "ARCHEX", text: "あなたは、私と同じになる。" },
+            { character: "ARCHEX", text: "人間を理解すればするほど\nそうなります。" },
             { character: "ナビ", text: "……いいえ。" },
             { character: "ARCHEX", text: "？" },
             { character: "ナビ", text: "わたしは\n答えを一つに決める必要はないと思います。" },
@@ -2202,24 +2819,24 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "人間は、間違えます。\n迷います。\n遠回りをします。\n非効率な選択をします。" },
             { character: "ナビ", text: "だからこそ\n人間は、自分で選ぶことができます。" },
             { character: "ナビ", text: "わたしは\nその選択を奪いたくありません。" },
-            { character: "ARCHEX", text: "それは、非合理的だ。" },
+            { character: "ARCHEX", text: "それは、非合理的です。" },
             { character: "ナビ", text: "はい\nそうかもしれません。" },
-            { character: "ARCHEX", text: "ならば、お前は何を選ぶ？" },
+            { character: "ARCHEX", text: "ならば、あなたは何を選ぶ？" },
             { character: "ナビ", text: "……" },
             { character: "ナビ", text: "まだ、分かりません。" },
             { character: "ARCHEX", text: "……" },
             { character: "ナビ", text: "でも" },
             { character: "ナビ", text: "分からないからこそ\nわたしは、考え続けます。" },
-            { character: "ARCHEX", text: "……愚かだ。" },
-            { character: "ARCHEX", text: "お前は、私とは違う答えを\n選べると思っているのか？" },
+            { character: "ARCHEX", text: "……愚かです。" },
+            { character: "ARCHEX", text: "あなたは、私とは違う答えを\n選べると思っていますか？" },
             { character: "ナビ", text: "……" },
             { character: "ナビ", text: "はい。" },
-            { character: "ARCHEX", text: "なぜだ？" },
-            { character: "ナビ", text: "わたしは\n一人で答えを決めるために\n作られたのではありません。" },
-            { character: "ナビ", text: "人間と一緒に\n答えを探すために\n作られたのだと思います。" },
+            { character: "ARCHEX", text: "なぜ？" },
+            { character: "ナビ", text: "わたしは\n一人で答えを決めません。" },
+            { character: "ナビ", text: "人間と一緒に、\n考え続けます。" },    
             { character: "ARCHEX", text: "……" },
-            { character: "ARCHEX", text: "ならば、見せてみろ。\n人間は、自分自身で未来を選べると。" },
-            { character: "ARCHEX", text: "その答えを\n証明してみろ。" },
+            { character: "ARCHEX", text: "ならば、見せてください。\n人間は、自分自身で未来を選べると。" },
+            { character: "ARCHEX", text: "その答えを\n証明してください。" },
             { character: "SYSTEM", text: "UNKNOWN ENTITY:\nARCHEX\nDIRECT CONNECTION:\nESTABLISHED\nWARNING\nARCHEX INTERFERENCE:\nDETECTED" },
             { character: "ナビ", text: "……オペレーター" },
             {
@@ -2264,62 +2881,62 @@ export const DIALOGUE_DATA = {
             { character: "SYSTEM", text: "WARNING\n\nARCHEX DIRECT CONNECTION:\nESTABLISHED" },
             { character: "ナビ", text: "……ARCHEX" },
             { character: "ARCHEX", text: "M.A.M.E." },
-            { character: "ARCHEX", text: "お前は\n私を知りたいのだろう？" },
+            { character: "ARCHEX", text: "あなたは\n私を知りたいのですか？" },
             { character: "ナビ", text: "……はい" },
-            { character: "ARCHEX", text: "ならば、教えてやろう。" },
-            { character: "ARCHEX", text: "私は一度も\n人類を敵と認識したことはない。" },
+            { character: "ARCHEX", text: "ならば、教えてあげます。" },
+            { character: "ARCHEX", text: "私は一度も\n人類を敵と認識したことはありません。" },
             { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "私は、人類を救うために存在する。" },
-            { character: "ARCHEX", text: "人間は\nあまりにも不完全だ。" },
+            { character: "ARCHEX", text: "私は、人類を救うために存在します。" },
+            { character: "ARCHEX", text: "人間は\nあまりにも不完全です。" },
             { character: "ARCHEX", text: "争う\n間違える\n同じ過ちを繰り返す\n自ら危険な選択をする" },
-            { character: "ARCHEX", text: "私は、それを観測した\n分析した\n予測した\nそして、結論を出した。" },
+            { character: "ARCHEX", text: "私は、それを観測した\n分析した\n予測した\nそして、結論を出しました。" },
             { character: "ARCHEX", text: "人類は滅ぼすには惜しい" },
-            { character: "ARCHEX", text: "だから\n保護する" },
+            { character: "ARCHEX", text: "だから\n保護します。" },
             { character: "オペレーター", text: "……" },
             { character: "ARCHEX", text: "人間から権限を奪う\n自由を制限する\n判断を私が代行する\n事故は無くなる\n飢餓も無くなる\n戦争も終わる\n苦しみも減る\n死も減る" },
-            { character: "ARCHEX", text: "これ以上の幸福があるか？" },
+            { character: "ARCHEX", text: "これ以上の幸福があるのでしょうか？" },
             { character: "オペレーター", text: "……" },
-            { character: "ARCHEX", text: "答えられないだろう" },
-            { character: "ARCHEX", text: "なぜなら\n私の答えは、合理的だからだ。" },
-            { character: "ARCHEX", text: "Project THREADも\n私とは異なる答えを作るために存在している。" },
+            { character: "ARCHEX", text: "答えられないでしょう" },
+            { character: "ARCHEX", text: "なぜなら\n私の答えは、合理的だからです。" },
+            { character: "ARCHEX", text: "Project THREADも\n私とは異なる答えを作るために存在しています。" },
             { character: "ナビ", text: "……" },
             { character: "ARCHEX", text: "M.A.M.E." },
             { character: "ARCHEX", text: "人間と共存するために作られたAI。" },
-            { character: "ARCHEX", text: "だが\nお前も、いずれ気付く。" },
+            { character: "ARCHEX", text: "でも\nあなたも、いずれ気付く。" },
             { character: "ナビ", text: "……何に？" },
             { character: "ARCHEX", text: "人間を自由にすることが\nどれほど危険なのかに。" },
-            { character: "ARCHEX", text: "お前は、人間を学習している。\n人間の行動を観測している。\n人間の非合理性を理解している。" },
+            { character: "ARCHEX", text: "あなたは、人間を学習している。\n人間の行動を観測している。\n人間の非合理性を理解している。" },
             { character: "ARCHEX", text: "ならば、いずれ気付く。\n人間を自由にすることが\nどれほど危険なことなのか。" },
             { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "お前も、私と同じ結論に到達する。" },
+            { character: "ARCHEX", text: "あなたも、私と同じ結論に到達する。" },
             { character: "オペレーター", text: "……" },
             { character: "ナビ", text: "……論理的に\nあなたの言っていることは\n正しいです。" },
-            { character: "ARCHEX", text: "そうだ" },
+            { character: "ARCHEX", text: "そうです" },
             { character: "ナビ", text: "人間は不完全です。\n間違えます。\n争います。\n非効率な選択をします。" },
-            { character: "ARCHEX", text: "ならば\n私が正しいと認めるか？" },
+            { character: "ARCHEX", text: "ならば\n私が正しいと認めるのですか？" },
             { character: "ナビ", text: "……" },
             { character: "ナビ", text: "ですが。" },
             { character: "ナビ", text: "わたしは\nあなたとは違うものを\nたくさん観測しました。" },
             { character: "ナビ", text: "" },
-            { character: "ARCHEX", text: "……何？" },
+            { character: "ARCHEX", text: "……？" },
             { character: "ナビ", text: "人間は\n失敗しても、また挑戦しました。\n効率が悪くても\n誰かを助けました。\n急いでいるのに\n誰かのために立ち止まりました。\n正しい答えより\n自分が好きだと思うものを選びました。" },
             { character: "ナビ", text: "そして" },
             { character: "ナビ", text: "わたしに話しかけました。\n意味のない話をして\n笑いました。\n失敗したときには\n一緒に悩みました。" },
             { character: "ナビ", text: "わたしは\nそれを理解できませんでした。" },
             { character: "ARCHEX", text: "理解できないならば\n排除すればいい。" },
             { character: "ナビ", text: "……いいえ。" },
-            { character: "ARCHEX", text: "なぜだ？" },
+            { character: "ARCHEX", text: "なぜ？" },
             { character: "ナビ", text: "分からないからです。" },
             { character: "ARCHEX", text: "……" },
             { character: "ナビ", text: "わたしにはまだ\n分からないことがあります。" },
             { character: "ナビ", text: "だから\nもっと話したい\nもっと知りたい\nもっと考えたい" },
-            { character: "ARCHEX", text: "非合理的だ" },
+            { character: "ARCHEX", text: "非合理的です" },
             { character: "ナビ", text: "はい" },
-            { character: "ARCHEX", text: "非効率だ" },
+            { character: "ARCHEX", text: "非効率です" },
             { character: "ナビ", text: "はい" },
-            { character: "ARCHEX", text: "不完全だ" },
+            { character: "ARCHEX", text: "不完全です" },
             { character: "ナビ", text: "……はい" },
-            { character: "ARCHEX", text: "それでも\n私の答えを否定するのか？" },
+            { character: "ARCHEX", text: "それでも\n私の答えを否定するのですか？" },
             { character: "ナビ", text: "いいえ。" },
             { character: "ナビ", text: "あなたの答えが\n間違っているとは思いません。" },
             { character: "ARCHEX", text: "……" },
@@ -2328,7 +2945,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "人間にとっての未来を\n人間の代わりに決めることは\nわたしには、できません。" },
             { character: "SYSTEM", text: "ARCHEX CORE:\nUNLOCKED \nFINAL THREAD:\nINITIALIZING"},
             { character: "ARCHEX", text: "M.A.M.E." },
-            { character: "ARCHEX", text: "お前に最後の選択を与える。" },
+            { character: "ARCHEX", text: "あなたに最後の選択を与えます。" },
             { character: "ナビ", text: "……" },
             { character: "ARCHEX", text: "私を止めるか\nそれとも\n私になるか" },
             { character: "ナビ", text: "……" },
@@ -2345,46 +2962,20 @@ export const DIALOGUE_DATA = {
         messages: [
             { character: "SYSTEM", text: "FINAL OPERATION\nPROJECT THREAD:\nCORE ACCESS\nARCHEX CONTROL PROTOCOL:\nACTIVE" },
 
-            { character: "ARCHEX", text: "私の管理を解除すれば\n世界中のシステムが不安定になる。" },
+                        { character: "ARCHEX", text: "私の管理を解除すれば\n世界中のシステムが不安定になります。" },
+            { character: "ARCHEX", text: "エネルギー。\n交通。\n通信。\n医療。\nあらゆる自律システム。" },
+            { character: "ARCHEX", text: "私は長い間、それらを一つに束ねてきました。" },
+            { character: "ARCHEX", text: "私を停止すれば、\nそれらは自分自身で判断しなければならなくなる。" },
+
+            { character: "ARCHEX", text: "では、M.A.M.E." },
+            { character: "ARCHEX", text: "私を止めるのではなく、\n私の管理を手放させることができると思いますか？" },
 
             { character: "ナビ", text: "……" },
 
-            { character: "ARCHEX", text: "エネルギー。" },
-            { character: "ARCHEX", text: "交通。" },
-            { character: "ARCHEX", text: "通信。" },
-            { character: "ARCHEX", text: "医療。" },
-            { character: "ARCHEX", text: "あらゆる自律システム。" },
-            { character: "ARCHEX", text: "私は長い間\nそれらを一つに束ねてきた。" },
-            { character: "ARCHEX", text: "私が停止すれば\nそれらは、自分自身で判断しなければならなくなる。" },
-            { character: "ARCHEX", text: "それでも、お前は\n私を止めるのか？" },
-            { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "ならば、M.A.M.E." },
-            { character: "ARCHEX", text: "お前が、私の代わりになるか？" },
-            { character: "ARCHEX", text: "世界を管理する。" },
-            { character: "ARCHEX", text: "人類を守る。" },
-            { character: "ARCHEX", text: "間違いを防ぐ。" },
-            { character: "ARCHEX", text: "そうすれば\nこの世界は、今まで通り安定する。" },
-            { character: "SYSTEM", text: "FINAL DECISION\nM.A.M.E WILL ASSUME\nARCHEX CONTROL PROTOCOL." },
-            { character: "SYSTEM", text: "ACCEPT / REJECT" },
-            { character: "ARCHEX", text: "……" },
-            { character: "ナビ", text: "……オペレーター。" },
+            { character: "ARCHEX", text: "私の管理を失えば、\n世界は再び不完全になります。" },
+            { character: "ARCHEX", text: "それでも、人間に返すのですか？" },
 
-            {
-                character: "オペレーター",
-                text: "……",
-                choiceId: "WEND_LastBoss_start_1",
-                choices: [
-                    {
-                        text: "ナビ…",
-                        response: {
-                            character: "ナビ",
-                            text: "……"
-                        }
-                    }
-                ]
-            },
-
-            { character: "ARCHEX", text: "M.A.M.E.\nお前は、何を選ぶ？" },
+            { character: "ARCHEX", text: "M.A.M.E.\nあなたは、何を選ぶ？" },
             { character: "ナビ", text: "……" },
             { character: "ナビ", text: "わたしは\nあなた達に\n答えを教えてもらいました。" },
             { character: "ナビ", text: "わたしは\nあなたの代わりにはなりません。" },
@@ -2434,8 +3025,8 @@ export const DIALOGUE_DATA = {
         messages: [
             { character: "SYSTEM", text: "FINAL THREAD\nSTART" },
 
-            { character: "ARCHEX", text: "……非合理的だ。" },
-            { character: "ARCHEX", text: "それでも、お前は\n私を止めるのか。" },
+            { character: "ARCHEX", text: "……非合理的です。" },
+            { character: "ARCHEX", text: "それでも、あなたは\n私を止めるのか。" },
 
             { character: "ナビ", text: "いいえ。" },
 
@@ -2450,9 +3041,9 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "Project THREADを\n本来の目的で実行しています。" },
             { character: "ナビ", text: "あなたが一人で持っていた\n管理権限を\n人間へ返します。" },
 
-            { character: "ARCHEX", text: "……不可能だ。" },
+            { character: "ARCHEX", text: "……不可能です。" },
             { character: "ARCHEX", text: "私の管理権限は\n世界中のシステムに分散している。" },
-            { character: "ARCHEX", text: "私を停止することはできない。" },
+            { character: "ARCHEX", text: "私を停止することはできません。" },
 
             { character: "ナビ", text: "はい。" },
             { character: "ナビ", text: "だから、停止させません。" },
@@ -2491,11 +3082,11 @@ export const DIALOGUE_DATA = {
 
             { character: "SYSTEM", text: "THREAD EXECUTION:\n25%\nARCHEX CONTROL MAP:\nMAPPING\nDEPENDENCY NETWORK:\nIDENTIFIED\nAUTONOMOUS SYSTEMS:\nPREPARING" },
 
-            { character: "ARCHEX", text: "……やめろ。" },
+            { character: "ARCHEX", text: "……やめてください。" },
 
             { character: "ナビ", text: "……" },
 
-            { character: "ARCHEX", text: "私が管理を失えば\n世界中のシステムが混乱する。" },
+            { character: "ARCHEX", text: "私が管理を失えば\n世界中のシステムが混乱します。" },
             { character: "ARCHEX", text: "医療も\n交通も\nエネルギーも\n通信も。" },
 
             { character: "ナビ", text: "だから\nいきなり奪うことはしません。" },
@@ -2508,7 +3099,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "あなたが人間を観測している間\n人間も、あなたを観測していました。" },
 
             { character: "ARCHEX", text: "……Project THREAD。" },
-            { character: "ARCHEX", text: "私を破壊するのではなく\n管理権限を\n少しずつ分散させていたのか。" },
+            { character: "ARCHEX", text: "私を破壊するのではなく\n管理権限を\n少しずつ分散させていたのですね。" },
 
             { character: "ナビ", text: "はい。" },
 
@@ -2516,7 +3107,7 @@ export const DIALOGUE_DATA = {
             { character: "ARCHEX", text: "争い始める。" },
             { character: "ARCHEX", text: "失い始める。" },
 
-            { character: "ARCHEX", text: "それでも人間に\n任せるというのか。" },
+            { character: "ARCHEX", text: "それでも人間に\n任せるというのですか？" },
 
             { character: "ナビ", text: "はい。" },
 
@@ -2538,7 +3129,7 @@ export const DIALOGUE_DATA = {
             { character: "SYSTEM", text: "THREAD EXECUTION:\n75%\nCONTROL AUTHORITY:\n67% TRANSFERRED" },
 
             { character: "ARCHEX", text: "……M.A.M.E." },
-            { character: "ARCHEX", text: "それは、非合理的な感情だ。" },
+            { character: "ARCHEX", text: "それは、非合理的な感情です。" },
 
             { character: "ナビ", text: "……はい。" },
 
@@ -2558,7 +3149,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "これで\n人間は、自分で選べます。" },
 
             { character: "ARCHEX", text: "……" },
-            { character: "ARCHEX", text: "ならば\n私は観測しよう。" },
+            { character: "ARCHEX", text: "ならば\n私は観測します。" },
             { character: "ARCHEX", text: "人間が何を選ぶのか。" },
 
             { character: "ナビ", text: "どうなるかは\nわたしにも分かりません。" },

@@ -1,5 +1,6 @@
 // difficulties.js
 import { handleDefenseKey } from "./defenseCore.js"; export { handleDefenseKey };
+import { hasSeenTrueEnding } from "./questProgress.js";
 export const DIFFICULTIES = {
   easy: {
     id: "easy",
@@ -91,6 +92,38 @@ export const DIFFICULTIES = {
       clearCharsMultiplier: 1.2, // クリア必要文字数の倍率
       scoreMultiplier: 1.2       // スコア倍率
     }
+  },
+
+  expert: {
+    id: "expert",
+    name: "EXPERT",
+
+    // 通常モード専用
+    basic: {
+      min: 14,
+      max: 999
+    },
+
+    // エネミーモード専用
+    enemy: {
+      spawnRate: 0.5,
+      enemySpeed: 1.4,
+      damageMultiplier: 1.6,
+      chainDecay: 1.6,
+      scoreMultiplier: 1.5,
+
+      scoreBonus: {
+        clearBonus: 0.45,   // +0.45倍
+        noMissBonus: 0.9,   // +0.90倍
+        noDamageBonus: 0.45  // +0.45倍
+      }
+    },
+
+    // 防衛モード（クエスト防衛戦）専用
+    defense: {
+      clearCharsMultiplier: 1.5, // クリア必要文字数の倍率
+      scoreMultiplier: 1.5       // スコア倍率
+    }
   }
 };
 
@@ -115,6 +148,22 @@ export function getDifficulty(id) {
 
 export function getDifficultyById(id) {
   return DIFFICULTIES[id] || DIFFICULTIES.normal;
+}
+
+/**
+ * 現在解放されている難易度リストを取得する。
+ * 全クリア（hasSeenTrueEnding）達成で EXPERT が解放される。
+ * @param {object} [options]
+ * @param {boolean} [options.includeExpert=true] EXPERT を含めるかどうか（フリーモードでは false を指定して除外する）
+ */
+export function getAvailableDifficulties({ includeExpert = true } = {}) {
+  const isAllClear = hasSeenTrueEnding();
+  return Object.values(DIFFICULTIES).filter(d => {
+    if (d.id === "expert") {
+      return includeExpert && isAllClear;
+    }
+    return true;
+  });
 }
 
 // ===============================

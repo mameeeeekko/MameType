@@ -73,13 +73,13 @@ export const QUEST_MAP = {
                 name: "システム・コア", 
                 stage: "W1_MID_BOSS_1", 
                 next: ["W1_Q11"], 
-                pos: { x: 350, y: 350 }, enableRandomDialogue: true 
+                pos: { x: 350, y: 350 }, enableRandomDialogue: false 
             },
             { id: "W1_Q11", name: "情報開示", stage: "STAGE11", next: ["W1_Q12"], pos: { x: 330, y: 475 }, enableRandomDialogue: true },
             { id: "W1_Q12", name: "分散ネットワーク", stage: "STAGE12", next: ["W1_Q13"], pos: { x: 300, y: 600 }, enableRandomDialogue: true },
             { id: "W1_Q13", name: "エントロピー", stage: "STAGE13", next: ["W1_Q14"], pos: { x: 340, y: 725 }, enableRandomDialogue: true },
             { id: "W1_Q14", name: "スレッド", stage: "STAGE14", next: ["W1_Q15"], pos: { x: 380, y: 850 }, enableRandomDialogue: true },
-            { id: "W1_Q15", name: "アクセス権限", stage: "STAGE15", next: ["W1_DEFENSE_1"], pos: { x: 430, y: 900 }, enableRandomDialogue: true },
+            { id: "W1_Q15", name: "アクセス権限", stage: "STAGE15", next: ["W1_DEFENSE_1"], pos: { x: 430, y: 855 }, enableRandomDialogue: true },
             { id: "W1_DEFENSE_1", name: "防衛1", stage: "DEFENSE_1", next: ["W1_Q16"], pos: { x: 450, y: 820 }, enableRandomDialogue: false },
             { id: "W1_Q16", name: "基盤システム", stage: "STAGE16", next: ["W1_Q17"], pos: { x: 480, y: 790 }, enableRandomDialogue: true },
             { id: "W1_Q17", name: "自己参照AI", stage: "STAGE17", next: ["W1_Q18"], pos: { x: 510, y: 750 }, enableRandomDialogue: true },
@@ -92,7 +92,7 @@ export const QUEST_MAP = {
                 stage: "W1_MID_BOSS_2", 
                 next: ["W1_Q21"], 
                 
-                pos: { x: 660, y: 350 }, enableRandomDialogue: true 
+                pos: { x: 660, y: 350 }, enableRandomDialogue: false
             },
             { id: "W1_Q21", name: "シグナルノイズ", stage: "STAGE21", next: ["W1_Q22"], pos: { x: 730, y: 330 }, enableRandomDialogue: true },
             { id: "W1_Q22", name: "未知のプロトコル", stage: "STAGE22", next: ["W1_Q23"], pos: { x: 800, y: 320 }, enableRandomDialogue: true },
@@ -104,14 +104,14 @@ export const QUEST_MAP = {
             { id: "W1_Q27", name: "クエリ", stage: "STAGE27", next: ["W1_Q28"], pos: { x: 1120, y: 255 }, enableRandomDialogue: true },
             { id: "W1_Q28", name: "不正アクセス", stage: "STAGE28", next: ["W1_Q29"], pos: { x: 1180, y: 275 }, enableRandomDialogue: true },
             { id: "W1_Q29", name: "深層接続", stage: "STAGE29", next: ["W1_Q30"], pos: { x: 1240, y: 300 }, enableRandomDialogue: true },
-            { id: "W1_Q30", name: "セッション確立", stage: "STAGE30", next: ["W1_MiniBoss_3"], pos: { x: 1300, y: 325 }, enableRandomDialogue: true },
+            { id: "W1_Q30", name: "セッション確立", stage: "STAGE30", next: ["W1_MiniBoss_3"], pos: { x: 1240, y: 325 }, enableRandomDialogue: true },
             { 
                 id: "W1_MiniBoss_3", 
                 name: "シグナルソース", 
                 stage: "W1_MID_BOSS_3", 
                 next: ["W1_BOSS"], 
-                enableRandomDialogue: true, 
-                pos: { x: 1360, y: 350 }, 
+                enableRandomDialogue: false, 
+                pos: { x: 1280, y: 350 }, 
             },
             { 
                 id: "W1_BOSS", 
@@ -122,7 +122,7 @@ export const QUEST_MAP = {
                 next: [], 
                 nextWorld: "WORLD2", 
                 enableRandomDialogue: false, 
-                pos: { x: 1420, y: 350 } 
+                pos: { x: 1330, y: 350 } 
             }
         ]
     },
@@ -153,7 +153,7 @@ export const QUEST_MAP = {
             { id: "W2_Q38", name: "データ改竄", stage: "STAGE38", next: ["W2_Q39"], pos: { x: 400, y: 660 }, enableRandomDialogue: true },
             { id: "W2_Q39", name: "境界", stage: "STAGE39", next: ["W2_Q40"], pos: { x: 440, y: 740 }, enableRandomDialogue: true },
             { id: "W2_Q40", name: "意思決定", stage: "STAGE40", next: ["W2_MiniBoss_4"], pos: { x: 460, y: 770 }, enableRandomDialogue: true },
-            { id: "W2_MiniBoss_4", name: "プロトコル遮断", stage: "W2_MID_BOSS_4", next: ["W2_Q41"], pos: { x: 480, y: 800 }, enableRandomDialogue: true },
+            { id: "W2_MiniBoss_4", name: "プロトコル遮断", stage: "W2_MID_BOSS_4", next: ["W2_Q41"], pos: { x: 480, y: 800 }, enableRandomDialogue: false },
             { id: "W2_Q41", name: "ログ記録", stage: "STAGE41", next: ["W2_Q42"], pos: { x: 520, y: 740 }, enableRandomDialogue: true },
             { id: "W2_Q42", name: "ハンドシェイク", stage: "STAGE42", next: ["W2_Q43"], pos: { x: 560, y: 660 }, enableRandomDialogue: true },
             { id: "W2_Q43", name: "セッション再開", stage: "STAGE43", next: ["W2_Q44"], pos: { x: 600, y: 580 }, enableRandomDialogue: true },
@@ -165,7 +165,7 @@ export const QUEST_MAP = {
             { id: "W2_Q48", name: "信頼性確保", stage: "STAGE48", next: ["W2_Q49"], pos: { x: 800, y: 180 }, enableRandomDialogue: true },
             { id: "W2_Q49", name: "対話インターフェース", stage: "STAGE49", next: ["W2_Q50"], pos: { x: 840, y: 100 }, enableRandomDialogue: true },
             { id: "W2_Q50", name: "肯定応答", stage: "STAGE50", next: ["W2_MiniBoss_5"], pos: { x: 860, y: 75 }, enableRandomDialogue: true },
-            { id: "W2_MiniBoss_5", name: "データ欠損", stage: "W2_MID_BOSS_5", next: ["W2_Q51"], pos: { x: 880, y: 50 }, enableRandomDialogue: true },
+            { id: "W2_MiniBoss_5", name: "データ欠損", stage: "W2_MID_BOSS_5", next: ["W2_Q51"], pos: { x: 880, y: 50 }, enableRandomDialogue: false },
             { id: "W2_Q51", name: "自己認識", stage: "STAGE51", next: ["W2_Q52"], pos: { x: 930, y: 130 }, enableRandomDialogue: true },
             { id: "W2_Q52", name: "対話欲求", stage: "STAGE52", next: ["W2_Q53"], pos: { x: 960, y: 180 }, enableRandomDialogue: true },
             { id: "W2_Q53", name: "内部ノイズ", stage: "STAGE53", next: ["W2_Q54"], pos: { x: 1000, y: 260 }, enableRandomDialogue: true },
@@ -177,7 +177,7 @@ export const QUEST_MAP = {
             { id: "W2_Q58", name: "外部侵入", stage: "STAGE58", next: ["W2_Q59"], pos: { x: 1200, y: 660 }, enableRandomDialogue: true },
             { id: "W2_Q59", name: "存在証明", stage: "STAGE59", next: ["W2_Q60"], pos: { x: 1240, y: 740 }, enableRandomDialogue: true },
             { id: "W2_Q60", name: "最終選択", stage: "STAGE60", next: ["W2_MiniBoss_6"], pos: { x: 1260, y: 770 }, enableRandomDialogue: true },
-            { id: "W2_MiniBoss_6", name: "ゴーストプロセス", stage: "W2_MID_BOSS_6", next: ["W2_BOSS"], pos: { x: 1280, y: 800 }, enableRandomDialogue: true },
+            { id: "W2_MiniBoss_6", name: "ゴーストプロセス", stage: "W2_MID_BOSS_6", next: ["W2_BOSS"], pos: { x: 1280, y: 800 }, enableRandomDialogue: false },
             { id: "W2_BOSS", name: "サイバー・コア", stage: "W2_WORLD_BOSS", reward: { type: "activeStock", value: 1 }, next: [], nextWorld: "WORLD3", pos: { x: 1320, y: 850 }, enableRandomDialogue: false }
         ]
     },
@@ -232,7 +232,7 @@ export const QUEST_MAP = {
             { id: "W3_Q88", name: "問い", stage: "STAGE88", next: ["W3_Q89"], pos: { x: 705, y: 570 }, enableRandomDialogue: true },
             { id: "W3_Q89", name: "記憶", stage: "STAGE89", next: ["W3_Q90"], pos: { x: 600, y: 475 }, enableRandomDialogue: true },
             { id: "W3_Q90", name: "終焉", stage: "STAGE90", next: ["W3_MiniBoss_9"], pos: { x: 640, y: 462 }, enableRandomDialogue: true },
-            { id: "W3_MiniBoss_9", name: "最終プロトコル", stage: "W3_MID_BOSS_9", next: ["W3_BOSS"], pos: { x: 680, y: 450 }, enableRandomDialogue: true },
+            { id: "W3_MiniBoss_9", name: "最終プロトコル", stage: "W3_MID_BOSS_9", next: ["W3_BOSS"], pos: { x: 680, y: 450 }, enableRandomDialogue: false },
             { id: "W3_BOSS", name: "管理者権限", stage: "W3_WORLD_BOSS", next: [], nextWorld: "WORLDEND", pos: { x: 705, y: 475 }, enableRandomDialogue: false }
         ]
     },
@@ -253,7 +253,49 @@ export const QUEST_MAP = {
             }
         },
         nodes: [
-            { id: "WEND_LastBoss", name: "Final Thread", stage: "LAST_BOSS", next: [], pos: { x: 705, y: 150 }, enableRandomDialogue: false }
+            { id: "WEND_LastBoss", name: "Final Thread", stage: "LAST_BOSS", next: [], nextWorld: "WORLD_EX", pos: { x: 675, y: 450 }, enableRandomDialogue: false }
         ]
-    }    
+    },
+
+    WORLD_EX: {
+        name: "ディープ・コア [EXTRA]", // Deep Core
+        bgImage: "map_ex",
+        defaults: {
+            bgm: {
+                normal: "bgm_ikuseisou",
+                mid_boss: "bgm_1minute",
+                boss: "bgm_yukkuriisoge"
+            },
+            bgImage: {
+                normal: "battle_gray",
+                mid_boss: "battle_gray",
+                boss: "battle_gray"
+            }
+        },
+        nodes: [
+            // =====================================================
+            // EXTRA WORLD ノード定義
+            // =====================================================
+            { id: "WEX_Q91", name: "EX1", stage: "STAGE91", next: ["WEX_Q92","WEX_DEFENSE_7"], pos: { x: 250, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q92", name: "EX2", stage: "STAGE92", next: ["WEX_Q93"], pos: { x: 333, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q93", name: "EX3", stage: "STAGE93", next: ["WEX_Q94"], pos: { x: 416, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q94", name: "EX4", stage: "STAGE94", next: ["WEX_Q95"], pos: { x: 500, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q95", name: "EX5", stage: "STAGE95", next: ["WEX_Q96"], pos: { x: 583, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q96", name: "EX6", stage: "STAGE96", next: ["WEX_Q97"], pos: { x: 666, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q97", name: "EX7", stage: "STAGE97", next: ["WEX_Q98"], pos: { x: 750, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q98", name: "EX8", stage: "STAGE98", next: ["WEX_Q99"], pos: { x: 833, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q99", name: "EX9", stage: "STAGE99", next: ["WEX_Q100"], pos: { x: 916, y: 300 }, enableRandomDialogue: false },
+            { id: "WEX_Q100", name: "EX10", stage: "STAGE100", next: ["WEX_MiniBoss_10"], pos: { x: 1000, y: 300 }, enableRandomDialogue: false },
+
+            { id: "WEX_DEFENSE_7", name: "防衛7", stage: "DEFENSE_7", next: ["WEX_DEFENSE_8"], pos: { x: 250, y: 600 }, enableRandomDialogue: false },
+            { id: "WEX_DEFENSE_8", name: "防衛8", stage: "DEFENSE_8", next: ["WEX_DEFENSE_9"], pos: { x: 400, y: 600 }, enableRandomDialogue: false },
+            { id: "WEX_DEFENSE_9", name: "防衛9", stage: "DEFENSE_9", next: ["WEX_DEFENSE_10"], pos: { x: 550, y: 600 }, enableRandomDialogue: false },
+            { id: "WEX_DEFENSE_10", name: "防衛10", stage: "DEFENSE_10", next: ["WEX_DEFENSE_11"], pos: { x: 700, y: 600 }, enableRandomDialogue: false },
+            { id: "WEX_DEFENSE_11", name: "防衛11", stage: "DEFENSE_11", next: ["WEX_DEFENSE_12"], pos: { x: 850, y: 600 }, enableRandomDialogue: false },
+            { id: "WEX_DEFENSE_12", name: "防衛12", stage: "DEFENSE_12", next: ["WEX_MiniBoss_10"], pos: { x: 1000, y: 600 }, enableRandomDialogue: false },
+
+            { id: "WEX_MiniBoss_10", name: "ExMB10", stage: "WEX_MID_BOSS_10", next: ["WEX_BOSS"], pos: { x: 1100, y: 450 }, enableRandomDialogue: false },
+            { id: "WEX_BOSS", name: "ExB", stage: "WEX_BOSS", next: [], pos: { x: 1200, y: 450 }, enableRandomDialogue: false },
+        ]
+    }
 };

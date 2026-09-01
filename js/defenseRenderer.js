@@ -4,6 +4,7 @@ import { getDisplayFullRoma } from "./typingLogic.js";
 import { getSoundEnabled, gameState, getNow } from "./gameCore.js";
 import { DEFENSE_COMBO_TIERS, DEFENSE_OVERDRIVE_COMBO, DEFENSE_SCORE_CONFIG } from "./defenseCore.js";
 import { spawnComboTierUpEffect, playComboTierUpSound } from "./effectManager.js";
+import { stageRect } from "./stageScale.js";
 
 
 /**
@@ -865,8 +866,8 @@ export function updateDefenseComboTierBar(stats) {
 
       const isNowOverdrive = combo >= DEFENSE_OVERDRIVE_COMBO;
       if (!isNowOverdrive) {
-        const tierWrapperRect = tierWrapper.getBoundingClientRect();
-        const canvasRect = document.getElementById("defenseModeCanvas").getBoundingClientRect();
+        const tierWrapperRect = stageRect(tierWrapper);
+        const canvasRect = stageRect(document.getElementById("defenseModeCanvas"));
         const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
         const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
         spawnComboTierUpEffect(centerX, centerY, currentTier, false);
@@ -877,8 +878,8 @@ export function updateDefenseComboTierBar(stats) {
 
   const wasOverdrive = stats.prevCombo < DEFENSE_OVERDRIVE_COMBO;
   if (wasOverdrive && isOverdrive) {
-    const tierWrapperRect = tierWrapper.getBoundingClientRect();
-    const canvasRect = document.getElementById("defenseModeCanvas").getBoundingClientRect();
+    const tierWrapperRect = stageRect(tierWrapper);
+    const canvasRect = stageRect(document.getElementById("defenseModeCanvas"));
     const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
     const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
     const lastTier = DEFENSE_COMBO_TIERS.length - 1;

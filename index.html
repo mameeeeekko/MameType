@@ -30,11 +30,25 @@
   メインメニュー
 ===================================================== -->
 <div id="menuBackground"></div>
+
+<!-- =====================================================
+  グローバルUIバー（全メニュー共通・ステージ左上固定）
+  フルスクリーン ⇔ ウィンドウ切替ボタン。
+  body（ステージ）直下に置くため、表示中のメニューに関係なく
+  常にゲーム画面の左上に表示される。
+  ※ ゲームプレイ中・起動中は js 側で自動的に隠れる
+  ※ ウィンドウサイズは自由に変更でき、ゲーム画面は自動でフィットする
+===================================================== -->
+<div id="globalUiBar">
+  <button id="globalFsToggle" class="global-fs-toggle" type="button" title="フルスクリーン ⇔ ウィンドウを切り替える">⛶ FULLSCREEN</button>
+</div>
+
 <div id="menu">
     <div class="menu-inner">
       <div id="menuHeader">
         <h1 id="gameTitle">Mame Type</h1>
         <div id="versionLabel"></div>
+        <!-- フルスクリーン切替ボタンは body 直下の #globalUiBar（全メニュー共通）へ移動 -->
       </div>
 
       <div id="menuButtons">
@@ -59,11 +73,13 @@
 ===================================================== -->
 <div id="questMenu" style="display:none; margin-top:20px;">
   <h2>QUEST MODE</h2>
-  
-  <button id="questStartBtn">CONTINUE</button>
-  <button id="questSaveBtn">SAVE／LOAD</button>
-  <button id="questStartBtnFromBeginning">NEW GAME</button>
-  <button id="questStartMenuBackBtn">BACK</button>
+
+  <div class="menu-scroll-area">
+    <button id="questStartBtn">CONTINUE</button>
+    <button id="questSaveBtn">SAVE／LOAD</button>
+    <button id="questStartBtnFromBeginning">NEW GAME</button>
+    <button id="questStartMenuBackBtn">BACK</button>
+  </div>
 
 </div>
 <!-- =====================================================
@@ -72,11 +88,10 @@
 <!-- セーブモーダル -->
 <div id="saveModal" class="save-modal hidden">
   <div id="questSaveMenu" class="save-modal-content">
+    <button id="saveToQuestMenuBackBtn" class="save-modal-close-btn" title="閉じる">×</button>
     <h2>SAVE / LOAD</h2>
-    
-    <div id="questSlots"></div>
 
-    <button id="saveToQuestMenuBackBtn">BACK</button>
+    <div id="questSlots"></div>
   </div>
 </div>
 <!-- =====================================================
@@ -84,13 +99,15 @@
 ===================================================== -->
 <div id="startMenu" style="display:none; margin-top:20px;">
   <h2>DAILY MODE<span id="switchToFreeBtn" title="モード切替">🔄</span></h2>
-  
-  <button id="startBtn">STANDARD</button>
-  <button id="timeAttackBtn">TIME ATTACK</button>
-  <button id="longTextBtn">LONG TEXT</button>
-  <button id="enemyModeBtn">ENEMY</button>
-  <button id="defenseModeBtn">DEFENCE</button>
-  <button id="startMenuBackBtn">BACK</button>
+
+  <div class="menu-scroll-area">
+    <button id="startBtn">STANDARD</button>
+    <button id="timeAttackBtn">TIME ATTACK</button>
+    <button id="longTextBtn">LONG TEXT</button>
+    <button id="enemyModeBtn">ENEMY</button>
+    <button id="defenseModeBtn">DEFENCE</button>
+    <button id="startMenuBackBtn">BACK</button>
+  </div>
 
 </div>
 
@@ -100,13 +117,15 @@
 <div id="freeStartMenu" style="display:none; margin-top:20px;">
   <h2>FREE MODE<span id="switchToNormalBtn" title="モード切替">🔄</span></h2>
 
-  <button id="freeStartBtn">STANDARD</button>
-  <button id="freeTimeAttackBtn">TIME ATTACK</button>
-  <button id="freeLongTextBtn">LONG TEXT</button>
-  <button id="freeEnemyModeBtn">ENEMY</button>
-  <button id="freeDefenseModeBtn">DEFENCE</button>
-  <button id="freeBossBtn" style="display: none;">QUEST BOSS</button>
-  <button id="freeStartMenuBackBtn">BACK</button>
+  <div class="menu-scroll-area">
+    <button id="freeStartBtn">STANDARD</button>
+    <button id="freeTimeAttackBtn">TIME ATTACK</button>
+    <button id="freeLongTextBtn">LONG TEXT</button>
+    <button id="freeEnemyModeBtn">ENEMY</button>
+    <button id="freeDefenseModeBtn">DEFENCE</button>
+    <button id="freeBossBtn" style="display: none;">QUEST BOSS</button>
+    <button id="freeStartMenuBackBtn">BACK</button>
+  </div>
 
   <!-- フリーモード詳細設定コンテナ -->
   <div id="freeModeConfig" class="free-config-container" style="display: none;">
@@ -540,6 +559,12 @@
           <button id="resetPlayerStatsBtn">Reset</button>
         </div>
         <input type="file" id="importPlayerStatsFile" accept=".json" style="display:none">
+        <div class="setting-description">
+          デイリーモードのプレイデータ一式（プレイヤーステータス・記録・ランキングなど）をバックアップします。
+          <br>
+          PCの買い替えやブラウザのデータを消去する前に「Export」でJSONファイルを保存しておくと、
+          新しい環境で「Import」を選ぶことでデータを復元できます。
+        </div>
       </fieldset>
 
       <fieldset>
@@ -550,6 +575,13 @@
           <button id="resetQuestBtn">Reset</button>
         </div>
         <input type="file" id="importQuestFile" accept=".json" style="display:none">
+        <div class="setting-description">
+          クエストモードのセーブデータ（進行状況・プレイヤー情報・アンロック済みステージなど）をバックアップします。
+          <br>
+          別の環境へ引き継ぐ際は「Export」で保存し、「Import」で復元してください。
+          <br>
+          <strong style="color: #ffc107;">「Reset」を押すとクエストモードのデータがすべて消えるため注意してください。</strong>
+        </div>
       </fieldset>
 
     </div>
@@ -822,7 +854,7 @@
 
 <div id="enemyModeContainer">
 
-  <canvas id="enemyModeCanvas" width="1400" height="900"></canvas>
+  <canvas id="enemyModeCanvas" width="1600" height="900"></canvas>
 
   <!-- <div id="enemyHUD">
     HP: <span id="enemyModeHP"></span>
@@ -864,7 +896,7 @@
   ゲーム画面 防衛モード
 ===================================================== -->
 <div id="defenseModeContainer" style="display: none;">
-  <canvas id="defenseModeCanvas" width="1400" height="900"></canvas>
+  <canvas id="defenseModeCanvas" width="1600" height="900"></canvas>
 </div>
 
 <!-- 防衛モード用UIコンテナ（コンボバーのみ） -->

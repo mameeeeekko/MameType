@@ -1,6 +1,6 @@
 import { Enemy, EnemyTypes, ItemEnemy, ItemTypes } from "./enemy.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
-import { getUISafeTop } from "./enemyCore.js";
+import { getUISafeMinEnemyY } from "./enemyCore.js";
 import { getWord } from "./target.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 
@@ -71,19 +71,18 @@ function getSpawnPosition(
 
     const padding = 10;
 
-    const rect =
-        canvas.getBoundingClientRect();
+    // transform スケールの影響を受けないレイアウトサイズ（ステージ座標）を使用
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
 
-    const canvasWidth = rect.width;
-    const canvasHeight = rect.height;
-
-    // UIセーフエリアを取得 (enemyCoreの共通関数を使用)
-    const uiTopLimit = getUISafeTop();
+    // UIセーフエリア（半径＋上部テキストラベル分も含む）を取得（enemyCoreの共通関数を使用）
+    // 敵の「見た目の上端」がUIに重ならないよう、中心Yの下限は uiSafeTop + size + ラベル分 になる
+    const uiTopLimit = getUISafeMinEnemyY(size);
 
     const minX = size + padding;
     const maxX = canvasWidth - size - padding;
 
-    // minY を UIの下端に合わせる
+    // minY を UIの下端（＋ラベルが重ならない分）に合わせる
     const minY = Math.max(size + padding, uiTopLimit);
 
     const maxY =
@@ -219,6 +218,15 @@ export function spawnEnemy(
         enemy.damage = type.damage;
     }
 
+    // ★ ステージ別 敵速度倍率（例: 圧倒 = 0.6 で低速化し、画面に敵が滞留する）
+    let stageSpeedMult = config?.enemySpeedMultiplier ?? 1;
+
+    // ★ 電撃戦(berserk): 残りHPが少ないほど敵が加速する
+    if (config?.berserk && player.maxHp > 0) {
+        const hpRatio = Math.max(0, Math.min(1, player.hp / player.maxHp));
+        stageSpeedMult *= 1 + (1 - hpRatio) * (config.berserk.maxBoost ?? 0.6);
+    }
+
     // 文字数に応じた最低入力時間を確保するための速度調整
     // 0.25 に設定すると、10文字の単語に対して 2.5秒 の到達時間が保証
     const SECONDS_PER_CHAR = SECONDS_PER_CHAR_BASE;
@@ -227,7 +235,8 @@ export function spawnEnemy(
     const minFramesToReach = Math.max(1, target.text.length * SECONDS_PER_CHAR * FPS);
     
     const maxAllowedSpeed = distToPlayer / minFramesToReach;
-    enemy.speed = Math.min(enemy.speed, maxAllowedSpeed);
+    // ステージ倍率を適用（最後に入力保証キャップを通すため、タイプ不能な速度にはならない）
+    enemy.speed = Math.min(enemy.speed * stageSpeedMult, maxAllowedSpeed);
 
     enemy.baseRomaji =
         buildBaseRomaji(enemy.text);

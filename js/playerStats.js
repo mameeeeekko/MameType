@@ -638,9 +638,9 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
 
   
   // ★通常モードのプレイ回数
-  const nModes = stats.regular?.modes || {};
-  if (nModes["proverb"] >= 50) unlock("play_proverb_50");
-  if (nModes["english"] >= 50) unlock("play_english_50");
+ // const nModes = stats.regular?.modes || {};
+//  if (nModes["proverb"] >= 50) unlock("play_proverb_50");
+//  if (nModes["english"] >= 50) unlock("play_english_50");
 
 
   // クエストモードのクリア回数
@@ -721,6 +721,7 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   if (cleared.includes("W1_BOSS")) unlock("clear_world_1");
   if (cleared.includes("W2_BOSS")) unlock("clear_world_2");
   if (cleared.includes("W3_BOSS")) unlock("clear_world_3");
+  if (cleared.includes("WEX_BOSS")) unlock("clear_world_ex");
 }
 
 // ================================
@@ -754,8 +755,8 @@ export const ACHIEVEMENTS = [
   // --- モード別 ---
   { id: "free_1h", name: "自由人", desc: "フリーモード1時間" },
   { id: "free_10h", name: "解放者", desc: "フリーモード10時間" },
-  { id: "play_proverb_50", name: "ことわざ博士", desc: "ことわざモードを50回プレイ" },
-  { id: "play_english_50", name: "英語マスター", desc: "英語モードを50回プレイ" },
+  //Z{ id: "play_proverb_50", name: "ことわざ博士", desc: "ことわざモードを50回プレイ" },
+  //{ id: "play_english_50", name: "英語マスター", desc: "英語モードを50回プレイ" },
 
   // --- エネミーモード ---
   { id: "play_daily_enemy_30", name: "エネミーチャレンジャー30", desc: "デイリーのエネミーモードを30回プレイ" }, //ok
@@ -788,6 +789,7 @@ export const ACHIEVEMENTS = [
   { id: "clear_world_1", name: "開拓者", desc: "ワールド1をクリア" }, //ok
   { id: "clear_world_2", name: "探求者", desc: "ワールド2をクリア" },
   { id: "clear_world_3", name: "到達者", desc: "ワールド3をクリア" },
+  { id: "clear_world_ex", name: "深淵の覇者", desc: "EXTRAワールドをクリア" },
   { id: "quest_level_10", name: "成長の証", desc: "プレイヤーレベル10到達" },//ok
   { id: "quest_level_50", name: "熟練の風格", desc: "プレイヤーレベル50到達" },
   { id: "quest_level_99", name: "王者の風格", desc: "プレイヤーレベル99到達" },
@@ -805,6 +807,6 @@ export const ACHIEVEMENTS = [
   { id: "active_skill_100_uses", name: "スキル活用術", desc: "アクティブスキルを100回使用" },
 
   // --- ストーリー・コンプリート ---
-  { id: "true_ending", name: "物語の終わり、そして始まり", desc: "真のエンディングに到達した" },
+  { id: "true_ending", name: "物語の終わり", desc: "真のエンディングに到達した" },
   { id: "all_achievements", name: "完全無欠のタイパー", desc: "すべての実績を解除した" },
 ];

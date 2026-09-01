@@ -626,12 +626,9 @@ export const dev = {
     dev.setAchievementStat("regular.maxEScore", 750); // 神の領域 (rank_god)
     dev.setAchievementStat("regular.noMissClears", 10); // パーフェクト10 (no_miss_10)
 
-    // --- モード別プレイ回数 ---
-    dev.setAchievementStat("regular.modes.proverb", 50); // (play_proverb_50) ※ことわざモードを50回プレイ
-    dev.setAchievementStat("regular.modes.english", 50); // (play_english_50) ※英語モードを50回プレイ
-
-    // --- エネミーモード系 ---
-    dev.setAchievementStat("enemyMode.totalPlays", 10);         // エネミーハンター (enemy_play_10)
+    // --- モード別プレイ回数（案B復活時用） ---
+    // dev.setAchievementStat("tagCounts.ことわざ", 50); // (play_proverb_50) ※ことわざ単語50問
+    // dev.setAchievementStat("tagCounts.英語", 50);     // (play_english_50) ※英語単語50問
     dev.setAchievementStat("enemyMode.totalKills", 1000);       // 撃墜王 (enemy_kill_1000)
     dev.setAchievementStat("enemyMode.maxGScore", 100000);      // スコアマスター (gscore_100k)
     dev.setAchievementStat("enemyMode.maxChain", 100);          // チェインマスター (max_chain_100)
@@ -654,8 +651,10 @@ export const dev = {
     dev.unlockAchievement("total_stars_100");         // 星々の収集家 (合計スター100個)
     dev.unlockAchievement("item_heal_100");           // 回復の恩恵 (回復アイテム100個取得)
     dev.unlockAchievement("active_skill_100_uses");   // スキル活用術 (アクティブスキル100回使用)
-    dev.unlockAchievement("clear_world_1");           // フロンティアの開拓者 (ワールド1クリア)
-    dev.unlockAchievement("clear_world_2");           // 静寂の探求者 (ワールド2クリア)
+    dev.unlockAchievement("clear_world_1");           // 開拓者 (ワールド1クリア)
+    dev.unlockAchievement("clear_world_2");           // 探求者 (ワールド2クリア)
+    dev.unlockAchievement("clear_world_3");           // 到達者 (ワールド3クリア)
+    dev.unlockAchievement("clear_world_ex");          // 深淵の覇者 (EXTRAワールドクリア)
      * 
      * @param {string} path - 設定する統計のパス (例: "totalPlays", "days.streak")
      * @param {*} value - 設定する値

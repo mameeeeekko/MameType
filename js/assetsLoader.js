@@ -118,6 +118,7 @@ const remainingAssets = [
   { type: "img", name: "map_purple", src: "./assets/pic/map_field_purple.png" },
   { type: "img", name: "map_red", src: "./assets/pic/map_field_red.png" },
   { type: "img", name: "map_gray", src: "./assets/pic/map_field_gray.png" },
+  { type: "img", name: "map_ex", src: "./assets/pic/map_field_ex.png" },
 
   // 音源
   // SE
@@ -173,6 +174,11 @@ const remainingAssets = [
   { type: "sound", name: "bgm_soranaka", src: "./assets/sound/bgm/soranaka.mp3", composer: "もえるごみ", title: "Soranaka", volume: 1.0 },
   { type: "sound", name: "bgm_float", src: "./assets/sound/bgm/floating_city.mp3", composer: "MFP", title: "Floating City", volume: 1.0 },
   { type: "sound", name: "bgm_aftersummer", src: "./assets/sound/bgm/after_the_summer_fades.mp3", composer: "MFP", title: "After the Summer Fades", volume: 1.0 },
+  { type: "sound", name: "bgm_ikuseisou", src: "./assets/sound/bgm/ikuseisou.mp3", composer: "もえるごみ", title: "幾星霜", volume: 1.0 }, //quest ex normal
+  { type: "sound", name: "bgm_free", src: "./assets/sound/bgm/free.mp3", composer: "もえるごみ", title: "Free!Free!", volume: 1.0 }, //quest ex defense
+  { type: "sound", name: "bgm_1minute", src: "./assets/sound/bgm/1minute.mp3", composer: "もえるごみ", title: "1minute", volume: 1.0 }, //quest ex midboss
+  { type: "sound", name: "bgm_yukkuriisoge", src: "./assets/sound/bgm/yukkuriisoge.mp3", composer: "watson", title: "ゆっくり急げ！", volume: 1.0 }, //quest ex boss
+  { type: "sound", name: "bgm_vampire", src: "./assets/sound/bgm/vampire.mp3", composer: "なぐもりず", title: "Vampire-Twins", volume: 1.0 }, //quest ex exboss
 ];
 
 async function _loadAssetList(assetList, onProgress) {

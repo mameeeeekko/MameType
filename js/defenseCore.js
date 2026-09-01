@@ -23,6 +23,7 @@ import { addRankingEntry } from "./storage.js";
 import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "./version.js";
 import { shouldRunFrame, recordFrame } from "./performance.js";
+import { stageRect } from "./stageScale.js";
 
 const canvas = document.getElementById("defenseModeCanvas");
 const ctx = canvas.getContext("2d");
@@ -78,11 +79,11 @@ const DEFENSE_COMBO_TIERS = [
 export { DEFENSE_COMBO_TIERS };
 
 // コンボによるタイムボーナス設定 (秒)
-const COMBO_TIME_BONUSES = [2, 3, 5, 8, 10];
+const COMBO_TIME_BONUSES = [1, 2, 3, 4, 6];
 
 // 1文字あたりの基準スコアとコンボ倍率
 export const DEFENSE_SCORE_CONFIG = {
-    baseScorePerChar: 5,
+    baseScorePerChar: 10,
     // コンボティア(DEFENSE_COMBO_TIERS)に合わせて倍率を設定
     comboMultipliers: [
         { count: DEFENSE_OVERDRIVE_COMBO, value: 3.0 }, // オーバードライブ
@@ -111,7 +112,7 @@ export function startDefenseMode(config = {}) {
   // Use custom config for totalCharsToType and timeLimit if provided (from free mode or quest mode)
   let totalChars = config.custom?.totalCharsToType ?? 300;
   const timeLimitMs = (config.custom?.timeLimit ?? 120) * 1000; // Assume seconds if not specified, then convert
-  const missPenaltyMs = (config.custom?.missPenalty ?? 1.5) * 1000; // Allow custom miss penalty
+  const missPenaltyMs = (config.custom?.missPenalty ?? 1.0) * 1000; // Allow custom miss penalty
 
   // ★ クエストモードでは難易度に応じてクリア必要文字数とスコア倍率を反映する
   //   EASY: 0.8倍 / NORMAL: 1.0倍 / HARD: 1.2倍
@@ -457,7 +458,7 @@ export function startDefenseEndingSequence(isFailed) {
 
   // パーティクル生成
   const particles = [];
-  const cw = canvas.clientWidth || 1400;
+  const cw = canvas.clientWidth || 1600;
   const ch = canvas.clientHeight || 900;
   const centerX = cw / 2;
   const centerY = ch / 2;
@@ -706,13 +707,14 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
             // まだ授与されていないボーナスがあるかチェック
             if (potentialBonuses > defenseState.awardedOverdriveBonuses) {
                 const newBonusesToAward = potentialBonuses - defenseState.awardedOverdriveBonuses;
-                const timeBonusMs = newBonusesToAward * 5000; // 5秒
+                const timeBonusMs = newBonusesToAward * 3000; // 3秒
                 const timeBonus = timeBonusMs / 1000;
                 defenseState.remainingTime += timeBonusMs;
                 defenseState.awardedOverdriveBonuses = potentialBonuses; // 授与済み回数を更新
                 // ポップアップ表示 (コンボバー側)
-                const comboBarRect = document.getElementById("defenseComboTierWrapper")?.getBoundingClientRect(); // このIDは存在しない可能性あり
-                const canvasRect = canvas.getBoundingClientRect();
+                // stageRect でステージ座標（キャンバス論理座標）に揃える
+                const comboBarRect = stageRect(document.getElementById("defenseComboTierWrapper")); // このIDは存在しない可能性あり
+                const canvasRect = stageRect(canvas);
                 const popupX = comboBarRect ? comboBarRect.left - canvasRect.left - 40 : canvas.clientWidth / 2; // 少し左へ
                 const popupY = comboBarRect ? comboBarRect.top - canvasRect.top + comboBarRect.height + 10 : 50; // 少し下へ
                 spawnTimeBonusPopup(popupX, popupY, `+${timeBonus}s`, { type: 'fade' }); // コンボバー側
@@ -739,8 +741,9 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
           const bonusTime = COMBO_TIME_BONUSES[i] * 1000; // 秒をミリ秒に変換
           defenseState.remainingTime += bonusTime;
           // ポップアップ表示 (コンボバーの左側に表示)
-          const comboBarRect = document.getElementById("defenseComboTierWrapper")?.getBoundingClientRect(); // このIDは存在しない可能性あり
-          const canvasRect = canvas.getBoundingClientRect();
+          // stageRect でステージ座標（キャンバス論理座標）に揃える
+          const comboBarRect = stageRect(document.getElementById("defenseComboTierWrapper")); // このIDは存在しない可能性あり
+          const canvasRect = stageRect(canvas);
           const popupX = comboBarRect ? comboBarRect.left - canvasRect.left - 40 : canvas.clientWidth / 2; // 少し左へ
           const popupY = comboBarRect ? comboBarRect.top - canvasRect.top + comboBarRect.height + 5 : 50; // 少し下へ
           spawnTimeBonusPopup(popupX, popupY, `+${COMBO_TIME_BONUSES[i]}s`, { type: 'fade' }); // コンボバー側

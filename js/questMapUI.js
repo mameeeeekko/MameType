@@ -5,7 +5,7 @@ import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedW
 import { startEnemyMode } from "./enemyCore.js";
 import { startDefenseMode } from "./defenseCore.js";
 import { gameState } from "./gameCore.js";
-import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty } from "./difficulties.js";
+import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty, getAvailableDifficulties } from "./difficulties.js";
 import { backToQuestMenu, backToQuestMap, showHud } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
@@ -39,6 +39,10 @@ import { images } from "./assetsLoader.js";
 import { playSE } from "./effectManager.js";
 import { hideAllScreens, showMenuBackground } from "./main.js";
 import { getEffectiveDPR } from "./canvasUtil.js";
+import { getStageScale, stageRect, clientToStage, STAGE_W, STAGE_H } from "./stageScale.js";
+
+// ★星強化でレベルアップした直前/直後のクールダウン時間（再描画時に一度だけ表示する）
+let starUpgradeFlashInfo = null;
 
 export function renderQuestMapUI(){
 
@@ -50,23 +54,26 @@ export function renderQuestMapUI(){
     const worldId = getSelectedWorldId();
     const world = QUEST_MAP[worldId] || QUEST_MAP.WORLD1;
 
-    const rect = container.getBoundingClientRect();
-    // canvasサイズ同期（描画品質設定を反映したDPRを使用）
-    const dpr = getEffectiveDPR();
+    // transform スケール下では rect が表示サイズを返すため、
+    // ステージ座標（レイアウトサイズ）の clientWidth / clientHeight を使う
+    const cssW = container.clientWidth || 1600;
+    const cssH = container.clientHeight || 900;
+    // canvasサイズ同期（描画品質設定にステージ拡大率も掛けたDPRを使用）
+    const dpr = getEffectiveDPR() * getStageScale();
 
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = rect.width + "px";
-    canvas.style.height = rect.height + "px";
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = cssW + "px";
+    canvas.style.height = cssH + "px";
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.clearRect(0, 0, cssW, cssH);
 
     // 背景描画
     if (world.bgImage && images[world.bgImage]) {
         ctx.save();
         ctx.globalAlpha = 0.3; // マップを見やすくするため薄く
-        ctx.drawImage(images[world.bgImage], 0, 0, rect.width, rect.height);
+        ctx.drawImage(images[world.bgImage], 0, 0, cssW, cssH);
         ctx.restore();
     }
 
@@ -906,7 +913,7 @@ export function openQuestMenuModal(type = "difficulty") {
 
                 // 説明要素は renderDiffDescription が生成するためここでは作らない
 
-                Object.values(DIFFICULTIES).forEach(diff=>{
+                getAvailableDifficulties().forEach(diff=>{
                     const btn = document.createElement("button");
                     btn.textContent = diff.name;
                     btn.className = "quest-modal-btn";
@@ -939,8 +946,8 @@ export function openQuestMenuModal(type = "difficulty") {
             treeBox.className = "skill-tree-box";
             // make height responsive and allow scrolling if content is large
             // 高さはモーダルの max-height と干渉しないように調整
-            treeBox.style.height = "calc(90vh - 120px)";
-            treeBox.style.maxHeight = "calc(90vh - 120px)";
+            treeBox.style.height = "calc(90 * var(--dvh) - 120px)";
+            treeBox.style.maxHeight = "calc(90 * var(--dvh) - 120px)";
             treeBox.style.border = "1px solid #333";
             treeBox.style.overflow = "auto";
             treeBox.style.width = "100%";
@@ -1562,7 +1569,7 @@ export function openQuestMenuModal(type = "difficulty") {
             title.textContent = "STAR UPGRADE";
 
             // =========================
-            // ヘッダー（所持星数）
+            // ヘッダー（所持星数 ＋ 振り直し）
             // =========================
             const header = document.createElement("div");
             header.className = "star-upgrade-header";
@@ -1571,17 +1578,63 @@ export function openQuestMenuModal(type = "difficulty") {
             const availableStars = getAvailableStars();
             const totalEarned = Math.max(getTotalStarsEarned(), getTotalStars());
 
-            header.innerHTML = `
-                <div class="star-upgrade-owned">
-                    <span class="star-upgrade-label">OWNED STARS</span>
-                    <span class="star-upgrade-value">★ ${availableStars} / ${totalEarned}</span>
-                </div>
-                <div class="star-upgrade-desc">
-                    星を消費してアクティブスキルのクールダウンを短縮できます。<br>
-                    各スキルごとに強化レベルが上がり、レベルごとに5%ずつ短縮されます（最大Lv.${STAR_UPGRADE_MAX_LEVEL}・50%短縮）。<br>
-                    ※ 表示は「使用可能な星数 / 獲得した星の総数」です。
-                </div>
+            // OWNED STARS 表示
+            const ownedBox = document.createElement("div");
+            ownedBox.className = "star-upgrade-owned";
+            ownedBox.innerHTML = `
+                <span class="star-upgrade-label">OWNED STARS</span>
+                <span class="star-upgrade-value">★ ${availableStars} / ${totalEarned}</span>
             `;
+            header.appendChild(ownedBox);
+
+            // =========================
+            // 振り直し（REBUILD）セクション（OWNED STARSの直下・コンパクト）
+            // =========================
+            const rebuildTickets = getRebuildTickets();
+            const unlimited = hasUnlimitedRebuild();
+            const canRebuildNow = canRebuild();
+
+            const rebuildBox = document.createElement("div");
+            rebuildBox.className = "star-upgrade-rebuild";
+            rebuildBox.title = unlimited
+                ? "全クリア特典により、振り直しは無制限です。"
+                : "チケットはレベル50到達とWORLD2クリアで各1枚入手できます。";
+
+            rebuildBox.innerHTML = `
+                <div class="star-upgrade-rebuild-info">
+                    <span class="star-upgrade-rebuild-title">REBUILD</span>
+                    <span class="star-upgrade-rebuild-tickets">
+                        ${unlimited ? "∞ UNLIMITED" : `チケット ×${rebuildTickets}`}
+                    </span>
+                </div>
+                <button class="star-upgrade-rebuild-btn ${canRebuildNow ? "" : "disabled"}" ${canRebuildNow ? "" : "disabled"}>
+                    REBUILD
+                </button>
+            `;
+
+            if (canRebuildNow) {
+                const btn = rebuildBox.querySelector(".star-upgrade-rebuild-btn");
+                btn.onclick = () => {
+                    const success = rebuildStarUpgrades();
+                    if (success) {
+                        playSE("skill_on");
+                        // 再描画
+                        openQuestMenuModal("starUpgrade");
+                    }
+                };
+            }
+            header.appendChild(rebuildBox);
+
+            // 説明文
+            const desc = document.createElement("div");
+            desc.className = "star-upgrade-desc";
+            desc.innerHTML = `
+                星を消費してアクティブスキルのクールダウンを短縮できます。<br>
+                各スキルごとに強化レベルが上がり、レベルごとに5%ずつ短縮されます（最大Lv.${STAR_UPGRADE_MAX_LEVEL}・50%短縮）。<br>
+                ※ 表示は「使用可能な星数 / 獲得した星の総数」です。
+            `;
+            header.appendChild(desc);
+
             content.appendChild(header);
 
             // =========================
@@ -1625,8 +1678,28 @@ export function openQuestMenuModal(type = "difficulty") {
                     const item = document.createElement("div");
                     item.className = "star-upgrade-item";
 
-                    // 進行バー
-                    const progressPercent = (level / maxLevel) * 100;
+                    // 進行バー（レベルごとのブロック表示）
+                    let progressBlocks = "";
+                    for (let i = 1; i <= maxLevel; i++) {
+                        progressBlocks += `<div class="star-upgrade-progress-block ${i <= level ? "filled" : ""}"></div>`;
+                    }
+
+                    // ★レベルアップ直後なら短縮前/後のクールダウン時間を表示
+                    const flash = starUpgradeFlashInfo?.skillId === skillId ? starUpgradeFlashInfo : null;
+
+                    // ★クールダウン表示（もともとの時間 → 短縮後の時間・常時表示）
+                    const baseCooldown = typeof skill.cooldown === "number" ? skill.cooldown : null;
+                    let cooldownHTML;
+                    if (baseCooldown !== null && level > 0) {
+                        // 短縮後の実効クールダウン = もともとの時間 ÷ マルチプライヤー
+                        const currentEffectiveSec = baseCooldown / currentMultiplier;
+                        cooldownHTML = `cooldown: ${baseCooldown.toFixed(1)}sec → <span class="star-upgrade-cd-reduced">${currentEffectiveSec.toFixed(1)}sec</span>`;
+                    } else if (baseCooldown !== null) {
+                        // 未強化（Lv.0）はもともとの時間のみ
+                        cooldownHTML = `cooldown: ${baseCooldown.toFixed(1)}sec`;
+                    } else {
+                        cooldownHTML = `cooldown: ${skill.cooldown ?? "-"}sec`;
+                    }
 
                     item.innerHTML = `
                         <div class="star-upgrade-item-icon">
@@ -1635,14 +1708,13 @@ export function openQuestMenuModal(type = "difficulty") {
                         <div class="star-upgrade-item-info">
                             <div class="star-upgrade-item-name">${skill.name}</div>
                             <div class="star-upgrade-item-desc">${skill.desc ?? ""}</div>
-                            <div class="star-upgrade-item-cooldown">cooldown: ${skill.cooldown ?? "-"}sec</div>
-                            <div class="star-upgrade-progress">
-                                <div class="star-upgrade-progress-fill" style="width:${progressPercent}%"></div>
-                            </div>
+                            <div class="star-upgrade-item-cooldown">${cooldownHTML}</div>
+                            <div class="star-upgrade-progress">${progressBlocks}</div>
                             <div class="star-upgrade-item-stats">
                                 <span>Lv.${level}/${maxLevel}</span>
                                 <span>短縮 ${currentReduction}%</span>
                             </div>
+                            ${flash ? `<div class="star-upgrade-flash">Lv.UP! ${flash.beforeSec.toFixed(1)}sec → ${flash.afterSec.toFixed(1)}sec</div>` : ""}
                         </div>
                         <div class="star-upgrade-item-action">
                             ${isMaxed
@@ -1657,9 +1729,21 @@ export function openQuestMenuModal(type = "difficulty") {
                     if (!isMaxed && canAfford) {
                         const btn = item.querySelector(".star-upgrade-btn");
                         btn.onclick = () => {
+                            // ★短縮前のマルチプライヤー（レベルアップ前に確定させる）
+                            const beforeMultiplier = currentMultiplier;
                             const success = upgradeStarSkill(skillId);
                             if (success) {
                                 playSE("skill_on");
+                                // ★レベルアップ前後の実効クールダウン時間を記録（再描画時に表示）
+                                const afterMultiplier = getStarUpgradeCooldownMultiplier(skillId);
+                                const baseCooldown = skill.cooldown;
+                                if (typeof baseCooldown === "number") {
+                                    starUpgradeFlashInfo = {
+                                        skillId,
+                                        beforeSec: baseCooldown / beforeMultiplier,
+                                        afterSec: baseCooldown / afterMultiplier,
+                                    };
+                                }
                                 // 再描画
                                 openQuestMenuModal("starUpgrade");
                             }
@@ -1668,51 +1752,12 @@ export function openQuestMenuModal(type = "difficulty") {
 
                     list.appendChild(item);
                 });
+
+                // ★フラッシュ表示は一度だけ（次回描画時には表示しない）
+                starUpgradeFlashInfo = null;
             }
 
             renderList();
-
-            // =========================
-            // 振り直し（REBUILD）セクション
-            // =========================
-            const rebuildBox = document.createElement("div");
-            rebuildBox.className = "star-upgrade-rebuild";
-
-            const rebuildTickets = getRebuildTickets();
-            const unlimited = hasUnlimitedRebuild();
-            const canRebuildNow = canRebuild();
-
-            rebuildBox.innerHTML = `
-                <div class="star-upgrade-rebuild-header">
-                    <span class="star-upgrade-rebuild-title">REBUILD（星の振り直し）</span>
-                    <span class="star-upgrade-rebuild-tickets">
-                        ${unlimited ? "∞ UNLIMITED" : `チケット ×${rebuildTickets}`}
-                    </span>
-                </div>
-                <div class="star-upgrade-rebuild-desc">
-                    全アクティブスキルの星強化レベルをリセットし、星を振り直せます。<br>
-                    ${unlimited
-                        ? "全クリア特典により、振り直しは無制限です！"
-                        : "チケットはレベル50到達とWORLD2クリアで各1枚入手できます。"}
-                </div>
-                <button class="star-upgrade-rebuild-btn ${canRebuildNow ? "" : "disabled"}" ${canRebuildNow ? "" : "disabled"}>
-                    REBUILD
-                </button>
-            `;
-
-            if (canRebuildNow) {
-                const btn = rebuildBox.querySelector(".star-upgrade-rebuild-btn");
-                btn.onclick = () => {
-                    const success = rebuildStarUpgrades();
-                    if (success) {
-                        playSE("skill_on");
-                        // 再描画
-                        openQuestMenuModal("starUpgrade");
-                    }
-                };
-            }
-
-            content.appendChild(rebuildBox);
         }
     };
 
@@ -1753,19 +1798,20 @@ function showQuestTooltip(lines, targetEl) {
 
   document.body.appendChild(tooltipEl);
 
-  const rect = targetEl.getBoundingClientRect();
-  const tooltipRect = tooltipEl.getBoundingClientRect();
+  // transform スケール下では rect が表示サイズを返すためステージ座標へ変換
+  const rect = stageRect(targetEl);
+  const tooltipRect = stageRect(tooltipEl);
 
   let left = rect.right + 10;
   let top = rect.top;
 
-  // 画面右端からはみ出る場合は左側に表示
-  if (left + tooltipRect.width > window.innerWidth) {
+  // ステージ右端からはみ出る場合は左側に表示
+  if (left + tooltipRect.width > STAGE_W) {
     left = Math.max(10, rect.left - tooltipRect.width - 10);
   }
-  // 画面下端からはみ出る場合は表示位置を上に調整
-  if (top + tooltipRect.height > window.innerHeight) {
-    top = Math.max(10, window.innerHeight - tooltipRect.height - 10);
+  // ステージ下端からはみ出る場合は表示位置を上に調整
+  if (top + tooltipRect.height > STAGE_H) {
+    top = Math.max(10, STAGE_H - tooltipRect.height - 10);
   }
 
   tooltipEl.style.left = left + "px";
@@ -1798,23 +1844,26 @@ function showSkillTooltip(skill, event) {
 
     document.body.appendChild(tooltipEl);
 
-  const tooltipRect = tooltipEl.getBoundingClientRect();
-  const mouseX = event?.clientX ?? 0;
-  const mouseY = event?.clientY ?? 0;
+  // transform スケール下では rect が表示サイズを返すためステージ座標へ変換
+  const tooltipRect = stageRect(tooltipEl);
+  // マウス座標もステージ座標へ変換
+  const m = clientToStage(event?.clientX ?? 0, event?.clientY ?? 0);
+  const mouseX = m.x;
+  const mouseY = m.y;
 
   let left = mouseX + 12;
   let top = mouseY + 12;
 
-  // 画面端での折り返し判定
-  if (left + tooltipRect.width > window.innerWidth) {
+  // ステージ端での折り返し判定
+  if (left + tooltipRect.width > STAGE_W) {
     left = mouseX - tooltipRect.width - 12;
   }
-  if (top + tooltipRect.height > window.innerHeight) {
+  if (top + tooltipRect.height > STAGE_H) {
     top = mouseY - tooltipRect.height - 12;
   }
 
-  tooltipEl.style.left = (left + window.scrollX) + "px";
-  tooltipEl.style.top = (top + window.scrollY) + "px";
+  tooltipEl.style.left = left + "px";
+  tooltipEl.style.top = top + "px";
 }
 
 // =========================

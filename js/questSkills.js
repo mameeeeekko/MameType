@@ -208,8 +208,9 @@ const SKILL_HANDLERS = {
     if (!targets.length) return;
 
     const canvasEl = document.getElementById("enemyModeCanvas");
-    const rect = canvasEl ? canvasEl.getBoundingClientRect() : { width: 800, height: 600 };
-    const cw = rect.width, ch = rect.height;
+    // transform スケールの影響を受けないレイアウトサイズ（ステージ座標）を使用
+    const cw = canvasEl ? canvasEl.clientWidth : 800;
+    const ch = canvasEl ? canvasEl.clientHeight : 600;
 
     targets.forEach(t => {
 

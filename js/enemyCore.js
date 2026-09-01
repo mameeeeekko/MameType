@@ -1,6 +1,7 @@
 // enemyCore.js
-import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI, showGameMessage,renderSystemMessage, updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI} from "./enemyRenderer.js";
+import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI, showGameMessage,renderSystemMessage, updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI, resetSpawnDotState} from "./enemyRenderer.js";
 import { fitCanvasToContainerFill } from "./canvasUtil.js";
+import { stageRect } from "./stageScale.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
     renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBreakEffect, playLoopSE, stopLoopSE,
@@ -75,6 +76,11 @@ let endingSequence = false; //終了待機用フラグ
 // ===============================
 let uiSafeTop = 0;
 
+// 敵は「中心に円、その上にテキストラベル(17px・円との間隔15px)」が描画されるため、
+// 中心Y座標だけをクランプすると見た目がUI（コンボバー等）に重なってしまう。
+// そのため中心Y座標の下限 = uiSafeTop + radius + ラベル上端分(15px + 17px) として扱う。
+const ENEMY_LABEL_TOP_MARGIN = 32;
+
 /**
  * UIと重ならないY座標の上限を計算し、キャッシュする。
  * この関数はゲーム開始時やウィンドウリサイズ時に呼び出す。
@@ -85,9 +91,21 @@ function updateUISafeTop() {
         uiSafeTop = 0;
         return;
     }
-    const rect = chainUI.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
-    uiSafeTop = rect.bottom - canvasRect.top + 20; // 少し余白
+    const canvasRect = stageRect(canvas);
+
+    // chainUI 全体の bottom
+    const chainRect = stageRect(chainUI);
+    let bottomY = chainRect.bottom - canvasRect.top;
+
+    // comboTierWrapper が chainUI より下に伸びている場合も考慮
+    const comboWrapper = document.getElementById("comboTierWrapper");
+    if (comboWrapper && comboWrapper.offsetParent !== null) {
+        const comboRect = stageRect(comboWrapper);
+        const comboBottom = comboRect.bottom - canvasRect.top;
+        if (comboBottom > bottomY) bottomY = comboBottom;
+    }
+
+    uiSafeTop = bottomY + 30; // 余白を 30px に増やす
 }
 
 /**
@@ -96,6 +114,17 @@ function updateUISafeTop() {
  */
 export function getUISafeTop() {
     return uiSafeTop;
+}
+
+/**
+ * 敵の「中心Y座標」が守るべき下限を返す。
+ * 敵の見た目（半径＋上部テキストラベル）がUIに重ならないよう、
+ * uiSafeTop に radius とラベル上端分(ENEMY_LABEL_TOP_MARGIN) を加算する。
+ * @param {number} radius 敵の半径（enemy.radius / type.size など）。未指定時は15
+ * @returns {number}
+ */
+export function getUISafeMinEnemyY(radius = 15) {
+    return uiSafeTop + radius + ENEMY_LABEL_TOP_MARGIN;
 }
 
 /**
@@ -158,8 +187,9 @@ function updateChainBar(){
 function getChainBarCenter(){
 
     const bar = document.getElementById("chainBar");
-    const rect = bar.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
+    // transform スケール下では rect が表示サイズを返すためステージ座標へ変換
+    const rect = stageRect(bar);
+    const canvasRect = stageRect(canvas);
 
     return {
         x: rect.left + rect.width/2 - canvasRect.left,
@@ -229,11 +259,6 @@ export function killEnemy(enemy, state, options = {}) {
             stats.processedCount = (stats.processedCount ?? 0) + 1;
             stats.phaseObjectiveDefeated = (stats.phaseObjectiveDefeated ?? 0) + 1;
             stats.phaseProcessedCount = (stats.phaseProcessedCount ?? 0) + 1;
-
-            // Free Modeかつ討伐目標がある場合、UI表示（残り数）を更新
-            if (gameState.isFreeMode && gameState.stage.clearConditions?.killCount) {
-                stats.remainingSpawn = Math.max(0, stats.totalSpawn - stats.objectiveDefeated);
-            }
         }
     }
     // =========================
@@ -458,6 +483,13 @@ function gameLoop(timestamp) {
         gameState.enemyStats,
         gameState.isQuestMode === true // ★クエストモード時のみクールタイム短縮ポップアップを有効化
     );
+
+    // UIセーフエリアを定期的に再計算（コンボバーの高さ変化に追従）
+    if (!gameLoop._uiSafeFrame) gameLoop._uiSafeFrame = 0;
+    gameLoop._uiSafeFrame++;
+    if (gameLoop._uiSafeFrame % 60 === 0) {
+        updateUISafeTop();
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -875,7 +907,7 @@ function gameLoop(timestamp) {
     }
 
     // 現在のフェーズが完了したかチェック
-    if (phaseCond.killCount != null && stats.phaseProcessedCount >= phaseCond.killCount) {
+    if (phaseCond.killCount != null && (stats.phaseObjectiveDefeated ?? 0) >= phaseCond.killCount) {
         phaseComplete = true;
     }
     if (timerStarted && phaseCond.timerMs != null && now - stats.phaseStartTime >= phaseCond.timerMs) {
@@ -1111,6 +1143,7 @@ function transitionToNextPhase(now) {
         lastItemSpawnTime = now;
         
         // UI用表示更新
+        resetSpawnDotState();
         if (nextPhase.spawn?.limit != null) {
             stats.totalSpawn = nextPhase.spawn.limit;
             stats.remainingSpawn = nextPhase.spawn.limit;
@@ -1880,6 +1913,7 @@ export async function startEnemyMode(config = {}) {
     resetGameState();
     fullResetInput();
     clearAllEffects();
+    resetSpawnDotState();
 
     spawnedCount = 0;
 
@@ -2161,8 +2195,8 @@ export async function startEnemyMode(config = {}) {
     setGameActive(true);
     gameState.enemyMode = true;   // ←追加
 
-    // 表示用の最大出現数を設定 (討伐数モードならその数、それ以外は0またはnull)
-    const total = stage.clearConditions?.killCount || stage.spawn?.limit || 0;
+    // 表示用の最大出現数を設定
+    const total = currentPhase?.spawn?.limit ?? stage.spawn?.limit ?? 0;
     gameState.enemyStats.totalSpawn = total;
     gameState.enemyStats.remainingSpawn = total;
 

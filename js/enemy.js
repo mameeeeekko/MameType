@@ -1,6 +1,6 @@
 // enemy.js
 
-import { getUISafeTop, markDamageTaken, onEnemyRemovedByDamage, killEnemy } from "./enemyCore.js";
+import { getUISafeMinEnemyY, markDamageTaken, onEnemyRemovedByDamage, killEnemy } from "./enemyCore.js";
 import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect, 
     spawnLaserEffect, spawnPlayerDamageEffect, spawnPlayerNegateEffect} from "./effectManager.js";
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
@@ -388,10 +388,10 @@ export class Enemy {
         // behaviors処理 敵が出す弾や、召喚する敵の処理
         this.updateBehaviors(player, difficulty, state, deltaTime);
 
-        // UI侵入防止
-        const uiTop = getUISafeTop();
-        if(this.y < uiTop){
-            this.y = uiTop;
+        // UI侵入防止（中心Yだけでなく、半径＋上部テキストラベルまでUIに重ならないようにする）
+        const minCenterY = getUISafeMinEnemyY(this.radius || this.type?.size || 15);
+        if (this.y < minCenterY) {
+            this.y = minCenterY;
         }
 
         return !this.isDead;
@@ -821,6 +821,12 @@ export class BulletEnemy extends Enemy{
 
         // 進行方向（プレイヤー側）を向くように回転を更新
         this.rotation = Math.atan2(this.vy, this.vx);
+
+        // UI侵入防止（中心Yだけでなく、半径＋上部テキストラベルまでUIに重ならないようにする）
+        const minCenterY = getUISafeMinEnemyY(this.radius || this.type?.size || 15);
+        if (this.y < minCenterY) {
+            this.y = minCenterY;
+        }
 
         return !this.isDead;
     }
@@ -1259,7 +1265,7 @@ Object.assign(EnemyTypes, {
     MID_BOSS_2: {
         id: "mid_boss_2", name: "中ボス 2: Guardian",
         color: "#13c2c2", shape: "clover", pattern: "circuit", size: 35,
-        speed: 0.5, rotationSpeed: 0.015, damage: 35,
+        speed: 0.4, rotationSpeed: 0.015, damage: 35,
         tags: ["", "句読点", "ことわざ"], minLen: 12, maxLen: 18, score: 800,
         killSound: 3, killedEffect: "midboss1", damageSound: 1,
         hitCount: 4, knockback: 45,
@@ -1271,7 +1277,7 @@ Object.assign(EnemyTypes, {
     MID_BOSS_3: {
         id: "mid_boss_3", name: "中ボス 3: Gatekeeper",
         color: "#fa8c16", shape: "relay", pattern: "circuit", size: 35,
-        speed: 0.6, rotationSpeed: 0.02, damage: 42,
+        speed: 0.4, rotationSpeed: 0.02, damage: 42,
         tags: ["", "英語"], minLen: 14, maxLen: 20, score: 1200, killedEffect: "midboss1",
         killSound: 3, damageSound: 1,
         hitCount: 5, knockback: 45,
@@ -1295,7 +1301,7 @@ Object.assign(EnemyTypes, {
     MID_BOSS_4: {
         id: "mid_boss_4", name: "中ボス 4: Breaker",
         color: "#a0d911", shape: "star", pattern: "circuit", size: 40,
-        speed: 0.6, rotationSpeed: 0.03, damage: 45,
+        speed: 0.4, rotationSpeed: 0.03, damage: 45,
         tags: ["", "促音", "擬音", "記号"], minLen: 14, maxLen: 20, score: 1400, killedEffect: "midboss1",
         killSound: 3, damageSound: 1,
         hitCount: 5, knockback: 45,
@@ -1307,7 +1313,7 @@ Object.assign(EnemyTypes, {
     MID_BOSS_5: {
         id: "mid_boss_5", name: "中ボス 5: Void",
         color: "#2f54eb", shape: "gear", pattern: "circuit", size: 40,
-        speed: 0.9, rotationSpeed: 0.06, damage: 60,
+        speed: 0.4, rotationSpeed: 0.06, damage: 60,
         tags: ["", "ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2000, killedEffect: "midboss1",
         killSound: 3, damageSound: 1,
         hitCount: 5, knockback: 55,
@@ -1319,12 +1325,12 @@ Object.assign(EnemyTypes, {
     MID_BOSS_6: {
         id: "mid_boss_6", name: "中ボス 6: Ghost",
         color: "#bfbfbf", shape: "nova", pattern: "circuit", size: 40,
-        speed: 0.9, rotationSpeed: 0.01, damage: 70,
+        speed: 0.4, rotationSpeed: 0.01, damage: 70,
         tags: ["", "擬音", "記号"], minLen: 15, maxLen: 22, score: 2200, killedEffect: "midboss1",
         killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
-            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.5, damage: 20, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } }
+            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.2, damage: 20, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } }
         ]
     },
 
@@ -1337,14 +1343,14 @@ Object.assign(EnemyTypes, {
         hitCount: 6, knockback: 30,
         behaviors: [
             { type: "spawn", interval: 12, preDelay: 1.5, spawnType: ["gray_circle_small","gray_circle_normal"], count: 2 },
-            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 6, speed: 1.5, damage: 25, size: 10, shape: "arrow", color: "#722ed1", charType: "alphabet" } }
+            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 6, speed: 1.2, damage: 25, size: 10, shape: "arrow", color: "#722ed1", charType: "alphabet" } }
         ]
     },
 
     MID_BOSS_7: {
-        id: "mid_boss_7", name: "中ボス 5: Void",
+        id: "mid_boss_7", name: "中ボス 7: Void",
         color: "#2f54eb", shape: "virus", pattern: "circuit", size: 40,
-        speed: 0.9, rotationSpeed: 0.06, damage: 60,
+        speed: 0.4, rotationSpeed: 0.06, damage: 60,
         tags: ["", "ことわざ", "英語"], minLen: 15, maxLen: 22, score: 2200, killedEffect: "midboss1",
         killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
@@ -1357,12 +1363,12 @@ Object.assign(EnemyTypes, {
     MID_BOSS_8: {
         id: "mid_boss_8", name: "中ボス 6: Ghost",
         color: "#bfbfbf", shape: "diamond", pattern: "circuit", size: 40,
-        speed: 0.9, rotationSpeed: 0.01, damage: 70,
+        speed: 0.4, rotationSpeed: 0.01, damage: 70,
         tags: ["", "擬音", "記号"], minLen: 15, maxLen: 22, score: 2400, killedEffect: "midboss1",
         killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
-            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.5, damage: 30, size: 10, shape: "arrow", color: "#bfbfbf", charType: "number" } },
+            { type: "shoot", interval: 8, preDelay: 1.0, bullet: { count: 5, speed: 1.2, damage: 30, size: 10, shape: "arrow", color: "#bfbfbf", charType: "number" } },
             { type: "attack", interval: 23, preDelay: 10, tags: ["","英語"], minLen: 8, maxLen: 12, damage: 70 },
         ]
     },
@@ -1370,12 +1376,12 @@ Object.assign(EnemyTypes, {
     MID_BOSS_9: {
         id: "mid_boss_9", name: "中ボス 6: Ghost",
         color: "#bfbfbf", shape: "mobius", pattern: "circuit", size: 40,
-        speed: 0.9, rotationSpeed: 0.01, damage: 70,
+        speed: 0.4, rotationSpeed: 0.01, damage: 70,
         tags: ["", "擬音", "記号", "英語"], minLen: 15, maxLen: 22, score: 2600, killedEffect: "midboss1",
         killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
-            { type: "shoot", interval: 10, preDelay: 1.0, bullet: { count: 10, speed: 1.5, damage: 35, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } },
+            { type: "shoot", interval: 10, preDelay: 1.0, bullet: { count: 10, speed: 12, damage: 35, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } },
             { type: "attack", interval: 23, preDelay: 10, tags: ["","句読点"], minLen: 8, maxLen: 12, damage: 80 },
         ]
     },
@@ -1390,7 +1396,7 @@ Object.assign(EnemyTypes, {
         hitCount: 7, knockback: 30,
         behaviors: [
             { type: "spawn", interval: 16, preDelay: 1.5, spawnType: ["gray_circle_small","gray_circle_normal"], count: 2 },
-            { type: "shoot", interval: 18, preDelay: 0.8, bullet: { count: 5, speed: 1.5, damage: 35, size: 10, color: "#cf1322", shape: "arrow", homing: 0.05, charType: "alphabet" } },
+            { type: "shoot", interval: 18, preDelay: 0.8, bullet: { count: 5, speed: 1.2, damage: 35, size: 10, color: "#cf1322", shape: "arrow", homing: 0.03, charType: "alphabet" } },
             { type: "shoot", interval: 35, preDelay: 0.8, bullet: { count: 3, speed: 0.4, damage: 35, size: 9, color: "#cf1322", shape: "circle", homing: 0.01, charType: "symbol" } },
             { type: "shoot", interval: 26, preDelay: 0.8, bullet: { count: 3, speed: 0.9, damage: 35, size: 12, color: "#cf1322", shape: "circle", homing: 0.02, charType: "number" } },
             { type: "attack", interval: 45, preDelay: 12, tags: ["","英語"], minLen: 8, maxLen: 12, damage: 120 },
@@ -1408,12 +1414,45 @@ Object.assign(EnemyTypes, {
             { type: "spawn", interval: 10, preDelay: 1.5, spawnType: "gray_circle_normal", count: 1 },
             { type: "spawn", interval: 21, preDelay: 1.5, spawnType: "gray_square_small", count: 1 },
             { type: "spawn", interval: 31, preDelay: 1.5, spawnType: "purple_circle_small", count: 1 },
-            { type: "shoot", interval: 15, preDelay: 0.8, bullet: { count: 8, speed: 1.0, damage: 50, size: 10, color: "#000000", shape: "arrow", homing: 0.03, charType: "alphabet" } },
+            { type: "shoot", interval: 15, preDelay: 0.8, bullet: { count: 8, speed: 1.0, damage: 50, size: 10, color: "#000000", shape: "arrow", homing: 0.02, charType: "alphabet" } },
             { type: "shoot", interval: 36, preDelay: 0.8, bullet: { count: 3, speed: 0.4, damage: 50, size: 9, color: "#000000", shape: "circle", homing: 0.01, charType: "symbol" } },
             { type: "shoot", interval: 26, preDelay: 0.8, bullet: { count: 3, speed: 0.9, damage: 50, size: 12, color: "#000000", shape: "circle", homing: 0.02, charType: "number" } },
             { type: "attack", interval: 45, preDelay: 12, tags: ["","英語","句読点"], minLen: 8, maxLen: 12, damage: 200 },
         ]
-    }
+    },
+
+    //Ex world
+    MID_BOSS_10: {
+        id: "mid_boss_9", name: "Ex Mid Boss 10",
+        color: "#bfbfbf", shape: "mobius", pattern: "circuit", size: 40,
+        speed: 0.4, rotationSpeed: 0.01, damage: 70,
+        tags: ["", "擬音", "記号", "英語"], minLen: 15, maxLen: 22, score: 2600, killedEffect: "midboss1",
+        killSound: 3, damageSound: 1,
+        hitCount: 6, knockback: 55,
+        behaviors: [
+            { type: "shoot", interval: 10, preDelay: 1.0, bullet: { count: 10, speed: 1.3, damage: 35, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } },
+            { type: "attack", interval: 23, preDelay: 10, tags: ["","句読点"], minLen: 8, maxLen: 12, damage: 80 },
+        ]
+    },
+
+    EX_BOSS: {
+        id: "extra_boss", name: "Ex Boss",
+        color: "#000000", shape: "circle", size: 60,
+        speed: 0.1, rotationSpeed: 0.04, damage: 99,
+        tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 30, maxLen: 100, score: 50000, killedEffect: "boss2",
+        killSound: 5, damageSound: 1,
+        hitCount: 15, knockback: 30,
+        behaviors: [
+            { type: "spawn", interval: 10, preDelay: 1.5, spawnType: "gray_circle_normal", count: 1 },
+            { type: "spawn", interval: 21, preDelay: 1.5, spawnType: "gray_square_small", count: 1 },
+            { type: "spawn", interval: 31, preDelay: 1.5, spawnType: "purple_circle_normal", count: 1 },
+            { type: "shoot", interval: 15, preDelay: 0.8, bullet: { count: 9, speed: 1.0, damage: 80, size: 10, color: "#000000", shape: "arrow", homing: 0.02, charType: "alphabet" } },
+            { type: "shoot", interval: 36, preDelay: 0.8, bullet: { count: 5, speed: 0.4, damage: 80, size: 9, color: "#000000", shape: "circle", homing: 0.01, charType: "symbol" } },
+            { type: "shoot", interval: 26, preDelay: 0.8, bullet: { count: 5, speed: 0.9, damage: 80, size: 12, color: "#000000", shape: "circle", homing: 0.02, charType: "number" } },
+            { type: "attack", interval: 40, preDelay: 12, tags: ["","英語","句読点"], minLen: 8, maxLen: 12, damage: 300 },
+        ]
+    },
+
 })
 
 // =================================

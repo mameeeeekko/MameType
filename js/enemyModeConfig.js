@@ -539,12 +539,12 @@ function getItemTierKey(stageNum) {
  * 1. ミッションパターン (0-9):
  *    0: 【撃破目標】   - 標準。指定数撃破でクリア。
  *    1: 【生存目標】   - 制限時間まで生存。無限湧き。
- *    2: 【殲滅目標】   - 有限の出現数(limit)を全て倒す。
- *    3: 【電撃戦】     - 短い制限時間 + 短い出現間隔。
+ *    2: 【殲滅目標】   - 有限の出現数(limit)を全滅させるか、制限時間まで生存。
+ *    3: 【電撃戦】     - 短い制限時間 + HP減少で敵が加速するberserk戦。
  *    4: 【精密防衛】   - 高密度サバイバル。出現数多め。
  *    5: 【タイムアタック】- 時間内に通常より多いノルマを達成。
  *    6: 【サボタージュ】- HP継続減少デバフ + 撃破目標。
- *    7: 【圧倒】       - 同時出現上限(maxAlive)大幅増 + 生存目標。
+ *    7: 【圧倒】       - 同時出現上限(maxAlive)大幅増 + 低速化で滞留 + 生存目標。
  *    8: 【精密射撃】   - 1ミスで即終了(failOnMiss) + 少数精鋭を撃破。
  *    9: 【純粋なる試練】- アイテム・スキル使用禁止 + 撃破目標。
  *    - 抽選ルール:
@@ -579,7 +579,7 @@ function getItemTierKey(stageNum) {
  */
 // ==============================================================
 
-function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
+function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = null) {
     // --- 属性アクセントの決定ロジック ---
     let selectedTable = tierTable;
     
@@ -603,17 +603,16 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
     const itemTier = getItemTierKey(i);
 
     // 1. ミッションパターンの決定 (0-9の10種類)
-    let pattern;
-    const lastDigit = i % 10;
-    if (lastDigit >= 1 && lastDigit <= 3) {
-        // 下一桁が1-3の場合: ミッションパターン0-2（基本形）を選択
-        pattern = Math.floor(Math.random() * 3);
-    } else if (lastDigit === 9 || lastDigit === 0) {
-        // 下一桁が9-0の場合: ミッションパターン3-9（応用・高難度形）を選択
-        pattern = 3 + Math.floor(Math.random() * 7);
-    } else {
-        // それ以外（4-8）: 全パターンからランダム
-        pattern = Math.floor(Math.random() * 10);
+    let pattern = explicitPattern;
+    if (pattern === null || pattern === undefined) {
+        const lastDigit = i % 10;
+        if (lastDigit >= 1 && lastDigit <= 3) {
+            // 下一桁が1-3の場合: ミッションパターン0-2（基本形）
+            pattern = Math.floor(Math.random() * 3);
+        } else {
+            // それ以外: 応用・全パターン
+            pattern = Math.floor(Math.random() * 10);
+        }
     }
 
     // 難易度の緩やかな上昇計算
@@ -624,14 +623,14 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
 
     // ミッションパターンごとの説明
     const missionDescriptions = [
-        { name: "撃破", desc: "指定数の敵を撃破せよ！" },
+        { name: "撃破", desc: "時間無制限！指定数の敵を撃破せよ！" },
         { name: "生存", desc: "制限時間まで生き残れ！" },
-        { name: "殲滅", desc: "出現する敵を全て殲滅せよ！" },
-        { name: "電撃戦", desc: "短時間で敵を撃破せよ！" },
+        { name: "殲滅", desc: "敵を全て殲滅せよ！時間まで生き延びてもクリア！" },
+        { name: "電撃戦", desc: "短時間で敵を撃破せよ！HPが減ると敵が加速！" },
         { name: "精密防衛", desc: "高密度攻撃を防衛せよ！" },
-        { name: "タイムアタック", desc: "時間内に指定数撃破せよ！" },
+        { name: "タイムアタック", desc: "時間内に指定数撃破！速さが全て！" },
         { name: "サボタージュ", desc: "HP減少の中、敵を撃破せよ！" },
-        { name: "圧倒", desc: "大量の敵を捌き切れ！" },
+        { name: "圧倒", desc: "低速の敵が大量に滞留！捌き切れ！" },
         { name: "精密射撃", desc: "ミスなく敵を撃破せよ！" },
         { name: "純粋なる試練", desc: "アイテム・スキルなしで敵を撃破せよ！" }
     ];
@@ -657,12 +656,12 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
     // 2. パターン別の条件設定
     switch (pattern) {
         case 0: // 【撃破目標】指定数倒せばクリア
-            config.spawn.limit = Math.floor(killGoal * 1.5);
+            config.spawn.limit = null;
             config.endConditions = { hpZero: true, killCount: killGoal };
             config.clearConditions = { killCount: killGoal };
             config.spawn.immediateOnClear = true; // 敵がいなくなったら即座に次を出す
             
-            // スター：タイピング速度(KPM) または クリア時間
+            // スター：タイピング速度(KPM) または 正確性（時間無制限＝じっくり質実な撃破任務）
             if (Math.random() > 0.5) {
                 config.star = {
                   type: "typingSpeed",
@@ -675,20 +674,16 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
                   ]
                 };
             } else {
-                // 最小スポーン時間 ＋ 最後の敵を倒すための猶予
-                const minSpawnTime = (killGoal - 1) * config.spawn.interval;
-                const typingBuffer = 1500; // 最低限必要なタイピング時間(ms)
-                const minPossibleTime = minSpawnTime + typingBuffer;
-                const baseTime = Math.max(minPossibleTime + 10000, killGoal * 4000); 
-
+                // 正確性（丁寧に戦うほど星が増える）
+                const accBase = 0.5 + (i * 0.003);
                 config.star = {
-                    type: "clearTime",
+                    type: "accuracy",
                     thresholds: [
-                        baseTime,
-                        Math.max(minPossibleTime + 4000, baseTime * 0.8),
-                        Math.max(minPossibleTime + 2000, baseTime * 0.7),
-                        Math.max(minPossibleTime + 1000, baseTime * 0.6),
-                        Math.max(minPossibleTime + 500, baseTime * 0.5)
+                        Math.min(0.85, accBase),
+                        Math.min(0.88, accBase + 0.05),
+                        Math.min(0.92, accBase + 0.1),
+                        Math.min(0.95, accBase + 0.15),
+                        0.98
                     ]
                 };
             }
@@ -720,11 +715,15 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             }
             break;
 
-        case 2: // 【殲滅目標】出現した敵をすべて倒せばクリア
+        case 2: // 【殲滅目標】出現した敵を全て倒す。
             const spawnLimit = Math.floor(killGoal * 0.8) + 5;
             config.spawn.limit = spawnLimit;
-            config.endConditions = { hpZero: true, allSpawnedDefeated: true };
-            config.clearConditions = { killCount: spawnLimit };
+            config.endConditions = {
+                hpZero: true,
+                allSpawnedDefeated: true     // (表示用) 全滅でも終了
+            };
+            config.clearConditions = { survive: true }; // ★ 生存クリア：1匹残してもクリア可能に
+            config.phaseConditions = { allSpawnedDefeated: true }; // 全滅させればその時点で早期クリア
             config.spawn.immediateOnClear = true; // 殲滅目標では即時スポーンが効果的
 
             // スター：総合評価(Composite) または クリア時間
@@ -757,15 +756,21 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
             }
             break;
 
-        case 3: // 【電撃戦】極めて短い制限時間内に指定数撃破
-            const blitzTime = Math.max(30000, 25000 + (i * 250)); // 制限時間を少し緩和 (25s -> 30sベース)
-            const blitzKillGoal = Math.floor(killGoal * 0.6); // 討伐目標を基本の8割に緩和
+        case 3: // 【電撃戦】短時間で決着。HPが減るほど敵が加速する(berserk)
+            const blitzTime = Math.max(30000, 25000 + (i * 250)); // 制限時間 (30sベース)
+            const blitzKillGoal = Math.floor(killGoal * 0.6); // 討伐目標を基本の6割に緩和
             config.spawn.interval *= 0.8; // 敵がどんどん出る
+            // 出現数は討伐目標より多め（猶予付き）：倒し切らなくても討伐数到達でクリア
+            config.spawn.limit = Math.floor(blitzKillGoal * 1.5) + 3;
             config.endConditions = { hpZero: true, timerMs: blitzTime, killCount: blitzKillGoal };
             config.clearConditions = { killCount: blitzKillGoal };
+            config.phaseConditions = { killCount: blitzKillGoal }; // ★ 討伐数到達でフェーズ完了（全滅不要＝逃しても詰まない）
             config.spawn.immediateOnClear = true;
-            
-            // ★スター評価基準を「残り時間」から「タイピング速度」に変更
+
+            // ★ berserk: 残りHPが少ないほど敵が加速（最大 +60%、ステージ進行で最大+100%まで強化）
+            config.berserk = { maxBoost: 0.6 + Math.min(0.4, i * 0.005) };
+
+            // スター：タイピング速度(KPM)
             config.star = {
                 type: "typingSpeed",
                 thresholds: [ // 圧倒も厳しかったため緩和
@@ -799,24 +804,23 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
 
         case 5: // 【タイムアタック】指定時間内に指定数撃破
             const timeAttackTime = Math.max(20000, 35000 + (i * 150)); // 20秒〜50秒程度
-            const timeAttackKillGoal = killGoal + Math.floor(i / 5); // 通常より多めに設定
+            const timeAttackKillGoal = Math.floor( killGoal * 0.6); 
             config.spawn.interval *= 0.8; // 敵の出現を少し早める
-            config.spawn.limit = Math.floor(timeAttackKillGoal * 1.5);
-            config.endConditions = { hpZero: true, timerMs: timeAttackTime };
-            config.clearConditions = { killCount: timeAttackKillGoal, timerMs: timeAttackTime };
+            config.spawn.limit = null;
+            config.endConditions = { hpZero: true, killCount: timeAttackKillGoal, timerMs: timeAttackTime };
+            config.clearConditions = { killCount: timeAttackKillGoal };
             config.spawn.immediateOnClear = true; // タイムアタックには必須級の機能
 
             // スター：クリア時間 または タイピング速度
             if (Math.random() > 0.5) {
-                const minPossibleTime = (timeAttackKillGoal - 1) * config.spawn.interval + 1500;
                 config.star = {
                     type: "clearTime",
                     thresholds: [
                         timeAttackTime,
-                        Math.max(minPossibleTime + 4000, timeAttackTime * 0.8),
-                        Math.max(minPossibleTime + 2000, timeAttackTime * 0.7),
-                        Math.max(minPossibleTime + 1000, timeAttackTime * 0.55),
-                        Math.max(minPossibleTime + 500, timeAttackTime * 0.4)
+                        Math.max(timeAttackTime * 0.95),
+                        Math.max(timeAttackTime * 0.9),
+                        Math.max(timeAttackTime * 0.85),
+                        Math.max(timeAttackTime * 0.8)
                     ]
                 };
             } else {
@@ -864,7 +868,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
           case 7: // 【圧倒】途方もない数の敵を捌き切れ！ (Overwhelm)
             const overwhelmTime = timeLimit + (i * 500); // 長めの生存時間
             config.spawn.interval *= 0.8; // 出現頻度を抑える (0.7 -> 0.8)
-            config.spawn.maxAlive = Math.min(10, maxAlive + 4); // 最大10体に制限
+            config.spawn.maxAlive = Math.min(14, maxAlive + 6); // 大幅増 → 画面に敵が溜まり続ける
+            config.enemySpeedMultiplier = 0.6; // ★ 敵を低速化：到達が遅く、画面上に滞留して密度が上がる
             config.spawn.limit = null; // 無限湧き
             config.endConditions = { hpZero: true, timerMs: overwhelmTime };
             config.clearConditions = { survive: true };
@@ -959,7 +964,16 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED) {
  * クエストステージの生成・永続化ロジック
  * 初回実行時に生成し、以降は LocalStorage から固定値を読み込む
  */
-const QUEST_STAGES_STORAGE_KEY = "QuestStages_Cache";
+const QUEST_STAGES_STORAGE_KEY = "QuestStages_Cache_v3";
+
+function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
 
 function initGeneratedStages() {
     if (typeof localStorage === 'undefined') return {}; // 非ブラウザ環境用セーフティ
@@ -975,8 +989,19 @@ function initGeneratedStages() {
 
     // キャッシュがない（New Game時など）場合は新規生成して保存
     const newStages = {};
-    for (let i = 1; i <= 100; i++) {
-        newStages[`STAGE${i}`] = generateStage(i);
+    // 10ステージごとの区切り（1-10, 11-20, ...）で全10パターンを配置
+    for (let block = 0; block < 10; block++) {
+        // 序盤（下一桁 1〜3）: 基本形 [0:撃破, 1:生存, 2:殲滅] をシャッフルして配置
+        const basicPatterns = shuffleArray([0, 1, 2]);
+        // 中盤〜後半（下一桁 4〜10）: 応用形 [3:電撃戦, 4:精密防衛, 5:タイムアタック, 6:サボタージュ, 7:圧倒, 8:精密射撃, 9:純粋なる試練] をシャッフルして配置
+        const advancedPatterns = shuffleArray([3, 4, 5, 6, 7, 8, 9]);
+
+        const patterns = [...basicPatterns, ...advancedPatterns];
+
+        for (let step = 0; step < 10; step++) {
+            const stageNum = block * 10 + step + 1;
+            newStages[`STAGE${stageNum}`] = generateStage(stageNum, ENEMY_TIER_BALANCED, patterns[step]);
+        }
     }
     localStorage.setItem(QUEST_STAGES_STORAGE_KEY, JSON.stringify(newStages));
     return newStages;
@@ -1240,14 +1265,14 @@ export const STAGES = {
   W1_MID_BOSS_1: {
     phases: [
       {
-        name: "Security Breach",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 4, immediateOnClear: true },
         enemyTable: getTierEnemies("T1", ENEMY_TIER_BALANCED),
         immediateOnClear: true,
         phaseConditions: { killCount: 10 }
       },
       {
-        name: "Adware King Appear",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_1", weight: 100, pos: { x: 830, y: 150 } }], 
@@ -1263,13 +1288,13 @@ export const STAGES = {
   W1_MID_BOSS_2: {
     phases: [
       {
-        name: "Botnet Invasion",
+        name: "phase 1",
         spawn: { interval: 2500, limit: 15, maxAlive: 5, immediateOnClear: true },
         enemyTable: getTierEnemies("T2", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 15 }
       },
       {
-        name: "Botnet Commander",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_2", weight: 100, pos: { x: 830, y: 150 }  }],
@@ -1284,13 +1309,13 @@ export const STAGES = {
   W1_MID_BOSS_3: {
     phases: [
       {
-        name: "Botnet Invasion",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 5 },
         enemyTable: getTierEnemies("T3", ENEMY_TIER_BALANCED),
         phaseConditions: { timerMs: 40000}
       },
       {
-        name: "Botnet Commander",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_3", weight: 100, pos: { x: 830, y: 150 }  }],
@@ -1305,13 +1330,13 @@ export const STAGES = {
   W2_MID_BOSS_4: {
     phases: [
       {
-        name: "Breaker's Approach",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
         enemyTable: getTierEnemies("T4", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 15 }
       },
       {
-        name: "Breaker",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_4", weight: 100, pos: { x: 830, y: 150 } }],
@@ -1326,13 +1351,13 @@ export const STAGES = {
   W2_MID_BOSS_5: {
     phases: [
       {
-        name: "Void's Echo",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
         enemyTable: getTierEnemies("T5", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 20 }
       },
       {
-        name: "Void",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_5", weight: 100, pos: { x: 830, y: 150 } }],
@@ -1347,13 +1372,13 @@ export const STAGES = {
   W2_MID_BOSS_6: {
     phases: [
       {
-        name: "Ghostly Presence",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
         enemyTable: getTierEnemies("T6", ENEMY_TIER_BALANCED),
         phaseConditions: {  timerMs: 50000 }
       },
       {
-        name: "Ghost",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_6", weight: 100, pos: { x: 830, y: 150 } }],
@@ -1368,13 +1393,13 @@ export const STAGES = {
   W3_MID_BOSS_7: {
     phases: [
       {
-        name: "Echoes of the Void",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
         enemyTable: getTierEnemies("T7", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 25 }
       },
       {
-        name: "Void",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_7", weight: 100, pos: { x: 830, y: 150 } }],
@@ -1389,13 +1414,13 @@ export const STAGES = {
   W3_MID_BOSS_8: {
     phases: [
       {
-        name: "Lingering Ghosts",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
         enemyTable: getTierEnemies("T8", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 28 }
       },
       {
-        name: "Ghost",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_8", weight: 100, pos: { x: 830, y: 150 } }],
@@ -1410,16 +1435,38 @@ export const STAGES = {
   W3_MID_BOSS_9: {
     phases: [
       {
-        name: "Final Phantoms",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
         enemyTable: getTierEnemies("T8", ENEMY_TIER_BALANCED),
         phaseConditions: { timerMs: 60000 }
       },
       {
-        name: "Ghost",
+        name: "mid boss",
         bgm: "bgm_reflectable",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "MID_BOSS_9", weight: 100, pos: { x: 830, y: 150 } }],
+        phaseConditions: { killCount: 1 }
+      }
+    ],
+    endConditions: { hpZero: true },
+    clearConditions: { survive: true },
+    star: { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
+  },
+
+  // EX mini Boss
+  WEX_MID_BOSS_10: {
+    phases: [
+      {
+        name: "phase 1",
+        spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
+        enemyTable: getTierEnemies("T9", ENEMY_TIER_BALANCED),
+        phaseConditions: { timerMs: 70000 }
+      },
+      {
+        name: "mid boss",
+        bgm: "bgm_reflectable",
+        spawn: { interval: 1000, limit: 1, maxAlive: 1 },
+        enemyTable: [{ type: "MID_BOSS_10", weight: 100, pos: { x: 830, y: 150 } }],
         phaseConditions: { killCount: 1 }
       }
     ],
@@ -1438,13 +1485,13 @@ export const STAGES = {
   W1_WORLD_BOSS: {
     phases: [
       {
-        name: "Gateway Security",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
         enemyTable: getTierEnemies("T3", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 20 }
       },
       {
-        name: "GATEWAY GUARDIAN",
+        name: "boss",
         bgm: "bgm_boss1",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "BOSS_1", weight: 100, pos: { x: 830, y: 150 }  }],
@@ -1460,19 +1507,19 @@ export const STAGES = {
   W2_WORLD_BOSS: {
     phases: [
       {
-        name: "Core Defense System",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
         enemyTable: getTierEnemies("T6", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 25 }
       },
       {
-        name: "Core Defense System 2",
+        name: "phase 2",
         spawn: { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
         enemyTable: getTierEnemies("T6", ENEMY_TIER_BALANCED),
         phaseConditions: { timerMs: 50000 }
       },
       {
-        name: "CYBER CORE",
+        name: "boss",
         bgm: "bgm_boss1",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "BOSS_2", weight: 100, pos: { x: 830, y: 150 } }],
@@ -1488,25 +1535,25 @@ export const STAGES = {
   W3_WORLD_BOSS: {
     phases: [
       {
-        name: "Admin's Guard",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
         enemyTable: getTierEnemies("T8", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 30 }
       },
       {
-        name: "Admin's Guard 2",
+        name: "phase 2",
         spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
         enemyTable: getTierEnemies("T9", ENEMY_TIER_BALANCED),
         phaseConditions: {timerMs: 60000}
       },
       {
-        name: "Admin's Guard 3",
+        name: "phase 3",
         spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
         enemyTable: getTierEnemies("T9", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 30 }
       },
       {
-        name: "THE ADMIN",
+        name: "boss",
         bgm: "bgm_boss1",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "BOSS_3", weight: 100, pos: { x: 830, y: 150 } }],
@@ -1522,28 +1569,62 @@ export const STAGES = {
   LAST_BOSS: {
     phases: [
       {
-        name: "end of the world",
+        name: "phase 1",
         spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
         enemyTable: getTierEnemies("T8", ENEMY_TIER_ENGLISH_HEAVY),
         phaseConditions: { killCount: 30 }
       },
       {
-        name: "end of the world 2",
+        name: "phase 2",
         spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
         enemyTable: getTierEnemies("T9", ENEMY_TIER_BALANCED),
         phaseConditions: {timerMs: 65000}
       },
       {
-        name: "end of the world 3",
+        name: "phase 3",
         spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
         enemyTable: getTierEnemies("T9", ENEMY_TIER_BALANCED),
         phaseConditions: { killCount: 35 }
       },
       {
-        name: "THE LAST",
+        name: "last boss",
         bgm: "bgm_boss2",
         spawn: { interval: 1000, limit: 1, maxAlive: 1 },
         enemyTable: [{ type: "LAST_BOSS", weight: 100, pos: { x: 830, y: 150 } }],
+        phaseConditions: { killCount: 1 }
+      }
+    ],
+    endConditions: { hpZero: true },
+    clearConditions: { survive: true },
+    star: { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
+  },
+
+  // Ex ボス
+  WEX_BOSS: {
+    phases: [
+      {
+        name: "phase 1",
+        spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
+        enemyTable: getTierEnemies("T9", ENEMY_TIER_ENGLISH_HEAVY),
+        phaseConditions: { killCount: 30 }
+      },
+      {
+        name: "phase 2",
+        spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
+        enemyTable: getTierEnemies("T10", ENEMY_TIER_BALANCED),
+        phaseConditions: {timerMs: 65000}
+      },
+      {
+        name: "phase 3",
+        spawn: { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
+        enemyTable: getTierEnemies("T10", ENEMY_TIER_BALANCED),
+        phaseConditions: { killCount: 35 }
+      },
+      {
+        name: "extra boss",
+        bgm: "bgm_vampire",
+        spawn: { interval: 1000, limit: 1, maxAlive: 1 },
+        enemyTable: [{ type: "EX_BOSS", weight: 100, pos: { x: 830, y: 150 } }],
         phaseConditions: { killCount: 1 }
       }
     ],
@@ -1698,6 +1779,151 @@ export const STAGES = {
       }
     }
   },
+  DEFENSE_7: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_free",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 470,
+      timeLimit: 200, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 4,
+      maxLength: 12,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+  DEFENSE_8: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_free",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 540,
+      timeLimit: 220, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 5,
+      maxLength: 12,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+  DEFENSE_9: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_free",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 620,
+      timeLimit: 240, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 5,
+      maxLength: 13,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+  DEFENSE_10: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_free",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 700,
+      timeLimit: 260, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 5,
+      maxLength: 14,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+  DEFENSE_11: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_free",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 780,
+      timeLimit: 280, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 6,
+      maxLength: 14,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+  DEFENSE_12: {
+    isDefenseMode: true, // ★防衛モードであることを示すフラグ
+    //bgImage: "battle_red",
+    bgm: "bgm_free",
+    missionName: "コア防衛戦線",
+    missionDescription: "時間内に、指定された文字数を入力せよ。",
+    defenseConfig: {
+      totalCharsToType: 870,
+      timeLimit: 300, // 秒
+      genres: ['empty'], // 標準単語
+      minLength: 6,
+      maxLength: 15,
+    },
+    // ★ 防衛モード用の星評価ロジックに変更
+    star: { 
+      type: "defenseSurplus", 
+      thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], // 総合スコアの閾値
+      weights: {
+        surplus: 0.4, // 超過率の重み
+        accuracy: 0.6 // 正確性の重み
+      }
+    }
+  },
+
+
 
 
 // ========================================================
@@ -1846,5 +2072,61 @@ export const STAGES = {
       }
     }
   },
+
+  // =====================================================
+  // EXTRA WORLD テストステージ
+  // ※ ここから自由にステージを追加・変更できます
+  // =====================================================
+  STAGE_EX1: {
+    spawn: {
+      interval: 2000,
+      limit: 10,
+      maxAlive: 3,
+      immediateOnClear: false
+    },
+    enemyTable: [
+      { type: "TYPE_A", weight: 40 },
+      { type: "TYPE_B", weight: 30 },
+      { type: "TYPE_C", weight: 30 }
+    ],
+    endConditions: {
+      hpZero: true,
+      killCount: 10,
+      allSpawnedDefeated: false
+    },
+    clearConditions: {
+      killCount: 10
+    },
+    star: {
+      type: "accuracy",
+      thresholds: [0.7, 0.8, 0.88, 0.94, 0.98]
+    }
+  },
+
+  STAGE_EX2: {
+    spawn: {
+      interval: 1500,
+      limit: 15,
+      maxAlive: 4,
+      immediateOnClear: true
+    },
+    enemyTable: [
+      { type: "TYPE_B", weight: 40 },
+      { type: "TYPE_C", weight: 30 },
+      { type: "TYPE_D", weight: 30 }
+    ],
+    endConditions: {
+      hpZero: true,
+      killCount: 15,
+      allSpawnedDefeated: false
+    },
+    clearConditions: {
+      killCount: 15
+    },
+    star: {
+      type: "accuracy",
+      thresholds: [0.75, 0.82, 0.90, 0.95, 0.99]
+    }
+  }
 
 };

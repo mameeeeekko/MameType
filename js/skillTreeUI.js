@@ -6,6 +6,7 @@ import { backToMenu, exitSkillMode } from "./gameCore.js";
 import { backToQuestMap, showHud } from "./main.js";
 import { devOverride } from "../dev/devOverride.js";
 import { setupCanvasDPR } from "./canvasUtil.js";
+import { getStageScale, STAGE_W, STAGE_H } from "./stageScale.js";
 import { images } from "./assetsLoader.js";
 
 
@@ -202,9 +203,9 @@ export function renderSkillTreeUI(container){
             </div>
         `;
 
-        // 中央寄せ表示
-        tooltip.style.left = `${window.innerWidth / 2 - 120}px`;
-        tooltip.style.top  = `${window.innerHeight / 2 + 120}px`;
+        // 中央寄せ表示（ステージ基準）
+        tooltip.style.left = `${STAGE_W / 2 - 120}px`;
+        tooltip.style.top  = `${STAGE_H / 2 + 120}px`;
 
         // ブルっと
         canvas.classList.add("shake");
@@ -349,8 +350,10 @@ export function renderSkillTreeUI(container){
     canvas.onclick = (e) => {
 
         const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
+        // ステージ拡大率を打ち消してステージ（論理）座標へ変換
+        const s = getStageScale() || 1;
+        const mx = (e.clientX - rect.left) / s;
+        const my = (e.clientY - rect.top) / s;
 
         nodeHitAreas.forEach(n => {
             const dx = mx - n.x;
@@ -438,8 +441,10 @@ export function renderSkillTreeUI(container){
     canvas.onmousemove = (e) => {
 
         const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
+        // ステージ拡大率を打ち消してステージ（論理）座標へ変換
+        const s = getStageScale() || 1;
+        const mx = (e.clientX - rect.left) / s;
+        const my = (e.clientY - rect.top) / s;
 
         let hitNode = null;
 

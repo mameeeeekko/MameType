@@ -11,6 +11,8 @@
 // 描画品質レベルの管理と実効DPR判定は performance.js に一元化した。
 // 旧API（getRenderQuality / setRenderQuality）は既存呼び出し互換のため再エクスポートする。
 import { getDprCap } from "./performance.js";
+// ステージが transform で拡大縮小されるため、表示解像度へ合わせる際に使用する
+import { getStageScale } from "./stageScale.js";
 
 export { getRenderQuality, setRenderQuality } from "./performance.js";
 
@@ -33,7 +35,8 @@ export function getEffectiveDPR() {
  * ctx を論理座標系で描けるようにスケールする。
  */
 export function applyCanvasDPR(canvas, cssW, cssH) {
-    const dpr = getEffectiveDPR();
+    // ステージ拡大率も掛けて、拡大表示時にもジャギらず描画されるようにする
+    const dpr = getEffectiveDPR() * getStageScale();
 
     canvas.style.width = cssW + "px";
     canvas.style.height = cssH + "px";
@@ -55,14 +58,17 @@ export function applyCanvasDPR(canvas, cssW, cssH) {
 }
 
 export function setupCanvasDPR(canvas, container, ctx) {
-    const dpr = getEffectiveDPR();
-    const rect = container.getBoundingClientRect();
+    // transform スケール下では rect が表示サイズを返すため、
+    // ステージ座標（レイアウトサイズ）の clientWidth / clientHeight を使う
+    const dpr = getEffectiveDPR() * getStageScale();
+    const cssW = container.clientWidth || 800;
+    const cssH = container.clientHeight || 600;
 
-    canvas.style.width = rect.width + "px";
-    canvas.style.height = rect.height + "px";
+    canvas.style.width = cssW + "px";
+    canvas.style.height = cssH + "px";
 
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
 
     // ★重要：一度リセット
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -71,8 +77,8 @@ export function setupCanvasDPR(canvas, container, ctx) {
     ctx.scale(dpr, dpr);
 
     return {
-        width: rect.width,
-        height: rect.height,
+        width: cssW,
+        height: cssH,
         dpr
     };
 }
@@ -83,10 +89,11 @@ export function setupCanvasDPR(canvas, container, ctx) {
  * 描画コードは clientWidth / clientHeight を基準にするため自動的に追従する。
  */
 export function fitCanvasToContainerFill(canvas, container, ctx) {
-    const dpr = getEffectiveDPR();
-    const rect = container.getBoundingClientRect();
-    const cssW = Math.max(1, Math.floor((rect && rect.width) || window.innerWidth || 800));
-    const cssH = Math.max(1, Math.floor((rect && rect.height) || window.innerHeight || 600));
+    // transform スケール下では rect が表示サイズを返すため、
+    // ステージ座標（レイアウトサイズ）の clientWidth / clientHeight を使う
+    const dpr = getEffectiveDPR() * getStageScale();
+    const cssW = Math.max(1, Math.floor(container.clientWidth || window.innerWidth || 800));
+    const cssH = Math.max(1, Math.floor(container.clientHeight || window.innerHeight || 600));
 
     canvas.style.width = cssW + "px";
     canvas.style.height = cssH + "px";
@@ -112,7 +119,7 @@ export function fitCanvasToContainerFill(canvas, container, ctx) {
 }
 
 /**
- * 論理キャンバス（例: 1400×900）を、コンテナ/画面に「収まる範囲で均一スケール」して
+ * 論理キャンバス（例: 1600×900）を、コンテナ/画面に「収まる範囲で均一スケール」して
  * 中央に表示する。縦横比を保つため、画面がどんなサイズでも下・右が切れず、
  * Mac / Windows で同じ見た目になる（レターボックス方式）。
  *
@@ -120,10 +127,9 @@ export function fitCanvasToContainerFill(canvas, container, ctx) {
  * ここで style 幅を論理幅×scale に設定することで、既存の描画ロジックはそのまま動作する。
  */
 export function fitCanvasToContainer(canvas, container, ctx, logicalW, logicalH) {
-    const dpr = getEffectiveDPR();
-    const rect = container.getBoundingClientRect();
-    const availW = (rect && rect.width) || window.innerWidth || 1400;
-    const availH = (rect && rect.height) || window.innerHeight || 900;
+    const dpr = getEffectiveDPR() * getStageScale();
+    const availW = container.clientWidth || window.innerWidth || 1600;
+    const availH = container.clientHeight || window.innerHeight || 900;
 
     const scale = Math.min(availW / logicalW, availH / logicalH) || 1;
     const cssW = Math.max(1, Math.floor(logicalW * scale));

@@ -11,6 +11,7 @@ import { getItemDescription } from "./enemy.js";
 import { renderEnemyBehaviorEffect,renderFreezeAura } from "./effectManager.js";
 import { images } from "./assetsLoader.js";
 import { defineShapePath } from "./shapeDefinitions.js";
+import { stageRect, STAGE_W, STAGE_H } from "./stageScale.js";
 
 // テキストが英数字・記号のみ（英語問題）か判定
 const isEnglish = (str) => /^[a-zA-Z0-9\s.,!?-]+$/.test(str);
@@ -2015,8 +2016,8 @@ export function updateComboTierBar(stats, isQuestMode = false) {
             // Tier上昇時のエフェクト（MAXではない）
             const isNowOverdrive = combo >= OVERDRIVE_COMBO;
             if (!isNowOverdrive) {
-                const tierWrapperRect = tierWrapper.getBoundingClientRect();
-                const canvasRect = document.getElementById("enemyModeCanvas").getBoundingClientRect();
+                const tierWrapperRect = stageRect(tierWrapper);
+                const canvasRect = stageRect(document.getElementById("enemyModeCanvas"));
                 const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
                 const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
                 spawnComboTierUpEffect(centerX, centerY, currentTier, false);
@@ -2039,8 +2040,8 @@ export function updateComboTierBar(stats, isQuestMode = false) {
     const wasOverdrive = stats.prevCombo < OVERDRIVE_COMBO;
 
     if (wasOverdrive && isOverdrive) {
-        const tierWrapperRect = tierWrapper.getBoundingClientRect();
-        const canvasRect = document.getElementById("enemyModeCanvas").getBoundingClientRect();
+        const tierWrapperRect = stageRect(tierWrapper);
+        const canvasRect = stageRect(document.getElementById("enemyModeCanvas"));
         const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
         const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
         const lastTier = COMBO_TIERS.length - 1; // 最後のティア
@@ -2127,6 +2128,12 @@ export function renderScore(ctx, gameState, now) {
 
 let prevRemainingSpawn = null;
 let spawnAnimState = null;
+const SPAWN_ANIM_DURATION = 180;
+
+export function resetSpawnDotState() {
+    prevRemainingSpawn = null;
+    spawnAnimState = null;
+}
 
 // ===============================
 // 終了条件UI（左上・複数対応）
@@ -2154,18 +2161,19 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
         if (prevRemainingSpawn !== null && remaining < prevRemainingSpawn) {
             spawnAnimState = {
                 type: "decay",
-                time: now
+                time: now,
+                fromCount: prevRemainingSpawn,
+                toCount: remaining,
+                fromSmall: prevRemainingSpawn % 10,
+                toSmall: remaining % 10,
+                fromBig: Math.floor(prevRemainingSpawn / 10),
+                toBig: Math.floor(remaining / 10)
             };
         }
 
-        const prevBig = Math.floor((prevRemainingSpawn ?? remaining) / 10);
-        const nowBig = Math.floor(remaining / 10);
-
-        if (prevBig > nowBig) {
-            spawnAnimState = {
-                type: "collapse10",
-                time: now
-            };
+        // アニメーション期限切れ判定
+        if (spawnAnimState && (now - spawnAnimState.time >= SPAWN_ANIM_DURATION)) {
+            spawnAnimState = null;
         }
 
         prevRemainingSpawn = remaining;
@@ -2182,7 +2190,8 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     
     // 残り敵数
     if (end.killCount != null) {
-        const remain = Math.max(0, end.killCount - stats.phaseProcessedCount);
+        const currentDefeated = stats.phaseObjectiveDefeated ?? stats.objectiveDefeated ?? 0;
+        const remain = Math.max(0, end.killCount - currentDefeated);
         lines.push({ label: "ENEMY", value: remain });
     }
 
@@ -2267,7 +2276,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     y += 16;
 
     if (spawnDots) {
-        drawSpawnDots(ctx, x, y, spawnDots.remaining, spawnAnimState);
+        drawSpawnDots(ctx, x, y, spawnDots.remaining, spawnAnimState, now);
     } else {
         ctx.font = "bold 24px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "#f0f6fc"; // ♾️を白く表示
@@ -2396,9 +2405,23 @@ function renderBgmInfo(ctx, gameState, now) {
 }
 
 // 敵の数をドットで表現
-function drawSpawnDots(ctx, x, y, remaining, anim) {
+function drawSpawnDots(ctx, x, y, remaining, anim, now) {
 
     if (remaining === 0) {
+        // 直前の最後の1個の消滅アニメ中ならそれを描画
+        if (anim?.type === "decay" && anim.fromCount === 1) {
+            const elapsed = now - anim.time;
+            if (elapsed < SPAWN_ANIM_DURATION) {
+                const t = Math.min(1, elapsed / SPAWN_ANIM_DURATION);
+                ctx.save();
+                ctx.font = `14px 'Noto Sans Mono', monospace`;
+                ctx.fillStyle = "#e4e4e4";
+                ctx.globalAlpha = Math.max(0, 1 - t);
+                ctx.fillText("●", x + 10 + t * 8, y);
+                ctx.restore();
+                return;
+            }
+        }
         ctx.font = "bold 16px 'Noto Sans Mono', monospace";
         ctx.fillStyle = "#e4e4e4";
         ctx.fillText("0", x, y);
@@ -2439,31 +2462,45 @@ function drawSpawnDots(ctx, x, y, remaining, anim) {
     // ======================
     // •（1）
     // ======================
-    drawSmallDots(ctx, cursorX + 10, y, smallCount, anim);
+    drawSmallDots(ctx, cursorX + 10, y, smallCount, anim, now);
 
     ctx.globalAlpha = 1;
 }
 
-function drawSmallDots(ctx, x, y, count, anim) {
+function drawSmallDots(ctx, x, y, count, anim, now) {
     ctx.font = `14px 'Noto Sans Mono', monospace`;
     ctx.fillStyle = "#e4e4e4";
 
+    // 現在の残りの丸（すべて通常描画）
     for (let i = 0; i < count; i++) {
         const col = i % 5;
         const row = Math.floor(i / 5);
 
-        let dx = x + col * 14;
-        let dy = y + row * 12;
-
-        // 減少アニメ（最後の1個）
-        if (anim?.type === "decay" && i === count - 1) {
-            const t = Math.min(1, (performance.now() - anim.time) / 150);
-            dx += t * 12;
-            ctx.globalAlpha = 1 - t;
-        }
+        const dx = x + col * 14;
+        const dy = y + row * 12;
 
         ctx.fillText("●", dx, dy);
-        ctx.globalAlpha = 1;
+    }
+
+    // 減少アニメーション（直前に消えた1個をフェードアウト＆スライド描画）
+    if (anim?.type === "decay" && anim.fromBig === anim.toBig) {
+        const elapsed = now - anim.time;
+        if (elapsed < SPAWN_ANIM_DURATION) {
+            const t = Math.min(1, elapsed / SPAWN_ANIM_DURATION);
+            const disappearingIndex = count; // 直前にあった位置 (index = count)
+            if (disappearingIndex < 10) {
+                const col = disappearingIndex % 5;
+                const row = Math.floor(disappearingIndex / 5);
+
+                const dx = x + col * 14 + t * 8;
+                const dy = y + row * 12;
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, 1 - t);
+                ctx.fillText("●", dx, dy);
+                ctx.restore();
+            }
+        }
     }
 }
 
@@ -2509,8 +2546,8 @@ function drawCooldownSpeedPopup(ctx, canvas) {
     const chainUI = document.getElementById("chainUI");
     if (!chainUI) return;
 
-    const rect = chainUI.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
+    const rect = stageRect(chainUI);
+    const canvasRect = stageRect(canvas);
 
     const size = 36;
     const OFFSET_X = 22;
@@ -2593,8 +2630,8 @@ export function renderActiveSkillUI(ctx, state, canvas) {
     const chainUI = document.getElementById("chainUI");
     if (!chainUI) return;
 
-    const rect = chainUI.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
+    const rect = stageRect(chainUI);
+    const canvasRect = stageRect(canvas);
 
     // 少しコンパクト化
     const size = 36;
@@ -3005,8 +3042,8 @@ export function renderSystemMessage(
     const chainUI = document.getElementById("chainUI");
     if (!chainUI) return;
 
-    const rect = chainUI.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
+    const rect = stageRect(chainUI);
+    const canvasRect = stageRect(canvas);
 
     const size = 34;
 
@@ -3124,13 +3161,14 @@ export function getUIAnchorPosition(type = "skill") {
     if (!canvas) {
 
         return {
-            x: window.innerWidth * 0.5,
-            y: window.innerHeight - 80
+            x: STAGE_W * 0.5,      // ステージ中央
+            y: STAGE_H - 80        // ステージ下端 - 80
         };
     }
 
+    // transform スケール下では rect が表示サイズを返すためステージ座標へ変換
     const rect =
-        canvas.getBoundingClientRect();
+        stageRect(canvas);
 
     // ======================================
     // Skill UI

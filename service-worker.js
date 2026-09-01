@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.2";
+const CACHE_NAME = "mametype-v1.0.6";
 
 // =====================================================
 // コアアセット
@@ -16,8 +16,27 @@ const CORE_ASSETS = [
   "./",
   "./index.html",
   "./style.css",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./assets/fonts/fonts.css",
+
+  // ---------------------------------------------------
+  // メニュー画像 / サウンドアイコン
+  // ---------------------------------------------------
+
+  "./assets/pic/title_menu.png",
+  "./assets/pic/quest_menu.png",
+  "./assets/pic/sound1.png",
+  "./assets/pic/soundmute.png",
+
+  // ---------------------------------------------------
+  // コアJS
+  // ---------------------------------------------------
 
   "./js/main.js",
+  "./js/fullscreenUtil.js",
+  "./js/stageScale.js",
   "./js/gameCore.js",
   "./js/enemyCore.js",
   "./js/defenseCore.js",
@@ -37,10 +56,65 @@ const CORE_ASSETS = [
   "./js/typingLogic.js",
   "./js/version.js",
 
-  "./assets/pic/title_menu.png",
-  "./assets/pic/quest_menu.png",
-  "./assets/pic/sound1.png",
-  "./assets/pic/soundmute.png",
+  // ---------------------------------------------------
+  // クエスト / スキルツリー関連JS
+  // ---------------------------------------------------
+
+  "./js/canvasUtil.js",
+  "./js/performance.js",
+  "./js/keybinds.js",
+  "./js/questMap.js",
+  "./js/questMapUI.js",
+  "./js/questProgress.js",
+  "./js/questPlayerStats.js",
+  "./js/questResult.js",
+  "./js/questSkills.js",
+  "./js/skillTree.js",
+  "./js/skillTreeUI.js",
+  "./js/skillTreeResult.js",
+
+  // ---------------------------------------------------
+  // 敵 / 描画 / エフェクト関連JS
+  // ---------------------------------------------------
+
+  "./js/enemy.js",
+  "./js/enemySpawner.js",
+  "./js/enemyRenderer.js",
+  "./js/enemyResult.js",
+  "./js/enemyModeConfig.js",
+  "./js/effectManager.js",
+  "./js/defenseRenderer.js",
+  "./js/defenseResult.js",
+  "./js/shapeDefinitions.js",
+  "./js/starEvaluator.js",
+  "./js/recordsView.js",
+  "./js/resultView.js",
+
+  // ---------------------------------------------------
+  // オンライン機能（オフライン起動時もモジュールとして
+  // 読み込まれるため、JSファイル自体はキャッシュ必須）
+  // ---------------------------------------------------
+
+  "./online/supabase.js",
+  "./online/playerProfile.js",
+  "./online/submitScore.js",
+  "./online/getRanking.js",
+  "./online/onlineRankingRenderer.js",
+
+  // ---------------------------------------------------
+  // 開発ツール（main.jsから読み込まれている）
+  // ---------------------------------------------------
+
+  "./dev/devOverride.js",
+  "./dev/devTools.js",
+
+  // ---------------------------------------------------
+  // 外部CDN（Supabaseクライアント）
+  // supabase.js が起動時に静的importしているため、
+  // 完全オフライン起動にはこのキャッシュが必須
+  // ---------------------------------------------------
+
+  "https://esm.sh/@supabase/supabase-js@2?bundle",
 ];
 
 // =====================================================
@@ -141,6 +215,7 @@ const DYNAMIC_ASSETS = [
   "./assets/pic/map_field_purple.png",
   "./assets/pic/map_field_red.png",
   "./assets/pic/map_field_gray.png",
+  "./assets/pic/map_field_ex.png" ,
 
   // ---------------------------------------------------
   // SE
@@ -199,6 +274,11 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/bgm/soranaka.mp3",
   "./assets/sound/bgm/floating_city.mp3",
   "./assets/sound/bgm/after_the_summer_fades.mp3",
+  "./assets/sound/bgm/ikuseisou.mp3", 
+  "./assets/sound/bgm/free.mp3",
+  "./assets/sound/bgm/1minute.mp3",
+  "./assets/sound/bgm/yukkuriisoge.mp3",
+  "./assets/sound/bgm/vampire.mp3",
 ];
 
 // =====================================================
@@ -424,7 +504,7 @@ self.addEventListener("fetch", event => {
 
   event.respondWith(
 
-    caches.match(event.request)
+    caches.match(event.request, { ignoreVary: true })
       .then(cachedResponse => {
 
         // ---------------------------------------------

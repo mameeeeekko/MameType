@@ -91,7 +91,7 @@ export function showQuestResult(stats) { // Already exported, no change needed
     // スコア・ランク
     // =========================
    const multiplierText = (stats.scoreBreakdown && !stats.isInvalidRun)
-        ? `<div style="font-size: 0.75em; color: #8b949e; margin-top: 15px; letter-spacing: 1px;">TOTAL MULTIPLIER: ×${stats.scoreBreakdown.totalMultiplier.toFixed(2)}</div>`
+        ? `<div style="font-size: 0.75em; color: #8b949e; margin-top: 6px; letter-spacing: 1px;">TOTAL MULTIPLIER: ×${stats.scoreBreakdown.totalMultiplier.toFixed(2)}</div>`
         : "";
 
    const scoreBlock = `
@@ -381,7 +381,7 @@ export function showQuestResult(stats) { // Already exported, no change needed
                     startDialogue("epilogue_after_staffroll", () => {
                         // エピローグ後、初回全クリ後の特典を一度だけ表示する
                         if (!hasShownFirstFullClearReward()) {
-                            const rewardHtml = `<div>全クリアおめでとうございます！<br>以下の特典が開放されました。<br>・各ステージのノードイベントを自由に聞くことが可能。<br>・ボスチャレンジモード（フリーモード内）<br>・クエストモードの星の振り直しが何回でも可能</div>`;
+                            const rewardHtml = `<div>全クリアおめでとうございます！<br>以下の特典が開放されました。<br>・新難易度【EXPERT】（高難易度・高スコア倍率）<br>・新ワールド【ディープ・コア [EXTRA]】<br>・各ステージのノードイベントを自由に聞くことが可能<br>・ボスチャレンジモード（フリーモード内）<br>・クエストモードの星の振り直しが何回でも可能</div>`;
                             // まずセーブの確認（スロット保存）を行い、保存完了またはモーダル閉じた後に特典を表示する
                             showSaveConfirmPopup("セーブしますか？（スロットに保存）", () => {
                                 // ユーザーが「セーブする」を選んだ → セーブモーダルを開いてスロット選択を促す

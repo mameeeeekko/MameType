@@ -8,6 +8,7 @@ import { DIALOGUE_DATA, CHARACTERS, RANDOM_DIALOGUES } from './dialogueData.js';
 import { QUEST_MAP } from './questMap.js';
 import { showQuestMap } from './main.js';
 import { images } from './assetsLoader.js';
+import { getStageScale } from './stageScale.js';
 
 let dialogueModal = null;
 let chatPanel = null;
@@ -838,7 +839,8 @@ function typeMessage(element, text, onFinished, noType = false, message = null) 
     if (bubble && bubble.classList.contains('right')) {
         element.style.visibility = 'hidden'; // 一時的に非表示
         element.innerHTML = text.replace(/\n/g, '<br>'); // 全文をセット
-        const width = element.getBoundingClientRect().width;
+        // transform スケール下では rect が表示幅を返すためステージ座標へ変換する
+        const width = element.getBoundingClientRect().width / (getStageScale() || 1);
         element.style.width = `${width}px`;
         element.style.visibility = 'visible'; // 表示に戻す
         element.innerHTML = ''; // テキストをクリアしてタイピング開始

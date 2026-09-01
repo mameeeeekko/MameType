@@ -67,7 +67,16 @@ function load(){
     if (!parsed.playedChoices) {
         parsed.playedChoices = {};
     }
-    return { ...DEFAULT_PROGRESS, ...parsed };
+    const res = { ...DEFAULT_PROGRESS, ...parsed };
+    if (res.hasSeenTrueEnding) {
+        if (!res.unlockedWorlds.includes("WORLD_EX")) {
+            res.unlockedWorlds.push("WORLD_EX");
+        }
+        if (!res.unlocked.includes("WEX_TEST_1")) {
+            res.unlocked.push("WEX_TEST_1");
+        }
+    }
+    return res;
 }
 
 export function reloadQuestProgress() {
@@ -84,10 +93,18 @@ export function reloadQuestProgress() {
     selectedWorldId: data.selectedWorldId ?? "WORLD1",
     playedDialogues: data.playedDialogues ?? {},
     playedChoices: data.playedChoices ?? {},
-        hasSeenTrueEnding: data.hasSeenTrueEnding || false,
-        hasShownFirstFullClearReward: data.hasShownFirstFullClearReward || false,
-        hasBossChallengeUnlocked: data.hasBossChallengeUnlocked || false,
-  };// ←これが重要
+    hasSeenTrueEnding: data.hasSeenTrueEnding || false,
+    hasShownFirstFullClearReward: data.hasShownFirstFullClearReward || false,
+    hasBossChallengeUnlocked: data.hasBossChallengeUnlocked || false,
+  };
+  if (progress.hasSeenTrueEnding) {
+    if (!progress.unlockedWorlds.includes("WORLD_EX")) {
+      progress.unlockedWorlds.push("WORLD_EX");
+    }
+    if (!progress.unlocked.includes("WEX_TEST_1")) {
+      progress.unlocked.push("WEX_TEST_1");
+    }
+  }
   return progress;
 }
 
@@ -192,6 +209,12 @@ export function isChoicePlayed(choiceId, choiceIndex) {
 export function markTrueEndingSeen() {
     if (progress) {
         progress.hasSeenTrueEnding = true;
+        if (!progress.unlockedWorlds.includes("WORLD_EX")) {
+            progress.unlockedWorlds.push("WORLD_EX");
+        }
+        if (!progress.unlocked.includes("WEX_TEST_1")) {
+            progress.unlocked.push("WEX_TEST_1");
+        }
     }
     // ★全クリア特典：星の振り直しを無制限にする
     setRebuildUnlimited();

@@ -35,6 +35,8 @@ import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed, show
 import { loadCoreAssets, loadRemainingAssets, images } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
+import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
+import { fitStage, getStageScale } from "./stageScale.js";
 import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
 import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
@@ -43,6 +45,7 @@ import {
   getCurrentDifficulty,
   setCurrentDifficulty,
   getDifficultyDescription,
+  getAvailableDifficulties,
 } from "./difficulties.js";
 import { playBGM, stopBGM, playSE } from "./effectManager.js";
 import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
@@ -399,6 +402,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("versionLabel").textContent = `v${APP_VERSION}`;
 
+  // アプリ全体のフルスクリーン ⇔ ウィンドウ切替（グローバルUIバーのボタン）
+  bindFullscreenToggle(document.getElementById("globalFsToggle"));
+
+  // ステージスケールの初期適用（resize / fullscreenchange では自動更新される）
+  fitStage();
+
+  // グローバルUIバー（全メニュー共通・左上）の表示制御を初期化
+  initGlobalUiBar();
+
   bindModeStartEvents();
   bindResultEvents();
   bindMenuBackEvents();
@@ -623,6 +635,8 @@ document.addEventListener("DOMContentLoaded", () => {
 let currentServiceWorkerRegistration = null;
 let updateControllerChangeHandler = null;
 let updateProgressReceived = false;
+let isFirstInstall = false;
+let updateFileErrorCount = 0;
 
 
 // =====================================================
@@ -674,6 +688,13 @@ if ("serviceWorker" in navigator) {
             installingWorker.state === "installing"
           ) {
 
+            // -------------------------------------------
+            // 初回インストール（オフライン用データの初回
+            // ダウンロード）か、アップデートかを判定
+            // -------------------------------------------
+
+            isFirstInstall = !navigator.serviceWorker.controller;
+
             showUpdateProgressPreparing();
 
           }
@@ -694,6 +715,20 @@ if ("serviceWorker" in navigator) {
             showUpdateNotification(
               registration
             );
+          }
+
+          // -------------------------------------------
+          // 初回インストール検知の保険
+          // （installing状態の取りこぼし対策）
+          // -------------------------------------------
+
+          if (
+            installingWorker.state === "installed" &&
+            !navigator.serviceWorker.controller
+          ) {
+
+            isFirstInstall = true;
+
           }
 
         };
@@ -825,13 +860,44 @@ function showUpdateProgressPreparing() {
   });
 
 
-  if (title) {
-    title.textContent = "MameType UPDATE";
-  }
+  if (isFirstInstall) {
 
-  if (message) {
-    message.textContent =
-      "新しいバージョンを準備しています...";
+    // -------------------------------------------
+    // 初回アクセス時は「アップデート」ではなく
+    // 「オフライン用データのダウンロード」なので
+    // 専用の文言を出す
+    // -------------------------------------------
+
+    if (title) {
+      title.textContent = "MameType OFFLINE";
+    }
+
+    if (message) {
+      message.textContent =
+        "ゲームデータをダウンロードしています...";
+    }
+
+    if (fileText) {
+      fileText.textContent =
+        "ダウンロードを準備しています...";
+    }
+
+  } else {
+
+    if (title) {
+      title.textContent = "MameType UPDATE";
+    }
+
+    if (message) {
+      message.textContent =
+        "新しいバージョンを準備しています...";
+    }
+
+    if (fileText) {
+      fileText.textContent =
+        "アップデートを準備しています...";
+    }
+
   }
 
   if (progressWrapper) {
@@ -844,11 +910,6 @@ function showUpdateProgressPreparing() {
 
   if (progressText) {
     progressText.textContent = "0%";
-  }
-
-  if (fileText) {
-    fileText.textContent =
-      "アップデートを準備しています...";
   }
 
   // -----------------------------------------------
@@ -889,12 +950,15 @@ function handleUpdateProgress(data) {
   if (data.status === "start") {
 
     updateProgressReceived = true;
+    updateFileErrorCount = 0;
 
     updateProgressUI(
       0,
       data.current || 0,
       data.total || 0,
-      "アップデートを開始しています..."
+      isFirstInstall
+        ? "ダウンロードを開始しています..."
+        : "アップデートを開始しています..."
     );
 
     return;
@@ -927,6 +991,7 @@ function handleUpdateProgress(data) {
   if (data.status === "file-error") {
 
     updateProgressReceived = true;
+    updateFileErrorCount++;
 
     updateProgressUI(
       data.percent || 0,
@@ -951,12 +1016,23 @@ function handleUpdateProgress(data) {
       100,
       data.total || 0,
       data.total || 0,
-      "アップデートの準備が完了しました"
+      isFirstInstall
+        ? "ダウンロードが完了しました"
+        : "アップデートの準備が完了しました"
     );
 
     setTimeout(() => {
 
-      showUpdateReady();
+      // -------------------------------------------
+      // 初回インストール時は「オフラインで遊べるように
+      // なった」通知を出す。アップデート時は従来通り
+      // -------------------------------------------
+
+      if (isFirstInstall) {
+        showOfflineReady();
+      } else {
+        showUpdateReady();
+      }
 
     }, 400);
 
@@ -1114,6 +1190,109 @@ function showUpdateReady() {
 
 
 // =====================================================
+// オフライン準備完了（初回ダウンロード時）
+// =====================================================
+
+function showOfflineReady() {
+
+  const notification =
+    document.getElementById(
+      "update-notification"
+    );
+
+  const title =
+    document.getElementById(
+      "update-title"
+    );
+
+  const message =
+    document.getElementById(
+      "update-message"
+    );
+
+  const updateButton =
+    document.getElementById(
+      "update-now-btn"
+    );
+
+  const laterButton =
+    document.getElementById(
+      "update-later-btn"
+    );
+
+  const fileText =
+    document.getElementById(
+      "update-file-text"
+    );
+
+  const note =
+    document.querySelector(
+      ".update-note"
+    );
+
+
+  if (title) {
+    title.textContent = "MameType OFFLINE";
+  }
+
+  if (message) {
+
+    message.textContent =
+      updateFileErrorCount > 0
+        ? "ダウンロードが完了しました。"
+        : "ダウンロードが完了しました！";
+
+  }
+
+  if (fileText) {
+
+    fileText.textContent =
+      updateFileErrorCount > 0
+        ? `一部のファイルをスキップしました（${updateFileErrorCount}件）。オンライン時に再度アクセスすると自動的に再取得されます。`
+        : "オフラインでも遊べるようになりました 🎮";
+
+  }
+
+  if (note) {
+    note.textContent =
+      "次回から、インターネットに接続しなくても遊べます。";
+  }
+
+  // -----------------------------------------------
+  // 「OK」ボタンだけ表示して閉じられるようにする
+  // （初回インストールでは再起動は不要）
+  // -----------------------------------------------
+
+  if (updateButton) {
+
+    updateButton.textContent = "OK";
+    updateButton.style.display = "inline-flex";
+    updateButton.disabled = false;
+
+    updateButton.onclick = () => {
+
+      if (!notification) {
+        return;
+      }
+
+      notification.classList.remove("show");
+
+      setTimeout(() => {
+        notification.style.display = "none";
+      }, 250);
+
+    };
+
+  }
+
+  if (laterButton) {
+    laterButton.style.display = "none";
+  }
+
+}
+
+
+// =====================================================
 // 更新通知
 // =====================================================
 
@@ -1169,6 +1348,30 @@ function showUpdateNotification(
     message.textContent =
       "新しいバージョンがあります。";
 
+  }
+
+
+  // -----------------------------------------------
+  // 同一セッション中に「初回ダウンロード→アップデート」
+  // と続いた場合に備えて、ボタン文言と注記を戻す
+  // -----------------------------------------------
+
+  if (updateButton) {
+    updateButton.textContent = "今すぐ更新";
+  }
+
+  if (laterButton) {
+    laterButton.textContent = "後で";
+  }
+
+  const updateNote =
+    document.querySelector(
+      ".update-note"
+    );
+
+  if (updateNote) {
+    updateNote.textContent =
+      "アップデート後、自動的に再起動します。";
   }
 
 
@@ -1498,19 +1701,30 @@ function createDifficultySelector(
   const info =
     document.getElementById(infoContainerId);
 
+  if (!container || !info) return;
+
   container.innerHTML = "";
 
   // ← 追加
   container.classList.add("pattern-selector");
 
+  // フリーモードでは EXPERT を選択不可にする
+  const availableDifficulties = getAvailableDifficulties({ includeExpert: false });
+
   let current = getCurrentDifficulty(scope);
+
+  // 旧セーブで EXPERT が選択されていた場合は NORMAL に戻す
+  if (!availableDifficulties.some(d => d.id === current.id)) {
+    setCurrentDifficulty("normal", scope);
+    current = getCurrentDifficulty(scope);
+  }
 
   function updateInfo(diff) {
     info.textContent =
       getDifficultyDescription(diff, mode);
   }
 
-  for (const d of Object.values(DIFFICULTIES)) {
+  for (const d of availableDifficulties) {
 
     const btn = document.createElement("button");
 
@@ -1544,48 +1758,42 @@ function createDifficultySelector(
   updateInfo(current);
 }
 
-// =====================================================
-// 設定UI
-// =====================================================
+export function updateAllDifficultySelectors() {
+  createDifficultySelector(
+    "standardDifficultyButtons",
+    "standardDifficultyInfo",
+    "free-standard",
+    "standard"
+  );
+  createDifficultySelector(
+    "timeAttackDifficultyButtons",
+    "timeAttackDifficultyInfo",
+    "free-timeattack",
+    "timeattack"
+  );
+  createDifficultySelector(
+    "enemyDifficultyButtons",
+    "enemyDifficultyInfo",
+    "free-enemy",
+    "enemy"
+  );
+  createDifficultySelector(
+    "bossDifficultyButtons",
+    "bossDifficultyInfo",
+    "free-boss",
+    "enemy"
+  );
+}
+
 /**
  * 敵モード / 防衛モード用のフルスクリーン切替ボタンを生成する。
+ * アプリ全体のフルスクリーン ⇔ ウィンドウ切替はメニューの globalFsToggle で行う。
  * コンテナが非表示のときは一緒に隠れるため、表示制御は不要。
+ * 実処理は fullscreenUtil.js の共通ユーティリティに委譲。
  */
 function ensureFullscreenButtons() {
   ["enemyModeContainer", "defenseModeContainer"].forEach((id) => {
-    const container = document.getElementById(id);
-    if (!container || document.getElementById(id + "FsBtn")) return;
-
-    const btn = document.createElement("button");
-    btn.id = id + "FsBtn";
-    btn.className = "enemy-sound-toggle fs-toggle-btn sound-toggle-btn";
-    btn.type = "button";
-    btn.title = "フルスクリーン切替";
-
-    const toggleFullscreen = () => {
-      try {
-        if (document.fullscreenElement) {
-          if (document.exitFullscreen) document.exitFullscreen();
-        } else {
-          const el = document.documentElement;
-          if (el.requestFullscreen) el.requestFullscreen();
-        }
-      } catch (err) {
-        console.warn("fullscreen toggle failed:", err);
-      }
-    };
-
-    btn.onclick = (e) => {
-      e.stopPropagation(); // タイピング入力等に影響させない
-      toggleFullscreen();
-    };
-
-    // フルスクリーン状態の変化でラベルを更新
-    document.addEventListener("fullscreenchange", () => {
-      btn.textContent = document.fullscreenElement ? "⛶ EXIT" : "⛶ FULL";
-    });
-
-    container.appendChild(btn);
+    ensureFullscreenButton(id);
   });
 }
 
@@ -2504,7 +2712,7 @@ function showMainMenu() {
 function showQuestMenu() {
   hideAllScreens();
   closeDialogue(); // ★会話モーダルを閉じる
-  if (questMenuDiv) questMenuDiv.style.display = "block";
+  if (questMenuDiv) questMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示
 
   // オートセーブデータの有無をチェック
   const auto = JSON.parse(localStorage.getItem("quest_auto_save"));
@@ -2522,12 +2730,12 @@ function showQuestMenu() {
 }
 function showStartMenu() { 
   hideAllScreens(); 
-  if (startMenuDiv) startMenuDiv.style.display = "block"; 
+  if (startMenuDiv) startMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示 
   showMenuBackground("title_menu");
 }
 function showFreeStartMenu() { 
   hideAllScreens(); 
-  if (freeStartMenuDiv) freeStartMenuDiv.style.display = "block"; 
+  if (freeStartMenuDiv) freeStartMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示
   
   const freeModeConfig = document.getElementById("freeModeConfig");
   if (freeModeConfig) freeModeConfig.style.display = "block";
@@ -2536,6 +2744,9 @@ function showFreeStartMenu() {
   if (freeBossBtn) {
     freeBossBtn.style.display = hasBossChallengeUnlocked() ? "inline-block" : "none";
   }
+
+  // 難易度セレクターの最新状態への更新（クリア後の新難易度等）
+  updateAllDifficultySelectors();
 
   showMenuBackground("title_menu");
   // 最後に選択されていた（またはデフォルトの）モードを表示
@@ -3712,9 +3923,12 @@ if (enemyCanvas) {
     enemyCanvas.addEventListener("mousemove", (e) => {
         const rect = enemyCanvas.getBoundingClientRect();
 
+        // ステージが拡大縮小されているため、表示座標をステージ座標へ変換する
+        const s = getStageScale() || 1;
+
         window.mousePos = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: (e.clientX - rect.left) / s,
+            y: (e.clientY - rect.top) / s
         };
     });
 
