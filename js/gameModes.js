@@ -1,6 +1,5 @@
 // gameModes.js
 import { getDifficulty } from "./difficulties.js";
-import { getWord } from "./target.js";
 import { QUEST_MAP } from "./questMap.js"; export { QUEST_MAP };
 
 // 難易度==========================================
@@ -16,7 +15,15 @@ function filterByDifficulty(targets, difficultyId) {
   });
 }
 
-function filterByTags(targets, tags = []) {
+function filterByTags(targets, tags = [], excludeTags = []) {
+
+  // 除外タグ: 指定されたタグを持つ単語を先に除外する（例: デイリーで英語タグを除く）
+  if (excludeTags && excludeTags.length) {
+    targets = targets.filter(t => {
+      const targetTags = t.tags || [];
+      return !targetTags.some(tag => excludeTags.includes(tag));
+    });
+  }
 
   if (!tags.length) {
     return targets;
@@ -55,7 +62,7 @@ export const GameModes = {
       const custom = state.modeData.custom;
 
       state.modeData.questionLimit =
-        custom?.questionLimit ?? 2;
+        custom?.questionLimit ?? 15;
 
       state.modeData.fixedQuestionLimit = state.modeData.questionLimit;
     },
@@ -72,13 +79,14 @@ export const GameModes = {
     buildTargets({ TARGETS, shuffleArray, modeData }) {
 
       const tags = modeData.custom?.tags || [];
+      const excludeTags = modeData.custom?.excludeTags || [];
 
       let filtered = filterByDifficulty(
         TARGETS,
         modeData.difficulty
       );
 
-      filtered = filterByTags(filtered, tags);
+      filtered = filterByTags(filtered, tags, excludeTags);
 
       let shuffled = shuffleArray(filtered);
 
@@ -104,7 +112,7 @@ export const GameModes = {
     name: "タイムトライアル",
     bgm: "bgm_gameover",
 
-    LIMIT_SEC: 15,
+    LIMIT_SEC: 120,
 
     onStart(state) {
       const custom = state.modeData.custom;
@@ -128,13 +136,14 @@ export const GameModes = {
     buildTargets({ TARGETS, shuffleArray, modeData }) {
 
       const tags = modeData.custom?.tags || [];
+      const excludeTags = modeData.custom?.excludeTags || [];
 
       let filtered = filterByDifficulty(
         TARGETS,
         modeData.difficulty
       );
 
-      filtered = filterByTags(filtered, tags);
+      filtered = filterByTags(filtered, tags, excludeTags);
 
       return shuffleArray(filtered);
     },
@@ -229,7 +238,7 @@ LONG_TEXT: {
       // 防衛戦モード用の設定
       state.modeData.totalCharsToType = custom?.totalCharsToType ?? 300;
       state.modeData.timeLimitSec = custom?.timeLimitSec ?? 120;
-      state.modeData.missPenaltySec = custom?.missPenaltySec ?? 1.5;
+      state.modeData.missPenaltySec = custom?.missPenaltySec ?? 1.0;
     },
 
     // このモードでは常に1問なので、常にfalseを返す

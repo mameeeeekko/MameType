@@ -3,7 +3,9 @@ import { devOverride } from "./devOverride.js";
 import { getPlayerStats, updateAchievements } from "../js/playerStats.js";
 import { savePlayerStats } from "../js/storage.js";
 import { gameState } from "../js/gameCore.js";
-import { forceSetLevel, getPlayerStats as getQuestPlayerStats } from "../js/questPlayerStats.js";
+import { forceSetLevel, getPlayerStats as getQuestPlayerStats, addTotalStarsEarned, getTotalStarsEarned, setTotalStarsEarned } from "../js/questPlayerStats.js";
+import { QUEST_MAP } from "../js/questMap.js";
+import { getStarData, setStar, getTotalStars, getTotalMaxStars } from "../js/questProgress.js";
 import { killEnemy } from "../js/enemyCore.js";
 import { updateHud } from "../js/hud.js";
 import { resetPlayerAndRecoveryId, getPlayerId } from "../online/playerProfile.js";
@@ -558,7 +560,88 @@ export const dev = {
 
         log("All stage overrides reset");
     },
-    
+
+    // =========================
+    // 星（STARS MAX トグル）
+    // =========================
+
+    /**
+     * DEVパネルの星数表示（現在/最大）を更新する
+     */
+    updateStarCountView() {
+        const el = document.getElementById("viewStarCount");
+        if (el) {
+            el.textContent = `${getTotalStars()} / ${getTotalMaxStars()}`;
+        }
+    },
+
+    /**
+     * 全ステージの星をMAX（☆5）にするトグル。
+     * ON : 現在の星データを devOverride.stars.backup に退避し、全ノードを☆5にする。
+     * OFF: 退避データに戻す。
+     * 実績（total_stars_100/300/all など）は triggerAchievementCheck で再評価される。
+     * @param {HTMLButtonElement} btn - 状態を表示するボタン要素
+     */
+    toggleStarMax(btn) {
+        const KEY = "questStars";
+
+        if (!devOverride.stars.maxed) {
+            // ---- ON: 現在の星データと累計獲得星数を退避して全ノードMAXにする ----
+            devOverride.stars.backup = getStarData();
+            devOverride.stars.backupEarned = getTotalStarsEarned();
+
+            let gained = 0;
+            for (const world of Object.values(QUEST_MAP)) {
+                for (const node of world.nodes) {
+                    const prev = devOverride.stars.backup[node.id] ?? 0;
+                    if (prev < 5) {
+                        gained += 5 - prev;
+                        setStar(node.id, 5);
+                    }
+                }
+            }
+
+            // 累計獲得星数に差分を加算（実績・星スキル強化の入手数に反映）
+            if (gained > 0) {
+                addTotalStarsEarned(gained);
+            }
+
+            devOverride.stars.maxed = true;
+            if (btn) {
+                btn.textContent = "STARS MAX: ON";
+                btn.classList.add("on");
+            }
+
+            log("Stars maxed ON. gained:", gained, "backup:", devOverride.stars.backup);
+        } else {
+            // ---- OFF: 退避データを復元 ----
+            // ※ ON中に星スキル強化で星を消費していた場合、消費分も復元前の状態に戻る
+            if (devOverride.stars.backup) {
+                localStorage.setItem(KEY, JSON.stringify(devOverride.stars.backup));
+            }
+            // ★累計獲得星数も復元（ON/OFFを繰り返してもOWNED STARSの獲得総数が膨らまないようにする）
+            setTotalStarsEarned(devOverride.stars.backupEarned ?? 0);
+            devOverride.stars.backupEarned = null;
+            devOverride.stars.backup = null;
+            devOverride.stars.maxed = false;
+            if (btn) {
+                btn.textContent = "STARS MAX: OFF";
+                btn.classList.remove("on");
+            }
+
+            log("Stars maxed OFF. restored backup.");
+        }
+
+        // 実績の再評価（total_stars_100 / total_stars_300 / total_stars_all など）
+        this.triggerAchievementCheck();
+
+        // HUD（星表示）とクエストマップUIを更新
+        updateHud(null, { isQuestMode: true });
+        renderQuestMapUI();
+        this.updateStarCountView();
+    },
+
+
     /**
      * 実績を全て表示するか切り替える
      * @param {HTMLButtonElement} btn - 状態を表示するボタン要素
@@ -741,6 +824,11 @@ export const dev = {
             stage: {},
             other: {},
             spawn: {},
+            stars: {
+                maxed: false,
+                backup: null,
+                backupEarned: null
+            },
             map: {
                 showAll: false
             },
@@ -859,5 +947,6 @@ window.dev = dev;
 window.addEventListener("DOMContentLoaded", () => {
   initDevStageSelector();
   enableDevPanelDrag();
-  getDefaultValue(); 
+  getDefaultValue();
+  dev.updateStarCountView();
 });

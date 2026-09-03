@@ -26,7 +26,6 @@ export function resetResultButtons(mode, options = {}) {
 
   const isEnemy = mode === "enemy_mode";
   const isLongText = mode === "long_text";
-  const isDefense = mode === "defense_mode";
   const hasMissed = (options.missedCount ?? 0) > 0;
 
   // デイリー/フリーモードのリザルトではクエスト関連ボタンは常に非表示

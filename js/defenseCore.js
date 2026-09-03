@@ -126,8 +126,8 @@ export function startDefenseMode(config = {}) {
 
   // 設定からジャンル配列と文字数範囲を取得
   let genres = config.custom?.genres || ['empty']; // デフォルトは '標準'
-  const minLength = config.custom?.minLength || 1;
-  const maxLength = config.custom?.maxLength || 10;
+  const minLength = config.custom?.minLength || 3;
+  const maxLength = config.custom?.maxLength || 12;
 
   // 「すべて」が選択されている場合は、TARGETSに存在する全てのタグを対象とする
   if (genres.includes('all')) {

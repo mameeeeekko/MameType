@@ -7,7 +7,7 @@
 // ★ 難易度は一切使用しない（UI からもロジックからも排除）
 // =====================================================
 
-import { RECORDS_KEY, loadRecords, clearRecords, clearRanking, MAX_RANKING, syncRankingProtection } from "./storage.js";
+import { RECORDS_KEY, loadRecords, MAX_RANKING, syncRankingProtection } from "./storage.js";
 import { GameModes } from "./gameModes.js";
 import { applyCanvasDPR } from "./canvasUtil.js";
 
@@ -29,8 +29,8 @@ function resetHistoryVisible() {
   historyVisibleCount = HISTORY_INITIAL_COUNT;
 }
 
-// NEWバッジの表示期間 (24時間)
-const NEW_BADGE_DURATION_MS = 24 * 60 * 60 * 1000;
+// NEWバッジの表示期間 (12時間)
+const NEW_BADGE_DURATION_MS = 12 * 60 * 60 * 1000;
 const getNewBadgeHtml = (record, isLatest = false) => {
   if (record.newInRankingAt && (Date.now() - record.newInRankingAt) < NEW_BADGE_DURATION_MS) {
     const className = isLatest ? "ranking-new-badge latest-record" : "ranking-new-badge";

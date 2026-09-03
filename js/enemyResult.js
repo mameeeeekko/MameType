@@ -1,8 +1,7 @@
 // enemyResult.js
 
-import { gameState, fullResetGame, backToMenu } from "./gameCore.js";
+import { gameState } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
-import { showRecordsView } from "./recordsView.js";
 import { resetResultButtons } from "./resultView.js";
 import { renderOnlineRanking } from "../online/getRanking.js";
 

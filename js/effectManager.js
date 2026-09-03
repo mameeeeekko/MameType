@@ -22,6 +22,7 @@ const playerNegateEffects = [];
 export let timeBonusPopups = []; // ★タイムボーナスポップアップ用
 let buffers = {};
 let bgmSource = null;
+let bgmSourceGain = null; // 現在再生中のBGMの個別ゲイン（フェードアウト用）
 
 let initialized = false;
 
@@ -503,6 +504,7 @@ export function playBGM(name="bgm1", volume=1.0){
     source.start();
 
     bgmSource = source;
+    bgmSourceGain = gain;
 }
 
 export function stopBGM(){
@@ -512,6 +514,40 @@ export function stopBGM(){
         bgmSource = null;
     }
 
+    if(bgmSourceGain){
+        try{ bgmSourceGain.gain.cancelScheduledValues(0); }catch{}
+        bgmSourceGain = null;
+    }
+
+}
+
+/**
+ * 現在再生中のBGMを、指定時間かけてフェードアウトしてから停止します。
+ * 個別ゲイン(bgmSourceGain)のみを操作するため、ユーザー設定音量(bgmGain)には影響しません。
+ * @param {number} durationMs - フェードアウトにかける時間 (ms)
+ */
+export function fadeOutBGM(durationMs = 3500){
+
+    if(!bgmSourceGain || !audioCtx){
+        stopBGM();
+        return;
+    }
+
+    const ctx = audioCtx;
+    const now = ctx.currentTime;
+    const end = now + durationMs / 1000;
+
+    try{
+        bgmSourceGain.gain.cancelScheduledValues(now);
+        // 現在値を基準に0へ滑らかに下げる（0.0001は完全停止前の微小値）
+        bgmSourceGain.gain.setValueAtTime(Math.max(bgmSourceGain.gain.value, 0.0001), now);
+        bgmSourceGain.gain.linearRampToValueAtTime(0.0001, end);
+    }catch(e){}
+
+    // フェード完了後にBGMを完全停止
+    setTimeout(() => {
+        stopBGM();
+    }, durationMs);
 }
 
 // ===========================================
@@ -2231,6 +2267,32 @@ export function renderFreezeAura(
     );
     ctx.fill();
 
+    // ===============
+    // 残り時間表示
+    // ===============
+    const remainSec = Math.max(1, Math.ceil(enemy.freezeTimer));
+    const timeText = remainSec + "s";
+
+    ctx.font = "bold 13px 'Noto Sans Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+
+    // 背景角丸BOX（敵の真下）
+    const textW = ctx.measureText(timeText).width;
+    const padding = 5;
+    const boxW = textW + padding * 2;
+    const boxH = 17;
+    const boxX = enemy.x - boxW / 2;
+    const boxY = enemy.y + enemy.type.size + 6;
+
+    ctx.fillStyle = "rgba(56, 110, 180, 0.55)";
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, 5);
+    ctx.fill();
+
+    // 文字（氷色）
+    ctx.fillStyle = "#d8f4ff";
+    ctx.fillText(timeText, enemy.x, boxY + 2);
     ctx.restore();
 }
 

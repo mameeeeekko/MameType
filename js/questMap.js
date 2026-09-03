@@ -56,8 +56,8 @@ export const QUEST_MAP = {
         },
         nodes: [
             { id: "W1_Q1",  name: "接続テスト1", stage: "STAGE1", next: ["W1_Q2", "W1_TEST","W1_DEFENSE_TEST"], pos: { x: 100, y: 350 }, enableRandomDialogue: true },
-            { id: "W1_DEFENSE_TEST", name: "防衛戦線", stage: "DEFENSE_TEST", next: [], pos: { x: 100, y: 220 }, enableRandomDialogue: false },
-            { id: "W1_TEST",  name: "tetetetes", stage: "TESTSTAGE", next: [], pos: { x: 100, y: 100 },reward: { type: "slot", value: 1 }, enableRandomDialogue: true }, 
+            // { id: "W1_DEFENSE_TEST", name: "防衛戦線", stage: "DEFENSE_TEST", next: [], pos: { x: 100, y: 220 }, enableRandomDialogue: false },
+            // { id: "W1_TEST",  name: "tetetetes", stage: "TESTSTAGE", next: [], pos: { x: 100, y: 100 },reward: { type: "slot", value: 1 }, enableRandomDialogue: true }, 
             { id: "W1_Q2",  name: "接続テスト2", stage: "STAGE2", next: ["W1_Q3"], pos: { x: 140, y: 290 }, enableRandomDialogue: true },
             { id: "W1_Q3",  name: "接続テスト3", stage: "STAGE3", next: ["W1_Q4"], pos: { x: 180, y: 230 }, enableRandomDialogue: true },
             { id: "W1_Q4",  name: "接続テスト4", stage: "STAGE4", next: ["W1_Q5"], pos: { x: 220, y: 170 } , enableRandomDialogue: true},

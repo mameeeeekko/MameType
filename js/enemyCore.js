@@ -1504,11 +1504,11 @@ export function handleEnemyKey(e) {
 
             if (isKilled) {
 
-                console.log("DEFECT CHECK", {
-                    type: enemy.type,
-                    isObjective: enemy.isObjective,
-                    id: enemy.id,
-                });
+                // console.log("DEFECT CHECK", {
+                //     type: enemy.type,
+                //     isObjective: enemy.isObjective,
+                //     id: enemy.id,
+                // });
                 // ===== 完全撃破 =====
                 killEnemy(lockedEnemy, gameState);
 

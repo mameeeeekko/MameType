@@ -353,6 +353,25 @@ function resetCombo(state = gameState) {
           // 次のかなへ移動
           state.pos += kana.length;
 
+          // ★ 引き継いだキーで次の文字が即完成するか（例: 「ん」+「い」→ "i" 1打で完了）
+          //   これを処理しないと typed バッファに残骸が残り、以後の入力が
+          //   すべて MISS になって完了できなくなる。
+          const nextKanaNow = getKana(state.text, state.pos);
+          const nextCandidatesNow = getCandidatesForKana(state.text, state.pos) || [];
+          const completesNow = nextCandidatesNow.some(c => c === key);
+
+          if (completesNow && nextKanaNow) {
+            // 次の文字もこの1打で確定
+            state.inputedRomaji += key;
+            if (!silent || processComboInSilent) onCorrectType(1, state);
+
+            state.pos += nextKanaNow.length;
+            state.typed = "";
+            resetCandidates();
+            if (!silent) { updateRender(); updateGameEnd(); }
+            return { success: true, isMiss: false, charCount: 2, isComplete: true };
+          }
+
           // 次候補生成
           resetCandidates();
 

@@ -2,13 +2,15 @@
 
 import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed, getMaxClearedStageNumber } from './questProgress.js'; // ★ MODIFIED: Import new functions
 import { gameState } from './gameCore.js';
-import { playBGM, stopBGM, playDialogueSound, playSystemDialogueSound } from './effectManager.js';
+import { playBGM, fadeOutBGM, playDialogueSound, playSystemDialogueSound, playSE } from './effectManager.js';
 import { showHud } from './enemyCore.js';
 import { DIALOGUE_DATA, CHARACTERS, RANDOM_DIALOGUES } from './dialogueData.js';
 import { QUEST_MAP } from './questMap.js';
 import { showQuestMap } from './main.js';
 import { images } from './assetsLoader.js';
 import { getStageScale } from './stageScale.js';
+import { handleKey, getCandidatesForKana } from './inputCore.js';
+import { getKana, isSmallTsu } from './romaUtils.js';
 
 let dialogueModal = null;
 let chatPanel = null;
@@ -18,6 +20,9 @@ let skipToEndButton = null; // 最後までスキップ
 let skipToChoiceButton = null; // 選択肢までスキップ
 let choicesContainer = null; // 選択肢コンテナ用の変数を追加
 let isStaffRollShowing = false; // スタッフロール表示中フラグ
+
+// ★ スタッフロールのスクロール速度（px/秒）。JSがrAFでピクセル絶対指定して流す。
+const STAFF_ROLL_SCROLL_SPEED = 60; //60
 
 let currentDialogueId = null;
 let currentMessageIndex = 0;
@@ -679,22 +684,8 @@ function renderChapterLog() {
  * @returns {Promise<void>}
  */
 function loadStaffRollCSS() {
-    return new Promise((resolve) => {
-        if (document.getElementById('staff-roll-css')) {
-            resolve();
-            return;
-        }
-        const link = document.createElement('link');
-        link.id = 'staff-roll-css';
-        link.rel = 'stylesheet';
-        link.href = './js/staffRoll.css'; // CSSファイルのパス
-        link.onload = () => resolve();
-        link.onerror = () => {
-            console.error("Failed to load staffRoll.css");
-            resolve(); // エラーでも処理を続行
-        };
-        document.head.appendChild(link);
-    });
+    // CSSは style.css に統合済み
+    return Promise.resolve();
 }
 
 /**
@@ -722,14 +713,16 @@ function fadeToBlack(duration = 1500) {
  * 画面にメッセージを表示します。
  * @param {string} text - 表示するテキスト
  * @param {number} duration - 表示時間 (ms)
+ * @param {string} className - p要素に付与する追加クラス（任意）
  * @returns {Promise<void>}
  */
-function showMessage(text, duration = 2000) {
+function showMessage(text, duration = 2000, className = '') {
     return new Promise(resolve => {
         const overlay = document.createElement('div');
         overlay.className = 'true-ending-message-overlay';
         const p = document.createElement('p');
         p.textContent = text;
+        if (className) p.className = className;
         overlay.appendChild(p);
         document.body.appendChild(overlay);
 
@@ -752,24 +745,93 @@ function showMessage(text, duration = 2000) {
  */
 function showStaffRoll(onComplete) {
     isStaffRollShowing = true;
+    window._staffRollActive = true; // ★スタッフロール中は全ショートカットを無効化
 
     const canSkip = hasSeenTrueEnding();
 
     // クリックとポインター表示に対応
     const staffRollHTML = `
         <div class="staff-roll-overlay">
-            ${canSkip ? '<div class="staff-roll-skip" style="position: fixed; bottom: 20px; right: 20px; color: white; font-family: monospace; z-index: 10001; opacity: 0.7; cursor: pointer;">skip &gt;&gt;&gt;</div>' : ''}
+            ${canSkip ? '<div class="staff-roll-skip" style="position: fixed; bottom: 20px; right: 20px; color: white; font-family: monospace; z-index: 10001; opacity: 0.7; cursor: pointer;">skip (esc) >>> </div>' : ''}
             <div class="staff-roll-content">
                 <div class="staff-roll-line"><span class="role-center">STAFF</span></div>
-                <div class="staff-roll-line"><span class="role">Direction / Design / Programming</span><span class="name">mame</span></div>
-                <div class="staff-roll-line"><span class="role">Music</span><span class="name">Pixabay</span></div>
+
+                <div class="staff-roll-line"><span class="role">Direction / Design</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Programming</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Scenario</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Game Design / Balance</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">UI / System Design</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Sound Design</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Level Design</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Debugging</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Testing / QA</span><span class="name">mame</span></div>
+                <div class="staff-roll-line"><span class="role">Playtesting</span><span class="name">mame</span></div>
+                
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Music</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">Pixabay</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://pixabay.com/</span></div>
                 <div class="staff-roll-line"><span class="role"></span><span class="name">RYU ITO</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://ryu110.com/</span></div>
                 <div class="staff-roll-line"><span class="role"></span><span class="name">moeru music.</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://moerumusic.com/</span></div>
                 <div class="staff-roll-line"><span class="role"></span><span class="name">MusMus</span></div>
-                <div class="staff-roll-line"><span class="role">Sound Effect</span><span class="name">Pixabay</span></div>
-                <div class="staff-roll-line"><span class="role-center" style="margin-top: 4em;">Special Thanks</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://musmus.main.jp</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">DOVA-SYNDROME</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://dova-syndrome.com</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">Marron Fields Production</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://www.marronfield.com</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">なぐもりずの音楽室</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://nagumorizu.com</span></div>                
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Sound Effect</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">Pixabay</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://pixabay.com/</span></div>
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Illustration / Image</span></div>
+                <div class="staff-roll-line"><span class="role">Graphic</span><span class="name">mame</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">generated with ChatGPT</span></div>
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Tools / Software</span></div>
+                <div class="staff-roll-line"><span class="role">Editor</span><span class="name">VS Code</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">Gemini Code Assist / Cline / Antigravity / Copilot</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">ChatGPT</span></div>
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Equipment</span></div>
+                <div class="staff-roll-line"><span class="role">PC</span><span class="name">MacBook Air M1</span></div>
+                <div class="staff-roll-line"><span class="role">Keyboard</span><span class="name">mamekeyS</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">Switch: Kailh Black Cloud / Keycaps: Kotori Blank</span></div>
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Font</span></div>
+                <div class="staff-roll-line"><span class="role">Japanese</span><span class="name">Noto Sans JP</span></div>
+                <div class="staff-roll-line"><span class="role">English</span><span class="name">Noto Sans</span></div>
+                <div class="staff-roll-line"><span class="role">Monospace</span><span class="name">Noto Sans Mono</span></div>
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Inspired By</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">e-typing</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://www.e-typing.ne.jp</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">寿司打</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://sushida.net</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">The Typing of the Dead</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">SEGA</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">新世紀エヴァンゲリオン タイピング-E計画</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">GAINAX</span></div>
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Procrastination（現実逃避）</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">風来のシレン6 とぐろ島探検録</span></div>
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Ending Theme</span></div>
+                <div class="staff-roll-line"><span class="role"></span><span class="name">星屑みたいに流れてく</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">watson</span></div>
+
+                <div class="staff-roll-line staff-roll-section"><span class="role-center">Special Thanks</span></div>
                 <div class="staff-roll-line"><span class="role-center">All Players</span></div>
-                <div class="staff-roll-line" style="margin-top: 6em; justify-content: center;"><span class="role-center">Thank you for playing!</span></div>
+                <div class="staff-roll-thanks" id="staff-roll-thanks">
+                    <div class="staff-roll-line typing-name-line"><span class="role-left">テストプレイ</span><span class="name-right" data-name="しれん" data-kana="しれん"><span class="name-text">しれん</span></span></div>
+                    <div class="staff-roll-line typing-name-line"><span class="role-left">応援</span><span class="name-right" data-name="まめっこ" data-kana="まめっこ"><span class="name-text">まめっこ</span></span></div>
+                    <div class="staff-roll-line typing-name-line"><span class="role-left">お世話になった</span><span class="name-right" data-name="うめこいし" data-kana="うめこいし"><span class="name-text">うめこいし</span></span></div>
+                </div>
+                <div id="staff-roll-joke-container"></div>
             </div>
         </div>
     `;
@@ -777,19 +839,478 @@ function showStaffRoll(onComplete) {
 
     const overlay = document.querySelector('.staff-roll-overlay');
     const skipButton = canSkip ? document.querySelector('.staff-roll-skip') : null;
-    let skipHandler = null;
+    let rollKeyHandler = null;
     let isCompleted = false; // 多重実行防止フラグ
+
+    // ★ ジョークスタッフギミック用
+    // ※kana は入力対象のよみ（純粋なひらがな＋長音のみ）。
+    //   ASCIIや数字・記号を含めるとローマ字変換が不能になり表示が壊れるため、
+    //   画面表示用の name と入力用の kana を分けて管理する。
+    const jokeStaffs = [
+        { role: "開発中に逃亡した", name: "モチベーション", kana: "もちべーしょん" },
+        { role: "夜食担当", name: "近くのコンビニの店員さん", kana: "ちかくのこんびにのてんいんさん" },
+        { role: "デバッグの邪魔をした", name: "野良猫の鳴き声", kana: "のらねこのなきごえ" },
+        { role: "バグを生み出した", name: "昔の自分", kana: "むかしのじぶん" },
+        { role: "応援席", name: "フォロワー一同", kana: "ふぉろわーいちどう" },
+        { role: "テストプレイで腱鞘炎", name: "友人の右手", kana: "ゆうじんのみぎて" },
+        { role: "心の支え", name: "夜に食べるお菓子", kana: "よるにたべるおかし" },
+        { role: "バグだと思ったら仕様だった", name: "奇跡のコード", kana: "きせきのこーど" },
+        { role: "クレジット水増し要員", name: "隣の松永さん", kana: "となりのまつながさん" },
+        { role: "寝不足の頭に響いた", name: "スマホのアラーム", kana: "スマホのアラーム" },
+        { role: "開発中に食べた", name: "うまかっちゃん", kana: "うまかっちゃん" },
+        { role: "午前3時の", name: "謎のテンション", kana: "なぞのてんしょん" },
+        { role: "外での作業でお世話になった", name: "ステップワゴン", kana: "すてっぷわごん" },
+        { role: "メダカの天敵", name: "野良猫", kana: "のらねこ" },
+        { role: "キーボードの上に乗った", name: "ほこりと食べかす", kana: "ほこりと食べかす" },
+        { role: "コンビニで買った", name: "アイスコーヒー", kana: "あいすこーひー" },
+        { role: "エラーを無視した", name: "昨日の自分", kana: "きのうのじぶん" },
+        { role: "開発を延ばした", name: "おっちょこちょい", kana: "おっちょこちょい" },
+        { role: "テスト中に寝た", name: "寝不足の自分", kana: "ねぶそくのじぶん" },
+        { role: "コードを消し飛ばした", name: "うっかりミス", kana: "うっかりみす" },
+        { role: "疲れ目に", name: "ソフトサンティアひとみストレッチ", kana: "そふとさんてぃあひとみすとれっち" },
+        { role: "作業用BGM", name: "ゲーム音楽集", kana: "ゲーム音楽集" },
+        { role: "トラックボールの使いすぎ", name: "右手の親指", kana: "みぎてのおやゆび" },
+        { role: "水槽の住人", name: "ウーパールーパー", kana: "うーぱーるーぱー" },
+        { role: "ゲームをここまで遊んでくれた", name: "あなた", kana: "あなた" },
+        { role: "カロリー補給", name: "開発を支えた炭水化物一同", kana: "かいはつをささえたたんすいかぶついちどう" },
+        { role: "健康への免罪符", name: "特茶（気休め）", kana: "とくちゃ（きやすめ）" },
+        { role: "塩分担当", name: "ポテトチップスコンソメ味", kana: "ぽてとちっぷすこんそめあじ" },
+        { role: "CSS崩壊", name: "原因不明の謎の隙間", kana: "げんいんふめいのなぞのすきま" },
+        { role: "開発中に食べた", name: "カップラーメン", kana: "かっぷらーめん" },
+        { role: "開発中に食べた", name: "チョコレート", kana: "ちょこれーと" },
+        { role: "開発中に飲んだ", name: "コーヒー", kana: "こーひー" },
+        { role: "開発中に飲んだ", name: "エナジードリンク", kana: "えなじーどりんく" },
+        { role: "開発中に飲んだ", name: "炭酸水", kana: "たんさんすい" },
+        { role: "こんなおふざけに付き合ってくれている", name: "あなた", kana: "あなた" },
+        { role: "AIの限界", name: "無料モデルの利用制限に達しました", kana: "むりょうもでるのりようせいげんにたっしました" },
+        { role: "英語の翻訳・変換", name: "google翻訳", kana: "googleほんやく" },
+        { role: "週末の楽しみ", name: "F１", kana: "f1" },
+        { role: "やっていないとこもある", name: "リファクタリング", kana: "りふぁくたりんぐ" },
+
+
+    ];
+    // ★ ジョークスタッフをシャッフル（毎回違う順番で出現させる）
+    //   Fisher-Yates シャッフル：配列の順序をその場で入れ替える
+    for (let i = jokeStaffs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [jokeStaffs[i], jokeStaffs[j]] = [jokeStaffs[j], jokeStaffs[i]];
+    }
+    let jokeStaffIndex = 0;
+    let jokeStaffCount = 0;
+    const JOKE_STAFF_MAX = 20; // 追加できるジョークスタッフの上限（1人入力で1人追加）
+    let jokeModeActive = false;
+
+    // ★ 受付（handleKey）と完全に一致するローマ字列を生成する。
+    //   getDisplayFullRoma は「文末のん」などを最短表記（"n"）にする一方、
+    //   受付側は設定（final_n_mode='nn'）で "nn" を要求する等のズレがあり、
+    //   表示どおり打っても完了しないケースがあった。
+    //   そのため候補生成元（getCandidatesForKana＝受付と同じ関数）から
+    //   直接組み立て、表示＝打鍵列を完全一致させる。
+    const buildRollRoma = ({ text, pos, typed, inputedRomaji }) => {
+        let result = inputedRomaji || '';
+        let i = pos || 0;
+        const hasTyped = (typed || '').length > 0;
+        while (i < text.length) {
+            const kana = getKana(text, i);
+            if (!kana) break;
+            const cands = getCandidatesForKana(text, i) || [];
+            if (cands.length === 0) {
+                // 候補がないかな（念のため表示だけは崩さない）
+                result += kana;
+                i += kana.length;
+                continue;
+            }
+            const sel = (hasTyped && i === pos)
+                ? (cands.find(r => r.startsWith(typed)) || cands[0])
+                : cands[0];
+            result += sel;
+            if (isSmallTsu(kana)) {
+                // 促音は「っ+次のかな」を1候補（例: "ffu"）で打ち切るので両方スキップ
+                const nextKana = getKana(text, i + kana.length);
+                i += (sel.length > 1 && sel !== 'ltu' && sel !== 'xtu' && nextKana)
+                    ? kana.length + nextKana.length
+                    : kana.length;
+            } else {
+                i += kana.length;
+            }
+        }
+        return result;
+    };
+
+    // ★ ジョークスタッフを「いま画面内に見えている最下端のスタッフ行」の直下に差し込む。
+    //   画面の下端にぱっと現れて、そのまま上へ流れていく＝「増えた」ことが目に見える。
+    const addJokeStaff = (completedLine) => {
+        if (jokeStaffIndex >= jokeStaffs.length || jokeStaffCount >= JOKE_STAFF_MAX) return;
+
+        const staff = jokeStaffs[jokeStaffIndex];
+        const role = staff.role;
+        const name = staff.name;
+        const nameHiragana = staff.kana; // 入力用のよみ（ひらがなのみ）
+
+        const jokeEl = document.createElement('div');
+        jokeEl.className = 'staff-roll-line typing-name-line joke-staff';
+        jokeEl.innerHTML = `
+            <span class="role-left">${role}</span>
+            <span class="name-right" data-name="${name}" data-kana="${nameHiragana}"><span class="name-text">${name}</span></span>
+        `;
+
+        // いま画面内に見えているスタッフ行のうち、いちばん下端に表示されているものを探す
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        let bottomLine = null;
+        let maxBottom = -Infinity;
+        document.querySelectorAll('.staff-roll-content .staff-roll-line').forEach(line => {
+            const rect = line.getBoundingClientRect();
+            if (rect.top < vh && rect.bottom > 0) { // 画面内に表示中
+                if (rect.bottom > maxBottom) {
+                    maxBottom = rect.bottom;
+                    bottomLine = line;
+                }
+            }
+        });
+
+        // 最下端の行の直下に差し込む（画面下端にぴったり現れる）
+        if (bottomLine && bottomLine.parentNode) {
+            bottomLine.insertAdjacentElement('afterend', jokeEl);
+        } else if (completedLine && completedLine.parentNode) {
+            completedLine.insertAdjacentElement('afterend', jokeEl);
+        } else {
+            const container = document.getElementById('staff-roll-joke-container');
+            if (!container) return;
+            container.appendChild(jokeEl);
+        }
+
+        // ローマ字表示を初期化
+        const nameEl = jokeEl.querySelector('.name-right');
+        const roma = buildRollRoma({ text: nameHiragana, pos: 0, typed: '', inputedRomaji: '' });
+        const romaEl = document.createElement('span');
+        romaEl.className = 'roma';
+        romaEl.innerHTML = `<span class="typed-part"></span>${roma}`;
+        nameEl.appendChild(romaEl);
+
+        // SEを鳴らす
+        try { playSE('select', 0.6); } catch(e) {}
+
+        jokeStaffIndex++;
+        jokeStaffCount++;
+    };
+
+    // ★ Special Thanks セクションが画面に入ったらタイピングモード有効化
+    // threshold 0 で「少しでも見えたら」即有効化し、入力できるタイミングを早める。
+    // ※ローマ字表示の生成はロール構築時に済ませてあるため、ここでは高さが変わらない。
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !jokeModeActive && !isCompleted) {
+                jokeModeActive = true;
+                // 最初の対象を設定
+                ensureTarget();
+            }
+        });
+    }, { threshold: 0 });
+
+    // タイピング状態管理
+    let currentTypingTarget = null; // 現在入力対象の名前行
+    let typingCompleteCount = 0; // 完了した名前の数
+
+    // 一時ゲーム状態（handleKey用）
+    const rollTypingState = {
+        text: '',
+        typed: '',
+        pos: 0,
+        inputedRomaji: '',
+        correctCount: 0,
+        mistakeCount: 0
+    };
+
+    // ===== 対象行の管理（「表示中の行」だけが入力対象。毎回再計算して壊れないようにする） =====
+    // 進捗は行ごとに dataset へ保存するため、対象が移っても入力途中が消えない。
+    const loadLineState = (line) => {
+        const nameEl = line.querySelector('.name-right');
+        if (!nameEl) return;
+        rollTypingState.text = nameEl.dataset.kana || nameEl.dataset.name || '';
+        rollTypingState.pos = parseInt(nameEl.dataset.pos || '0', 10) || 0;
+        rollTypingState.typed = nameEl.dataset.typed || '';
+        rollTypingState.inputedRomaji = nameEl.dataset.roma || '';
+    };
+
+    const saveLineState = (line) => {
+        const nameEl = line.querySelector('.name-right');
+        if (!nameEl) return;
+        nameEl.dataset.pos = String(rollTypingState.pos);
+        nameEl.dataset.typed = rollTypingState.typed;
+        nameEl.dataset.roma = rollTypingState.inputedRomaji;
+    };
+
+    // 行が画面内に見えているか
+    const isLineVisible = (line) => {
+        const rect = line.getBoundingClientRect();
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        return rect.top < vh && rect.bottom > 0;
+    };
+
+    // 現在入力できる行（上から順に、未完了・未失敗・表示中の最初の行）
+    const pickTarget = () => {
+        const lines = document.querySelectorAll('.typing-name-line');
+        for (const line of lines) {
+            const nameEl = line.querySelector('.name-right');
+            if (!nameEl) continue;
+            if (nameEl.classList.contains('typed') || nameEl.classList.contains('missed')) continue;
+            if (!isLineVisible(line)) continue;
+            return line;
+        }
+        return null;
+    };
+
+    // 対象の整合性を保つ（完了・失敗・画面外なら次の対象へ）
+    const ensureTarget = () => {
+        if (!jokeModeActive || isCompleted || isFinishing) return;
+
+        if (currentTypingTarget) {
+            const nameEl = currentTypingTarget.querySelector('.name-right');
+            const done = nameEl.classList.contains('typed') || nameEl.classList.contains('missed');
+            if (!done && isLineVisible(currentTypingTarget)) return; // 有効な対象のまま
+
+            // 画面外に流れた場合は入力失敗扱い
+            if (!done) {
+                nameEl.classList.add('missed');
+                nameEl.classList.remove('typing');
+            }
+            currentTypingTarget.classList.remove('current-target');
+            currentTypingTarget = null;
+        }
+
+        const next = pickTarget();
+        if (next) {
+            currentTypingTarget = next;
+            setCurrentTargetMark(next);
+            loadLineState(next);
+            updateNameRoma(next);
+        }
+        // ※対象が残らない場合もここでは終了しない。
+        //   「Thank you」はコンテンツが画面上に流れ切ってから（スクロール完了時）表示する。
+    };
+
+    // 全名前のローマ字表示を初期化
+    const initAllNameRoma = () => {
+        const lines = document.querySelectorAll('.typing-name-line');
+        lines.forEach(line => {
+            const nameEl = line.querySelector('.name-right');
+            if (!nameEl) return;
+            const kana = nameEl.dataset.kana || nameEl.dataset.name || '';
+            const roma = buildRollRoma({ text: kana, pos: 0, typed: '', inputedRomaji: '' });
+            let romaEl = nameEl.querySelector('.roma');
+            if (!romaEl) {
+                romaEl = document.createElement('span');
+                romaEl.className = 'roma';
+                nameEl.appendChild(romaEl);
+            }
+            romaEl.innerHTML = `<span class="typed-part"></span>${roma}`;
+        });
+    };
+
+    // 現在の対象に目印をつける
+    const setCurrentTargetMark = (line) => {
+        // 既存の目印を削除
+        document.querySelectorAll('.typing-name-line.current-target').forEach(el => {
+            el.classList.remove('current-target');
+        });
+        // 新しい目印を設定
+        if (line) {
+            line.classList.add('current-target');
+            const nameEl = line.querySelector('.name-right');
+            if (nameEl) nameEl.classList.add('typing');
+        }
+    };
+
+    // 名前とローマ字の表示を更新（文字ごとに色を変える）
+    const updateNameRoma = (line) => {
+        if (!line) return;
+        const nameEl = line.querySelector('.name-right');
+        if (!nameEl) return;
+        const kana = nameEl.dataset.kana || nameEl.dataset.name || '';
+        const roma = buildRollRoma({
+            text: kana,
+            pos: rollTypingState.pos,
+            typed: rollTypingState.typed,
+            inputedRomaji: rollTypingState.inputedRomaji
+        });
+
+        // ローマ字表示の更新
+        let romaEl = nameEl.querySelector('.roma');
+        if (!romaEl) {
+            romaEl = document.createElement('span');
+            romaEl.className = 'roma';
+            nameEl.appendChild(romaEl);
+        }
+        const typedLen = Math.min(roma.length, rollTypingState.inputedRomaji.length + rollTypingState.typed.length);
+        const typedPart = roma.slice(0, typedLen);
+        const remainPart = roma.slice(typedLen);
+        romaEl.innerHTML = `<span class="typed-part">${typedPart}</span>${remainPart}`;
+
+        // 表示名の文字ごとに色を変える（表示名とよみの長さが違う場合は比率で色分け）
+        const display = nameEl.dataset.name || '';
+        const nameTextEl = nameEl.querySelector('.name-text');
+        if (nameTextEl && display) {
+            const doneChars = kana.length > 0
+                ? Math.min(display.length, Math.floor((rollTypingState.pos / kana.length) * display.length + 1e-6))
+                : 0;
+            let nameHTML = '';
+            for (let i = 0; i < display.length; i++) {
+                if (i < doneChars) {
+                    // 入力済みの文字
+                    nameHTML += `<span class="char-typed">${display[i]}</span>`;
+                } else {
+                    // 未入力の文字
+                    nameHTML += `<span class="char-remain">${display[i]}</span>`;
+                }
+            }
+            nameTextEl.innerHTML = nameHTML;
+        }
+    };
+
+    // 対象が画面外にスクロールしたら次へ移る（チェック用）
+    const checkTargetVisible = () => {
+        ensureTarget();
+    };
+    // 100msごとに画面内チェック（終了時にクリアできるよう保持）
+    const visibilityCheckInterval = setInterval(checkTargetVisible, 100);
+
+    // タイピング完了時の処理
+    const onTypingComplete = () => {
+        if (!currentTypingTarget) return;
+
+        // 完了状態に
+        const nameEl = currentTypingTarget.querySelector('.name-right');
+        if (nameEl) {
+            nameEl.classList.add('typed');
+            nameEl.classList.remove('typing');
+        }
+        saveLineState(currentTypingTarget);
+        currentTypingTarget.classList.remove('current-target');
+
+        // ★ ジョークスタッフを「入力した行の直後」に1人追加（1人入力→1人出現）
+        addJokeStaff(currentTypingTarget);
+        typingCompleteCount++;
+
+        // 次の対象へ（毎回再計算：直後に差し込まれたジョークも対象になる）
+        currentTypingTarget = null;
+        ensureTarget();
+    };
+
+    // 強制終了（Thank you for playing! → The End フェードイン/アウト）
+    // ※呼ばれるのはスクロールドライバが「コンテンツが画面上に流れ切った」ことを
+    //   検知したとき（または最終手段のフェイルセーフ）。表示中のスタッフが
+    //   見えている状態で Thank you を出さない。
+    let isFinishing = false;
+    let scrollRafId = null;
+    let scrollStartTs = null;
+    const stopScrollLoop = () => {
+        if (scrollRafId) {
+            cancelAnimationFrame(scrollRafId);
+            scrollRafId = null;
+        }
+    };
+    const finishRoll = () => {
+        if (isFinishing || isCompleted) return;
+        isFinishing = true;
+
+        // スクロールループを停止
+        stopScrollLoop();
+
+        // Thank you for playing! → The End を表示
+        showThankYouThenEnd();
+    };
+
+    // Thank you for playing! → The End フェードイン/アウト
+    const showThankYouThenEnd = () => {
+        const overlay = document.querySelector('.staff-roll-overlay');
+        if (!overlay) return;
+
+        // Thank you for playing! 表示
+        const thankYou = document.createElement('div');
+        thankYou.className = 'staff-roll-thank-you-final';
+        thankYou.innerHTML = 'Thank you for playing!';
+        overlay.appendChild(thankYou);
+
+        // 2秒後に The End 表示
+        setTimeout(() => {
+            thankYou.style.opacity = '0';
+            thankYou.style.transition = 'opacity 1s ease-out';
+            
+            setTimeout(() => {
+                thankYou.remove();
+                
+                // The End 表示
+                const theEnd = document.createElement('div');
+                theEnd.className = 'staff-roll-the-end-final';
+                theEnd.innerHTML = 'The End';
+                overlay.appendChild(theEnd);
+                
+                // 3秒後にフェードアウトして終了
+                setTimeout(() => {
+                    theEnd.style.opacity = '0';
+                    theEnd.style.transition = 'opacity 2s ease-out';
+                    setTimeout(() => endRoll(), 2000);
+                }, 3000);
+            }, 1000);
+        }, 2000);
+    };
+
+    // タイピング処理（既存のhandleKeyを使用）
+    const processTyping = (e) => {
+        if (!currentTypingTarget || isFinishing) return false;
+
+        const nameEl = currentTypingTarget.querySelector('.name-right');
+        if (!nameEl) return false;
+
+        // 対象のよみ（ひらがな）を入力テキストとして設定
+        rollTypingState.text = nameEl.dataset.kana || nameEl.dataset.name || '';
+
+        // handleKeyで判定（silent=true：ゲーム本体の描画・終了判定・コンボ処理には触れない）
+        const result = handleKey(e, true, rollTypingState);
+
+        // 進捗を行に保存（対象が移っても入力途中が消えないように）
+        saveLineState(currentTypingTarget);
+
+        // 表示更新
+        updateNameRoma(currentTypingTarget);
+
+        // 正解キーごとに軽いSE（完了時はジョーク追加のSEが鳴るのでスキップ）
+        if (result && result.success && !result.isMiss) {
+            try { playSE('select', 0.25); } catch(err) {}
+        }
+
+        // ★ 完了判定は「単語全体の入力が終わったとき」。
+        // handleKey の isComplete は「1かな文字が完成したとき」に立つフラグなので、
+        // ゲーム本体（checkGameEnd / defenseCore）と同じく pos >= text.length で判定する。
+        if (result && result.success && rollTypingState.pos >= rollTypingState.text.length) {
+            onTypingComplete();
+        }
+
+        return result && !result.isMiss;
+    };
 
     const endRoll = () => {
         if (isCompleted || !overlay) return;
         isCompleted = true;
 
         clearTimeout(rollTimer);
-        // イベントリスナーを安全に解除
-        if (skipHandler) document.removeEventListener('keydown', skipHandler);
+        // ※ スタッフロールフラグはここでは解除しない。
+        //   Thank you → The End のフェードアウト中もショートカットを無効化し続け、
+        //   「完全に終了したとき」に startTrueEndingSequence 側の onComplete で解除する。
+        // IntersectionObserver を切断
+        observer.disconnect();
+        // 画面内チェックを停止
+        clearInterval(visibilityCheckInterval);
+        // キーボードブロックを解除
+        if (rollKeyHandler) document.removeEventListener('keydown', rollKeyHandler, true);
+        if (window._staffRollSkipHandler) window._staffRollSkipHandler = null;
         if (skipButton) skipButton.removeEventListener('click', endRoll);
 
         overlay.classList.add('fade-out');
+        // 曲も同時にフェードアウト（約3.5秒で消える）
+        fadeOutBGM(3500);
+        // スクロールループも確実に停止
+        stopScrollLoop();
 
         setTimeout(() => {
             overlay.remove();
@@ -798,18 +1319,80 @@ function showStaffRoll(onComplete) {
         }, 1500);
     };
 
-    const rollTimer = setTimeout(endRoll, 30000); // 30秒でロール終了
+    // ★ スクロールドライバ：rAFでピクセル絶対指定してコンテンツを流す。
+    //   CSSのtranslateY(%)アニメーションは「要素の高さ」基準のため、
+    //   ジョークスタッフ追加（高さ増加）の瞬間に表示が跳ねてしまう。
+    //   ピクセル絶対指定なら追加しても座標は不変 → 自然な流れが保たれる。
+    //   ※CSS側は align-items: flex-start（上寄せアンカー）にしてあるため、
+    //     要素を追加しても既存の表示位置は一切動かない。
+    const rollContent = document.querySelector('.staff-roll-content');
+    let rollTimer = null;
+    if (rollContent) {
+        rollContent.style.animation = 'none'; // CSSアニメーションを無効化（JS駆動に移行）
+        const startY = window.innerHeight || 800; // 開始位置：コンテンツ上端が画面下端
+        rollContent.style.transform = `translateY(${startY}px)`;
+
+        const scrollLoop = (ts) => {
+            if (isCompleted || isFinishing) return;
+            if (scrollStartTs === null) scrollStartTs = ts;
+            const y = startY - ((ts - scrollStartTs) / 1000) * STAFF_ROLL_SCROLL_SPEED;
+            rollContent.style.transform = `translateY(${y}px)`;
+
+            // コンテンツ全体が画面上に流れ切ったら Thank you → The End へ
+            if (y + rollContent.offsetHeight <= -40) {
+                finishRoll();
+                return;
+            }
+            scrollRafId = requestAnimationFrame(scrollLoop);
+        };
+        scrollRafId = requestAnimationFrame(scrollLoop);
+
+        // 最終手段のフェイルセーフ（ジョーク追加ぶんの高さ＋余裕を見て算出）
+        const failsafeMs = ((rollContent.offsetHeight + startY + 1600) / STAFF_ROLL_SCROLL_SPEED) * 1000 + 60000;
+        rollTimer = setTimeout(endRoll, failsafeMs);
+    } else {
+        rollTimer = setTimeout(endRoll, 60000);
+    }
+
+    // ★ スタッフロール中は、ESCキー以外の全ショートカットをブロックする。
+    // 他のキーハンドラ（保存・メニュー等）より先にcaptureフェーズで受け止める。
+    // ※Sキーはセーブ画面のショートカットと競合するため、スキップには使わない。
+    // ※タイピングモード時は、名前を入力するとジョークスタッフが追加される。
+    // stopImmediatePropagationで、document上の他の全リスナー（バブル含む）への伝播を完全に遮断する。
+    rollKeyHandler = (e) => {
+        // ESCでスキップ
+        if (canSkip && e.key === 'Escape') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            endRoll();
+            return;
+        }
+
+        // タイピングモード時：名前入力を処理（既存のhandleKeyを使用）
+        if (jokeModeActive && !isFinishing && e.key.length === 1) {
+            if (currentTypingTarget) {
+                processTyping(e);
+            }
+        }
+
+        // 全ショートカットをブロック（Sキー含む）
+        e.preventDefault();
+        e.stopImmediatePropagation();
+    };
+    document.addEventListener('keydown', rollKeyHandler, true);
+    // ★ 他のクリーンアップ処理からも参照できるようグローバルに保持
+    window._staffRollSkipHandler = rollKeyHandler;
+
+    // ★ ローマ字表示はロール構築時に全員分まとめて生成しておく。
+    // （Special Thanks 出現時など途中で高さが変わると、
+    //   translateY(%) 基準のスクロールアニメーションが跳ねてしまうため）
+    initAllNameRoma();
+
+    // IntersectionObserver で Special Thanks セクションを監視
+    const specialThanksSection = document.querySelector('.staff-roll-thanks');
+    if (specialThanksSection) observer.observe(specialThanksSection);
 
     if (canSkip && skipButton) {
-        // Sキーでのスキップ
-        skipHandler = (e) => {
-            if (e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                endRoll();
-            }
-        };
-        document.addEventListener('keydown', skipHandler);
-
         // クリックでのスキップ
         skipButton.addEventListener('click', endRoll);
 
@@ -823,8 +1406,6 @@ function showStaffRoll(onComplete) {
             skipButton.style.transform = 'scale(1.0)';
             skipButton.style.opacity = '0.7';
         };
-        
-
     }
 }
 
@@ -1298,9 +1879,9 @@ function finishDialogue() {
     // イベントリスナーを削除
     if (handleDialogueClick) dialogueModal.removeEventListener('click', handleDialogueClick);
     if (handleDialogueKeydown) document.removeEventListener('keydown', handleDialogueKeydown);
-    // ★スタッフロール中のスキップイベントもここで確実に解除
+    // ★スタッフロール中のスキップイベントもここで確実に解除（captureで登録しているためフラグを揃える）
     const skipHandler = window._staffRollSkipHandler;
-    if (skipHandler) document.removeEventListener('keydown', skipHandler);
+    if (skipHandler) document.removeEventListener('keydown', skipHandler, true);
     handleDialogueClick = null;
     handleDialogueKeydown = null;
 
@@ -1358,7 +1939,7 @@ export function closeDialogue() {
     if (handleDialogueClick) dialogueModal.removeEventListener('click', handleDialogueClick);
     if (handleDialogueKeydown) document.removeEventListener('keydown', handleDialogueKeydown);
     const skipHandler = window._staffRollSkipHandler;
-    if (skipHandler) document.removeEventListener('keydown', skipHandler);
+    if (skipHandler) document.removeEventListener('keydown', skipHandler, true);
 
     handleDialogueClick = null;
     handleDialogueKeydown = null;
@@ -1609,6 +2190,10 @@ export async function startTrueEndingSequence(onCompleteCallback) {
     // HUDを非表示にする
     showHud(false);
 
+    // ★ ここからエンディングが完全に終了するまで、全ショートカットキーを無効化する。
+    //   （タイトル表示中や Thank you 表示中に s/a などでセーブ・勲章画面が開くのを防ぐ）
+    window._staffRollActive = true;
+
     // 1. CSSの読み込みを試みる
     await loadStaffRollCSS();
 
@@ -1617,12 +2202,14 @@ export async function startTrueEndingSequence(onCompleteCallback) {
     playBGM("bgm_hosikuzu"); // BGM再生開始
     await new Promise(r => setTimeout(r, 2000));
 
-    // 3. メッセージを表示する
-    await showMessage("Thank you for playing.");
+    // 3. メッセージを表示する（ゲームタイトル）
+    await showMessage("MameType", 2800, 'staff-roll-title');
 
     // 4. スタッフロールのHTMLを表示する
     await showStaffRoll(() => {
-        stopBGM(); // BGM停止
+        // BGMのフェードアウトは showStaffRoll() 内部（endRoll）で行われる
+        // ★ エンディングが完全に終了してからショートカットキーを再有効化する
+        window._staffRollActive = false;
         if (onCompleteCallback) onCompleteCallback();
         showHud(true); // ★ HUDを再表示
     });

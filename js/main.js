@@ -41,16 +41,21 @@ import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
 import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
-  DIFFICULTIES,
   getCurrentDifficulty,
   setCurrentDifficulty,
   getDifficultyDescription,
   getAvailableDifficulties,
 } from "./difficulties.js";
-import { playBGM, stopBGM, playSE } from "./effectManager.js";
+import { playBGM, playSE } from "./effectManager.js";
 import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
 import { supabase } from "../online/supabase.js";
 import { startDefenseMode } from "./defenseCore.js";
+
+// ================================
+// 🔹デイリーモードの固定設定
+// ================================
+// デイリーのStandard / TimeAttackでは英語タグの単語を除外して出題する（固定設定）
+const DAILY_EXCLUDED_TAGS = ["英語"];
 
 // ================================
 // 🔹DOM参照（グローバル）
@@ -1708,12 +1713,12 @@ function createDifficultySelector(
   // ← 追加
   container.classList.add("pattern-selector");
 
-  // フリーモードでは EXPERT を選択不可にする
-  const availableDifficulties = getAvailableDifficulties({ includeExpert: false });
+  // フリーモードでは MASTER を選択不可にする
+  const availableDifficulties = getAvailableDifficulties({ includeMaster: false });
 
   let current = getCurrentDifficulty(scope);
 
-  // 旧セーブで EXPERT が選択されていた場合は NORMAL に戻す
+  // 旧セーブで MASTER が選択されていた場合は NORMAL に戻す
   if (!availableDifficulties.some(d => d.id === current.id)) {
     setCurrentDifficulty("normal", scope);
     current = getCurrentDifficulty(scope);
@@ -2850,6 +2855,9 @@ export async function startTrueEndingSequence(onCompleteCallback) {
     // HUDを非表示にする
     showHud(false);
 
+    // ★ ここからエンディングが完全に終了するまで、全ショートカットキーを無効化する。
+    window._staffRollActive = true;
+
     // 1. CSSの読み込みを試みる
     await loadStaffRollCSS();
 
@@ -2858,12 +2866,14 @@ export async function startTrueEndingSequence(onCompleteCallback) {
     playBGM("bgm_hosikuzu"); // BGM再生開始
     await new Promise(r => setTimeout(r, 2000));
 
-    // 3. メッセージを表示する
-    await showMessage("Thank you for playing.");
+    // 3. メッセージを表示する（ゲームタイトル）
+    await showMessage("MameType", 2800, 'staff-roll-title');
 
     // 4. スタッフロールのHTMLを表示する
     await showStaffRoll(() => {
-        stopBGM(); // BGM停止
+        // BGMのフェードアウトは showStaffRoll() 内部（endRoll）で行われる
+        // ★ エンディングが完全に終了してからショートカットキーを再有効化する
+        window._staffRollActive = false;
         if (onCompleteCallback) onCompleteCallback();
         showHud(true); // ★ HUDを再表示
     });
@@ -2979,13 +2989,15 @@ function bindModeStartEvents() {
   startBtn?.addEventListener("click", () => {
     hideAllScreens();
     updateGameUIVisibility(GameModes.NORMAL.id); // UI表示を更新
-    Game.doCountdown({ mode: GameModes.NORMAL, isFreeMode: false, difficulty: "hard" });
+    // ★デイリーでは英語タグを除外して出題する（固定設定）
+    Game.doCountdown({ mode: GameModes.NORMAL, isFreeMode: false, difficulty: "hard", custom: { excludeTags: DAILY_EXCLUDED_TAGS } });
   });
 
   timeAttackBtn?.addEventListener("click", () => {
     hideAllScreens();
     updateGameUIVisibility(GameModes.TIME_ATTACK.id); // UI表示を更新
-    Game.doCountdown({ mode: GameModes.TIME_ATTACK, isFreeMode: false, difficulty: "hard" });
+    // ★デイリーでは英語タグを除外して出題する（固定設定）
+    Game.doCountdown({ mode: GameModes.TIME_ATTACK, isFreeMode: false, difficulty: "hard", custom: { excludeTags: DAILY_EXCLUDED_TAGS } });
   });
 
   longTextBtn?.addEventListener("click", () => {
@@ -3165,14 +3177,20 @@ function bindKeyEvents() {
   
   document.addEventListener("keydown", async (e) => {
 
-    // 管理者用DEVツール
-    if (e.shiftKey && e.key.toLowerCase() === "d") {
+    // ★スタッフロール中は全ショートカットを無効化（ESCによるスキップはdialogue.js側で処理）
+    if (window._staffRollActive) return;
+
+    // 管理者用DEVツール（Shift+Oで開閉）
+    if (e.shiftKey && e.key.toLowerCase() === "o") {
       const panel = document.getElementById("devPanel");
       if (!panel) return;
 
+      // ★DEVパネル起動キーがタイピング入力として処理されないよう止める
+      e.preventDefault();
+
       panel.style.display =
         panel.style.display === "none" ? "block" : "none";
-    
+      return;
     }
 
     // ★クエストステータスモーダル表示中のタブ切替（MAIN / RECORD / PROGRESSION / SKILL）
@@ -3492,6 +3510,9 @@ function handleMenuKey(e) {
             break;
           case "h": // HARD
             btn = btnContainer.querySelector("button:nth-child(3)");
+            break;
+          case "m": // MASTER
+            btn = btnContainer.querySelector("button:nth-child(4)");
             break;
         }
         btn?.click();

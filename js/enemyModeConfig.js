@@ -162,6 +162,17 @@ export function buildClearText(clear, defenseConfig = null) {
   return lines;
 }
 
+/**
+ * 防衛モードのジャンル表記を整形する（複数タグ対応）
+ * @param {string[]} genres - ['empty'] や ['empty', '促音', 'ことわざ'] など
+ * @returns {string} 表示用テキスト（例: "標準・促音・ことわざ" / "全ジャンル"）
+ */
+export function formatDefenseGenres(genres) {
+  if (!genres || genres.length === 0) return "標準";
+  if (genres.includes("all")) return "全ジャンル";
+  return genres.map(g => (g === "empty" ? "標準" : g)).join("・");
+}
+
 // スター５取得条件
 export function buildStarText(star = {}) {
   const lines = [];
@@ -803,7 +814,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             break;
 
         case 5: // 【タイムアタック】指定時間内に指定数撃破
-            const timeAttackTime = Math.max(20000, 35000 + (i * 150)); // 20秒〜50秒程度
+            const timeAttackTime = Math.max(30000, 35000 + (i * 300)); // 30秒〜60秒程度
             const timeAttackKillGoal = Math.floor( killGoal * 0.6); 
             config.spawn.interval *= 0.8; // 敵の出現を少し早める
             config.spawn.limit = null;
@@ -817,10 +828,10 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
                     type: "clearTime",
                     thresholds: [
                         timeAttackTime,
+                        Math.max(timeAttackTime * 0.98),
                         Math.max(timeAttackTime * 0.95),
-                        Math.max(timeAttackTime * 0.9),
-                        Math.max(timeAttackTime * 0.85),
-                        Math.max(timeAttackTime * 0.8)
+                        Math.max(timeAttackTime * 0.92),
+                        Math.max(timeAttackTime * 0.88)
                     ]
                 };
             } else {
@@ -1056,8 +1067,6 @@ STAGES = {
       { name: "Phase 2",  ...  }
     ],
 
-STAGES = {
-  ステージID: {
     // ---------------------------
     // 敵出現設定
     // ---------------------------
@@ -1172,6 +1181,61 @@ composite → 総合評価(0～1)
 timeRemaining → 残り時間率(0～1)
 
 hpRemaining → 残りHP率(0～1)
+
+defenseSurplus → 防衛モード専用（超過率×surplusWeight ＋ 正確率×accuracyWeight）
+  thresholds: [0.4,0.45,0.5,0.6,0.7]  // 総合スコア閾値（クリアすれば最低1つ星獲得）
+  weights: { surplus: 0.4, accuracy: 0.6 }  // 超過率/正確率の重み
+    score = (入力文字数 / 目標文字数 − 1.0) × surplus ＋ 正確率(0〜1) × accuracy
+    ※ 失敗（時間切れで未達成）時は星0
+*/
+
+// =========================================================================
+// 防衛モード（Defense）ステージ設定リファレンス
+// =========================================================================
+/*
+通常ステージの代わりに、以下のようにして防衛戦ステージを定義する。
+
+DEFENSE_1: {
+  isDefenseMode: true,   // ★必須: このフラグで防衛戦として起動する
+  bgm: "bgm_universe",   // 防衛戦のBGM（省略可）
+  missionName: "コア防衛戦線",
+  missionDescription: "時間内に、指定された文字数を入力せよ。",
+
+  defenseConfig: {       // ★防衛モード専用の設定
+    totalCharsToType: 300,       // 目標文字数（タイムアップ時にこの数に達していればクリア）
+    timeLimit: 120,              // 制限時間（秒）
+    genres: ['empty', '促音', 'ことわざ'], // 出題ジャンル（下記参照）
+    minLength: 4,                // 出題単語の最小文字数
+    maxLength: 8                 // 出題単語の最大文字数
+  },
+
+  // 星評価は 防衛モード専用 type を使用する（下記 star.type 一覧 参照）
+  star: {
+    type: "defenseSurplus",
+    thresholds: [0.4, 0.45, 0.5, 0.6, 0.7],
+    weights: { surplus: 0.4, accuracy: 0.6 }
+  }
+}
+
+===============================
+defenseConfig.genres の書き方
+===============================
+  ['empty']                     → 標準（タグ無し）のみ
+  ['empty', '促音', 'ことわざ']  → 標準 ＋ 指定タグ（OR条件で共存できる）
+  ['all']                       → 全ジャンル（標準 ＋ すべてのタグ）
+
+  ※ 標準（'empty'）は他のタグと同時に指定可能。
+     'empty'の単語は①タグ無し判定で、タグ付き単語は②タグ一致(OR)で採用される。
+
+  利用可能タグ: 句読点 / 促音 / 記号 / 英語 / ことわざ / 擬音 / 数字 / ネタ
+  （※ 長文タグの文学・おもしろ等はTARGETSに無いため防衛戦では使用不可）
+
+===============================
+防衛戦の勝敗判定（defenseCore.js 準拠）
+===============================
+  タイムアップ（timeLimit 到達）が唯一の終了条件。
+    入力文字数 >= totalCharsToType ならクリア（成功）
+    入力文字数 <  totalCharsToType なら失敗
 */
 //===================================================================================
 
@@ -1810,10 +1874,10 @@ export const STAGES = {
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {
-      totalCharsToType: 540,
-      timeLimit: 220, // 秒
-      genres: ['empty'], // 標準単語
-      minLength: 5,
+      totalCharsToType: 470,
+      timeLimit: 200, // 秒
+      genres: ['英語'], // 標準単語
+      minLength: 4,
       maxLength: 12,
     },
     // ★ 防衛モード用の星評価ロジックに変更
@@ -1858,11 +1922,11 @@ export const STAGES = {
     missionName: "コア防衛戦線",
     missionDescription: "時間内に、指定された文字数を入力せよ。",
     defenseConfig: {
-      totalCharsToType: 700,
-      timeLimit: 260, // 秒
-      genres: ['empty'], // 標準単語
+      totalCharsToType: 620,
+      timeLimit: 240, // 秒
+      genres: ['英語'], // 標準単語
       minLength: 5,
-      maxLength: 14,
+      maxLength: 13,
     },
     // ★ 防衛モード用の星評価ロジックに変更
     star: { 

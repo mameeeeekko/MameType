@@ -1,6 +1,6 @@
 import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEMENTS } from "./playerStats.js";
 import { savePlayerStats } from "./storage.js";
-import { getPlayerStatsForEnemy, getStarUpgradeLevel, getStarUpgradeCooldownMultiplier, STAR_UPGRADE_MAX_LEVEL } from "./questPlayerStats.js";
+import { getPlayerStatsForEnemy, getStarUpgradeLevel, getStarUpgradeTimeFactor, STAR_UPGRADE_MAX_LEVEL } from "./questPlayerStats.js";
 import { getClearedStageCount, getTotalStars, getAvailableMaxStars, hasSeenTrueEnding } from "./questProgress.js";
 import { PASSIVE_SKILLS, ACTIVE_SKILLS, getSkillById } from "./questSkills.js";
 import { QUEST_MAP } from "./questMap.js";
@@ -644,10 +644,10 @@ function renderQuestActiveSkills() {
     const skill = ACTIVE_SKILLS?.[id];
     if (!skill) return;
 
-    // ★星強化の表示
+    // ★星強化の表示（CD短縮% = 時間ベースの短縮率）
     const starLevel = getStarUpgradeLevel(id);
-    const starMultiplier = getStarUpgradeCooldownMultiplier(id);
-    const starReduction = Math.round((starMultiplier - 1) * 100);
+    const starFactor = getStarUpgradeTimeFactor(id);
+    const starReduction = Math.round((1 - starFactor) * 100);
 
     const item = document.createElement("div");
     item.className = "skill-item equipped active";

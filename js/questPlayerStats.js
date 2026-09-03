@@ -956,6 +956,17 @@ export function getTotalStarsEarned() {
     return earned;
 }
 
+/**
+ * 累計獲得星数を直接設定します（主にDEVツールによる復元用）。
+ * @param {number} value - 設定する累計獲得星数
+ */
+export function setTotalStarsEarned(value) {
+    const stats = getPlayerStats();
+    if (!stats.questRecord) stats.questRecord = {};
+    stats.questRecord.totalStarsEarned = Math.max(0, Math.floor(Number(value) || 0));
+    saveStats();
+}
+
 // ===============================
 // 星でアクティブスキルのクールダウンを強化
 // ===============================
@@ -989,14 +1000,27 @@ export function getStarUpgradeLevel(skillId) {
 }
 
 /**
- * 指定スキルのクールダウン短縮率（乗算係数）を取得します。
- * 例: Lv.3 → 1.15（15%速くチャージ）
+ * 指定スキルの実効クールダウン時間の係数を取得します。
+ * 実効クールダウン = 元の時間 × この係数
+ * 例: Lv.3 → 0.85（クールダウン時間が15%短縮）
+ * Lv.10（最大） → 0.5（半分）
  * @param {string} skillId - アクティブスキルID
- * @returns {number} 短縮係数（1.0 = 強化なし）
+ * @returns {number} 時間係数（1.0 = 強化なし、0.5 = 半分）
+ */
+export function getStarUpgradeTimeFactor(skillId) {
+    const level = getStarUpgradeLevel(skillId);
+    // レベルごとにクールダウン時間が5%短縮（旧仕様: チャージ速度ベース）
+    return Math.max(0.05, 1 - level * STAR_UPGRADE_REDUCTION_PER_LEVEL);
+}
+
+/**
+ * 指定スキルのクールダウン減少速度の倍率を取得します（戦闘中のチャージ速度用）。
+ * 実効クールダウン時間の逆数に相当し、Lv.10では2倍の速さでチャージします。
+ * @param {string} skillId - アクティブスキルID
+ * @returns {number} 速度倍率（1.0 = 強化なし、2.0 = 半分の時間でチャージ）
  */
 export function getStarUpgradeCooldownMultiplier(skillId) {
-    const level = getStarUpgradeLevel(skillId);
-    return 1 + level * STAR_UPGRADE_REDUCTION_PER_LEVEL;
+    return 1 / getStarUpgradeTimeFactor(skillId);
 }
 
 /**

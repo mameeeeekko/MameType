@@ -70,7 +70,7 @@ export const DIFFICULTIES = {
 
     basic: {
       min: 10,
-      max: 999
+      max: 20
     },
 
     enemy: {
@@ -94,9 +94,9 @@ export const DIFFICULTIES = {
     }
   },
 
-  expert: {
-    id: "expert",
-    name: "EXPERT",
+  master: {
+    id: "master",
+    name: "MASTER",
 
     // 通常モード専用
     basic: {
@@ -152,15 +152,15 @@ export function getDifficultyById(id) {
 
 /**
  * 現在解放されている難易度リストを取得する。
- * 全クリア（hasSeenTrueEnding）達成で EXPERT が解放される。
+ * 全クリア（hasSeenTrueEnding）達成で MASTER が解放される。
  * @param {object} [options]
- * @param {boolean} [options.includeExpert=true] EXPERT を含めるかどうか（フリーモードでは false を指定して除外する）
+ * @param {boolean} [options.includeMaster=true] MASTER を含めるかどうか（フリーモードでは false を指定して除外する）
  */
-export function getAvailableDifficulties({ includeExpert = true } = {}) {
+export function getAvailableDifficulties({ includeMaster = true } = {}) {
   const isAllClear = hasSeenTrueEnding();
   return Object.values(DIFFICULTIES).filter(d => {
-    if (d.id === "expert") {
-      return includeExpert && isAllClear;
+    if (d.id === "master") {
+      return includeMaster && isAllClear;
     }
     return true;
   });

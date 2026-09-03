@@ -1,6 +1,6 @@
 // defenseResult.js
 
-import { gameState, setLastWasEnemyMode, getERank, fullResetGame } from "./gameCore.js";
+import { setLastWasEnemyMode, getERank, fullResetGame } from "./gameCore.js";
 import { backToQuestMap } from "./main.js";
 import { updateHud } from "./hud.js";
 import { restartDefenseMode } from "./defenseCore.js";

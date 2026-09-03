@@ -24,6 +24,11 @@ export const devOverride = {
     spawn: {
         maxAlive: null,
     },
+    stars: {
+        maxed: false,        // STARS MAX トグルの状態
+        backup: null,        // トグルON時に退避した元の星データ（questStars）
+        backupEarned: null,  // トグルON時に退避した累計獲得星数（totalStarsEarned）
+    },
     unlockAllSkills: false,
 };
 

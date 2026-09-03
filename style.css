@@ -6773,35 +6773,91 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   position: fixed;
   left: 10px;
   top: 400px;
-  width: 360px; /* 後で広げる */
+  width: 280px;
   background: rgba(0,0,0,0.88);
   color: white;
-  padding: 10px;
-  font-size: 12px;
+  padding: 8px;
+  font-size: 11px;
   border-radius: 8px;
   /* z-index: 99999; */ /* → 画面階層セクションへ移動 */
   box-sizing: border-box;
 }
 
-.devPanelHeader {
+#devPanelHeader {
   cursor: grab;
   user-select: none;
-  padding: 6px 8px;
+  padding: 4px 6px;
   background: rgba(255,255,255,0.08);
   border-radius: 6px;
-  margin-bottom: 8px;
-  position: relative; 
+  margin-bottom: 6px;
+  position: relative;
   /* z-index: 2; */ /* → 画面階層セクションへ移動 */
 }
 
-.devPanelHeader:active {
+#devPanelHeader:active {
   cursor: grabbing;
 }
 
 .dev-title {
   font-weight: bold;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dev-key {
+  font-size: 9px;
+  font-weight: normal;
+  opacity: 0.6;
+  letter-spacing: 0.5px;
+}
+
+/* QUICKセクション（星MAXトグル） */
+.dev-quick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 6px;
+  margin-bottom: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+}
+
+.dev-quick button {
+  flex: none;
+  font-weight: bold;
+}
+
+#devStarMaxBtn.on {
+  color: #ffd76a;
+}
+
+.dev-quick-info {
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+/* 折りたたみセクション */
+#devPanel details.dev-sec {
+  margin: 3px 0;
+}
+
+#devPanel details.dev-sec summary {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  opacity: 0.75;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+
+#devPanel details.dev-sec summary:hover {
+  opacity: 1;
 }
 
 /* 超圧縮レイアウト */
@@ -6810,14 +6866,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
-  margin: 4px 0;
-}
-.dev-row label,
-.dev-row span:first-child {
-  width: 60px;
-}
-.dev-row input {
-  width: 70px;
+  margin: 3px 0;
 }
 
 .dev-row button {
@@ -6832,22 +6881,13 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 #devPanel input {
   font-size: 9px;
-  width: 45px;
+  width: 48px;
   height: 14px;
 }
 
 #devPanel select {
   font-size: 9px;
   width: 100%;
-}
-
-#devPanel fieldset {
-  padding: 3px;
-  margin: 3px 0;
-}
-
-#devPanel legend {
-  font-size: 9px;
 }
 
 #devPanel hr {
@@ -6899,11 +6939,6 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   background: #ddd;
 }
 
-#devPanel hr {
-  margin: 3px 0;
-  opacity: 0.3;
-}
-
 
 
 /* =====================================================
@@ -6916,7 +6951,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #fff;
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: flex-start; /* ★上寄せアンカー：要素を追加しても既存表示が動かない（下に伸びるだけ） */
   overflow: hidden;
   z-index: 30000;
   font-family: var(--font-ja);
@@ -6932,23 +6967,17 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   width: 80%;
   max-width: 600px;
   text-align: center;
-  animation: scrollUp 30s linear forwards;
-  transform: translateY(100%);
-}
-
-@keyframes scrollUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(-120%);
-  }
+  /* ★スクロールはJS(dialogue.js)がrAFでピクセル絶対指定する。
+     以前の translate(%) ベースのCSSアニメーションは「要素の高さ」基準のため、
+     ジョークスタッフを途中で追加すると高さが変わり表示位置が跳ねてしまう。
+     JS駆動なら追加しても座標は変わらないため、自然な流れが保たれる。 */
+  transform: translateY(100vh);
 }
 
 .staff-roll-line {
-  margin-bottom: 2.5em;
+  margin-bottom: 5em;
   font-size: 18px;
-  line-height: 1.5;
+  line-height: 2.2;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -6969,6 +6998,258 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   text-align: center;
   font-size: 1.2em;
   font-weight: bold;
+}
+
+/* セクション見出し（Music / Sound Effect など） */
+.staff-roll-line.staff-roll-section {
+  display: block;
+  margin-top: 9em;
+  margin-bottom: 5em;
+  padding-top: 2em;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.staff-roll-line.staff-roll-section .role-center {
+  font-size: 1.35em;
+  letter-spacing: 4px;
+  color: #fff;
+}
+
+/* 名前の下に表示するHP（URL） ※右寄せ */
+.staff-roll-line.staff-roll-hp {
+  display: block;
+  margin-top: -4.2em;
+  margin-bottom: 4.8em;
+  text-align: right;
+  padding-right: 2%;
+}
+
+.staff-roll-line.staff-roll-hp .hp {
+  font-size: 12px;
+  color: #9a9a9a;
+  word-break: break-all;
+  letter-spacing: 0.5px;
+}
+
+/* 最後の Thank you 表示 */
+.staff-roll-line.staff-roll-thanks {
+  display: block;
+  margin-top: 9em;
+  padding-bottom: 5em;
+}
+
+.staff-roll-line.staff-roll-thanks .role-center {
+  font-size: 1.8em;
+  letter-spacing: 2px;
+}
+
+/* エンドロール最後の The End */
+.staff-roll-line.staff-roll-end {
+  display: block;
+  margin-top: 7em;
+  padding-bottom: 6em;
+}
+
+.staff-roll-line.staff-roll-end .role-center {
+  font-size: 2em;
+  letter-spacing: 8px;
+  color: #fff;
+}
+
+/* Special Thanks セクション */
+.staff-roll-thanks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5em;
+  margin: 3em 0;
+  padding: 2em 0;
+}
+
+/* ※ジョークスタッフは入力した行の直後に差し込まれるため、
+     専用コンテナの高さ確保は不要（JSスクロール化により跳ねも解消済み） */
+
+/* タイピング中の名前の強調表示（控えめだがほんの少し分かる程度） */
+.name-right.typing {
+  text-shadow: 0 0 10px rgba(255, 240, 200, 0.3);
+}
+
+/* 現在の入力対象の目印（うっすら金色がかって、少しだけ目立つ） */
+.typing-name-line.current-target .name-right .name-text {
+  color: #f7e9c8;
+}
+
+/* 対象行の未入力文字（同じく薄い金色） */
+.typing-name-line.current-target .char-remain {
+  color: #f7e9c8;
+}
+
+.typing-name-line.current-target .role-left {
+  color: #d8c9a8;
+  opacity: 0.9;
+}
+
+.typing-name-line.current-target .name-right .roma {
+  color: #c4b896;
+}
+
+/* 入力失敗（スクロールアウト） */
+.name-right.missed .name-text,
+.name-right.missed .roma {
+  color: #833;
+  opacity: 0.4;
+}
+
+/* タイピング対象の名前行（横書き） */
+.typing-name-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1.5em;
+  width: 100%;
+  text-align: center;
+}
+
+.role-left {
+  color: #aaa;
+  font-size: 14px;
+  min-width: 120px;
+  text-align: right;
+  opacity: 0.8;
+  writing-mode: horizontal-tb;
+  direction: ltr;
+}
+
+.name-right {
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
+  position: relative;
+  transition: all 0.2s;
+  writing-mode: horizontal-tb;
+  direction: ltr;
+}
+
+.name-right .roma {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  font-family: 'Noto Sans Mono', monospace;
+  margin-top: 4px;
+  letter-spacing: 1px;
+  writing-mode: horizontal-tb;
+  direction: ltr;
+}
+
+.name-right.typing .roma {
+  color: #88ff88;
+}
+
+.name-right.typed {
+  color: #444;
+}
+
+.name-right.typed .roma {
+  color: #333;
+}
+
+.name-right .typed-part {
+  color: #666;
+}
+
+/* 名前の文字ごとの色（入力済みはうっすら緑、ほぼ目立たない程度） */
+.char-typed {
+  color: #6f9a6f;
+}
+
+.char-remain {
+  color: #fff;
+}
+
+/* Thank you for playing! と The End の最終表示 */
+.staff-roll-thank-you-final,
+.staff-roll-the-end-final {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+  z-index: 30002;
+  pointer-events: none;
+  animation: fadeInFinal 1s ease-in;
+}
+
+.staff-roll-the-end-final {
+  font-size: 72px;
+  letter-spacing: 8px;
+}
+
+@keyframes fadeInFinal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ジョークスタッフ（タイピングで増殖）※色は控えめに：通常文字とあまり変わらない程度 */
+.joke-staff {
+  animation: jokePopIn 0.3s ease-out;
+}
+
+.joke-staff .role-left {
+  color: #a8bcd2;
+  opacity: 0.85;
+  writing-mode: horizontal-tb;
+  direction: ltr;
+}
+
+.joke-staff .name-right {
+  color: #ece4d4;
+  writing-mode: horizontal-tb;
+  direction: ltr;
+}
+
+.joke-staff .name-right.typed {
+  color: #444;
+}
+
+@keyframes jokePopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ジョークスタッフ上限警告（画面中央固定・スクロールの影響を受けない） */
+.staff-roll-joke-warning {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  text-align: center;
+  font-size: 2em;
+  font-weight: bold;
+  color: #ff4444;
+  text-shadow: 0 0 12px rgba(255, 0, 0, 0.8);
+  animation: warningPulse 0.5s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes warningPulse {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.05);
+  }
 }
 
 /* =====================================================
@@ -7046,6 +7327,15 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   font-size: 22px;
   font-family: var(--font-ja);
   letter-spacing: 1.5px;
+}
+
+/* エンディング冒頭のゲームタイトル表示 */
+.true-ending-message-overlay p.staff-roll-title {
+  font-size: 56px;
+  font-weight: bold;
+  letter-spacing: 12px;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(255, 255, 255, 0.35);
 }
 
 /* =====================================================

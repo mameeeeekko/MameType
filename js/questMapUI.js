@@ -5,7 +5,7 @@ import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedW
 import { startEnemyMode } from "./enemyCore.js";
 import { startDefenseMode } from "./defenseCore.js";
 import { gameState } from "./gameCore.js";
-import { DIFFICULTIES, getCurrentDifficulty, setCurrentDifficulty, getAvailableDifficulties } from "./difficulties.js";
+import { getCurrentDifficulty, setCurrentDifficulty, getAvailableDifficulties } from "./difficulties.js";
 import { backToQuestMenu, backToQuestMap, showHud } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
@@ -21,9 +21,8 @@ import {
     getActiveSkillStockMax,
     getStarUpgradeLevel,
     getStarUpgradeCost,
-    getStarUpgradeCooldownMultiplier,
+    getStarUpgradeTimeFactor,
     STAR_UPGRADE_MAX_LEVEL,
-    STAR_UPGRADE_REDUCTION_PER_LEVEL,
     upgradeStarSkill,
     getTotalStarsEarned,
     getAvailableStars,
@@ -32,7 +31,7 @@ import {
     canRebuild,
     rebuildStarUpgrades,
 } from "./questPlayerStats.js";
-import { buildClearText, buildEndText, buildStarText, STAGES, getStageConfig } from "./enemyModeConfig.js";
+import { buildClearText, buildEndText, buildStarText, formatDefenseGenres, STAGES, getStageConfig } from "./enemyModeConfig.js";
 import { startDialogue, DIALOGUE_DATA, isDialogueVisible, showLog, showDialoguePlaybackChoicePopup } from "./dialogue.js";
 import { devOverride } from "../dev/devOverride.js";
 import { images } from "./assetsLoader.js";
@@ -523,6 +522,12 @@ export function renderQuestMapUI(){
                     tooltipLines.push(stage.enemyVariationDescription);
                     tooltipLines.push("");
                 }
+                // ★ 防衛モード: 出題ジャンルを独立セクションとして表示（クリア条件には含めない）
+                if (stage.isDefenseMode) {
+                    tooltipLines.push('<span class="tooltip-title">[出題ジャンル]</span>');
+                    tooltipLines.push(formatDefenseGenres(stage.defenseConfig?.genres));
+                    tooltipLines.push("");
+                }
 
                 tooltipLines.push(
                     '<span class="tooltip-title">[終了条件]</span>',
@@ -796,7 +801,14 @@ function showLockMessage(text) {
 export function openQuestMenuModal(type = "difficulty") {
 
     const old = document.getElementById("questModal");
-    if (old) old.remove();
+
+    // ★再描画時（UPGRADE/REBUILD後など）に星強化リストのスクロール位置を引き継ぐ
+    let savedStarListScroll = 0;
+    if (old) {
+        const oldStarList = old.querySelector(".star-upgrade-list");
+        if (oldStarList) savedStarListScroll = oldStarList.scrollTop;
+        old.remove();
+    }
 
     const overlay = document.createElement("div");
     overlay.id = "questModal";
@@ -1668,8 +1680,8 @@ export function openQuestMenuModal(type = "difficulty") {
 
                     const level = getStarUpgradeLevel(skillId);
                     const maxLevel = STAR_UPGRADE_MAX_LEVEL;
-                    const currentMultiplier = getStarUpgradeCooldownMultiplier(skillId);
-                    const currentReduction = Math.round((currentMultiplier - 1) * 100);
+                    const currentFactor = getStarUpgradeTimeFactor(skillId);
+                    const currentReduction = Math.round((1 - currentFactor) * 100);
 
                     const isMaxed = level >= maxLevel;
                     const nextCost = isMaxed ? null : getStarUpgradeCost(level + 1);
@@ -1691,8 +1703,8 @@ export function openQuestMenuModal(type = "difficulty") {
                     const baseCooldown = typeof skill.cooldown === "number" ? skill.cooldown : null;
                     let cooldownHTML;
                     if (baseCooldown !== null && level > 0) {
-                        // 短縮後の実効クールダウン = もともとの時間 ÷ マルチプライヤー
-                        const currentEffectiveSec = baseCooldown / currentMultiplier;
+                        // 短縮後の実効クールダウン = もともとの時間 × 時間係数
+                        const currentEffectiveSec = baseCooldown * currentFactor;
                         cooldownHTML = `cooldown: ${baseCooldown.toFixed(1)}sec → <span class="star-upgrade-cd-reduced">${currentEffectiveSec.toFixed(1)}sec</span>`;
                     } else if (baseCooldown !== null) {
                         // 未強化（Lv.0）はもともとの時間のみ
@@ -1729,19 +1741,19 @@ export function openQuestMenuModal(type = "difficulty") {
                     if (!isMaxed && canAfford) {
                         const btn = item.querySelector(".star-upgrade-btn");
                         btn.onclick = () => {
-                            // ★短縮前のマルチプライヤー（レベルアップ前に確定させる）
-                            const beforeMultiplier = currentMultiplier;
+                            // ★短縮前の時間係数（レベルアップ前に確定させる）
+                            const beforeFactor = currentFactor;
                             const success = upgradeStarSkill(skillId);
                             if (success) {
                                 playSE("skill_on");
                                 // ★レベルアップ前後の実効クールダウン時間を記録（再描画時に表示）
-                                const afterMultiplier = getStarUpgradeCooldownMultiplier(skillId);
+                                const afterFactor = getStarUpgradeTimeFactor(skillId);
                                 const baseCooldown = skill.cooldown;
                                 if (typeof baseCooldown === "number") {
                                     starUpgradeFlashInfo = {
                                         skillId,
-                                        beforeSec: baseCooldown / beforeMultiplier,
-                                        afterSec: baseCooldown / afterMultiplier,
+                                        beforeSec: baseCooldown * beforeFactor,
+                                        afterSec: baseCooldown * afterFactor,
                                     };
                                 }
                                 // 再描画
@@ -1765,6 +1777,12 @@ export function openQuestMenuModal(type = "difficulty") {
 
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+
+    // ★星強化リストのスクロール位置を復元（UPGRADE/REBUILD後に上へ戻らないようにする）
+    if (savedStarListScroll > 0) {
+        const newStarList = overlay.querySelector(".star-upgrade-list");
+        if (newStarList) newStarList.scrollTop = savedStarListScroll;
+    }
 }
 
 export function closeQuestModal() {
@@ -1907,6 +1925,8 @@ function showStageIntro(stage, node, onStart, onCancel, startGameFunction) {
   const missionTitle = stage.missionName || "標準ミッション";
   const missionDesc  = stage.missionDescription || "敵を排除し、システムを正常化せよ。";
   const enemyVar     = stage.enemyVariationDescription || "標準データ";
+  // ★ 防衛モード: 出題ジャンル表示用（エネミー・バリエーションの代わりに表示）
+  const defenseGenres = stage.isDefenseMode ? formatDefenseGenres(stage.defenseConfig?.genres) : "";
 
     // =========================
     // 報酬テキスト生成
@@ -1947,10 +1967,15 @@ function showStageIntro(stage, node, onStart, onCancel, startGameFunction) {
         <div class="mission-desc-main">${missionDesc}</div>
       </div>
 
+      ${stage.isDefenseMode ? `
+      <div class="intro-section">
+        <h3>[ 出題ジャンル ]</h3>
+        <div class="enemy-var-highlight">${defenseGenres}</div>
+      </div>` : `
       <div class="intro-section">
         <h3>[ エネミー・バリエーション ]</h3>
         <div class="enemy-var-highlight">${enemyVar}</div>
-      </div>
+      </div>`}
 
       <div class="intro-section">
         <h3>[ 終了条件 ]</h3>

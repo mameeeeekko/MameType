@@ -24,7 +24,7 @@ import { resetCandidates, candidates, fullResetInput } from './inputCore.js';
 import { showResult } from "./resultView.js";
 import { getCurrentDifficulty, getDifficultyById } from "./difficulties.js";
 import { handleSkillModeResult } from "./skillTreeResult.js"
-import { initTimeCircle, stopTimeCircle, updateCircle } from "./renderer.js";
+import { initTimeCircle, stopTimeCircle } from "./renderer.js";
 import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "./version.js";
 import { addQuestSkillNodeAttempt } from "./questPlayerStats.js";

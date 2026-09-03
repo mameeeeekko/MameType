@@ -6,18 +6,17 @@ import { getPlayerStats, updateAchievements, savePlayerStats, showAchievementPop
 import { closeDialogue, startDialogue, startTrueEndingSequence, showClearRewardPopup, showSaveConfirmPopup } from "./dialogue.js";
 import { backToQuestMap } from "./main.js";
 import { hasShownFirstFullClearReward, markFirstFullClearRewardShown } from "./questProgress.js";
-import { autoSaveQuest } from "./storage.js";
 import { restartEnemyMode } from "./enemyCore.js";
 
 export function showEnemyEndIntro(text, onFinish) {
     const intro = document.getElementById("endIntro");
 
-    console.log("intro:", intro);
-    console.log("HTML:", intro?.innerHTML);
+    // console.log("intro:", intro);
+    // console.log("HTML:", intro?.innerHTML);
 
     const textEl = intro.querySelector(".introText");
 
-    console.log("textEl:", textEl);
+    // console.log("textEl:", textEl);
 
     textEl.textContent = text;
 
@@ -381,7 +380,7 @@ export function showQuestResult(stats) { // Already exported, no change needed
                     startDialogue("epilogue_after_staffroll", () => {
                         // エピローグ後、初回全クリ後の特典を一度だけ表示する
                         if (!hasShownFirstFullClearReward()) {
-                            const rewardHtml = `<div>全クリアおめでとうございます！<br>以下の特典が開放されました。<br>・新難易度【EXPERT】（高難易度・高スコア倍率）<br>・新ワールド【ディープ・コア [EXTRA]】<br>・各ステージのノードイベントを自由に聞くことが可能<br>・ボスチャレンジモード（フリーモード内）<br>・クエストモードの星の振り直しが何回でも可能</div>`;
+                            const rewardHtml = `<div>全クリアおめでとうございます！<br>以下の特典が開放されました。<br>・新難易度【MASTER】（高難易度・高スコア倍率）<br>・新ワールド【ディープ・コア [EXTRA]】<br>・各ステージのノードイベントを自由に聞くことが可能<br>・ボスチャレンジモード（フリーモード内）<br>・クエストモードの星の振り直しが何回でも可能</div>`;
                             // まずセーブの確認（スロット保存）を行い、保存完了またはモーダル閉じた後に特典を表示する
                             showSaveConfirmPopup("セーブしますか？（スロットに保存）", () => {
                                 // ユーザーが「セーブする」を選んだ → セーブモーダルを開いてスロット選択を促す
