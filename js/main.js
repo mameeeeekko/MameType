@@ -37,7 +37,7 @@ import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
 import { fitStage, getStageScale } from "./stageScale.js";
-import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
+import { enableAdaptiveShadowControl, getProfile, applyMenuLightMode, getMenuLightModeSetting, setMenuLightMode } from "./performance.js";
 import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
@@ -237,6 +237,94 @@ function hideLoading() {
   if (loadingScreen) loadingScreen.style.display = "none";
 }
 
+// =====================================================
+// バックグラウンド読み込みインジケータ（中央下）
+// メニュー表示後に残りアセットを裏で読んでいる間だけ表示する
+// =====================================================
+let _remainingLoadShown = false;
+let _remainingLoadTimer = null;
+
+function showRemainingLoadIndicator() {
+  _remainingLoadShown = true;
+  const el = document.getElementById("remainingLoadIndicator");
+  if (el) el.classList.add("show");
+  const fill = document.getElementById("remainingLoadBarFill");
+  if (fill) fill.style.width = "0%";
+}
+
+function updateRemainingLoadProgress(loaded, total) {
+  const fill = document.getElementById("remainingLoadBarFill");
+  if (fill) {
+    const pct = total > 0 ? Math.min(100, Math.floor((loaded / total) * 100)) : 100;
+    fill.style.width = `${pct}%`;
+  }
+  const text = document.querySelector("#remainingLoadIndicator .remaining-load-text");
+  if (text) {
+    text.textContent = `アセット読み込み中… ${total > 0 ? Math.floor((loaded / total) * 100) : 100}%`;
+  }
+}
+
+function completeRemainingLoad() {
+  if (!_remainingLoadShown) return; // 一瞬で終わった場合は出さない
+  const fill = document.getElementById("remainingLoadBarFill");
+  if (fill) fill.style.width = "100%";
+  const text = document.querySelector("#remainingLoadIndicator .remaining-load-text");
+  if (text) text.textContent = "読み込み完了";
+
+  // 少し見せてからフェードアウトし、次回用に初期化
+  clearTimeout(_remainingLoadTimer);
+  _remainingLoadTimer = setTimeout(() => {
+    const el = document.getElementById("remainingLoadIndicator");
+    if (el) el.classList.remove("show");
+    setTimeout(() => {
+      if (text) text.textContent = "アセット読み込み中…";
+      _remainingLoadShown = false;
+    }, 400);
+  }, 2500);
+}
+
+// 残りアセットの読み込みを開始し、進捗をインジケータに表示する
+function startRemainingLoadProgress() {
+  // 読み込みが一瞬で終わる(キャッシュ済み)場合は出さないよう少し待ってから表示
+  clearTimeout(_remainingLoadTimer);
+  _remainingLoadTimer = setTimeout(() => showRemainingLoadIndicator(), 700);
+
+  loadRemainingAssets((loaded, total) => {
+    if (loaded >= total) {
+      clearTimeout(_remainingLoadTimer);
+      completeRemainingLoad();
+    } else {
+      updateRemainingLoadProgress(loaded, total);
+    }
+  });
+}
+
+// ============================================================
+// メニュー軽量モード用：キャッシュ無効化フック（循環参照回避のためwindow経由）
+// questProgress.js の markCleared / markTrueEndingSeen 等から呼ばれる
+// ============================================================
+function markDifficultySelectorsDirty() {
+  try {
+    if (typeof updateAllDifficultySelectors === "function") {
+      updateAllDifficultySelectors._dirty = true;
+    }
+  } catch (e) { /* 無視 */ }
+}
+function resetFreeBossUnlockCache() {
+  try {
+    if (typeof showFreeStartMenu === "function") {
+      showFreeStartMenu._bossUnlocked = undefined;
+      showFreeStartMenu._availCount = undefined;
+    }
+  } catch (e) { /* 無視 */ }
+}
+try {
+  if (typeof window !== "undefined") {
+    window.__markDifficultySelectorsDirty = markDifficultySelectorsDirty;
+    window.__resetFreeBossUnlockCache = resetFreeBossUnlockCache;
+  }
+} catch (e) { /* 無視 */ }
+
 function hasBossChallengeUnlocked() {
   // ★ 修正: オートセーブと全手動セーブスロットを確認する
 
@@ -311,14 +399,26 @@ export function showMenuBackground(imageKeyOrVisible) {
   }
 
   const key = typeof imageKeyOrVisible === "string" ? imageKeyOrVisible : "title_menu";
-  if (images[key]) {
-    menuBackground.style.backgroundImage = `url("${images[key].src}")`;
+  // 同一キー再設定による再デコード・再レイアウトを回避（メニュー往復時のカクつき対策）
+  if (menuBackground.dataset.bgKey !== key) {
+    if (images[key]) {
+      menuBackground.style.backgroundImage = `url("${images[key].src}")`;
+    }
+    menuBackground.dataset.bgKey = key;
   }
 
-  // クエストメニューの時だけ、少しだけ黒っぽく（明度をわずかに下げる）調整
+  // クエストメニュー時の減光は filter（再合成が重い）ではなく
+  // ::after オーバーレイの class 切替で表現する（style.css 参照）
   if (key === "quest_menu") {
-    menuBackground.style.filter = "brightness(0.8)";
+    menuBackground.classList.add("quest-dim");
+    // 軽量モードでない従来環境では従来どおり filter を使う
+    if (document.body && document.body.classList.contains("menu-light")) {
+      menuBackground.style.filter = "none";
+    } else {
+      menuBackground.style.filter = "brightness(0.8)";
+    }
   } else {
+    menuBackground.classList.remove("quest-dim");
     menuBackground.style.filter = "none";
   }
 
@@ -342,6 +442,21 @@ export function applyTitleMenuBackground() {
 document.addEventListener("DOMContentLoaded", () => {
   // ★描画品質に応じた「グロー影」の一括制御を有効化（起動時）
   enableAdaptiveShadowControl();
+  // ★メニュー軽量モード（低スペックPC向けDOM軽量化）を起動時に反映
+  try { applyMenuLightMode(); } catch (e) { /* 無視 */ }
+  // ★OSのモーション削減設定が変わったらメニュー軽量モードに追従
+  try {
+    const mq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mq) {
+      const onMotionChange = () => { try { applyMenuLightMode(); } catch (e) { /* 無視 */ } };
+      if (typeof mq.addEventListener === "function") mq.addEventListener("change", onMotionChange);
+      else if (typeof mq.addListener === "function") mq.addListener(onMotionChange);
+    }
+  } catch (e) { /* 無視 */ }
+  // ★Auto適応・品質切替が起きたらメニュー軽量モードも同期
+  window.addEventListener("mametype-quality-changed", () => {
+    try { applyMenuLightMode(); } catch (e) { /* 無視 */ }
+  });
 
   cacheDOM();
 
@@ -376,7 +491,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       // バックグラウンドで残りのアセットを読み込み開始（awaitしない）
-      loadRemainingAssets();
+      // 進捗は中央下の細いプログレスバー（インジケータ）で表示する
+      startRemainingLoadProgress();
 
       applyTitleMenuBackground();
       
@@ -1761,7 +1877,12 @@ function createDifficultySelector(
   updateInfo(current);
 }
 
-export function updateAllDifficultySelectors() {
+export function updateAllDifficultySelectors(force = false) {
+  // メニュー往復のたびに4スコープ分のDOMを再生成すると低スペックで重い。
+  // 初回以降は明示的なdirty/forceがあるときだけ再生成する。
+  if (!force && updateAllDifficultySelectors._built && !updateAllDifficultySelectors._dirty) return;
+  updateAllDifficultySelectors._dirty = false;
+  updateAllDifficultySelectors._built = true;
   createDifficultySelector(
     "standardDifficultyButtons",
     "standardDifficultyInfo",
@@ -1923,8 +2044,29 @@ function initSettingsUI() {
     renderQualitySelect.addEventListener("change", () => {
       setRenderQuality(renderQualitySelect.value);
       updateQualityStatus();
+      // 品質連動: Low選択時はメニュー軽量モードも自動でONになる
+      try { applyMenuLightMode(); } catch (e) { /* 無視 */ }
+      try {
+        const mls = document.getElementById("menuLightModeSelect");
+        if (mls) mls.value = getMenuLightModeSetting();
+      } catch (e) { /* 無視 */ }
       playSE("select");
     });
+
+    // メニュー軽量モード（低スペックPC向け・DOM演出の削減）
+    const menuLightSelect = document.getElementById("menuLightModeSelect");
+    const syncMenuLightSelect = () => {
+      if (menuLightSelect) menuLightSelect.value = getMenuLightModeSetting();
+    };
+    syncMenuLightSelect();
+    window.addEventListener("mametype-quality-changed", syncMenuLightSelect);
+    if (menuLightSelect) {
+      menuLightSelect.addEventListener("change", () => {
+        setMenuLightMode(menuLightSelect.value);
+        syncMenuLightSelect();
+        playSE("select");
+      });
+    }
   }
 
 
@@ -2630,8 +2772,9 @@ function switchEnemyPattern(pattern) {
 /**
  * フリーモードのモード選択に合わせて設定パネルを切り替える
  * @param {string} modeId 'Standard', 'TimeAttack', 'Enemy', 'Long'
+ * @param {object} [opts] - { save: true } メニュー往復表示時は { save:false } でLS書き込みを省略
  */
-function switchFreeModeConfig(modeId) {
+function switchFreeModeConfig(modeId, opts = {}) {
   currentFreeModeId = modeId; // 選択されたモードを保存
   const groups = document.querySelectorAll(".mode-config-group");
   const targetId = `config${modeId}`;
@@ -2657,6 +2800,11 @@ function switchFreeModeConfig(modeId) {
     btnMap[modeId].classList.add("active");
   }
 
+  // メニュー表示だけのための切替では保存を省略（低スペックでの往復コスト削減）
+  if (opts.save === false) {
+    // currentFreeModeId は更新済み。保存はユーザーが明示切替したときのみ行う
+    return;
+  }
   saveFreeModeConfig(); // 選択状態が変わるたびに保存
 }
 
@@ -2742,25 +2890,43 @@ function showStartMenu() {
   if (startMenuDiv) startMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示 
   showMenuBackground("title_menu");
 }
-function showFreeStartMenu() { 
-  hideAllScreens(); 
+function showFreeStartMenu() {
+  hideAllScreens();
   fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (freeStartMenuDiv) freeStartMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示
-  
+
   const freeModeConfig = document.getElementById("freeModeConfig");
   if (freeModeConfig) freeModeConfig.style.display = "block";
 
   // BOSS チャレンジボタンの表示制御
+  // ※ loadQuestSlots() の JSON parse を毎回行うと重いので結果をキャッシュする
   if (freeBossBtn) {
-    freeBossBtn.style.display = hasBossChallengeUnlocked() ? "inline-block" : "none";
+    if (typeof showFreeStartMenu._bossUnlocked !== "boolean") {
+      showFreeStartMenu._bossUnlocked = hasBossChallengeUnlocked();
+    }
+    freeBossBtn.style.display = showFreeStartMenu._bossUnlocked ? "inline-block" : "none";
   }
 
-  // 難易度セレクターの最新状態への更新（クリア後の新難易度等）
-  updateAllDifficultySelectors();
+  // 難易度セレクターは初回のみ構築し、MASTER解放など変化があったときだけ再構築する
+  // （メニュー往復のたびに4スコープ分の innerHTML + createElement を繰り返さない）
+  // ※ MASTER解放状態（選択肢数）が変わった場合だけ force 再構築する
+  try {
+    const availCount = getAvailableDifficulties({ includeMaster: true }).length;
+    if (showFreeStartMenu._availCount !== availCount) {
+      showFreeStartMenu._availCount = availCount;
+      // 初回(_built未設定)は通常構築、2回目以降の変化は強制再構築
+      updateAllDifficultySelectors(!updateAllDifficultySelectors._built ? false : true);
+    } else {
+      updateAllDifficultySelectors();
+    }
+  } catch (e) {
+    updateAllDifficultySelectors();
+  }
 
   showMenuBackground("title_menu");
   // 最後に選択されていた（またはデフォルトの）モードを表示
-  switchFreeModeConfig(currentFreeModeId);
+  // ※ saveFreeModeConfig() の localStorage 書き込みを毎回行わないよう軽量切替にする
+  switchFreeModeConfig(currentFreeModeId, { save: false });
 }
 
 export function showQuestMap() {

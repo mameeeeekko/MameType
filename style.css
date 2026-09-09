@@ -8369,3 +8369,169 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   cursor: not-allowed;
   filter: grayscale(60%);
 }
+
+/* =====================================================
+   メニュー軽量モード（低スペックPC向け）
+   body.menu-light が付いているときだけ有効。
+   ゲームCanvasの品質設定とは独立に、DOM合成コストの高い
+   エフェクトを一括で落とす。見た目の骨格は維持する。
+   ===================================================== */
+/* 全画面の重い背景レイヤーを停止（html疑似要素は html.menu-light で制御） */
+html.menu-light::before,
+html.menu-light::after { display: none !important; }
+/* メニュー背景: フィルタ合成をやめ、不透明度を上げて合成回数を減らす */
+body.menu-light #menuBackground {
+  filter: none !important;
+  opacity: 0.9;
+  will-change: auto;
+}
+/* ぼかし（backdrop-filter）は低スペックのソフトウェア描画で特に重いため一括OFF。
+   代わりに背景を少し濃くして可読性を保つ */
+body.menu-light .game-modal-content,
+body.menu-light #playerHud,
+body.menu-light .daily-stats-card,
+body.menu-light .quest-modal-box,
+body.menu-light .save-modal-content,
+body.menu-light .modal-content,
+body.menu-light .stats-modal,
+body.menu-light .quest-stats-modal,
+body.menu-light .ach-modal-content,
+body.menu-light #settings,
+body.menu-light #onlineRankingScreen .ranking-card,
+body.menu-light .result-modal,
+body.menu-light .game-modal {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+body.menu-light .game-modal-content,
+body.menu-light #playerHud,
+body.menu-light .daily-stats-card {
+  background: rgba(13, 17, 23, 0.98) !important;
+}
+/* 重い影・発光を軽減 */
+body.menu-light .game-modal-content,
+body.menu-light #playerHud,
+body.menu-light .daily-stats-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+body.menu-light #menu h1,
+body.menu-light #startMenu h2,
+body.menu-light #freeStartMenu h2,
+body.menu-light #questMenu h2 {
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55) !important;
+}
+body.menu-light #freeStartMenu button.active {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+/* ボタンの padding アニメ（レイアウト再計算の原因）を無効化し、色変化のみに */
+body.menu-light #menu button,
+body.menu-light #startMenu button,
+body.menu-light #freeStartMenu button,
+body.menu-light #questMenu button {
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+body.menu-light #menu button:hover,
+body.menu-light #startMenu button:hover,
+body.menu-light #freeStartMenu button:hover,
+body.menu-light #questMenu button:hover {
+  padding-left: 20px !important;
+  text-shadow: none !important;
+  border-left-width: 4px !important;
+}
+/* 無限アニメーション（点滅・回転・パルス）を停止 */
+body.menu-light .ranking-new-badge,
+body.menu-light .quest-core-ring,
+body.menu-light .quest-core-ring2,
+body.menu-light .map-node-pulse,
+body.menu-light .tri-target,
+body.menu-light .overdrive-glow {
+  animation: none !important;
+}
+/* メニュー背景のクエスト時減光を filter ではなくオーバーレイで表現（合成が軽い） */
+#menuBackground::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  pointer-events: none;
+}
+#menuBackground.quest-dim::after {
+  background: rgba(0, 0, 0, 0.25);
+}
+body.menu-light #menuBackground.quest-dim::after {
+  background: rgba(0, 0, 0, 0.35);
+}
+/* モーション削減要求時はスクロール系アニメも即時に */
+@media (prefers-reduced-motion: reduce) {
+  #menu button, #startMenu button, #freeStartMenu button, #questMenu button {
+    transition: none !important;
+  }
+}
+/* =====================================================
+   バックグラウンド読み込みインジケータ（中央下）
+   body直下に置くため 1600×900 ステージ座標が基準になる。
+   pointer-events: none でクリックを一切阻害しない。
+   ===================================================== */
+#remainingLoadIndicator {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  z-index: 10800; /* グローバルUIバー(10700)より上・カウントダウン(11000)より下 */
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+
+  min-width: 200px;
+  padding: 7px 16px 9px;
+  box-sizing: border-box;
+
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 8px;
+
+  color: #a3c8e4;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-align: center;
+
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+  visibility: hidden;
+  transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s;
+  pointer-events: none;
+  user-select: none;
+}
+#remainingLoadIndicator.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  visibility: visible;
+}
+
+/* 細いプログレスバー */
+.remaining-load-bar {
+  width: 168px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.remaining-load-bar-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #58a6ff, #9fe870);
+  transition: width 0.2s linear;
+}
+
+/* 軽量モード時はさらに簡素に（ぼかし・グラデ不使用） */
+body.menu-light #remainingLoadIndicator {
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+}
+body.menu-light .remaining-load-bar-fill {
+  background: #58a6ff;
+}
+

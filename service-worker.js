@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.7";
+const CACHE_NAME = "mametype-v1.0.9";
 
 // =====================================================
 // コアアセット
@@ -55,6 +55,7 @@ const CORE_ASSETS = [
   "./js/romaUtils.js",
   "./js/typingLogic.js",
   "./js/version.js",
+  "./js/analytics.js",
 
   // ---------------------------------------------------
   // クエスト / スキルツリー関連JS

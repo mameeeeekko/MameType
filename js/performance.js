@@ -342,4 +342,99 @@ export function notifyQualityChanged() {
   } catch (e) {
     /* イベント不可の環境では黙って続行 */
   }
+  // メニュー軽量モードの body クラスも同期する
+  try { applyMenuLightMode(); } catch (e) { /* 無視 */ }
+}
+
+// ============================================================
+// メニュー軽量モード（低スペックPC向け・DOMメニュー専用）
+// ------------------------------------------------------------
+// Canvasゲーム描画の品質制御とは別に、メニューDOMの合成コスト
+// （backdrop-filter blur / mask-image / filter / 多重shadow /
+//  全画面固定レイヤー）を下げるための判定を提供する。
+// 低スペックPCではゲーム中よりメニュー遷移の方が重くなるため、
+//   * 描画品質 Low 選択時
+//   * Auto適応が最終段階まで劣化したとき
+//   * prefers-reduced-motion が有効なとき
+// に body.menu-light を付与し、CSS側で効果を一括OFFする。
+// ============================================================
+const MENU_LIGHT_STORAGE_KEY = "typing_game_menu_light";
+// null = 自動（品質に連動）, true = 常に軽量, false = 常に通常
+function getMenuLightOverride() {
+  try {
+    const v = localStorage.getItem(MENU_LIGHT_STORAGE_KEY);
+    if (v === "light") return true;
+    if (v === "full") return false;
+  } catch (e) { /* localStorage不可の環境は無視 */ }
+  return null;
+}
+
+/** メニュー軽量モードの明示設定（"auto" / "light" / "full"） */
+export function setMenuLightMode(mode) {
+  try {
+    if (mode === "light" || mode === "full") {
+      localStorage.setItem(MENU_LIGHT_STORAGE_KEY, mode);
+    } else {
+      localStorage.removeItem(MENU_LIGHT_STORAGE_KEY);
+    }
+  } catch (e) { /* 無視 */ }
+  applyMenuLightMode();
+  return shouldReduceMenuEffects();
+}
+
+export function getMenuLightModeSetting() {
+  const o = getMenuLightOverride();
+  if (o === true) return "light";
+  if (o === false) return "full";
+  return "auto";
+}
+
+function prefersReducedMotion() {
+  try {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * メニュー演出を落とすべきかどうか。
+ * ゲームCanvasの品質とは独立に、DOM合成の重さを基準に判定する。
+ */
+export function shouldReduceMenuEffects() {
+  const override = getMenuLightOverride();
+  if (override !== null) return override;
+  // 明示的に Low が選ばれている場合は無条件で軽量に
+  try {
+    if (getRenderQuality() === "low") return true;
+  } catch (e) { /* 無視 */ }
+  // Auto適応が最終段階まで落ちたらメニューも軽量に
+  try {
+    if (isAutoQuality()) {
+      const stage = typeof autoStage !== "undefined" ? autoStage : 0;
+      if (stage >= AUTO_STAGES.length - 1) return true;
+    }
+  } catch (e) { /* 無視 */ }
+  // OS側でモーション削減が要求されている場合も軽量に
+  if (prefersReducedMotion()) return true;
+  return false;
+}
+
+/**
+ * body.menu-light クラスの付け外し。起動時・品質変更時に呼ぶ。
+ * @returns {boolean} 軽量モードかどうか
+ */
+export function applyMenuLightMode() {
+  let light = false;
+  try { light = shouldReduceMenuEffects(); } catch (e) { light = false; }
+  try {
+    if (typeof document !== "undefined" && document.body) {
+      document.body.classList.toggle("menu-light", !!light);
+    }
+    if (typeof document !== "undefined" && document.documentElement) {
+      // html::before / html::after（スキャンライン・hex背景）用
+      document.documentElement.classList.toggle("menu-light", !!light);
+    }
+  } catch (e) { /* 無視 */ }
+  return light;
 }

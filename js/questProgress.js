@@ -146,6 +146,13 @@ export function markCleared(id, nextList, nextWorldId = null){
     }
 
     save();
+    // クエストマップの描画キャッシュを無効化（進捗が変わったため次回は再描画）
+    // ※ questMapUI.js 側で window.__invalidateQuestMapCache に登録される
+    try {
+        if (typeof window !== "undefined" && typeof window.__invalidateQuestMapCache === "function") {
+            window.__invalidateQuestMapCache();
+        }
+    } catch (e) { /* 無視 */ }
 }
 
 // dialogue.js から参照するために export する
@@ -219,6 +226,16 @@ export function markTrueEndingSeen() {
     // ★全クリア特典：星の振り直しを無制限にする
     setRebuildUnlimited();
     save();
+    // MASTER解放で難易度セレクターの選択肢が増えるため再構築が必要
+    // ※ main.js との循環参照を避けるため window 経由で通知する
+    try {
+        if (typeof window !== "undefined" && typeof window.__markDifficultySelectorsDirty === "function") {
+            window.__markDifficultySelectorsDirty();
+        }
+        if (typeof window !== "undefined" && typeof window.__resetFreeBossUnlockCache === "function") {
+            window.__resetFreeBossUnlockCache();
+        }
+    } catch (e) { /* 無視 */ }
 }
 // ★ ADDED: Check if true ending has been seen
 export function hasSeenTrueEnding() {
@@ -243,6 +260,12 @@ export function markBossChallengeUnlocked() {
         progress.hasBossChallengeUnlocked = true;
     }
     save();
+    // FREEメニューのBOSSボタン表示キャッシュを破棄（次回表示時に再判定）
+    try {
+        if (typeof window !== "undefined" && typeof window.__resetFreeBossUnlockCache === "function") {
+            window.__resetFreeBossUnlockCache();
+        }
+    } catch (e) { /* 無視 */ }
 }
 
 export function hasBossChallengeUnlocked() {

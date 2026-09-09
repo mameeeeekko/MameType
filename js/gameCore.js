@@ -29,6 +29,34 @@ import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "./version.js";
 import { addQuestSkillNodeAttempt } from "./questPlayerStats.js";
 import { recordFrame, shouldRunFrame } from "./performance.js";
+import {
+  initAnalyticsLazy,
+  trackGameStart,
+  trackGameComplete,
+  mapModeIdToAnalytics,
+} from "./analytics.js";
+
+// =====================================================
+// Google Analytics (軽量・遅延読み込み)
+// G-LTCTSF3D03 / game_start: standard/time_attack等を分類
+// ミス練は除外・ボスは含める
+// =====================================================
+initAnalyticsLazy();
+
+/**
+ * 通常系(startGame経由)のgame_start計測パラメータを組み立てる
+ * play_style: quest / free / daily
+ * mode: standard / time_attack / long_text 等
+ */
+function buildNormalGameStartParams(config, normalizedConfig, diff) {
+  const modeId = normalizedConfig.mode?.id || config.mode?.id || "unknown";
+  const mode = mapModeIdToAnalytics(modeId);
+  const isQuest = !!config.isQuestMode;
+  const isFree = !!normalizedConfig.isFreeMode;
+  const play_style = isQuest ? "quest" : isFree ? "free" : "daily";
+  const difficulty = diff?.id || normalizedConfig.difficulty || null;
+  return { mode, play_style, difficulty };
+}
 
 // =====================================================
 // 1.5 グローバル定数・変数の初期化（TDZ回避のため先頭へ）
@@ -402,6 +430,9 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
     config.difficulty
       ? getDifficultyById(config.difficulty) 
       : getCurrentDifficulty();
+
+  // ★GA: ミス練はtrackGameStart内で除外される。クエスト/通常/フリーを分類
+  trackGameStart(buildNormalGameStartParams(config, normalizedConfig, diff));
 
   currentIsFreeMode = normalizedConfig.isFreeMode;
   gameState.isFreeMode = normalizedConfig.isFreeMode;
@@ -858,8 +889,31 @@ async function finishGame(config = {}) {
         onlineUpdated: onlineUpdated, // ★ 結果表示に渡す
     });
     
-    // 結果表示後にオフ。イントロ中にポーズを起動させないために使っている。
+    // 結果表示前にオフ。イントロ中にポーズを起動させないために使っている。
     gameState.isEnding = false;
+
+    // ★GA: game_complete(ミス練は除外・個人情報なし)
+    try {
+      const completeMode = mapModeIdToAnalytics(gameState.currentMode?.id);
+      const completePlayStyle = isQuestContext
+        ? "quest"
+        : currentIsFreeMode
+          ? "free"
+          : "daily";
+      trackGameComplete({
+        mode: completeMode,
+        play_style: completePlayStyle,
+        difficulty: diff?.id,
+        score: typeof eScore === "number" ? eScore : undefined,
+        solved:
+          typeof gameState.solvedCount === "number"
+            ? gameState.solvedCount
+            : undefined,
+        clear: totalInputs > 0,
+      });
+    } catch (e) {
+      /* 計測失敗は無視 */
+    }
 
     isGameActive = false;
 }

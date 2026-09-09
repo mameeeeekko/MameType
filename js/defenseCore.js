@@ -24,6 +24,7 @@ import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "./version.js";
 import { shouldRunFrame, recordFrame } from "./performance.js";
 import { stageRect } from "./stageScale.js";
+import { trackGameStart, mapModeIdToAnalytics } from "./analytics.js";
 
 const canvas = document.getElementById("defenseModeCanvas");
 const ctx = canvas.getContext("2d");
@@ -276,6 +277,23 @@ export function startDefenseMode(config = {}) {
     enemyStats: defenseState, // ★ defenseStateを直接参照
   });
   gameState.isQuestMode = lastDefenseConfig.isQuestMode; // ★クエストモードのフラグを設定
+
+  // ★GA: defense を分類(daily/free/quest)
+  try {
+    trackGameStart({
+      mode: mapModeIdToAnalytics(GameModes.DEFENSE_MODE.id),
+      play_style: lastDefenseConfig.isQuestMode
+        ? "quest"
+        : lastDefenseConfig.isFreeMode
+          ? "free"
+          : "daily",
+      difficulty: lastDefenseConfig.isQuestMode
+        ? getCurrentDifficulty("quest")?.id || null
+        : null,
+    });
+  } catch (e) {
+    /* 計測失敗は無視 */
+  }
 
   fullResetInput();
   clearAllEffects();

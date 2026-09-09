@@ -33,6 +33,7 @@ import { loadKeybinds, isBoundKey } from "./keybinds.js";
 import { devOverride, applyOverride } from "../dev/devOverride.js";
 import { activateSkill, ACTIVE_SKILLS } from "./questSkills.js";
 import { shouldRunFrame, recordFrame } from "./performance.js";
+import { trackGameStart, mapModeIdToAnalytics } from "./analytics.js";
 
 import { closeDialogue, startDialogue, DIALOGUE_DATA, showDialoguePlaybackChoicePopup } from "./dialogue.js";
 let currentStage = "STAGE1";
@@ -1945,7 +1946,43 @@ export async function startEnemyMode(config = {}) {
     gameState.isFreeMode = config.isFreeMode ?? false;
     gameState.isQuestMode = config.isQuestMode ?? false;
     gameState.currentMode = GameModes.ENEMY_MODE;
-    
+
+    // ★GA: enemy/boss/quest を分類。ボスは含める
+    //   bossOnly=true → mode:"boss" / それ以外 → mode:"enemy"
+    try {
+      const isBossOnly = config.bossOnly === true;
+      const enemyMode = isBossOnly
+        ? "boss"
+        : mapModeIdToAnalytics(GameModes.ENEMY_MODE.id);
+      const enemyPlayStyle = gameState.isQuestMode
+        ? "quest"
+        : gameState.isFreeMode
+          ? "free"
+          : "daily";
+      // 難易度: クエストはconfig指定、フリーはfree-enemy、通常はdaily相当
+      let enemyDifficulty = null;
+      try {
+        if (config.isQuestMode) {
+          enemyDifficulty =
+            config.difficulty || getCurrentDifficulty("quest")?.id || null;
+        } else if (config.isFreeMode) {
+          enemyDifficulty = getCurrentDifficulty("free-enemy")?.id || null;
+        } else {
+          enemyDifficulty =
+            config.difficulty || getCurrentDifficulty("daily")?.id || null;
+        }
+      } catch (e) {
+        enemyDifficulty = null;
+      }
+      trackGameStart({
+        mode: enemyMode,
+        play_style: enemyPlayStyle,
+        difficulty: enemyDifficulty,
+      });
+    } catch (e) {
+      /* 計測失敗は無視 */
+    }
+
     setLastWasEnemyMode(true);
 
     showHud(false);

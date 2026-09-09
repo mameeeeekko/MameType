@@ -43,6 +43,38 @@ import { getStageScale, stageRect, clientToStage, STAGE_W, STAGE_H } from "./sta
 // ★星強化でレベルアップした直前/直後のクールダウン時間（再描画時に一度だけ表示する）
 let starUpgradeFlashInfo = null;
 
+// クエストマップの再描画キャッシュ（低スペックPCのメニュー往復対策）
+// 同一ワールド・同一進捗・同一サイズならDOM再生成をスキップする
+let _questMapCache = { key: null, dpr: 0, w: 0, h: 0 };
+
+function _questProgressKey(worldId) {
+    try {
+        // 進捗の変化を軽量に検出する（全文の簡易ハッシュ＋長さ＋選択ワールド＋管理者表示）
+        const hash = (s) => {
+            let h = 5381;
+            for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+            return (h >>> 0).toString(36);
+        };
+        const cleared = (typeof localStorage !== "undefined" && localStorage.getItem("questProgress")) || "";
+        const stars = (typeof localStorage !== "undefined" && localStorage.getItem("questStars")) || "";
+        const admin = (typeof window !== "undefined" && window.QUEST_MAP_ADMIN_SHOW_ALL) ? "1" : "0";
+        return `${worldId}|${cleared.length}:${hash(cleared)}|${stars.length}:${hash(stars)}|admin:${admin}`;
+    } catch (e) {
+        return `${worldId}|nocache`;
+    }
+}
+
+export function invalidateQuestMapCache() {
+    _questMapCache = { key: null, dpr: 0, w: 0, h: 0 };
+}
+// ESモジュール循環参照を避けるため、questProgress.js の markCleared から呼べるよう
+// window 経由でも公開する（markCleared → save → 無効化の通知用）
+try {
+    if (typeof window !== "undefined") {
+        window.__invalidateQuestMapCache = invalidateQuestMapCache;
+    }
+} catch (e) { /* 無視 */ }
+
 export function renderQuestMapUI(){
 
     const canvas = document.getElementById("mapCanvas");
@@ -58,7 +90,25 @@ export function renderQuestMapUI(){
     const cssW = container.clientWidth || 1600;
     const cssH = container.clientHeight || 900;
     // canvasサイズ同期（描画品質設定にステージ拡大率も掛けたDPRを使用）
-    const dpr = getEffectiveDPR() * getStageScale();
+    // ※ メニュー軽量モード時はマップ背景のDPRを1に抑えて合成コストを下げる
+    let dpr = getEffectiveDPR() * getStageScale();
+    try {
+        if (document.body && document.body.classList.contains("menu-light")) {
+            dpr = Math.min(dpr, 1);
+        }
+    } catch (e) { /* 無視 */ }
+
+    // 同一条件の再描画ならDOM再生成をスキップ（メニュー往復のカクつき対策）
+    const progressKey = _questProgressKey(worldId);
+    if (
+        _questMapCache.key === progressKey &&
+        _questMapCache.dpr === dpr &&
+        _questMapCache.w === cssW &&
+        _questMapCache.h === cssH &&
+        nodeLayer.childElementCount > 0
+    ) {
+        return;
+    }
 
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
@@ -621,19 +671,27 @@ export function renderQuestMapUI(){
         // ▼ ラベルの色付け（状態クラス付与の後に行う）
         // =========================
         // 中ボスまたはボスの場合、オレンジ色にする
+        // ※ 軽量モードでは textShadow の再計算を避けて合成コストを下げる
+        const isMenuLight = (() => {
+            try { return !!(document.body && document.body.classList.contains("menu-light")); }
+            catch (e) { return false; }
+        })();
         if (isMidBoss || isEndNode) {
             label.style.color = "#ffc15d"; // オレンジ
-            label.style.textShadow = "0 0 8px rgba(255, 184, 77, 0.6)";
+            if (!isMenuLight) label.style.textShadow = "0 0 8px rgba(255, 184, 77, 0.6)";
+            else label.style.textShadow = "";
         }
-        
+
         // ロックされている場合は、全ての色設定をリセットしてCSSのスタイルを優先する
         if (!canEnter) {
-            label.style.color = ""; 
+            label.style.color = "";
             label.style.textShadow = "";
         }
     });
     renderQuestSideMenu(container);
     renderWorldSelector(container);
+    // 描画完了後にキャッシュキーを保存（次回の同一条件再描画をスキップ）
+    _questMapCache = { key: progressKey, dpr, w: cssW, h: cssH };
 }
 
 // ====================================

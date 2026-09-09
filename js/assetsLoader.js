@@ -211,9 +211,85 @@ async function loadCoreAssets(onProgress) {
   await _loadAssetList(coreAssets, onProgress);
 }
 
-async function loadRemainingAssets() {
-  // バックグラウンドで静かに読み込むため、進捗コールバックは不要
-  await _loadAssetList(remainingAssets);
+// ======================================================================
+// 残りアセットのバックグラウンド読み込み（低スペックPC対策）
+// ----------------------------------------------------------------------
+//  - 画像は IMAGE_CONCURRENCY 件、音声は SOUND_CONCURRENCY 件ずつしか
+//    同時に読み込まない（BGMのfetch+デコードが一斉に走るのを防ぐ）
+//  - 音声キューは「デイリー各モードの先頭曲 → SE → その他BGM」の順。
+//    デイリー曲は最初から読み込むので、ゲーム開始時のBGM待ちを減らす。
+//  - 全アセット数に対する進捗を onProgress(loaded, total) で通知する。
+// ======================================================================
+
+const IMAGE_CONCURRENCY = 4; // 画像の同時読み込み数
+const SOUND_CONCURRENCY = 2; // 音声の同時読み込み数（デコードの競合を防ぐ）
+
+// デイリー各モードの先頭曲
+//   スタンダード = bgm_rainy（コアアセットで既読）
+//   タイムアタック = bgm_gameover / 長文 = bgm_yakanhikou
+//   防衛 = bgm_dive / エネミー = bgm_swim
+const DAILY_PRELOAD_BGM_NAMES = [
+  "bgm_gameover",
+  "bgm_yakanhikou",
+  "bgm_dive",
+  "bgm_swim",
+];
+
+/**
+ * キュー方式で最大 maxConcurrent 件ずつ処理する汎用ローダー。
+ * @param {Array} queue - アセット定義の配列
+ * @param {number} maxConcurrent - 同時実行数
+ * @param {Function} [onOneLoaded] - 1件完了ごとに呼ばれる
+ */
+async function _runQueueWithLimit(queue, maxConcurrent, onOneLoaded) {
+  let index = 0;
+  const workerCount = Math.max(1, Math.min(maxConcurrent, queue.length));
+  const workers = [];
+  for (let w = 0; w < workerCount; w++) {
+    workers.push((async () => {
+      while (true) {
+        const idx = index++;
+        if (idx >= queue.length) break;
+        const a = queue[idx];
+        try {
+          if (a.type === "img") await loadImage(a.name, a.src);
+          else if (a.type === "sound") await loadSound(a);
+        } catch (e) {
+          console.error(`[ASSET LOAD ERROR] name=${a.name} src=${a.src}`, e);
+        }
+        onOneLoaded?.(a);
+      }
+    })());
+  }
+  await Promise.all(workers);
+}
+
+/**
+ * 残りアセット全量をバックグラウンドで読み込む。
+ * @param {Function} [onProgress] - (loaded, total) の進捗通知
+ */
+async function loadRemainingAssets(onProgress) {
+  // 種類ごとに分割（優先順位: 画像 → [デイリーBGM → SE → その他BGM]）
+  const imageQueue = remainingAssets.filter(a => a.type === "img");
+  const bgmDailyQueue = remainingAssets.filter(a => DAILY_PRELOAD_BGM_NAMES.includes(a.name));
+  const seQueue = remainingAssets.filter(a => a.type === "sound" && !a.name.startsWith("bgm_"));
+  const bgmRestQueue = remainingAssets.filter(a => a.type === "sound" && a.name.startsWith("bgm_") && !DAILY_PRELOAD_BGM_NAMES.includes(a.name));
+  const soundQueue = [...bgmDailyQueue, ...seQueue, ...bgmRestQueue];
+
+  const total = imageQueue.length + soundQueue.length;
+  let loaded = 0;
+  const report = () => {
+    loaded++;
+    try { onProgress?.(loaded, total); } catch (e) { /* 無視 */ }
+  };
+
+  // 画像と音声はそれぞれ別の並列数で同時に進める
+  // → メニュー用画像が優先的に進みつつ、デイリー曲も最初から読み込まれる
+  const imagePromise = _runQueueWithLimit(imageQueue, IMAGE_CONCURRENCY, report);
+  const soundPromise = _runQueueWithLimit(soundQueue, SOUND_CONCURRENCY, report);
+  await Promise.all([imagePromise, soundPromise]);
+
+  try { onProgress?.(total, total); } catch (e) { /* 無視 */ }
   console.log("All remaining assets loaded in background.");
 }
 
