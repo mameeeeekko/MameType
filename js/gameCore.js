@@ -28,6 +28,7 @@ import { initTimeCircle, stopTimeCircle } from "./renderer.js";
 import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "./version.js";
 import { addQuestSkillNodeAttempt } from "./questPlayerStats.js";
+import { recordFrame, shouldRunFrame } from "./performance.js";
 
 // =====================================================
 // 1.5 グローバル定数・変数の初期化（TDZ回避のため先頭へ）
@@ -82,7 +83,9 @@ export let isRetrying = false;
 export let isGameActive = false;
 export function setGameActive(v){
   isGameActive = v;
-} 
+  // ★エネミー/防衛モードは startGame を経由しないため、ここで speedTick を再始動する
+  if (v) ensureSpeedTickRunning();
+}
  
 export let lastWasEnemyMode = false; //結果画面のもう一度につかう。
 let lastSpecialModeType = null; // "enemy_mode" or "defense_mode"
@@ -412,6 +415,7 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   stopTimeAttackTimer();
   isTimeUp = false;
   gameState.isEnding = false;
+  ensureSpeedTickRunning(); // ★前回のゲーム終了時に停止した speedTick ループを再始動
   
   // 最後に開始したゲームを保存
   if (normalizedConfig.mode !== GameModes.MISS_PRACTICE) {
@@ -879,6 +883,7 @@ export function getERank(eScore) {
 // =====================================================
 function startTimeAttackTimer(){
   stopTimeAttackTimer();
+  lastTaSecond = -1; // ★前回ゲームの秒表示キャッシュをリセット
 
   const limitSec = modeData.limitSec; 
   if (!limitSec || limitSec <= 0) return;
@@ -897,21 +902,31 @@ function stopTimeAttackTimer(){
   setTimeLeft(null);
 }
 
+/**
+ * タイムアタックの残り時間を更新する。
+ * @returns {boolean} 表示秒が変わってDOM（タイマー表示）を更新した場合は true
+ */
 function updateTimeAttack() {
-  if (!isGameActive || isTimeUp) return;
+  if (!isGameActive || isTimeUp) return false;
 
-  if (isPaused) return;
+  if (isPaused) return false;
 
   const elapsed = getNow() - timeAttackStartTime;
   const remainMs = timeLimitMs - elapsed;
 
   const sec = Math.max(0, Math.ceil(remainMs / 1000));
-  setTimeLeft(sec);
+  let secChanged = false;
+  if (sec !== lastTaSecond) {
+    lastTaSecond = sec;
+    setTimeLeft(sec); // ★秒が変わったときだけDOMを更新（毎フレームのinnerHTML再生成を廃止）
+    secChanged = true;
+  }
 
   if (remainMs <= 0) {
     isTimeUp = true;
     finishGame();
   }
+  return secChanged;
 }
 
 // =====================================================
@@ -945,28 +960,60 @@ export function backToMenu(){
 // =====================================================
 // 18. スピード(KPM)更新ループ
 // =====================================================
+// ★パフォーマンス:
+//  - ゲーム非アクティブ / 終了演出中は rAF ループを完全に停止する
+//    （再開は startGame / setGameActive(true) 内の ensureSpeedTickRunning が行う）
+//  - 通常・タイムアタック等の DOM モードでは performance.js の
+//    recordFrame（Auto品質の自動調整への入力）と shouldRunFrame（FPSキャップ）を適用する
+//  - エネミー/防衛モードは各ゲームループ側で同じ処理を行うため、
+//    二重計測・ゲート競合を避けるためにここでは適用しない
+let speedTickActive = false;
+let lastTaRenderAt = 0;   // タイムアタックで最後に全体再描画した時刻
+let lastTaSecond = -1;    // タイムアタックで最後に表示した残り秒
+
+function ensureSpeedTickRunning() {
+  if (speedTickActive) return;
+  speedTickActive = true;
+  requestAnimationFrame(speedTick);
+}
+
 function speedTick(now){
   // ゲーム中かつ終了演出（isEnding）開始前のみロジックを動かす
-  if(!isGameActive || gameState.isEnding){ 
-    requestAnimationFrame(speedTick); 
-    return; 
+  if(!isGameActive || gameState.isEnding){
+    speedTickActive = false; // ★ループを完全に停止（メニュー中の常時rAFを廃止）
+    return;
   }
 
-  // ポーズ中はKPM更新停止
+  // ポーズ中はKPM更新停止（再開に備えてループは生かす）
   if (isPaused) {
     requestAnimationFrame(speedTick);
     return;
   }
 
-  if (gameState.currentMode.id === GameModes.TIME_ATTACK.id) {
-    updateTimeAttack();
-    renderState(); // タイマー表示更新時のみ描画
+  // ★低スペック対応: 実測FPSを計測し、Low品質時はフレームを間引く
+  //   （キャンバス系モードでは各ゲームループが処理するためスキップ）
+  if (!gameState.enemyMode) {
+    recordFrame(now);
+    if (!shouldRunFrame(now)) {
+      requestAnimationFrame(speedTick);
+      return;
+    }
   }
-  if(now-lastSpeedUpdate>200){ 
-    lastSpeedUpdate=now; 
+
+  if (gameState.currentMode?.id === GameModes.TIME_ATTACK.id) {
+    const secChanged = updateTimeAttack();
+    // タイマー数値のDOM更新は updateTimeAttack 内で「秒が変わったときだけ」行う。
+    // 重い全体再描画（renderState）は秒変化時 or 最低250ms間隔に制限する。
+    if (secChanged || now - lastTaRenderAt > 250) {
+      lastTaRenderAt = now;
+      renderState();
+    }
+  }
+  if(now-lastSpeedUpdate>200){
+    lastSpeedUpdate=now;
     const elapsed = getNow() - gameState.speedStartTime; //ポーズ補正あり
-    const kpm = smoothKPM(calcKPM(gameState.speedCorrectChars,elapsed)); 
-    updateSpeedBar(kpm); 
+    const kpm = smoothKPM(calcKPM(gameState.speedCorrectChars,elapsed));
+    updateSpeedBar(kpm);
   }
   requestAnimationFrame(speedTick);
 }

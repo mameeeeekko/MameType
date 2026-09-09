@@ -16,7 +16,7 @@ let typeWarmFilter = null; // ローパスフィルター（温かみ用）
 
 export let laserEffects = [];
 import { gameState, getSoundEnabled, getSoundSettings } from "./gameCore.js";
-import { scaledParticleCount } from "./performance.js";
+import { scaledParticleCount, getEffectsScale } from "./performance.js";
 
 // ===========================================
 // ★ サウンド個別設定の一元判定
@@ -216,11 +216,18 @@ export async function initAudio() {
     const ctx = getAudioContext();
 
     if (ctx.state === "suspended") {
-        await ctx.resume();
+        try {
+            await ctx.resume();
+        } catch (e) { /* resume失敗時は後続の再生試行に任せる */ }
     }
 
-    // 初回再生遅延防止（ウォームアップ）
-    playTone(440,0.001);
+    // ★初回ウォームアップのウォームアップ：suspended のままだと playTone が例外で落ち、
+    // initialized が立たないままになるため、例外を握りつぶして確実に初期化完了させる
+    try {
+        // ★事前にノイズバッファを生成しておき、初回打鍵時の生成コスト（遅延）を潰す
+        ensureNoiseBuffers(ctx);
+        playTone(440,0.001);
+    } catch (e) { /* ウォームアップ失敗は無視 */ }
 
     initialized = true;
 }
@@ -240,51 +247,68 @@ export function playTone(freq, duration, type="sine", volume=1.0, targetGainNode
     const ctx = getAudioContext();
 
     if (ctx.state !== "running") {
-        ctx.resume();
+        try { ctx.resume(); } catch (e) {}
     }
 
     const now = ctx.currentTime;
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    let osc = null;
+    let gain = null;
+    try {
+        osc = ctx.createOscillator();
+        gain = ctx.createGain();
+    } catch (e) { return; }
     
     osc.type = type;
     osc.frequency.setValueAtTime(freq, now);
 
     // エンベロープ（超重要）
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
-    osc.connect(gain).connect(targetGainNode || seGain); // Connect to the determined destinationNode
+    const dest = targetGainNode || seGain;
+    // ★接続先が未初期化の場合は無音終了させず中断（抜けの原因になるため）
+    if (!dest) return;
+    try {
+        osc.connect(gain);
+        gain.connect(dest);
+    } catch (e) { return; }
 
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
+    try {
+        osc.start(now);
+        osc.stop(now + duration);
+    } catch (e) {
+        try { osc.disconnect(); } catch (_ignored) {}
+        try { gain.disconnect(); } catch (_ignored) {}
+        return;
+    }
 
     osc.onended = () => {
-        osc.disconnect();
-        gain.disconnect();
+        try { osc.disconnect(); } catch (e) {}
+        try { gain.disconnect(); } catch (e) {}
     };
 }
+
+let _lastVinylTime = 0;
 
 function playNoise(duration = 0.1, volume = 1.0, target = null) {
     const ctx = getAudioContext();
 
     if (ctx.state !== "running") {
-        ctx.resume();
+        try { ctx.resume(); } catch (e) {}
     }
 
     const now = ctx.currentTime;
 
-    const bufferSize = ctx.sampleRate * duration;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-    }
+    // ★ノイズバッファは事前生成したキャッシュを再利用（毎回の createBuffer + PCM生成を廃止）
+    ensureNoiseBuffers(ctx);
+    if (!_whiteNoiseBuffer) return;
 
     const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
+    noise.buffer = _whiteNoiseBuffer;
+    // 毎回異なる位置から再生して音の被りを避ける
+    const maxOffset = Math.max(0, _whiteNoiseBuffer.duration - duration);
+    const offset = Math.random() * maxOffset;
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(volume, now);
@@ -294,10 +318,72 @@ function playNoise(duration = 0.1, volume = 1.0, target = null) {
     filter.type = "highpass";
     filter.frequency.setValueAtTime(5000, now);
 
-    noise.connect(filter).connect(gain).connect(target || seGain);
+    const dest = target || seGain;
+    // ★接続先が未初期化の場合は中断（抜け・例外の原因になるため）
+    if (!dest) return;
+    try {
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(dest);
+    } catch (e) { return; }
 
-    noise.start();
-    noise.stop(ctx.currentTime+ duration);
+    try {
+        noise.start(now, offset, duration);
+    } catch (e) {
+        try { noise.disconnect(); } catch (_ignored) {}
+        try { filter.disconnect(); } catch (_ignored) {}
+        try { gain.disconnect(); } catch (_ignored) {}
+        return;
+    }
+    noise.onended = () => {
+        try { noise.disconnect(); } catch (e) {}
+        try { filter.disconnect(); } catch (e) {}
+        try { gain.disconnect(); } catch (e) {}
+    };
+}
+
+// ===========================================
+// ★ノイズバッファの事前生成キャッシュ
+// 毎キー入力で createBuffer + PCM生成を行うと、高速タイピング時に
+// 毎秒100ノード以上の生成・破棄（GC/CPU負荷）が発生するため、
+// 最初の1回だけ生成して以降は使い回す。
+// ===========================================
+let _whiteNoiseBuffer = null; // 汎用白色ノイズ（1秒）
+let _clickBuffers = null;     // クリック音（8ms・減衰ノイズ）× 8バリエーション
+let _hissBuffer = null;       // ヒス音（60ms・サインエンベロープ）
+
+function ensureNoiseBuffers(ctx) {
+    if (_whiteNoiseBuffer && _clickBuffers && _hissBuffer) return;
+
+    // 汎用白色ノイズ（1秒）
+    const wnLen = Math.max(1, Math.floor(ctx.sampleRate * 1.0));
+    _whiteNoiseBuffer = ctx.createBuffer(1, wnLen, ctx.sampleRate);
+    const wn = _whiteNoiseBuffer.getChannelData(0);
+    for (let i = 0; i < wnLen; i++) {
+        wn[i] = Math.random() * 2 - 1;
+    }
+
+    // クリック音（急激に減衰する短いノイズ）を8バリエーション生成
+    _clickBuffers = [];
+    const clickLen = Math.max(1, Math.floor(ctx.sampleRate * 0.008));
+    for (let v = 0; v < 8; v++) {
+        const buf = ctx.createBuffer(1, clickLen, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < clickLen; i++) {
+            const envelope = Math.exp(-i / (clickLen * 0.1)); // 急激な減衰
+            d[i] = (Math.random() * 2 - 1) * envelope;
+        }
+        _clickBuffers.push(buf);
+    }
+
+    // ヒス音（サイン波エンベロープ）
+    const hissLen = Math.max(1, Math.floor(ctx.sampleRate * 0.06));
+    _hissBuffer = ctx.createBuffer(1, hissLen, ctx.sampleRate);
+    const hd = _hissBuffer.getChannelData(0);
+    for (let i = 0; i < hissLen; i++) {
+        const envelope = Math.sin((i / hissLen) * Math.PI); // サイン波エンベロープ
+        hd[i] = (Math.random() * 2 - 1) * envelope * 0.3;
+    }
 }
 
 /**
@@ -306,40 +392,38 @@ function playNoise(duration = 0.1, volume = 1.0, target = null) {
  * @param {number} intensity - ノイズの強度 (0.0 ~ 1.0)
  */
 function playVinylCrackle(intensity = 1.0) {
+    // ★Low品質・Auto低位ステージではビニールノイズを丸ごとスキップ
+    if (getEffectsScale() < 0.5) return;
+
     const ctx = getAudioContext();
 
     if (ctx.state !== "running") {
-        ctx.resume();
+        try { ctx.resume(); } catch (e) {}
     }
 
     if (!typeVinylGain) return;
 
+    ensureNoiseBuffers(ctx);
+
+    // ★高速タイピング時の取りこぼし・遅延対策：
+    // 毎打鍵で 0〜40ms 先にスケジュールするとキーが詰まったように聞こえるため、
+    // 40ms以内の連続呼び出しはノイズ再生を間引く（タイプ音本体は鳴らす）。
     const now = ctx.currentTime;
+    if (now - _lastVinylTime < 0.04) return;
+    _lastVinylTime = now;
 
-    // --- 1. パチパチというクリック音（レコードの針音） ---
-    const clickCount = 2 + Math.floor(Math.random() * 3); // 2〜4個のクリック
-
-    for (let c = 0; c < clickCount; c++) {
-        const clickTime = now + Math.random() * 0.04; // 0〜40ms の間にランダム配置
-        const clickDuration = 0.003 + Math.random() * 0.005; // 3〜8ms の短いクリック
-
-        const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * clickDuration));
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-
-        // クリック音の生成（高周波成分が強い短いノイズ）
-        for (let i = 0; i < bufferSize; i++) {
-            const envelope = Math.exp(-i / (bufferSize * 0.1)); // 急激な減衰
-            data[i] = (Math.random() * 2 - 1) * envelope;
-        }
-
+    // --- 1. パチパチというクリック音（キャッシュ済みバッファを再生） ---
+    // ★遅延対策：打鍵直後に聞こえるよう1個だけ即時再生する（2〜4個の未来配置を廃止）
+    if (_clickBuffers && _clickBuffers.length > 0) {
         const clickSource = ctx.createBufferSource();
-        clickSource.buffer = buffer;
+        clickSource.buffer = _clickBuffers[(Math.random() * _clickBuffers.length) | 0];
+        // 再生速度を変えてバリエーションを出す
+        clickSource.playbackRate.value = 0.8 + Math.random() * 0.5;
 
         const clickGain = ctx.createGain();
         const clickVolume = (0.03 + Math.random() * 0.04) * intensity; // 3〜7% の音量
-        clickGain.gain.setValueAtTime(clickVolume, clickTime);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, clickTime + clickDuration);
+        clickGain.gain.setValueAtTime(clickVolume, now);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.008);
 
         // バンドパスフィルターでレコードノイズらしい周波数帯域を抽出
         const clickFilter = ctx.createBiquadFilter();
@@ -351,72 +435,61 @@ function playVinylCrackle(intensity = 1.0) {
         clickFilter.connect(clickGain);
         clickGain.connect(typeVinylGain);
 
-        clickSource.start(clickTime);
-        clickSource.stop(clickTime + clickDuration);
+        try {
+            clickSource.start(now, 0, 0.008);
+        } catch (e) {
+            try { clickSource.disconnect(); } catch (_ignored) {}
+            try { clickFilter.disconnect(); } catch (_ignored) {}
+            try { clickGain.disconnect(); } catch (_ignored) {}
+            return;
+        }
+        clickSource.onended = () => {
+            try { clickSource.disconnect(); } catch (e) {}
+            try { clickFilter.disconnect(); } catch (e) {}
+            try { clickGain.disconnect(); } catch (e) {}
+        };
     }
 
-    // --- 2. サーフェスノイズ（連続する微かなヒス音） ---
-    const hissDuration = 0.06;
-    const hissBufferSize = Math.floor(ctx.sampleRate * hissDuration);
-    const hissBuffer = ctx.createBuffer(1, hissBufferSize, ctx.sampleRate);
-    const hissData = hissBuffer.getChannelData(0);
+    // --- 2. サーフェスノイズ（キャッシュ済みヒス音を再生） ---
+    // ★ヒスバッファ未生成時は中断（抜け・例外の原因になるため）
+    if (_hissBuffer) {
+        const hissDuration = 0.06;
+        const hissSource = ctx.createBufferSource();
+        hissSource.buffer = _hissBuffer;
+        hissSource.playbackRate.value = 0.9 + Math.random() * 0.2;
 
-    for (let i = 0; i < hissBufferSize; i++) {
-        const envelope = Math.sin((i / hissBufferSize) * Math.PI); // サイン波エンベロープ
-        hissData[i] = (Math.random() * 2 - 1) * envelope * 0.3;
+        const hissGain = ctx.createGain();
+        const hissVolume = (0.015 + Math.random() * 0.01) * intensity; // 1.5〜2.5% の音量
+        hissGain.gain.setValueAtTime(hissVolume, now);
+        hissGain.gain.exponentialRampToValueAtTime(0.001, now + hissDuration);
+
+        // ハイパスフィルターでヒス音らしく
+        const hissFilter = ctx.createBiquadFilter();
+        hissFilter.type = "highpass";
+        hissFilter.frequency.value = 4000 + Math.random() * 3000; // 4kHz〜7kHz
+
+        hissSource.connect(hissFilter);
+        hissFilter.connect(hissGain);
+        hissGain.connect(typeVinylGain);
+
+        try {
+            hissSource.start(now);
+            hissSource.stop(now + hissDuration);
+        } catch (e) {
+            try { hissSource.disconnect(); } catch (_ignored) {}
+            try { hissFilter.disconnect(); } catch (_ignored) {}
+            try { hissGain.disconnect(); } catch (_ignored) {}
+            return;
+        }
+        hissSource.onended = () => {
+            try { hissSource.disconnect(); } catch (e) {}
+            try { hissFilter.disconnect(); } catch (e) {}
+            try { hissGain.disconnect(); } catch (e) {}
+        };
     }
-
-    const hissSource = ctx.createBufferSource();
-    hissSource.buffer = hissBuffer;
-
-    const hissGain = ctx.createGain();
-    const hissVolume = (0.015 + Math.random() * 0.01) * intensity; // 1.5〜2.5% の音量
-    hissGain.gain.setValueAtTime(hissVolume, now);
-    hissGain.gain.exponentialRampToValueAtTime(0.001, now + hissDuration);
-
-    // ハイパスフィルターでヒス音らしく
-    const hissFilter = ctx.createBiquadFilter();
-    hissFilter.type = "highpass";
-    hissFilter.frequency.value = 4000 + Math.random() * 3000; // 4kHz〜7kHz
-
-    hissSource.connect(hissFilter);
-    hissFilter.connect(hissGain);
-    hissGain.connect(typeVinylGain);
-
-    hissSource.start(now);
-    hissSource.stop(now + hissDuration);
 
     // --- 3. 低域のウーンという音（レコードの回転ムラ） ---
-    if (Math.random() < 0.3) { // 30% の確率で発生
-        const wowDuration = 0.08;
-        const wowOsc = ctx.createOscillator();
-        wowOsc.type = "sine";
-        wowOsc.frequency.setValueAtTime(4 + Math.random() * 3, now); // 4〜7Hz の低周波
-        wowOsc.frequency.exponentialRampToValueAtTime(2, now + wowDuration);
-
-        const wowGain = ctx.createGain();
-        wowGain.gain.setValueAtTime(0.008 * intensity, now);
-        wowGain.gain.exponentialRampToValueAtTime(0.001, now + wowDuration);
-
-        // ピッチを変調するためのオシレーター
-        const modulator = ctx.createOscillator();
-        modulator.type = "sine";
-        modulator.frequency.value = 0.5 + Math.random() * 1.5; // 0.5〜2Hz（回転ムラ）
-
-        const modGain = ctx.createGain();
-        modGain.gain.value = 5 + Math.random() * 8; // 変調度
-
-        modulator.connect(modGain);
-        modGain.connect(wowOsc.frequency);
-
-        wowOsc.connect(wowGain);
-        wowGain.connect(typeVinylGain);
-
-        wowOsc.start(now);
-        wowOsc.stop(now + wowDuration);
-        modulator.start(now);
-        modulator.stop(now + wowDuration);
-    }
+    // ★遅延・負荷対策：毎打鍵30%で2オシレータ追加は重いため廃止（タイプ音の輪郭に影響しない）
 }
 
 // SEを流す関数
@@ -444,13 +517,29 @@ export function playSE(
     const individualVolume = soundMeta[name]?.volume ?? 1.0;
     gain.gain.value = volume * individualVolume;
 
-    source.connect(gain).connect(seGain);
+    // ★seGain未初期化時は中断（抜け）せず接続エラーを避ける
+    if (!seGain) return;
+    try {
+        source.connect(gain);
+        gain.connect(seGain);
+    } catch (e) { return; }
 
-    if (duration != null) {
-        source.start(0, startOffset, duration);
-    } else {
-        source.start(0, startOffset);
+    const when = ctx.currentTime;
+    try {
+        if (duration != null) {
+            source.start(when, startOffset, duration);
+        } else {
+            source.start(when, startOffset);
+        }
+    } catch (e) {
+        try { source.disconnect(); } catch (_ignored) {}
+        try { gain.disconnect(); } catch (_ignored) {}
+        return;
     }
+    source.onended = () => {
+        try { source.disconnect(); } catch (_ignored) {}
+        try { gain.disconnect(); } catch (_ignored) {}
+    };
     //console.log("[SE]", name, performance.now());
 }
 
@@ -480,19 +569,43 @@ export function playTypeSound() {
     );
 
     // エコー
-    const g = ctx.createGain();
-    g.gain.value = 0.15;
+    // ★遅延・抜け対策：delayNode 未初期化時はエコーを作らない（タイプ音本体は鳴らす）
+    if (delayNode) {
+        let g = null;
+        let osc = null;
+        try {
+            g = ctx.createGain();
+            g.gain.value = 0.15;
+            osc = ctx.createOscillator();
+        } catch (e) { g = null; osc = null; }
+        if (g && osc) {
+            const echoStart = ctx.currentTime;
+            osc.type = "triangle";
+            osc.frequency.value = freq;
 
-    const osc = ctx.createOscillator();
+            try {
+                osc.connect(g);
+                g.connect(delayNode);
+            } catch (e) { g = null; osc = null; }
 
-    osc.type = "triangle";
-    osc.frequency.value = freq;
-
-    osc.connect(g);
-    g.connect(delayNode);
-
-    osc.start();
-    osc.stop(ctx.currentTime + 0.05);
+            if (g && osc) {
+                try {
+                    osc.start(echoStart);
+                    osc.stop(echoStart + 0.05);
+                } catch (e) {
+                    try { osc.disconnect(); } catch (_ignored) {}
+                    try { g.disconnect(); } catch (_ignored) {}
+                    osc = null;
+                }
+                if (osc) {
+                    osc.onended = () => {
+                        try { osc.disconnect(); } catch (_ignored) {}
+                        try { g.disconnect(); } catch (_ignored) {}
+                    };
+                }
+            }
+        }
+    }
 
     // レコードノイズ（ビニールクラックル）を追加
     playVinylCrackle(1.0);
@@ -2173,10 +2286,11 @@ export function renderEnemyEffects(ctx) {
 export let knockbackEffects = [];
 
 export function spawnKnockbackEffect(x, y){
+    // ★品質設定に応じてパーティクル数を調整
+    const count = scaledParticleCount(8);
+    for(let i = 0; i < count; i++){
 
-    for(let i = 0; i < 8; i++){
-
-        const angle = (Math.PI * 2 / 8) * i;
+        const angle = (Math.PI * 2 / count) * i;
 
         knockbackEffects.push({
             x,

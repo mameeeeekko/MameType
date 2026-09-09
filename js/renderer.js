@@ -395,6 +395,22 @@ let lastRomaText = "";
 let lastTypedLen = -1;
 let pendingRender = false;
 
+// ===========================================
+// ★長文モードのスクロール表示用スパン再利用プール
+// 毎打鍵ごとの innerHTML="" + span再生成（最大80ノード/打鍵）を廃止し、
+// 事前生成したスパンの textContent / className だけを差し替える。
+// ===========================================
+let _kanaSpanPool = [];
+let _romaSpanPool = [];
+
+function ensureSpanPool(pool, container, size) {
+  while (pool.length < size) {
+    const s = document.createElement("span");
+    container.appendChild(s);
+    pool.push(s);
+  }
+}
+
 
 export function render(state) {
 
@@ -447,9 +463,11 @@ export function resetRendererState() {
 
   const kanaScroll = dom.kanaScroll();
   if (kanaScroll) kanaScroll.innerHTML = "";
+  _kanaSpanPool.length = 0; // ★DOMから切り離されたためプールを破棄
 
   const romaScroll = dom.romaScroll();
   if (romaScroll) romaScroll.innerHTML = "";
+  _romaSpanPool.length = 0;
 
   const word = dom.word();
   if (word) word.innerHTML = "";
@@ -751,22 +769,24 @@ function renderLongText(state) {
 
       const visibleKana = chars.slice(start, start + DISPLAY_LEN);
 
-      kanaScroll.innerHTML = "";
-      for (let i = 0; i < visibleKana.length; i++) {
-        const span = document.createElement("span");
+      // ★スパンを再利用し、textContent / className だけ差し替える
+      ensureSpanPool(_kanaSpanPool, kanaScroll, DISPLAY_LEN);
+      for (let i = 0; i < _kanaSpanPool.length; i++) {
+        const span = _kanaSpanPool[i];
 
-        span.textContent = visibleKana[i].char;
+        if (i < visibleKana.length) {
+          // visibleKanaのi番目の要素は、元のchars配列では start + i 番目にあたる
+          const originalCharIndexInChars = start + i;
 
-        // visibleKanaのi番目の要素は、元のchars配列では start + i 番目にあたる
-        const originalCharIndexInChars = start + i;
-
-        if (originalCharIndexInChars < safePos) {
-          span.className = "done";
-        } else if (originalCharIndexInChars === safePos) {
-          span.className = "current";
+          span.style.display = "";
+          span.textContent = visibleKana[i].char;
+          span.className = originalCharIndexInChars < safePos ? "done"
+            : originalCharIndexInChars === safePos ? "current" : "";
+        } else {
+          // 使わないスパンは非表示にして再利用に備える
+          span.style.display = "none";
+          span.className = "";
         }
-
-        kanaScroll.appendChild(span);
       }
     }
   }
@@ -799,19 +819,28 @@ function renderLongText(state) {
     const visibleRoma = romaMap.slice(start, start + DISPLAY_LEN);
     const relativeTyped = typedLen - start;
 
-    romaScroll.innerHTML = "";
-    for (let i = 0; i < visibleRoma.length; i++) {
-      const s = document.createElement("span");
-      const char = visibleRoma[i].char;
-      if (char === ' ') {
-        s.textContent = '␣';
-        s.classList.add('space-char');
-      } else {
-        s.textContent = char;
-      }
+    // ★スパンを再利用し、textContent / className だけ差し替える
+    ensureSpanPool(_romaSpanPool, romaScroll, DISPLAY_LEN);
+    for (let i = 0; i < _romaSpanPool.length; i++) {
+      const s = _romaSpanPool[i];
 
-      if (i < safePos - start) s.classList.add("done");
-      romaScroll.appendChild(s);
+      if (i < visibleRoma.length) {
+        const char = visibleRoma[i].char;
+        const isDone = i < safePos - start;
+
+        s.style.display = "";
+        if (char === ' ') {
+          s.textContent = '␣';
+          s.className = isDone ? "space-char done" : "space-char";
+        } else {
+          s.textContent = char;
+          s.className = isDone ? "done" : "";
+        }
+      } else {
+        // 使わないスパンは非表示にして再利用に備える
+        s.style.display = "none";
+        s.className = "";
+      }
     }
   }
 }

@@ -6,6 +6,28 @@ import { DEFENSE_COMBO_TIERS, DEFENSE_OVERDRIVE_COMBO, DEFENSE_SCORE_CONFIG } fr
 import { spawnComboTierUpEffect, playComboTierUpSound } from "./effectManager.js";
 import { stageRect } from "./stageScale.js";
 
+// ============================================================
+// オフスクリーンキャッシュ（パフォーマンス最適化）
+// ------------------------------------------------------------
+// 背景ハニカムグリッド線（静的部分）と侵食グリッドをキャッシュし、
+// 毎フレームの全セル再計算コストを削減する。
+// ============================================================
+
+// 背景グリッド（グリッド線のみ。明滅アクセントは毎フレーム別途描画）
+let _bgGridCanvas = null;
+let _bgGridW = 0;
+let _bgGridH = 0;
+// 明滅アクセント対象セル（約5%）の事前列挙。毎フレームの全セル seededRandom 走査を避ける
+let _bgAccentCells = [];
+
+// 侵食グリッド（corruption が変化したときのみ再計算）
+let _corruptCanvas = null;
+let _corruptW = 0;
+let _corruptH = 0;
+let _lastCorruption = -1;     // 前回描画時の corruption 値
+let _lastAnimType = null;     // 前回の animType
+let _lastAnimProgress = -1;   // 前回の animProgress（0.005 以上変化で再描画）
+const CORRUPT_REDRAW_THRESHOLD = 0.004; // 再描画を発生させる最低変化量
 
 /**
  * 座標をシードにした簡易的な乱数を生成します。
@@ -62,34 +84,42 @@ export function renderDefenseUI(ctx, state) {
   // 失敗で完全侵食に向かうときはランダムオフセットを徐々に小さくして隙間なく埋める
   const randomFactor = animType === "failure" ? Math.max(20, 150 * (1 - animProgress)) : 150;
 
-  for (let row = 0; startY + row * vertDist < endY; row++) {
-    for (let col = 0; startX + col * horizDist < endX; col++) {
-      const cx = startX + col * horizDist + (row % 2 === 1 ? horizDist / 2 : 0);
-      const cy = startY + row * vertDist;
-
-      const distFromCenter = Math.hypot(cx - centerX, cy - centerY);
-      const randomOffset = (seededRandom(cx, cy) - 0.5) * randomFactor;
-
-      // unCorrodedRadiusの外側にある六角形ほど、より侵食されているように見せる
-      if (distFromCenter > unCorrodedRadius + randomOffset || (animType === "failure" && corruption > 0.88)) {
-        // unCorrodedRadiusからmaxCanvasRadiusまでの距離でアルファ値を調整
-        const distanceFactor = Math.max(0, (distFromCenter - unCorrodedRadius) / Math.max(1, maxCanvasRadius - unCorrodedRadius));
-        
-        let alpha = Math.min(0.5, 0.1 + distanceFactor * 0.4); // 0.1から0.5の範囲で変化
-        if (animType === "failure") {
-          alpha = Math.min(0.85, 0.15 + distanceFactor * 0.45 + animProgress * 0.35);
-        } else if (animType === "success") {
-          alpha = alpha * Math.max(0, 1 - animProgress * 1.2);
-        }
-
-        if (alpha > 0.01) {
-          ctx.fillStyle = `rgba(${corruptionColor}, ${alpha})`;
-          drawHexagon(ctx, cx, cy, hexSize, true); // 塗りつぶし
-        }
-      }
-    }
+  // ★侵食グリッドはオフスクリーンキャンバスにキャッシュし、
+  //   侵食率・演出状態がしきい値以上変化したときだけ再描画する。
+  //   毎フレームの全セル再計算（≈1万セル × Math.hypot/Math.sin）を
+  //   1回の drawImage に置き換える。
+  if (!_corruptCanvas || _corruptW !== cw || _corruptH !== ch) {
+    _corruptCanvas = document.createElement("canvas");
+    _corruptCanvas.width = cw;
+    _corruptCanvas.height = ch;
+    _corruptW = cw;
+    _corruptH = ch;
+    _lastCorruption = -1; // サイズ変更時は必ず再描画させる
   }
-  
+
+  const corruptionDirty =
+    _lastCorruption === -1 ||
+    animType !== _lastAnimType ||
+    Math.abs(corruption - _lastCorruption) >= CORRUPT_REDRAW_THRESHOLD ||
+    Math.abs(animProgress - _lastAnimProgress) >= CORRUPT_REDRAW_THRESHOLD;
+
+  if (corruptionDirty) {
+    redrawCorruptionGrid(_corruptCanvas.getContext("2d"), {
+      cw, ch, centerX, centerY,
+      hexSize, horizDist, vertDist,
+      startX, startY, endX, endY,
+      corruption, maxCanvasRadius, unCorrodedRadius,
+      corruptionColor, randomFactor,
+      animType, animProgress
+    });
+    _lastCorruption = corruption;
+    _lastAnimType = animType;
+    _lastAnimProgress = animProgress;
+  }
+
+  // キャッシュ済み侵食グリッドを 1 回の drawImage で転写
+  ctx.drawImage(_corruptCanvas, 0, 0);
+
   // 3. 中央のコア（三重装甲光輪）
   renderTrinityShield(ctx, state);
 
@@ -118,6 +148,44 @@ export function renderDefenseUI(ctx, state) {
 
   // 9. 現在再生中のBGM情報（画面左下）
   renderBgmInfo(ctx);
+}
+
+/**
+ * 侵食グリッドをオフスクリーンコンテキストへ描画する。
+ * renderDefenseUI のキャッシュ更新時（corruptionDirty）のみ呼ばれる重い処理。
+ * @param {CanvasRenderingContext2D} offCtx - オフスクリーン描画コンテキスト
+ * @param {object} p - グリッド描画に必要なパラメータ一式
+ */
+function redrawCorruptionGrid(offCtx, p) {
+  offCtx.clearRect(0, 0, p.cw, p.ch);
+
+  for (let row = 0; p.startY + row * p.vertDist < p.endY; row++) {
+    for (let col = 0; p.startX + col * p.horizDist < p.endX; col++) {
+      const cx = p.startX + col * p.horizDist + (row % 2 === 1 ? p.horizDist / 2 : 0);
+      const cy = p.startY + row * p.vertDist;
+
+      const distFromCenter = Math.hypot(cx - p.centerX, cy - p.centerY);
+      const randomOffset = (seededRandom(cx, cy) - 0.5) * p.randomFactor;
+
+      // unCorrodedRadiusの外側にある六角形ほど、より侵食されているように見せる
+      if (distFromCenter > p.unCorrodedRadius + randomOffset || (p.animType === "failure" && p.corruption > 0.88)) {
+        // unCorrodedRadiusからmaxCanvasRadiusまでの距離でアルファ値を調整
+        const distanceFactor = Math.max(0, (distFromCenter - p.unCorrodedRadius) / Math.max(1, p.maxCanvasRadius - p.unCorrodedRadius));
+
+        let alpha = Math.min(0.5, 0.1 + distanceFactor * 0.4); // 0.1から0.5の範囲で変化
+        if (p.animType === "failure") {
+          alpha = Math.min(0.85, 0.15 + distanceFactor * 0.45 + p.animProgress * 0.35);
+        } else if (p.animType === "success") {
+          alpha = alpha * Math.max(0, 1 - p.animProgress * 1.2);
+        }
+
+        if (alpha > 0.01) {
+          offCtx.fillStyle = `rgba(${p.corruptionColor}, ${alpha})`;
+          drawHexagon(offCtx, cx, cy, p.hexSize, true); // 塗りつぶし
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -161,6 +229,8 @@ function renderBgmInfo(ctx) {
 }
 /**
  * 攻殻機動隊風のサイバーなグリッド背景を描画します。
+ * グリッド線部分はオフスクリーンキャンバスにキャッシュし、
+ * 毎フレームは drawImage + 明滅アクセント（全体の5%）のみ描画する。
  * @param {CanvasRenderingContext2D} ctx - 描画コンテキスト
  */
 function renderCyberGridBackground(ctx) {
@@ -172,34 +242,51 @@ function renderCyberGridBackground(ctx) {
   ctx.fillStyle = "#020a17"; // 深い紺色
   ctx.fillRect(0, 0, cw, ch);
 
-  ctx.save();
-
-  // 2. 静的なハニカムグリッド
-  const hexSize = 40; // 六角形のサイズを大きく
+  // 2. 静的なハニカムグリッド線 — オフスクリーンキャッシュ
+  const hexSize = 40;
   const hexWidth = Math.sqrt(3) * hexSize;
   const hexHeight = 2 * hexSize;
   const horizDist = hexWidth;
   const vertDist = hexHeight * 3 / 4;
 
-  ctx.strokeStyle = "rgba(0, 150, 200, 0.1)"; // 薄いシアン
-  ctx.lineWidth = 1;
+  // サイズが変わったときのみキャッシュを再生成
+  if (!_bgGridCanvas || _bgGridW !== cw || _bgGridH !== ch) {
+    _bgGridCanvas = document.createElement("canvas");
+    _bgGridCanvas.width = cw;
+    _bgGridCanvas.height = ch;
+    _bgGridW = cw;
+    _bgGridH = ch;
 
-  for (let row = -2; row * vertDist < ch + hexHeight; row++) {
-    for (let col = -2; col * horizDist < cw + hexWidth; col++) {
-      const cx = col * horizDist + (row % 2 === 1 ? horizDist / 2 : 0);
-      const cy = row * vertDist;
+    const offCtx = _bgGridCanvas.getContext("2d");
+    offCtx.strokeStyle = "rgba(0, 150, 200, 0.1)";
+    offCtx.lineWidth = 1;
 
-      // 背景のグリッド
-      drawHexagon(ctx, cx, cy, hexSize);
+    // 明滅アクセント対象セルもこのタイミングで列挙しておく
+    _bgAccentCells = [];
 
-      // 3. ランダムな明滅アクセント
-      const rand = seededRandom(col, row);
-      if (rand > 0.95) { // 5%の確率で明滅させる
-        const blinkAlpha = (Math.sin(time * 0.0005 + col + row) + 1) / 2 * 0.3; // 0 ~ 0.3
-        ctx.fillStyle = `rgba(0, 200, 255, ${blinkAlpha})`;
-        drawHexagon(ctx, cx, cy, hexSize, true);
+    for (let row = -2; row * vertDist < ch + hexHeight; row++) {
+      for (let col = -2; col * horizDist < cw + hexWidth; col++) {
+        const cx = col * horizDist + (row % 2 === 1 ? horizDist / 2 : 0);
+        const cy = row * vertDist;
+        drawHexagon(offCtx, cx, cy, hexSize);
+        if (seededRandom(col, row) > 0.95) {
+          _bgAccentCells.push({ cx, cy, col, row });
+        }
       }
     }
+  }
+
+  // キャッシュ済みグリッド線を 1 回の drawImage で転写
+  ctx.drawImage(_bgGridCanvas, 0, 0);
+
+  ctx.save();
+
+  // 3. ランダムな明滅アクセント（対象は事前列挙済みの全体の約5%のみ）
+  for (let i = 0; i < _bgAccentCells.length; i++) {
+    const cell = _bgAccentCells[i];
+    const blinkAlpha = (Math.sin(time * 0.0005 + cell.col + cell.row) + 1) / 2 * 0.3;
+    ctx.fillStyle = `rgba(0, 200, 255, ${blinkAlpha})`;
+    drawHexagon(ctx, cell.cx, cell.cy, hexSize, true);
   }
 
   // 4. 四隅のコーナーアクセント
@@ -220,6 +307,7 @@ function renderCyberGridBackground(ctx) {
 
   ctx.restore();
 }
+
 
 function renderDefenseStats(ctx, state) {
   const isEnding = state.endingAnimation && state.endingAnimation.active;
@@ -460,14 +548,17 @@ function renderTrinityShield(ctx, state) {
     drawHexagon(ctx, 0, 0, ringRadius);
 
     // 侵食によるバリアの破損 (赤色ライン)
+    // ★Math.random の代わりに seededRandom を使用し、侵食率が変わるまで
+    //   ひびの位置を固定する（毎フレームのチカチカを防止）
     if (corruption > 0.1 && animType !== "success") {
       const breakAlpha = corruption * (animType === "failure" ? 0.6 : 0.2);
       ctx.strokeStyle = `rgba(255, 80, 80, ${breakAlpha})`;
       ctx.lineWidth = animType === "failure" ? 2 : 1;
       const breakCount = animType === "failure" ? 8 : 3;
+      const corruptionSeed = Math.floor(corruption * 40); // 侵食率2.5%ごとに模様が更新される
       for (let j = 0; j < breakCount; j++) {
-        const angle = Math.random() * Math.PI * 2;
-        const len = Math.random() * ringRadius * 0.4;
+        const angle = seededRandom(i * 31 + j, corruptionSeed) * Math.PI * 2;
+        const len = seededRandom(j * 17 + 7, corruptionSeed + i) * ringRadius * 0.4;
         ctx.beginPath();
         ctx.moveTo(Math.cos(angle) * (ringRadius - len), Math.sin(angle) * (ringRadius - len));
         ctx.lineTo(Math.cos(angle) * ringRadius, Math.sin(angle) * ringRadius);
