@@ -90,13 +90,7 @@ export function renderQuestMapUI(){
     const cssW = container.clientWidth || 1600;
     const cssH = container.clientHeight || 900;
     // canvasサイズ同期（描画品質設定にステージ拡大率も掛けたDPRを使用）
-    // ※ メニュー軽量モード時はマップ背景のDPRを1に抑えて合成コストを下げる
-    let dpr = getEffectiveDPR() * getStageScale();
-    try {
-        if (document.body && document.body.classList.contains("menu-light")) {
-            dpr = Math.min(dpr, 1);
-        }
-    } catch (e) { /* 無視 */ }
+    const dpr = getEffectiveDPR() * getStageScale();
 
     // 同一条件の再描画ならDOM再生成をスキップ（メニュー往復のカクつき対策）
     const progressKey = _questProgressKey(worldId);
@@ -671,15 +665,9 @@ export function renderQuestMapUI(){
         // ▼ ラベルの色付け（状態クラス付与の後に行う）
         // =========================
         // 中ボスまたはボスの場合、オレンジ色にする
-        // ※ 軽量モードでは textShadow の再計算を避けて合成コストを下げる
-        const isMenuLight = (() => {
-            try { return !!(document.body && document.body.classList.contains("menu-light")); }
-            catch (e) { return false; }
-        })();
         if (isMidBoss || isEndNode) {
             label.style.color = "#ffc15d"; // オレンジ
-            if (!isMenuLight) label.style.textShadow = "0 0 8px rgba(255, 184, 77, 0.6)";
-            else label.style.textShadow = "";
+            label.style.textShadow = "0 0 8px rgba(255, 184, 77, 0.6)";
         }
 
         // ロックされている場合は、全ての色設定をリセットしてCSSのスタイルを優先する

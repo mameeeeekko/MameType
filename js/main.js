@@ -37,7 +37,7 @@ import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
 import { fitStage, getStageScale } from "./stageScale.js";
-import { enableAdaptiveShadowControl, getProfile, applyMenuLightMode, getMenuLightModeSetting, setMenuLightMode } from "./performance.js";
+import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
 import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
@@ -300,7 +300,7 @@ function startRemainingLoadProgress() {
 }
 
 // ============================================================
-// メニュー軽量モード用：キャッシュ無効化フック（循環参照回避のためwindow経由）
+// メニュー描画のキャッシュ無効化フック（循環参照回避のためwindow経由）
 // questProgress.js の markCleared / markTrueEndingSeen 等から呼ばれる
 // ============================================================
 function markDifficultySelectorsDirty() {
@@ -407,18 +407,10 @@ export function showMenuBackground(imageKeyOrVisible) {
     menuBackground.dataset.bgKey = key;
   }
 
-  // クエストメニュー時の減光は filter（再合成が重い）ではなく
-  // ::after オーバーレイの class 切替で表現する（style.css 参照）
+  // クエストメニューの時だけ、少しだけ黒っぽく（明度をわずかに下げる）調整
   if (key === "quest_menu") {
-    menuBackground.classList.add("quest-dim");
-    // 軽量モードでない従来環境では従来どおり filter を使う
-    if (document.body && document.body.classList.contains("menu-light")) {
-      menuBackground.style.filter = "none";
-    } else {
-      menuBackground.style.filter = "brightness(0.8)";
-    }
+    menuBackground.style.filter = "brightness(0.8)";
   } else {
-    menuBackground.classList.remove("quest-dim");
     menuBackground.style.filter = "none";
   }
 
@@ -442,21 +434,6 @@ export function applyTitleMenuBackground() {
 document.addEventListener("DOMContentLoaded", () => {
   // ★描画品質に応じた「グロー影」の一括制御を有効化（起動時）
   enableAdaptiveShadowControl();
-  // ★メニュー軽量モード（低スペックPC向けDOM軽量化）を起動時に反映
-  try { applyMenuLightMode(); } catch (e) { /* 無視 */ }
-  // ★OSのモーション削減設定が変わったらメニュー軽量モードに追従
-  try {
-    const mq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (mq) {
-      const onMotionChange = () => { try { applyMenuLightMode(); } catch (e) { /* 無視 */ } };
-      if (typeof mq.addEventListener === "function") mq.addEventListener("change", onMotionChange);
-      else if (typeof mq.addListener === "function") mq.addListener(onMotionChange);
-    }
-  } catch (e) { /* 無視 */ }
-  // ★Auto適応・品質切替が起きたらメニュー軽量モードも同期
-  window.addEventListener("mametype-quality-changed", () => {
-    try { applyMenuLightMode(); } catch (e) { /* 無視 */ }
-  });
 
   cacheDOM();
 
@@ -2044,29 +2021,8 @@ function initSettingsUI() {
     renderQualitySelect.addEventListener("change", () => {
       setRenderQuality(renderQualitySelect.value);
       updateQualityStatus();
-      // 品質連動: Low選択時はメニュー軽量モードも自動でONになる
-      try { applyMenuLightMode(); } catch (e) { /* 無視 */ }
-      try {
-        const mls = document.getElementById("menuLightModeSelect");
-        if (mls) mls.value = getMenuLightModeSetting();
-      } catch (e) { /* 無視 */ }
       playSE("select");
     });
-
-    // メニュー軽量モード（低スペックPC向け・DOM演出の削減）
-    const menuLightSelect = document.getElementById("menuLightModeSelect");
-    const syncMenuLightSelect = () => {
-      if (menuLightSelect) menuLightSelect.value = getMenuLightModeSetting();
-    };
-    syncMenuLightSelect();
-    window.addEventListener("mametype-quality-changed", syncMenuLightSelect);
-    if (menuLightSelect) {
-      menuLightSelect.addEventListener("change", () => {
-        setMenuLightMode(menuLightSelect.value);
-        syncMenuLightSelect();
-        playSE("select");
-      });
-    }
   }
 
 

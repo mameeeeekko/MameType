@@ -605,20 +605,12 @@ function renderTimelineGraph(container, timeline, mode) {
   const padding = { left: 70, right: 40, top: 40, bottom: 100 };
 
   // 論理サイズ（CSS px）を決めてからHi-DPIでバッキングを作る
-  // ※ 低スペック時は巨大バッキングが重いので幅に上限を設ける
-  let logicalW = Math.max(points.length * 110, 720);
-  try {
-    if (document.body && document.body.classList.contains("menu-light")) {
-      logicalW = Math.min(logicalW, 1200);
-    }
-  } catch (e) { /* 無視 */ }
+  const logicalW = Math.max(points.length * 110, 720);
   const logicalH = container.clientHeight || 380;
   container.appendChild(canvas);
   applyCanvasDPR(canvas, logicalW, logicalH);
 
   const ctx = canvas.getContext("2d");
-  // 軽量モードではグラフの影を省略（performance.js の shadow パッチと連動）
-  const useShadow = !(document.body && document.body.classList.contains("menu-light"));
   const w = logicalW - padding.left - padding.right;
   const h = logicalH - padding.top - padding.bottom;
 
@@ -669,10 +661,8 @@ function renderTimelineGraph(container, timeline, mode) {
   ctx.lineWidth = 4;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  if (useShadow) {
-    ctx.shadowColor = "rgba(99,102,241,0.25)";
-    ctx.shadowBlur = 6;
-  }
+  ctx.shadowColor = "rgba(99,102,241,0.25)";
+  ctx.shadowBlur = 6;
 
   ctx.beginPath();
   points.forEach((p, i) => {
@@ -725,11 +715,9 @@ points.forEach((p, i) => {
   const x = xAtIndex(i);
   const y = yAt(p.value);
 
-  if (useShadow) {
-    ctx.shadowColor = "rgba(0,0,0,0.8)";
-    ctx.shadowBlur = 2;
-    ctx.shadowOffsetY = 1;
-  }
+  ctx.shadowColor = "rgba(0,0,0,0.8)";
+  ctx.shadowBlur = 2;
+  ctx.shadowOffsetY = 1;
 
   ctx.fillStyle = "#c9d1d9";
   ctx.fillText(p.value.toFixed(0), x, y - 10);
