@@ -908,18 +908,28 @@ function renderBgmInfo(now) {
     // Update text content
     displayEl.textContent = `♪ ${info.title} / ${info.composer}`;
 
-    // Fade in/out logic
-    const fadeDuration = 2000;
-    const displayDuration = 15000; // Display duration
-    const elapsed = now - (gameState.startTime || 0); // Use gameState.startTime
+    // Make element visible
+    displayEl.style.display = "block";
 
-    let alpha = 0;
-    if (elapsed < fadeDuration) {
-        alpha = elapsed / fadeDuration; // Fade in
-    } else if (elapsed < displayDuration - fadeDuration) {
-        alpha = 1; // Stay
-    } else if (elapsed < displayDuration) {
-        alpha = (displayDuration - elapsed) / fadeDuration; // Fade out
+    // Fade in/out logic
+    const fadeInDuration = 2000;   // 2秒でフェードイン
+    const displayDuration = 10000; // 10秒間表示
+    const fadeOutDuration = 2000;  // 2秒でフェードアウト
+    const elapsed = now - (gameState.startTime || 0);
+
+    let alpha = 1;
+    if (elapsed < fadeInDuration) {
+        // フェードイン
+        alpha = elapsed / fadeInDuration;
+    } else if (elapsed < fadeInDuration + displayDuration) {
+        // 表示継続
+        alpha = 1;
+    } else if (elapsed < fadeInDuration + displayDuration + fadeOutDuration) {
+        // フェードアウト
+        alpha = 1 - (elapsed - fadeInDuration - displayDuration) / fadeOutDuration;
+    } else {
+        // フェードアウト完了
+        alpha = 0;
     }
 
     displayEl.style.opacity = Math.max(0, alpha).toString();

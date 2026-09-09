@@ -190,8 +190,9 @@ function todayStr() {
 // stats: 現在の統計オブジェクト
 // mode: プレイモードID
 // date: プレイ日付
-// isFree: フリーモードまたはクエストモードフラグ
-export function updatePlayerStats(stats, result, mode, date = null, isFree = false) {
+// isFree: フリーモードフラグ（trueなら regular 等の記録系統計を更新しない）
+// isQuest: クエストモードフラグ（trueなら daily の記録・eScoreランク勲章の対象外にする）
+export function updatePlayerStats(stats, result, mode, date = null, isFree = false, isQuest = false) {
 
   stats = stats || getPlayerStats(); // 統計取得
   date = date || todayStr();         // 日付決定
@@ -199,6 +200,7 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   
   const isEnemy = mode === "enemy_mode";
   const isDefense = mode === "defense_mode";
+  const isMissPractice = mode === "miss_practice";
 
   const totalChars = result.totalChars ?? 0;     // 正解文字数
   const totalMistake = result.totalMistake ?? 0; // ミス数
@@ -360,7 +362,9 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   // ========================
   // 通常モード処理
   // ========================
-  if (!isFree && !isEnemy && !isDefense) {
+  // ★クエストモード（クエスト戦闘・スキルチャレンジ等）は daily の記録（regular.maxEScore 等）に影響させない
+  //   デイリーの Standard / Time Attack / Long Text のみがここを通る
+  if (!isFree && !isQuest && !isEnemy && !isDefense) {
     stats.regular.totalPlays++;              // 通常回数++
     stats.regular.totalTyped += totalChars;  // 累計Typed
     stats.regular.totalMiss += totalMistake; // 累計Miss
@@ -379,7 +383,8 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
     stats.regular.avgAccuracy = totalAll > 0 ? (stats.regular.totalTyped / totalAll) * 100 : 0; // 平均正確率
 
     // ★ノーミスクリア回数
-    if (totalMistake === 0) {
+    // ※ミス練習は totalMistake を渡さないため常にミス0扱いになる → 勲章カウントから除外
+    if (totalMistake === 0 && !isMissPractice) {
       stats.regular.noMissClears = (stats.regular.noMissClears || 0) + 1;
     }
 
@@ -443,7 +448,7 @@ export function updatePlayerStats(stats, result, mode, date = null, isFree = fal
   // ========================
   // 勲章判定
   // ========================
-  const newAchievements = updateAchievements(stats, isFree);
+  const newAchievements = updateAchievements(stats, isFree, isQuest);
 
   // ★新規取得があれば通知
   if (newAchievements.length > 0) {
@@ -525,7 +530,7 @@ export function formatPlayTime(seconds) {
 // ================================
 // 勲章判定
 // ================================
-export function updateAchievements(stats, isFree = false) {
+export function updateAchievements(stats, isFree = false, isQuest = false) {
   // ===== 配列保証 =====
   if (!Array.isArray(stats.achievements)) stats.achievements = [];
   if (!Array.isArray(stats.seenAchievements)) stats.seenAchievements = [];
@@ -564,8 +569,9 @@ export function updateAchievements(stats, isFree = false) {
     if (stats.regular?.maxSpeed >= 200) unlock("kpm_200");
     if (stats.regular?.maxSpeed >= 250) unlock("kpm_250");
     if (stats.regular?.maxSpeed >= 300) unlock("kpm_300");
+    if (stats.regular?.maxSpeed >= 350) unlock("kpm_350");
 
-    if (stats.regular?.noMissClears >= 10) unlock("no_miss_10");
+    if (stats.regular?.noMissClears >= 10) unlock("no_miss_10"); //enemy defense misspracticeは除外。
 
     // ===== クエスト & エネミーモード =====
     updateQuestAndEnemyAchievements(stats, unlock);
@@ -574,7 +580,15 @@ export function updateAchievements(stats, isFree = false) {
     if (stats.hasSeenTrueEnding) {
       unlock("true_ending");
     }
-    if (stats.regular?.maxEScore >= 260) unlock("rank_s");
+
+    // ★eScoreのランク達成は「デイリーの Standard / Time Attack / Long Text」でのみ達成可能
+    //   （フリーモード・ミス練習は isFree、クエストモードは isQuest で除外）
+    if (!isQuest) {
+      if (stats.regular?.maxEScore >= 260) unlock("rank_s");
+      if (stats.regular?.maxEScore >= 275) unlock("rank_great");
+      if (stats.regular?.maxEScore >= 300) unlock("rank_rapid");
+      if (stats.regular?.maxEScore >= 325) unlock("rank_falcon");
+    }
   }
 
   // 全実績解除
@@ -749,8 +763,12 @@ export const ACHIEVEMENTS = [
   { id: "kpm_200", name: "高速域", desc: "200KPM到達" },//ok
   { id: "kpm_250", name: "光速", desc: "250KPM到達" },
   { id: "kpm_300", name: "超光速", desc: "300KPM到達" },
+  { id: "kpm_350", name: "時空の旅人", desc: "350KPM到達" },
   { id: "no_miss_10", name: "パーフェクト10", desc: "ノーミスクリア10回" },
   { id: "rank_s", name: "Sの領域", desc: "eScoreのランクSに到達" },//ok
+  { id: "rank_great", name: "Great!の領域", desc: "eScoreのランクGreat!に到達" },
+  { id: "rank_rapid", name: "Rapidの領域", desc: "eScoreのランクRapidに到達" },
+  { id: "rank_falcon", name: "Falconの領域", desc: "eScoreのランクFalconに到達" },
 
   // --- モード別 ---
   { id: "free_1h", name: "自由人", desc: "フリーモード1時間" },

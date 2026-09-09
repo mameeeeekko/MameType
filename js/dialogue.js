@@ -2,7 +2,7 @@
 
 import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed, getMaxClearedStageNumber } from './questProgress.js'; // ★ MODIFIED: Import new functions
 import { gameState } from './gameCore.js';
-import { playBGM, fadeOutBGM, playDialogueSound, playSystemDialogueSound, playSE } from './effectManager.js';
+import { playBGM, fadeOutBGM, fadeBGMTo, BGM_CONFIG, playDialogueSound, playSystemDialogueSound, playSE } from './effectManager.js';
 import { showHud } from './enemyCore.js';
 import { DIALOGUE_DATA, CHARACTERS, RANDOM_DIALOGUES } from './dialogueData.js';
 import { QUEST_MAP } from './questMap.js';
@@ -22,7 +22,7 @@ let choicesContainer = null; // 選択肢コンテナ用の変数を追加
 let isStaffRollShowing = false; // スタッフロール表示中フラグ
 
 // ★ スタッフロールのスクロール速度（px/秒）。JSがrAFでピクセル絶対指定して流す。
-const STAFF_ROLL_SCROLL_SPEED = 60; //60
+const STAFF_ROLL_SCROLL_SPEED = 80; //60
 
 let currentDialogueId = null;
 let currentMessageIndex = 0;
@@ -782,7 +782,11 @@ function showStaffRoll(onComplete) {
                 <div class="staff-roll-line"><span class="role"></span><span class="name">Marron Fields Production</span></div>
                 <div class="staff-roll-line staff-roll-hp"><span class="hp">https://www.marronfield.com</span></div>
                 <div class="staff-roll-line"><span class="role"></span><span class="name">なぐもりずの音楽室</span></div>
-                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://nagumorizu.com</span></div>                
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://nagumorizu.com</span></div> 
+                <div class="staff-roll-line"><span class="role"></span><span class="name">Flehmann</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">X(@flehmann8)</span></div>   
+                <div class="staff-roll-line"><span class="role"></span><span class="name">もっぴーさうんど</span></div>
+                <div class="staff-roll-line staff-roll-hp"><span class="hp">https://www.moppysound.com</span></div>                  
 
                 <div class="staff-roll-line staff-roll-section"><span class="role-center">Sound Effect</span></div>
                 <div class="staff-roll-line"><span class="role"></span><span class="name">Pixabay</span></div>
@@ -827,7 +831,6 @@ function showStaffRoll(onComplete) {
                 <div class="staff-roll-line staff-roll-section"><span class="role-center">Special Thanks</span></div>
                 <div class="staff-roll-line"><span class="role-center">All Players</span></div>
                 <div class="staff-roll-thanks" id="staff-roll-thanks">
-                    <div class="staff-roll-line typing-name-line"><span class="role-left">テストプレイ</span><span class="name-right" data-name="しれん" data-kana="しれん"><span class="name-text">しれん</span></span></div>
                     <div class="staff-roll-line typing-name-line"><span class="role-left">応援</span><span class="name-right" data-name="まめっこ" data-kana="まめっこ"><span class="name-text">まめっこ</span></span></div>
                     <div class="staff-roll-line typing-name-line"><span class="role-left">お世話になった</span><span class="name-right" data-name="うめこいし" data-kana="うめこいし"><span class="name-text">うめこいし</span></span></div>
                 </div>
@@ -856,19 +859,19 @@ function showStaffRoll(onComplete) {
         { role: "心の支え", name: "夜に食べるお菓子", kana: "よるにたべるおかし" },
         { role: "バグだと思ったら仕様だった", name: "奇跡のコード", kana: "きせきのこーど" },
         { role: "クレジット水増し要員", name: "隣の松永さん", kana: "となりのまつながさん" },
-        { role: "寝不足の頭に響いた", name: "スマホのアラーム", kana: "スマホのアラーム" },
+        { role: "寝不足の頭に響いた", name: "スマホのアラーム", kana: "すまほのあらーむ" },
         { role: "開発中に食べた", name: "うまかっちゃん", kana: "うまかっちゃん" },
         { role: "午前3時の", name: "謎のテンション", kana: "なぞのてんしょん" },
         { role: "外での作業でお世話になった", name: "ステップワゴン", kana: "すてっぷわごん" },
         { role: "メダカの天敵", name: "野良猫", kana: "のらねこ" },
-        { role: "キーボードの上に乗った", name: "ほこりと食べかす", kana: "ほこりと食べかす" },
+        { role: "キーボードの上に乗った", name: "ほこりと食べかす", kana: "ほこりとたべかす" },
         { role: "コンビニで買った", name: "アイスコーヒー", kana: "あいすこーひー" },
         { role: "エラーを無視した", name: "昨日の自分", kana: "きのうのじぶん" },
         { role: "開発を延ばした", name: "おっちょこちょい", kana: "おっちょこちょい" },
         { role: "テスト中に寝た", name: "寝不足の自分", kana: "ねぶそくのじぶん" },
         { role: "コードを消し飛ばした", name: "うっかりミス", kana: "うっかりみす" },
         { role: "疲れ目に", name: "ソフトサンティアひとみストレッチ", kana: "そふとさんてぃあひとみすとれっち" },
-        { role: "作業用BGM", name: "ゲーム音楽集", kana: "ゲーム音楽集" },
+        { role: "作業用BGM", name: "ゲーム音楽集", kana: "げーむおんがくしゅう" },
         { role: "トラックボールの使いすぎ", name: "右手の親指", kana: "みぎてのおやゆび" },
         { role: "水槽の住人", name: "ウーパールーパー", kana: "うーぱーるーぱー" },
         { role: "ゲームをここまで遊んでくれた", name: "あなた", kana: "あなた" },
@@ -886,7 +889,31 @@ function showStaffRoll(onComplete) {
         { role: "英語の翻訳・変換", name: "google翻訳", kana: "googleほんやく" },
         { role: "週末の楽しみ", name: "F１", kana: "f1" },
         { role: "やっていないとこもある", name: "リファクタリング", kana: "りふぁくたりんぐ" },
+        { role: "アイデアが思い浮かぶ", name: "仕事の帰り道", kana: "しごとのかえりみち" },
+        { role: "アイデアが思い浮かぶ", name: "お風呂", kana: "おふろ" },
 
+        // ── メタ系（スタッフロール自身・プレイ体験） ──
+        { role: "最後まで見てくれた", name: "根気強いあなた", kana: "こんきづよいあなた" },
+        { role: "スキップしなかった", name: "優しい心", kana: "やさしいこころ" },
+        { role: "スクロール速度の調整に費やした", name: "丸3日", kana: "まるみっか" },
+        { role: "ネタ切れのときに降りてきた", name: "天啓", kana: "てんけい" },
+        { role: "クレジットに乗せ損ねた", name: "無数のバグ達", kana: "むすうのばぐたち" },
+        { role: "このスタッフロールの", name: "真の主人公", kana: "しんのしゅじんこう" },
+
+        // ── 開発ツール系 ──
+        { role: "エラー文の翻訳担当", name: "先人の知恵", kana: "せんじんのちえ" },
+        { role: "消し忘れた", name: "console.logの山", kana: "console.logのやま" },
+
+        // ── 生活環境・設備系 ──
+        { role: "夏の作業部屋を支えた", name: "エアコン", kana: "えあこん" },
+
+        // ── 現代あるある系 ──ß
+        { role: "集中力を削った", name: "通知音", kana: "つうちおん" },
+        { role: "明日やると今日も決めた", name: "部屋の片付け", kana: "へやのかたづけ" },
+        { role: "議論の相手", name: "壁", kana: "かべ" },
+
+        // ── 自然・環境音系 ──
+        { role: "夜中に窓の外で鳴いた", name: "野良猫", kana: "のらねこ" },
 
     ];
     // ★ ジョークスタッフをシャッフル（毎回違う順番で出現させる）
@@ -897,7 +924,7 @@ function showStaffRoll(onComplete) {
     }
     let jokeStaffIndex = 0;
     let jokeStaffCount = 0;
-    const JOKE_STAFF_MAX = 20; // 追加できるジョークスタッフの上限（1人入力で1人追加）
+    const JOKE_STAFF_MAX = 25; // 追加できるジョークスタッフの上限（1人入力で1人追加）
     let jokeModeActive = false;
 
     // ★ 受付（handleKey）と完全に一致するローマ字列を生成する。
@@ -1950,8 +1977,9 @@ export function closeDialogue() {
  * @param {string} dialogueId - dialogueData.jsで定義された会話のID
  * @param {function} onComplete - 会話が終了したときに呼び出されるコールバック関数
  * @param {boolean} isContinuation - 内部用フラグ。モーダルを再生成しない場合にtrue
+ * @param {string} [bgmName] - 会話中に再生するBGM名。省略時はBGM_CONFIG.DIALOGUEを使用
  */
-export function startDialogue(dialogueId, onComplete, isContinuation = false) {
+export function startDialogue(dialogueId, onComplete, isContinuation = false, bgmName = BGM_CONFIG.DIALOGUE) {
     // --- ランダム会話のフォールバック処理 ---
     if (!DIALOGUE_DATA[dialogueId]) {
         const node = gameState.currentQuestNode;
@@ -1980,7 +2008,7 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false) {
                             messages: [randomMessage]
                         };
                         // 一時的なIDで会話を開始する
-                        startDialogue(temporaryDialogueId, onComplete, isContinuation);
+                        startDialogue(temporaryDialogueId, onComplete, isContinuation, bgmName);
                         return;
                     }
                 }
@@ -2021,6 +2049,9 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false) {
         dialogueModal.style.pointerEvents = 'auto';
     }
     dialogueModal.classList.add('show');
+
+    // 会話BGMをフェードインで再生
+    fadeBGMTo(bgmName);
 
     // 継続でない場合のみイベントリスナーを再設定
     if (!isContinuation) {

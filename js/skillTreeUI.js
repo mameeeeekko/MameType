@@ -100,6 +100,7 @@ const NODE_POS = {
 
     // EXP ノード（右下）
     EXP_UP_1: { x: -80, y: 210 },
+    EXP_AUTO_1: { x: -80, y: 320 },
     EXP_UP_2: { x: -160, y: 350 },
     EXP_UP_3: { x: 0, y: 420 },
     

@@ -42,6 +42,7 @@ const DEFAULT_STATS = {
     activeSkill: null,  //装備するアクティブスキル
     activeSkillCooldown: 0,
     cooldownSpeed: 1.0, //skill
+    autoExpBonus: 0, // オートスキル: EXP倍率アップ（常時発動）
     activeSkillStock: 0,
     baseActiveSkillStockMax: 1,   // 初期ストック最大
     bonusActiveSkillStockMax: 0, 
@@ -139,6 +140,9 @@ function buildFinalStats(base) {
             }
         }
     }
+
+    // ★オートスキル(常時発動)のEXP倍率ボーナスを全モードに反映
+    result.expMultiplier += (base.autoExpBonus || 0);
 
     return result;
 }
@@ -554,6 +558,14 @@ export function applySkillNodeEffect(reward, source = "stage") {
         } else if (source === "skill") {
             stats.stockHistory.skillTreeGained += value;
         }
+    }
+
+    // =========================
+    // ★オートスキル：EXP倍率アップ（常時発動）
+    // =========================
+    if (reward.type === "expUp") {
+        const value = reward.value || 0;
+        stats.autoExpBonus = (stats.autoExpBonus || 0) + value;
     }
 
     // 忘れず保存

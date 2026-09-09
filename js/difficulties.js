@@ -154,7 +154,7 @@ export function getDifficultyById(id) {
  * 現在解放されている難易度リストを取得する。
  * 全クリア（hasSeenTrueEnding）達成で MASTER が解放される。
  * @param {object} [options]
- * @param {boolean} [options.includeMaster=true] MASTER を含めるかどうか（フリーモードでは false を指定して除外する）
+ * @param {boolean} [options.includeMaster=true] MASTER を含めるかどうか
  */
 export function getAvailableDifficulties({ includeMaster = true } = {}) {
   const isAllClear = hasSeenTrueEnding();

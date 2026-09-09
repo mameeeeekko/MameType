@@ -12,6 +12,7 @@ import { renderEnemyBehaviorEffect,renderFreezeAura } from "./effectManager.js";
 import { images } from "./assetsLoader.js";
 import { defineShapePath } from "./shapeDefinitions.js";
 import { stageRect, STAGE_W, STAGE_H } from "./stageScale.js";
+import { getEnemyTextBox, boxesOverlap } from "./enemySpawner.js";
 
 // テキストが英数字・記号のみ（英語問題）か判定
 const isEnglish = (str) => /^[a-zA-Z0-9\s.,!?-]+$/.test(str);
@@ -90,6 +91,158 @@ export function renderQuestBackground(ctx, node) {
     }
 }
 
+// =====================================================
+// ★文字同士の動的ずらし（文字列が重なった時のみ上段へずらし、離れたら0へスッと復帰）
+// =====================================================
+/**
+ * 敵・ビットなど全ターゲットの「文字列同士」の重なりを検出し、
+ * targetTextOffsetY（目標ずらし量・負=上方向）を設定する。
+ * - 判定は文字列ラベル部分（上段word＋下段romaの2行）のみ。
+ *   本体（敵の円）同士が重なっていても文字列同士が離れていればずらさない
+ * - ※弾（isBullet）は対象外：弾の文字列は常に定位置（オフセット0）で描画し、
+ *    他のターゲットをずらすきっかけにもしない
+ * - 実際の位置は各オブジェクトの update 内で textOffsetY を滑らかに補間する
+ * - 入力中（ロック中）のターゲットはタイピングしやすいよう定位置（オフセット0）をキープし、
+ *   重なった相手側を「ロック中の文字列から離れる方向（外側）」へずらす。
+ *   （無条件に上へずらすと、ロック敵の下にある敵の文字がロック文字列の上に
+ *     積み重なって逆に読めなくなるため）
+ * - 敵同士がすれ違って重なりが解消されたら targetTextOffsetY は自動的に0へ戻る
+ * - あわせて「文字列と他の敵本体の重なり」を検出して textOverBody フラグを立てる。
+ *   位置はずらさず、描画側（drawEnemyText）で文字だけ浮かび上がらせる
+ * @param {Array} targets 敵（＋ビット等）の全ターゲット配列
+ * @param {object} lockedEnemy ロック中のターゲット（activeAttack の場合は .ref を参照）
+ */
+export function updateEnemyTextOffsets(targets, lockedEnemy) {
+
+    const list = (targets || []).filter(t => t && !t.isDead && !t.isBullet && (t.text || t.word));
+    if (list.length === 0) return;
+
+    // lockedEnemy may be an `activeAttack` (has .ref) or an `enemy` directly.
+    const lockedRef = lockedEnemy ? (lockedEnemy.ref || lockedEnemy) : null;
+
+    // ロック中の文字列（アンカー）の中心Y（常にオフセット0で固定される）
+    let anchorCenterY = null;
+    if (lockedRef) {
+        const anchorBox = getEnemyTextBox(lockedRef);
+        anchorCenterY = anchorBox.y + anchorBox.h / 2;
+    }
+
+    const PADDING = 6;      // ずらした際の余白
+    const MAX_OFFSET = 80; // ずらし上限（上下それぞれ。密集時でも行き場があるように）
+
+    // 目標値を毎フレーム再計算する（重なりが解消されたら0へ戻る）
+    const offsets = new Map();
+    for (const t of list) offsets.set(t, 0);
+
+    // 現在の累積オフセット込みの「文字列のみ」の矩形を取得
+    const boxOf = (t) => {
+        const b = getEnemyTextBox(t);
+        return { x: b.x, y: b.y + offsets.get(t), w: b.w, h: b.h };
+    };
+
+    // ペアワイズ解消（数パス回して連鎖的な重なりにも対応）
+    for (let pass = 0; pass < 4; pass++) {
+        let moved = false;
+
+        for (let i = 0; i < list.length; i++) {
+            for (let j = i + 1; j < list.length; j++) {
+                const a = list[i];
+                const b = list[j];
+                const boxA = boxOf(a);
+                const boxB = boxOf(b);
+                if (!boxesOverlap(boxA, boxB)) continue;
+
+                const overlapY =
+                    Math.min(boxA.y + boxA.h, boxB.y + boxB.h) -
+                    Math.max(boxA.y, boxB.y);
+                const push = overlapY + PADDING;
+
+                const aLocked = a === lockedRef;
+                const bLocked = b === lockedRef;
+                if (aLocked && bLocked) continue; // 両方ロックは基本発生しない
+
+                const aCenter = boxA.y + boxA.h / 2;
+                const bCenter = boxB.y + boxB.h / 2;
+
+                // ずらす側と方向の決定:
+                // 基本は「相手の文字列から離れる方向」へずらす。
+                // ロック中の文字列は定位置（オフセット0）で動かないため、
+                // 下側の文字を無条件に上へずらすと、ロック中の文字列の上に
+                // 文字列が積み重なって逆に読めなくなる。
+                // → ロック文字列を挟んで「外側」の文字列を「外側方向」へずらし、
+                //   ロック文字列の周囲に空白ができるようにする。
+                let mover;
+                let dir; // 1: 下へ離れる, -1: 上へ離れる
+                if (aLocked || bLocked) {
+                    // ロック中のペア: 動ける方をロック文字列から離れる方向へずらす
+                    mover = aLocked ? b : a;
+                    const moverCenter = aLocked ? bCenter : aCenter;
+                    const lockedCenter = aLocked ? aCenter : bCenter;
+                    dir = moverCenter >= lockedCenter ? 1 : -1;
+                } else if (anchorCenterY !== null) {
+                    // ロック文字列が存在する場合: ロック文字列から遠い方（外側）を動かす
+                    const aDist = Math.abs(aCenter - anchorCenterY);
+                    const bDist = Math.abs(bCenter - anchorCenterY);
+                    if (aDist >= bDist) {
+                        mover = a;
+                        dir = aCenter >= bCenter ? 1 : -1;
+                    } else {
+                        mover = b;
+                        dir = bCenter >= aCenter ? 1 : -1;
+                    }
+                } else {
+                    // ロック中の敵がいない場合: 従来どおり画面下側の文字を上段へずらす
+                    mover = (a.y !== b.y) ? (a.y > b.y ? a : b) : b;
+                    dir = -1;
+                }
+
+                const cur = offsets.get(mover);
+                const newOffset = dir > 0
+                    ? Math.min(MAX_OFFSET, cur + push)
+                    : Math.max(-MAX_OFFSET, cur - push);
+                if (newOffset !== cur) {
+                    offsets.set(mover, newOffset);
+                    moved = true;
+                }
+            }
+        }
+
+        if (!moved) break;
+    }
+
+    for (const t of list) {
+        t.targetTextOffsetY = offsets.get(t);
+    }
+
+    // =====================
+    // ★文字列と「他の敵本体」との重なり検出
+    // 位置はずらさず（文字と文字が重なった場合だけずらす）、
+    // textOverBody フラグを立てて描画側で文字だけ浮かび上がらせる
+    // =====================
+    for (const t of list) {
+        const tb = getEnemyTextBox(t);
+        const tBox = { x: tb.x, y: tb.y + offsets.get(t), w: tb.w, h: tb.h };
+
+        let over = false;
+        for (const o of list) {
+            if (o === t) continue;
+
+            const r = o.radius || o.type?.size || 15;
+            // 円（本体）と矩形（文字列）の重なり判定
+            const cx = Math.max(tBox.x, Math.min(o.x, tBox.x + tBox.w));
+            const cy = Math.max(tBox.y, Math.min(o.y, tBox.y + tBox.h));
+            const dx = o.x - cx;
+            const dy = o.y - cy;
+
+            if (dx * dx + dy * dy < r * r) {
+                over = true;
+                break;
+            }
+        }
+        t.textOverBody = over;
+    }
+}
+
 export function renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies = []) {
     ctx.textAlign = "center";
 
@@ -102,13 +255,35 @@ export function renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies = []) 
         .slice()
         .sort((a, b) => (a.y || 0) - (b.y || 0));
 
+    const hasLocked = Boolean(lockedRef && enemies.includes(lockedRef));
+
+    // =====================
+    // ★重なりのレイヤー順（手前 → 奥）:
+    //   1. ロック中の敵の文字（最前面: 入力中の文字は必ず読める）
+    //   2. ロック以外の敵の文字
+    //   3. ロック中の敵の本体
+    //   4. ロック以外の敵の本体（最背面）
+    //   → 文字列は常に本体より手前に描画され、文字が本体に隠れない
+    // =====================
+
+    // 4. ロック以外の敵の本体（最背面）
     for (const enemy of nonLocked) {
-        drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies);
+        drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, "body");
     }
 
-    // ロック敵は常に最後（最前面）に描画
-    if (lockedRef && enemies.includes(lockedRef)) {
-        drawEnemy(ctx, lockedRef, lockedEnemy, candidateEnemies);
+    // 3. ロック中の敵の本体
+    if (hasLocked) {
+        drawEnemy(ctx, lockedRef, lockedEnemy, candidateEnemies, "body");
+    }
+
+    // 2. ロック以外の敵の文字
+    for (const enemy of nonLocked) {
+        drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, "text");
+    }
+
+    // 1. ロック中の敵の文字（最前面）
+    if (hasLocked) {
+        drawEnemy(ctx, lockedRef, lockedEnemy, candidateEnemies, "text");
     }
 }
 
@@ -175,7 +350,13 @@ export function renderActiveAttackUI(ctx, player, enemies, lockedTarget, candida
     });
 }
 
-function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
+function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, layer = "all"){
+
+    // "text" レイヤー: 文字列（word＋ローマ字の2行）のみを描画する
+    if (layer === "text") {
+        drawEnemyText(ctx, enemy, lockedEnemy, candidateEnemies);
+        return;
+    }
 
     renderEnemyBehaviorEffect(ctx,enemy);
     
@@ -183,19 +364,14 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic"; // ←初期化
 
-    const word = enemy.word || "";
-    const displayFull = getDisplayRomaForEnemy(enemy, getDisplayFullRoma);
+    // ★ビット: フェードイン適用
+    if (enemy.isBit && enemy.spawnAlpha < 1) {
+        ctx.globalAlpha = enemy.spawnAlpha;
+    }
 
     // ロックまたは候補状態の判定（本体またはその攻撃が対象の場合）
     const isLocked = lockedEnemy && (lockedEnemy === enemy || lockedEnemy.ref === enemy);
     const isCandidate = candidateEnemies.some(c => c === enemy || c.ref === enemy);
-
-    const typedLen =
-        (enemy.inputedRomaji || "").length +
-        (enemy.typed || "").length;
-
-    const remainPartRaw = displayFull.slice(typedLen);
-    const remainPart = remainPartRaw.replace(/ /g, '␣');
 
     let enemyColor = enemy.type.color;
     //ロックした敵の色
@@ -209,6 +385,11 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
     // 敵の見た目描画（shape + pattern）
     // =====================
     drawEnemyBody(ctx, enemy, enemyColor);
+
+    // ★ビット連動ボス: 本体と生存ビットを電磁波風ラインで連結
+    if (enemy.isBitBoss) {
+        drawBitLinks(ctx, enemy);
+    }
 
     renderFreezeAura(
         ctx,
@@ -235,30 +416,15 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
         ctx.restore();
     }
 
-    ctx.font = "17px 'Inter', 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillStyle = "#f0f6fc"; // 白系
-    ctx.fillText(word, enemy.x, enemy.y - radius - 15);
-
-    ctx.font = "bold 17px 'Noto Sans Mono', monospace";
-    //入力文字の色
-    let remainColor = "#a3c8e4"; // より鮮明なシアンに変更
-
-    //ロックした敵の入力文字の色
-    if (isLocked || isCandidate) {
-        remainColor = "rgb(255, 123, 0)";
+    // =====================
+    // 文字列（word＋ローマ字の2行）
+    // layer === "all" の場合のみここで一緒に描画する。
+    // renderEnemies のレイヤー分割描画（"text" / "body"）時は
+    // drawEnemyText 側で描画される。
+    // =====================
+    if (layer === "all") {
+        drawEnemyText(ctx, enemy, lockedEnemy, candidateEnemies);
     }
-
-    const remainWidth = ctx.measureText(remainPart).width;
-
-    const remainX = enemy.x; // X座標は変更なし
-    const remainY = enemy.y - radius; // Y座標を5px上に移動
-
-    // 発光の代わりに黒い縁取り（アウトライン）を追加して視認性を確保
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
-    ctx.lineWidth = 3;
-    ctx.strokeText(remainPart, remainX, remainY);
-    ctx.fillStyle = remainColor;
-    ctx.fillText(remainPart, remainX, remainY);
 
     // =====================
     // ロックカーソル
@@ -389,6 +555,93 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies){
 }
 
 // ===============================
+// 敵の文字列（word＋ローマ字の2行）のみを描画
+// ※renderEnemies のレイヤー分割描画（"text"）からも呼ばれる
+// ===============================
+function drawEnemyText(ctx, enemy, lockedEnemy, candidateEnemies){
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic"; // ←初期化
+
+    // ★ビット: フェードイン適用
+    if (enemy.isBit && enemy.spawnAlpha < 1) {
+        ctx.globalAlpha = enemy.spawnAlpha;
+    }
+
+    const word = enemy.word || "";
+    const displayFull = getDisplayRomaForEnemy(enemy, getDisplayFullRoma);
+
+    // ロックまたは候補状態の判定（本体またはその攻撃が対象の場合）
+    const isLocked = lockedEnemy && (lockedEnemy === enemy || lockedEnemy.ref === enemy);
+    const isCandidate = candidateEnemies.some(c => c === enemy || c.ref === enemy);
+
+    const typedLen =
+        (enemy.inputedRomaji || "").length +
+        (enemy.typed || "").length;
+
+    const remainPartRaw = displayFull.slice(typedLen);
+    const remainPart = remainPartRaw.replace(/ /g, '␣');
+
+    const radius = enemy.radius || 15;
+
+    // ★文字列動的ずらし: 重なり時に上へずらしたオフセットを適用
+    // ※弾（isBullet）の文字列は常に定位置で描画する（ずらさない）
+    const labelOffsetY = enemy.isBullet ? 0 : (enemy.textOffsetY || 0);
+
+    // =====================
+    // ★文字と敵本体が重なっているときは、文字だけ浮かび上がらせる
+    // （位置はずらさない。背前に半透明プレートを添えて本体から浮かせて見せる）
+    // =====================
+    if (enemy.textOverBody) {
+        const tBox = getEnemyTextBox(enemy);
+        const px = tBox.x - 2;
+        const py = tBox.y + labelOffsetY - 2;
+        const pw = tBox.w + 4;
+        const ph = tBox.h + 4;
+
+        // 本体の上に文字が浮かんで見えるよう半透明の暗色プレートを敷く
+        ctx.fillStyle = "rgba(6, 10, 18, 0.55)";
+        roundRect(ctx, px, py, pw, ph, 8);
+        ctx.fill();
+
+        // うっすら白い縁で「浮いている」ことを示す
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.lineWidth = 1;
+        roundRect(ctx, px, py, pw, ph, 8);
+        ctx.stroke();
+    }
+
+    ctx.font = "17px 'Inter', 'M PLUS Rounded 1c', sans-serif";
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
+    ctx.lineWidth = 3;
+    ctx.strokeText(word, enemy.x, enemy.y - radius - 15 + labelOffsetY);
+    ctx.fillStyle = "#f0f6fc"; // 白系
+    ctx.fillText(word, enemy.x, enemy.y - radius - 15 + labelOffsetY);
+
+    ctx.font = "bold 17px 'Noto Sans Mono', monospace";
+    //入力文字の色
+    let remainColor = "#a3c8e4"; // より鮮明なシアンに変更
+
+    //ロックした敵の入力文字の色
+    if (isLocked || isCandidate) {
+        remainColor = "rgb(255, 123, 0)";
+    }
+
+    const remainX = enemy.x; // X座標は変更なし
+    const remainY = enemy.y - radius + labelOffsetY; // ★文字列動的ずらしオフセットを適用
+
+    // 発光の代わりに黒い縁取り（アウトライン）を追加して視認性を確保
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.lineWidth = 3;
+    ctx.strokeText(remainPart, remainX, remainY);
+    ctx.fillStyle = remainColor;
+    ctx.fillText(remainPart, remainX, remainY);
+
+    ctx.restore();
+}
+
+// ===============================
 // アイテムラベル
 // ===============================
 function drawItemLabel(ctx, enemy){
@@ -492,6 +745,62 @@ function drawItemLabel(ctx, enemy){
     );
 
     ctx.restore();
+}
+
+// ===============================
+// ビット連結ライン（電磁波風）+ ビットのリスポーン表示
+// ===============================
+function drawBitLinks(ctx, enemy) {
+    const slots = enemy.bitSlots || {};
+    const now = performance.now();
+    const orbit = enemy.type.bitOrbitRadius || 120;
+
+    for (const side of ["left", "right"]) {
+        const slot = slots[side];
+        if (!slot) continue;
+        const bit = slot.enemy;
+
+        if (bit && !bit.isDead) {
+            // ---- 生存ビット: 本体と薄い波打つラインで連結（電磁波風）----
+            // ビットが死んだときはこの分岐に入らず、ラインが消える
+            const dx = bit.x - enemy.x;
+            const dy = bit.y - enemy.y;
+            const ang = Math.atan2(dy, dx);
+            const len = Math.hypot(dx, dy) || 1;
+            const waveAmp = 3.0;
+
+            ctx.save();
+            ctx.strokeStyle = "rgba(120, 220, 255, 0.30)";
+            ctx.lineWidth = 1.2;
+
+            ctx.beginPath();
+            const segments = 22;
+            for (let i = 0; i <= segments; i++) {
+                const t = i / segments;
+                const phase = Math.sin(t * Math.PI * 3 + now * 0.004);
+                const px = enemy.x + Math.cos(ang) * len * t + Math.sin(ang) * waveAmp * phase;
+                const py = enemy.y + Math.sin(ang) * len * t - Math.cos(ang) * waveAmp * phase;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.restore();
+        } else {
+            // ---- 死亡中ビット: 本体が復活させるまでの残り秒を薄く表示 ----
+            const sec = Math.ceil(slot.respawnTimer || 0);
+            if (sec <= 0) continue;
+            const dir = side === "left" ? -1 : 1;
+            const bx = enemy.x + dir * orbit;
+            const by = enemy.y + (enemy.type.size || 15) + 14;
+
+            ctx.save();
+            ctx.font = "10px 'Noto Sans Mono', monospace";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "rgba(255,255,255,0.55)";
+            ctx.fillText(`RESPAWN ${sec}`, bx, by);
+            ctx.restore();
+        }
+    }
 }
 
 // ===============================
@@ -2379,19 +2688,14 @@ function renderBgmInfo(ctx, gameState, now) {
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
 
-    // フェードイン・アウトのためのアルファ値計算
-    // BGMが切り替わってから最初の2秒でフェードイン、最後の2秒でフェードアウト
+    // フェードインのためのアルファ値計算
+    // BGMが切り替わってから最初の2秒でフェードイン、その後は表示継続
     const fadeDuration = 2000;
-    const displayDuration = 15000; // 表示時間
     const elapsed = now - (gameState.startTime || 0); // Use gameState.startTime
 
-    let alpha = 0;
+    let alpha = 1;
     if (elapsed < fadeDuration) {
         alpha = elapsed / fadeDuration; // Fade in
-    } else if (elapsed < displayDuration - fadeDuration) {
-        alpha = 1; // Stay
-    } else if (elapsed < displayDuration) {
-        alpha = (displayDuration - elapsed) / fadeDuration; // Fade out
     }
 
     ctx.globalAlpha = Math.max(0, alpha);

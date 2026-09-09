@@ -11,6 +11,7 @@ import { getSoundEnabled } from "./gameCore.js";
 import { images } from "./assetsLoader.js";
 import { devOverride } from "../dev/devOverride.js";
 import { applyCanvasDPR } from "./canvasUtil.js";
+import { playSE } from "./effectManager.js";
 
 function formatDateOnly(dateStr){
   if(!dateStr) return "";
@@ -39,6 +40,7 @@ export function initAchievementsUI() {
 
   // 勲章ボタンのクリックイベント
   btn.onclick = () => {
+    playSE("questmenu"); // ★勲章を開いた時のSE
     renderAchievements(list); // 描画
     modal.style.display = "flex"; // 表示
   };
@@ -257,6 +259,7 @@ function setupStatsModal(options = {}) {
 
   //詳細ステータス分岐
   btn.onclick = () => {
+    playSE("questmenu"); // ★ステータスを開いた時のSE
     if(isQuest){
       modalQuest.style.display = "flex";
       renderQuestStatsModal();
@@ -432,6 +435,12 @@ function renderQuestStatsModal() {
   // 左
   const left = document.getElementById("questBasicStats");
 
+  // ★オートスキルのEXP倍率ボーナス（取得時のみ表示）
+  const expMultBonus =
+    (skillStats.expMultiplier || 1) > 1.001
+      ? `<span class="stat-plus">(×${Number(skillStats.expMultiplier).toFixed(2)})</span>`
+      : "";
+
   if (left) {
     left.innerHTML = `
       <div class="quest-bottom-title quest-stats-section">STATUS</div>
@@ -439,7 +448,7 @@ function renderQuestStatsModal() {
         <div class="quest-stats-row"><span class="quest-stats-label">Lv</span><span>${s.level}</span></div>
         <div class="quest-stats-row"><span class="quest-stats-label">HP</span><span>${s.maxHp} ${skillStats.maxHp ? `<span class="stat-plus">(+${skillStats.maxHp})</span>` : ''}</span></div>
         <div class="quest-stats-row"><span class="quest-stats-label">DEF</span><span>${s.defense} ${skillStats.defense ? `<span class="stat-plus">(+${skillStats.defense})</span>` : ''}</span></div>
-        <div class="quest-stats-row"><span class="quest-stats-label">EXP</span><span>${exp} / ${nextExp}</span></div>
+        <div class="quest-stats-row"><span class="quest-stats-label">EXP</span><span>${exp} / ${nextExp} ${expMultBonus}</span></div>
 
         <div class="quest-exp-wrap">
           <div class="quest-exp-bar-bg">
@@ -475,7 +484,7 @@ function renderQuestStatsModal() {
 
         <div class="quest-skill-row">
           <span>MaxHP</span>
-          ${renderQuestStatBarForValue(skillStats.maxHp, 'addition')}
+          ${renderQuestStatBarForValue(skillStats.maxHp, 'addition', 200)}
           <span>+${skillStats.maxHp || 0}</span>
         </div>
 
@@ -1018,7 +1027,8 @@ function calcQuestSkillStats() {
     knockbackBonus: 1,
     maxHp: 0,
     defense: 0,
-    expMultiplier: 1,
+    // ★オートスキル(常時発動)のEXPボーナスをベースに含める
+    expMultiplier: 1 + (stats.autoExpBonus || 0),
     itemSpawnMultiplier: 1,
     damageNegateChance: 0,
     reviveChance: 0,
@@ -1079,17 +1089,20 @@ function renderQuestStatBar(value, inverse = false) {
  * スキルボーナスの種類に応じた汎用的なスタッツバーをレンダリングする
  * @param {number} value - 現在の数値
  * @param {'addition' | 'multiplier' | 'multiplier_special' | 'percentage'} type - 値の種類
+ * @param {number|null} [maxDeltaOverride=null] - 表示上限の上書き（中心→端がこの値で一杯になる）。
+ *                                                未指定時はタイプ別のデフォルト値を使用
  * @returns {string} - バーのHTML文字列
  */
-function renderQuestStatBarForValue(value = 0, type = 'addition') {
+function renderQuestStatBarForValue(value = 0, type = 'addition', maxDeltaOverride = null) {
   let delta = 0;
   let maxDelta = 1; // デフォルトの最大値
 
   switch (type) {
     case 'addition':
-      // 例: MaxHP +50 -> delta: 50, maxDelta: 100 (仮)
+      // 例: MaxHP +50 -> delta: 50, maxDelta: 100
+      // ※ MaxHPバーは呼び出し側で上限200を指定する（スキル装備画面と共通）
       delta = value;
-      maxDelta = 100; // HPやDEFの最大ボーナス値（仮）
+      maxDelta = 100; // HPやDEFのデフォルトの最大ボーナス値
       break;
     case 'multiplier':
       // 例: EXP x1.5 -> delta: 0.5, maxDelta: 2.0 (x3.0が最大)
@@ -1106,6 +1119,11 @@ function renderQuestStatBarForValue(value = 0, type = 'addition') {
       delta = value;
       maxDelta = 1.0;
       break;
+  }
+
+  // 呼び出し側から表示上限を上書きできる（例: MaxHPバーの上限は200）
+  if (maxDeltaOverride != null) {
+    maxDelta = maxDeltaOverride;
   }
 
   const scale = 50 / Math.max(0.0001, maxDelta);

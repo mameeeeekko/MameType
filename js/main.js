@@ -19,12 +19,12 @@ import {
   importQuestData,
 } from "./storage.js";
 import * as Game from "./gameCore.js";
-import { gameState, getLastSpecialModeInfo, getPaused, setPaused, backToMenu } from "./gameCore.js";
+import { gameState, getLastSpecialModeInfo, getPaused, setPaused, backToMenu, getNow } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
 import { getPlayerStats } from "./playerStats.js"; 
 import { updateHud, initAchievementsUI, showHud } from "./hud.js"; export { showHud };
 import { handleKey } from './inputCore.js';
-import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode } from "./enemyCore.js";
+import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, wasLastModeBossOnly } from "./enemyCore.js";
 import { renderQuestMapUI, openQuestMenuModal, closeQuestModal } from "./questMapUI.js";
 import { reloadQuestProgress, resetQuestAll, markTrueEndingSeen, hasSeenTrueEnding as hasSeenTrueEndingInAutoSave } from "./questProgress.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
@@ -33,7 +33,7 @@ import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
 import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed, showDisclaimer } from "./dialogue.js";
 import { loadCoreAssets, loadRemainingAssets, images } from "./assetsLoader.js";
-import { loadKeybinds, saveKeybinds, initKeybinds } from "./keybinds.js";
+import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds.js";
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
 import { fitStage, getStageScale } from "./stageScale.js";
@@ -46,7 +46,7 @@ import {
   getDifficultyDescription,
   getAvailableDifficulties,
 } from "./difficulties.js";
-import { playBGM, playSE } from "./effectManager.js";
+import { playBGM, playSE, stopBGM, stopAllLoopSE, fadeBGMTo, fadeOutBGM, BGM_CONFIG } from "./effectManager.js";
 import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
 import { supabase } from "../online/supabase.js";
 import { startDefenseMode } from "./defenseCore.js";
@@ -68,7 +68,6 @@ let settingsDiv, gameDiv, resultDiv, recordsDiv;
 let questMapScreen, questSaveMenuDiv, skillTreeDiv;
 let hintDiv;
 let onlineRankingDiv;
-let bgmInfoDisplay;
 
 let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn, onlineRankingBtn, endingBtn;
 let startMenuBackBtn, freeStartMenuBackBtn, questStartMenuBackBtn;
@@ -127,7 +126,6 @@ function cacheDOM() {
   skillTreeDiv = document.getElementById("skillTree");
   hintDiv = document.getElementById("skillUnlockHint");
   onlineRankingDiv = document.getElementById("onlineRankingScreen");
-  bgmInfoDisplay = document.getElementById("bgmInfoDisplay"); // Cache the new element
 
   startMenuBtn = document.getElementById("startMenuBtn"); //デイリー
   questMenuBtn = document.getElementById("questMenuBtn");
@@ -1713,8 +1711,8 @@ function createDifficultySelector(
   // ← 追加
   container.classList.add("pattern-selector");
 
-  // フリーモードでは MASTER を選択不可にする
-  const availableDifficulties = getAvailableDifficulties({ includeMaster: false });
+  // フリーモードでも全クリアで MASTER が選択可能になる
+  const availableDifficulties = getAvailableDifficulties({ includeMaster: true });
 
   let current = getCurrentDifficulty(scope);
 
@@ -1867,6 +1865,9 @@ function initSettingsUI() {
   ].forEach(([el, key]) => {
     el?.addEventListener("change", e => {
       Game.setSoundSetting(key, e.target.checked);
+      // ★ OFFにした瞬間、再生中のBGM / ループSEも即座に停止（一括ON/OFFを反映）
+      if (key === 'bgm' && !e.target.checked) stopBGM();
+      if (key === 'soundeffect' && !e.target.checked) stopAllLoopSE();
       saveSettings();
     });
   });
@@ -2707,6 +2708,7 @@ function showMainMenu() {
   hideAllScreens();
   updateHud(null, { isQuestMode: false }); // HUDを通常モードに戻す
   closeDialogue(); // ★会話モーダルを閉じる
+  fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (menuDiv) menuDiv.style.display = "block";
 
   showMenuBackground("title_menu");
@@ -2717,6 +2719,7 @@ function showMainMenu() {
 function showQuestMenu() {
   hideAllScreens();
   closeDialogue(); // ★会話モーダルを閉じる
+  fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (questMenuDiv) questMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示
 
   // オートセーブデータの有無をチェック
@@ -2735,11 +2738,13 @@ function showQuestMenu() {
 }
 function showStartMenu() { 
   hideAllScreens(); 
+  fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (startMenuDiv) startMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示 
   showMenuBackground("title_menu");
 }
 function showFreeStartMenu() { 
   hideAllScreens(); 
+  fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (freeStartMenuDiv) freeStartMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示
   
   const freeModeConfig = document.getElementById("freeModeConfig");
@@ -2765,6 +2770,10 @@ export function showQuestMap() {
   
   questMapScreen.style.display = "block";
   renderQuestMapUI();
+
+  // クエストマップBGMをフェードインで再生
+  gameState.startTime = getNow(); // BGM表示タイマーをリセット
+  fadeBGMTo(BGM_CONFIG.QUEST_MAP);
 }
 
 export function showGameScreen() {
@@ -2806,7 +2815,7 @@ function bindMenuEvents() {
   questStartMenuBackBtn?.addEventListener("click", () => { playSE("select"); showMainMenu(); });
 
   questSaveBtn?.addEventListener("click", () => {
-    playSE("select");
+    playSE("questmenu"); // ★SAVE/LOADメニューを開いた時のSE
     questSaveMenuDiv.classList.remove("hidden");
     renderQuestSlots();
   });
@@ -3053,9 +3062,17 @@ function bindResultEvents() {
         restartDefenseMode();
       } else { // "enemy_mode" or null (legacy)
         // フリーモードのエネミーモードの場合、UIの設定（Tier等）を反映し直して開始する
-        if (gameState.isFreeMode) {
+        // ★直前のモードがboss-only（ボス戦のみ）だった場合は、ボスフェーズから再開する
+        console.log("[PLAY AGAIN] wasLastModeBossOnly():", wasLastModeBossOnly());
+        console.log("[PLAY AGAIN] gameState.isFreeMode:", gameState.isFreeMode);
+        if (wasLastModeBossOnly()) {
+          console.log("[PLAY AGAIN] -> restartEnemyMode (boss only)");
+          restartEnemyMode();
+        } else if (gameState.isFreeMode) {
+          console.log("[PLAY AGAIN] -> startFreeEnemyMode");
           startFreeEnemyMode();
         } else {
+          console.log("[PLAY AGAIN] -> restartEnemyMode");
           restartEnemyMode();
         }
       }
@@ -3372,6 +3389,9 @@ async function handleGameKey(e) {
 
   if (!Game.isGameActive) return false;
 
+  // 矢印キーのページスクロール防止（バインドの有無にかかわらずゲーム中は無効化）
+  if (e.code.startsWith("Arrow")) e.preventDefault();
+
   // ★終了演出中は入力停止
   if (gameState.isEnding) return true;
 
@@ -3381,7 +3401,7 @@ async function handleGameKey(e) {
   if (getPaused()) return true;
 
   // ポーズトグル
-  if (e.code === keybinds.pause) {
+  if (isBoundKey(e, keybinds.pause)) {
     e.preventDefault();
     const paused = Game.togglePause();
     const overlay = document.querySelector(".pause-overlay");

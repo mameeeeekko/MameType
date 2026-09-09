@@ -7,6 +7,7 @@ import { closeDialogue, startDialogue, startTrueEndingSequence, showClearRewardP
 import { backToQuestMap } from "./main.js";
 import { hasShownFirstFullClearReward, markFirstFullClearRewardShown } from "./questProgress.js";
 import { restartEnemyMode } from "./enemyCore.js";
+import { BGM_CONFIG } from "./effectManager.js";
 
 export function showEnemyEndIntro(text, onFinish) {
     const intro = document.getElementById("endIntro");
@@ -375,7 +376,9 @@ export function showQuestResult(stats) { // Already exported, no change needed
             // ★★★ ここまで ★★★
 
             gameState.isTrueEnding = false;
-            startDialogue("true_ending_dialogue", () => { // エピローグ再生
+
+            // エピローグ再生（BGM: bgm_otiru）
+            startDialogue("true_ending_dialogue", () => { // エピローグ再生（BGM: bgm_otiru）
                 startTrueEndingSequence(() => { // スタッフロール再生
                     startDialogue("epilogue_after_staffroll", () => {
                         // エピローグ後、初回全クリ後の特典を一度だけ表示する
@@ -441,7 +444,7 @@ export function showQuestResult(stats) { // Already exported, no change needed
                         }
                     }); // スタッフロール後の会話
                 });
-            });
+            }, false, BGM_CONFIG.TRUE_ENDING_DIALOGUE); // エピローグ用BGM (bgm_otiru)
             return;
         }
 
@@ -454,7 +457,7 @@ export function showQuestResult(stats) { // Already exported, no change needed
 
         // ★★★ ワールドクリア実績などを即時反映させるための処理を追加 ★★★
         const stats = getPlayerStats();
-        const newAchievements = updateAchievements(stats);
+        const newAchievements = updateAchievements(stats, false, true); // ★クエスト中はeScoreランク勲章を判定しない
         if (newAchievements.length > 0) {
             showAchievementPopup(newAchievements);
         }

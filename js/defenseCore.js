@@ -10,7 +10,7 @@ import { getCurrentDifficulty } from "./difficulties.js"; // ★クエスト防�
 import { STAGES, getStageConfig } from "./enemyModeConfig.js";
 import { playSE, stopBGM, playBGM, clearAllEffects, playErrorSound, playDialogueSound } from "./effectManager.js";
 import { showDefenseResult } from "./defenseResult.js";
-import { showEnemyEndIntro, showQuestResult } from "./questResult.js";
+import { showEnemyEndIntro } from "./questResult.js";
 import { TARGETS } from "./target.js";
 import { closeDialogue, startDialogue, DIALOGUE_DATA, showDialoguePlaybackChoicePopup } from "./dialogue.js";
 import { showHud } from "./main.js";
@@ -317,6 +317,8 @@ export function startDefenseMode(config = {}) {
   if (getSoundEnabled() && getSoundSettings().bgm) {
     playBGM(defenseBgm, 1.0);
     gameState.startTime = getNow(); // BGM表示タイマーをリセット
+  } else {
+    stopBGM(); // ★ BGM設定がOFFでも、マップBGM等が鳴り続けないように停止
   }
 
   // --- 開始演出 ---
@@ -1216,7 +1218,7 @@ async function endDefenseMode(isAbort = false) {
       solvedCount: stats.solvedCount,
       maxCombo: stats.maxCombo,
       failed: stats.failed,
-    }, GameModes.DEFENSE_MODE.id, new Date().toISOString(), lastDefenseConfig.isFreeMode || lastDefenseConfig.isQuestMode);
+    }, GameModes.DEFENSE_MODE.id, new Date().toISOString(), lastDefenseConfig.isFreeMode || lastDefenseConfig.isQuestMode, lastDefenseConfig.isQuestMode);
 
     if (shouldRecord) {
       const recordId = rankingResult.record?.id;

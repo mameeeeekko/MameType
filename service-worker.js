@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.6";
+const CACHE_NAME = "mametype-v1.0.7";
 
 // =====================================================
 // コアアセット
@@ -114,7 +114,7 @@ const CORE_ASSETS = [
   // 完全オフライン起動にはこのキャッシュが必須
   // ---------------------------------------------------
 
-  "https://esm.sh/@supabase/supabase-js@2?bundle",
+  "https://esm.sh/@supabase/supabase-js@2.49.1?bundle",
 ];
 
 // =====================================================
@@ -122,6 +122,21 @@ const CORE_ASSETS = [
 // =====================================================
 
 const DYNAMIC_ASSETS = [
+
+  // ---------------------------------------------------
+  // 立ち絵 / キャラ portraits
+  // assetsLoader.js（remainingAssets）で参照されている。
+  // 背景読み込みだけではなく、SWの事前キャッシュ対象にする。
+  // これがないと「オフラインでも遊べるようになりました」
+  // 表示直後をオフラインにすると立ち絵が欠落する。
+  // ---------------------------------------------------
+
+  "./assets/pic/char/navi_normal.png",
+  "./assets/pic/char/navi_smile.png",
+  "./assets/pic/char/navi_sad.png",
+  "./assets/pic/char/navi_angry.png",
+  "./assets/pic/char/navi_surprised.png",
+  "./assets/pic/char/enemy.png",
 
   // ---------------------------------------------------
   // passiveスキル画像
@@ -222,6 +237,8 @@ const DYNAMIC_ASSETS = [
   // ---------------------------------------------------
 
   "./assets/sound/se/select.mp3",
+  "./assets/sound/se/questmenu.mp3",
+  "./assets/sound/se/mapmove.mp3",
   "./assets/sound/se/kill1.mp3",
   "./assets/sound/se/kill2.mp3",
   "./assets/sound/se/kill3.mp3",
@@ -243,11 +260,12 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/se/trophy.mp3",
   "./assets/sound/se/skillon.mp3",
   "./assets/sound/se/skilloff.mp3",
+  "./assets/sound/se/bitspawn.mp3",
 
   // ---------------------------------------------------
   // BGM
   // ---------------------------------------------------
-
+  
   "./assets/sound/bgm/rojiura.mp3",
   "./assets/sound/bgm/flashback.mp3",
   "./assets/sound/bgm/yamiyonikakeru.mp3",
@@ -263,6 +281,7 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/bgm/the_fight_left_in_us.mp3",
   "./assets/sound/bgm/aquarium.mp3",
   "./assets/sound/bgm/bpm150.mp3",
+  "./assets/sound/bgm/mercury.mp3",//map
   "./assets/sound/bgm/sounds_of_memories.mp3",
   "./assets/sound/bgm/gameover.mp3",
   "./assets/sound/bgm/yellow.mp3",
@@ -279,6 +298,8 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/bgm/1minute.mp3",
   "./assets/sound/bgm/yukkuriisoge.mp3",
   "./assets/sound/bgm/vampire.mp3",
+  "./assets/sound/bgm/broccoli.mp3",
+  "./assets/sound/bgm/otiru.mp3"
 ];
 
 // =====================================================

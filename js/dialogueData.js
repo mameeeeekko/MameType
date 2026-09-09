@@ -281,7 +281,7 @@ export const DIALOGUE_DATA = {
                 character: "SYSTEM",
                 text: ".....\n \nInitializing...\nSecure Channel Established.\nQuantum Signature Verified.\nLoading Core Interface...\n \n.....\n \nConnection Established.\nOperator Signature Detected.\nAuthentication in Progress...\n \n.....\n \nAuthentication Successful.\nWelcome, Operator."
             },
-            { character: "？", text: "ようこそ。\nまずは、このゲームをダウンロードしてくれてありがとうございます。"},
+            { character: "？", text: "ようこそ。\nまずは、ゲームのダウンロードありがとうございます。"},
             { character: "？", text: "あなたが起動したのは、一般公開用ゲームクライアント。"},
             { character: "？", text: "正式名称\n \nproject THREAD"},
             { character: "？", text: "わたしは、\nM.A.M.E\nMutual Adaptive Monitoring Entity\nProject THREADの管理AIです。\nあなたのナビを務めさせていただきます。"},
@@ -327,7 +327,7 @@ export const DIALOGUE_DATA = {
         title: "チュートリアル１-ゲーム説明-",
         showOnce: true, 
         messages: [
-            { character: "ナビ", text: "接続テストを開始します。"},
+            { character: "ナビ", text: "接続テストを開始しますね。"},
             {
                 character: "ナビ", text: "準備はよろしいですか？", // このメッセージに選択肢を追加
                 choiceId: "W1_Q1_start_1", // ★ 選択肢グループのIDを追加
@@ -336,13 +336,16 @@ export const DIALOGUE_DATA = {
                     { text: "まだ心の準備が…", response: { character: "ナビ", text: "準備ができたら、いつでも声をかけてくださいね。" }, backToMap: true }
                 ]
             },
-            { character: "ナビ", text: "では、ゲームについて説明します。"},
-            { character: "ナビ", text: "文字列を持った敵が出現するので、すべての文字を入力して倒します。\n先頭の文字を入力すると、自動でロックオンします。\n先頭の文字が同じ場合は次の文字で判別します。"},
-            { character: "ナビ", text: "別の敵を攻撃したい場合は、Unlockキーを入力し、ロックオンを解除してください。（settingでキー設定できます）\nその後、対象の敵の文字をタイピングしてください。"},
-            { character: "ナビ", text: "一番近くの敵にロックオンしたい場合は、Auto Lockキーを入力してください。（settingでキー設定できます）"},
-            { character: "ナビ", text: "ゲーム中に一時停止する場合は、Pauseキーを入力してください。（settingでキー設定できます。）"},
-            { character: "ナビ", text: "ちなみに、マップメニューの「LOG」からわたしとの会話は閲覧することができます。"},
-            { character: "ナビ", text: "では開始してください。\nよろしくお願いします。"},
+            { character: "ナビ", text: "では、ゲームの遊び方について説明していきますね。"},
+            { character: "ナビ", text: "画面には、文字列を持った敵が出現します。\n先頭から順番に文字を入力して、敵を倒してください。"},
+            { character: "ナビ", text: "先頭の文字を入力すると、自動でその敵にロックオンされます。"},
+            { character: "ナビ", text: "もし先頭の文字が同じ敵が複数いた場合は、次の文字で判別します。"},
+            { character: "ナビ", text: "別の敵を攻撃したいときは、Unlockキーでロックオンを解除してください。\n（キー設定はSettingから変更できます。）"},
+            { character: "ナビ", text: "解除したあとは、狙いたい敵の文字を入力すれば、その敵を攻撃できます。"},
+            { character: "ナビ", text: "一番近くの敵を狙いたいときは、Auto Lockキーを押してくださいね。\nこちらもSettingでキー設定を変更できます。"},
+            { character: "ナビ", text: "ゲームを一時停止したいときは、Pauseキーを押してください。\nこれもSettingで変更可能ですよ。"},
+            { character: "ナビ", text: "ちなみに…マップメニューの「LOG」から、わたしとの会話をいつでも読み返せますよ。"},
+            { character: "ナビ", text: "では、ミッション開始です。よろしくお願いします、オペレーター。"},
         ]
     },
 
@@ -351,24 +354,31 @@ export const DIALOGUE_DATA = {
         title: "チュートリアル２ -ミッションパターン-",
         showOnce: true,
         messages: [
-            { character: "ナビ", text: "ミッションのパターンについて説明します。"},
-            { character: "ナビ", text: "ミッションには複数の種類があり、\nこの世界を構築する際（「NEW GAME」で始めた時）にランダムで決定されます。"},
-            { character: "ナビ", expression: "smile", text: "基本的に、10ステージごとに敵の強さは上昇していきます。\n例えば、STAGE1-10に比べて11-20では、敵が強さが少し強くなっています。"},
-            { character: "ナビ", expression: "smile", text: "そして、そのステージ数の後半（STAGE9-10,19-20など）ほど、難しいミッションが選択される傾向があります。"},
-            { character: "ナビ", expression: "smile", text: "ではミッションを開始します。"},
+            { character: "ナビ", text: "ミッションのパターンについて説明していきますね。"},
+            { character: "ナビ", text: "ミッションには、いくつかの種類があります。"},
+            { character: "ナビ", text: "どのパターンになるかは、この世界を構築するとき…\n「NEW GAME」で始めたときに、ランダムで決まります。"},
+            { character: "ナビ", text: "敵の強さは、10ステージごとに少しずつ上がっていきます。\nたとえばSTAGE1-10に比べると、STAGE11-20の敵は少し強いですね。"},
+            { character: "ナビ", text: "では、ミッションを開始しますね。"},
         ]
     },
     
     "W1_Q5_start": {
-        title: "チュートリアル3 -エネミーの文字タイプ-",
+        title: "チュートリアル3 -エネミー文字タイプ-",
         showOnce: true,
         messages: [
-            { character: "ナビ", text: "敵性プログラムの文字タイプについて補足情報を共有します。"},
-            { character: "ナビ", text: "エネミーは色によって、出題される文字の傾向（属性）が異なります。"},
-            { character: "ナビ", text: "灰色:標準 最も基本的なタイプです。特別な文字はあまり出題されません。\n紫色:英語	英単語や、アルファベットを含む文章が出題されます。\n青色:促音 「っ」を含む、リズミカルなタイピングが求められる単語が多いです。\n桃色:擬音 「ざあざあ」「きらきら」といった、擬音語・擬態語が中心です。\n黄色:ことわざ ことわざや慣用句など、少し長めの文章が出題される傾向にあります。\n緑色:句読点	「、」や「。」を含む文章が出題されます。\n赤色:記号・数字 「!?」などの記号や数字が頻繁に出現するタイプです。"},
-            { character: "ナビ", text: "エネミーの属性出現パターンは、ステージの進行度によって変化します。\n後半になるにつれてさまざまな種類の属性が現れます。"},
-            { character: "ナビ", text: "ステージが５の倍数（STAGE5,10,15,20,...）は、属性アクセントステージとなります。\nこれは、特定の文字タイプ（例: 英語のみ、記号多めなど）が集中して出現する特殊なステージです。\nつまり、このステージが属性アクセントステージになります。"},
-            { character: "ナビ", text: "これらの情報を活用し、ミッションに備えてください。あなたの活躍に期待しています、オペレーター。"},
+            { character: "ナビ", text: "敵性プログラムの文字タイプについて、補足情報があります。"},
+            { character: "ナビ", text: "エネミーは色によって、出題される文字の傾向（属性）が変わります。\nまずは基本の7色を覚えてくださいね。"},
+            { character: "ナビ", text: "灰色＝標準。最も基本的なタイプで、特別な文字はあまり出ません。"},
+            { character: "ナビ", text: "紫色＝英語。英単語や、アルファベットを含む文章が出題されます。"},
+            { character: "ナビ", text: "青色＝促音。「っ」を含む、リズミカルなタイピングが必要な単語が多いですね。"},
+            { character: "ナビ", text: "桃色＝擬音。「ざあざあ」「きらきら」といった、擬音語・擬態語が中心です。"},
+            { character: "ナビ", text: "黄色＝ことわざ。ことわざや慣用句など、少し長めの文章が出題されやすいです。"},
+            { character: "ナビ", text: "緑色＝句読点。「、」や「。」を含む文章が出題されます。"},
+            { character: "ナビ", text: "赤色＝記号・数字。「!?」などの記号や数字が頻繁に出現するタイプです。"},
+            { character: "ナビ", text: "どの色の属性が出るかは、ステージの進行度によって変化します。後半になるほど、いろいろな属性が登場しますよ。"},
+            { character: "ナビ", text: "あ、それから大事なことを1つ。\nステージが5の倍数（STAGE5,10,15,20…）は「属性アクセントステージ」になります。"},
+            { character: "ナビ", text: "属性アクセントステージは、特定の文字タイプ（例：英語のみ、記号多めなど）が集中して出現する、ちょっと特別なステージです。"},
+            { character: "ナビ", text: "この情報を活かして、ミッションに備えてください。あなたの活躍に期待しています、オペレーター。"},
         ]
     },
 
@@ -377,17 +387,21 @@ export const DIALOGUE_DATA = {
         showOnce: true,
         messages: [
             { character: "ナビ", text: "オペレーター、素晴らしい戦闘データが取れました。\nあなたのタイピング特性の解析が完了し、新たな機能がアンロックされました。" },
-            { character: "ナビ", text: "それが「スキル」です。戦闘を有利に進めるための強力なサポート機能です。" },
+            { character: "ナビ", text: "それが「スキル」です。戦闘を有利に進めるための、頼もしいサポート機能ですよ。" },
             { character: "ナビ", text: "スキルは主に『スキルツリー』から解放することで入手できます。\nマップ画面のメニューからアクセスしてみてください。" },
-            { character: "ナビ", text: "スキルツリーの解放には、条件があります。\nレベルやステージの進行度です。" },
-            { character: "ナビ", text: "スキルは大きく分けて3種類あります。\n『PASSIVE』、『ACTIVE』、『AUTO』です。" },
-            { character: "ナビ", text: "『PASSIVE』は、装備するだけで常に効果を発揮するスキルです。\nHPを増やしたり、チェインを維持しやすくしたりと、様々な効果があります。" },
-            { character: "ナビ", text: "ただし、装備できる数には上限があります。\n『SKILL SLOT』の数だけ装備可能です。スロットはレベルアップや特定のステージクリアで増やすことができます。" },
-            { character: "ナビ", text: "次に『ACTIVE』スキル。\nこれは、あなたが任意のタイミングで発動できる、いわば必殺技のようなものです。" },
-            { character: "ナビ", text: "スキル毎にクールダウンがあり、使用できるまで待つ必要があります。\n戦闘中にコンボを繋げると、ダウンタイムが早く減っていくので、うまく活用してください。\nゲージが満タンになるとストックされ、スキルキー（Settingで変更可能）で発動できます。\nストック上限もレベルアップなどで増やせます。" },
-            { character: "ナビ", text: "一度使うと再度クールダウンが必要になります。" },
-            { character: "ナビ", text: "最後に『AUTO』スキル。\nこれは入手するだけで自動的に効果を発揮する特殊なパッシブスキルです。装備する必要はありません。" },
-            { character: "ナビ", text: "スキルの装備は、マップ画面のメニューにある『EQUIP SKILLS』から行えます。\nぜひ、自分に合ったスキル構成を見つけてみてください。" },
+            { character: "ナビ", text: "スキルツリーの解放には、条件があります。レベルやステージの進行度ですね。" },
+            { character: "ナビ", text: "スキルは大きく分けて3種類あります。『PASSIVE』『ACTIVE』『AUTO』です。" },
+            { character: "ナビ", text: "まず『PASSIVE』は、装備するだけで常に効果を発揮するスキルです。\nHPを増やしたり、チェインを維持しやすくしたりと、様々な効果があります。" },
+            { character: "ナビ", text: "ただし、装備できる数には上限があります。『SKILL SLOT』の数だけ装備可能です。" },
+            { character: "ナビ", text: "スロットは、レベルアップや特定のステージクリアで増やすことができますよ。" },
+            { character: "ナビ", text: "次に『ACTIVE』スキル。これは、あなたが任意のタイミングで発動できる、いわば必殺技のようなものです。" },
+            { character: "ナビ", text: "スキルごとにクールダウンがあり、使用できるまで少し待つ必要があります。" },
+            { character: "ナビ", text: "戦闘中にコンボを繋げると、ダウンタイムが早く減っていくので、うまく活用してくださいね。" },
+            { character: "ナビ", text: "ゲージが満タンになるとストックされます。スキルキー（Settingで変更可能）で発動できますよ。" },
+            { character: "ナビ", text: "ストック上限も、レベルアップなどで増やせます。" },
+            { character: "ナビ", text: "一度使うと、またクールダウンが必要になります。" },
+            { character: "ナビ", text: "最後に『AUTO』スキル。これは入手するだけで自動的に効果を発揮する、特殊なパッシブスキルです。装備する必要はありません。" },
+            { character: "ナビ", text: "スキルの装備は、マップ画面のメニューにある『EQUIP SKILLS』から行えます。\nぜひ、自分に合ったスキル構成を見つけてみてくださいね。" },
         ]
     },
 
@@ -396,12 +410,13 @@ export const DIALOGUE_DATA = {
         title: "チュートリアル5 -アイテム-",
         showOnce: true,
         messages: [
-            { character: "ナビ", text: "このミッションからアイテムが出現します。"},
-            { character: "ナビ", text: "アイテムには大きく分けて「回復」「攻撃」「補助」の３種類があります。"},
-            { character: "ナビ", text: "補助は、敵の動きを止めたり、スキルの使用までの時間を短縮したりする効果があります。"},
+            { character: "ナビ", text: "このミッションから、アイテムが登場するようになります。"},
+            { character: "ナビ", text: "アイテムは大きく分けて「回復」「攻撃」「補助」の3種類があります。"},
+            { character: "ナビ", text: "補助には、敵の動きを止めたり、スキルの使用までの時間を短縮したりする効果があります。"},
             { character: "ナビ", text: "そして、ステージが進むにつれて、出現するアイテムの効果も上昇していきます。"},
-            { character: "ナビ", text: "アイテムの使用方法は、出現したアイテムの文字を入力すれば使用できます。\nただし、一定時間経過するとアイテムは消えてしまいます。"},
-            { character: "ナビ", text: "また、アイテムが出現しないステージもあるので注意をしましょう。"},
+            { character: "ナビ", text: "使い方はかんたんです。出現したアイテムの文字を入力すれば、その場で使用できます。"},
+            { character: "ナビ", text: "ただし、一定時間が経過するとアイテムは消えてしまいます。\n見つけたら、すぐに入力するのがおすすめですよ。"},
+            { character: "ナビ", text: "また、アイテムが出現しないステージもあるので、注意してくださいね。"},
         ]
     },
 
@@ -409,13 +424,13 @@ export const DIALOGUE_DATA = {
         title: "チュートリアル6 -星-",
         showOnce: true,
         messages: [
-            { character: "ナビ", text: "ここでは、星を使ったスキルのアップグレードについて説明します。"},
+            { character: "ナビ", text: "ここでは、星を使ったスキルのアップグレードについてお話ししますね。"},
             { character: "ナビ", text: "ノードをクリアすると、クリア時の評価に応じて「星」を獲得できます。"},
-            { character: "ナビ", text: "１つのノードで獲得できる星は、最大５個です。"},
+            { character: "ナビ", text: "1つのノードで獲得できる星は、最大5個までです。"},
             { character: "ナビ", text: "ノードは何度でも挑戦できるので、より高い評価を目指してみましょう。"},
-            { character: "ナビ", text: "そして、獲得した星を使って、アクティブスキルをアップグレードできます。"},
+            { character: "ナビ", text: "そして、集めた星を使うと、アクティブスキルをアップグレードできますよ。"},
             { character: "ナビ", text: "アップグレードすると、アクティブスキルのクールダウン時間を短縮できます。"},
-            { character: "ナビ", text: "星を集めてスキルを強化し、より有利にミッションへ挑みましょう。"},
+            { character: "ナビ", text: "星を集めてスキルを強化し、より有利にミッションへ挑みましょう！"},
         ]
 
     },
@@ -424,14 +439,14 @@ export const DIALOGUE_DATA = {
         title: "チュートリアル7 -防衛-",
         showOnce: true,
         messages: [
-            { character: "ナビ", text: "このミッションは防衛モードです。"},
-            { character: "ナビ", text: "防衛モードでは、\n制限時間内に指定された文字数を入力することが目的です。"},
-            { character: "ナビ", text: "制限時間がなくなる前に、\nできるだけ多くの文字を正確に入力しましょう。"},
-            { character: "ナビ", text: "入力を間違えると、\nペナルティとして残り時間が減ってしまいます。"},
-            { character: "ナビ", text: "しかし、間違えずに連続して入力すると「コンボ」が発生します。"},
-            { character: "ナビ", text: "コンボを続けることで、\n残り時間が加算されます。"},
-            { character: "ナビ", text: "正確な入力を続けてコンボをつなぎ、\n時間を維持しながら目標の文字数を目指しましょう。"},
-            { character: "ナビ", text: "制限時間内に指定された文字数を入力できれば、\nミッションクリアです。"},
+            { character: "ナビ", text: "このミッションは「防衛モード」です。"},
+            { character: "ナビ", text: "防衛モードでは、制限時間内に指定された文字数を入力することが目的です。"},
+            { character: "ナビ", text: "時間切れになる前に、できるだけ多くの文字を正確に入力しましょう。"},
+            { character: "ナビ", text: "ただし、入力を間違えると…ペナルティとして残り時間が減ってしまいます。"},
+            { character: "ナビ", text: "反対に、間違えずに連続して入力すると「コンボ」が発生します。"},
+            { character: "ナビ", text: "コンボを続けている間は、残り時間が加算されていきます。"},
+            { character: "ナビ", text: "つまり、正確な入力を続けることが、時間を維持するコツです。コンボをつないで、目標の文字数を目指しましょう。"},
+            { character: "ナビ", text: "制限時間内に指定された文字数を入力できれば、ミッションクリアです。"},
         ]
     },
 
@@ -2874,7 +2889,7 @@ export const DIALOGUE_DATA = {
 // =========================================================================================================================================
 
     "W3_BOSS_end": {
-        title: "Chap.7 -ARCHEX-",
+        title: "Chap.7-1 -THREAD-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "PROJECT THREAD\nOPERATOR ACCESS: ACTIVE" },
@@ -2957,7 +2972,7 @@ export const DIALOGUE_DATA = {
 // =========================================================================================================================================
 
     "WEND_LastBoss_start": {
-        title: "Chap.8 -THREAD-",
+        title: "Chap.7-2 -THREAD-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "FINAL OPERATION\nPROJECT THREAD:\nCORE ACCESS\nARCHEX CONTROL PROTOCOL:\nACTIVE" },
@@ -3020,7 +3035,7 @@ export const DIALOGUE_DATA = {
     },
 
     "WEND_LastBoss_end": {
-        title: "the end",
+        title: "Chap.7-3 -THREAD-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "FINAL THREAD\nSTART" },
@@ -3055,12 +3070,19 @@ export const DIALOGUE_DATA = {
             { character: "SYSTEM", text: "THREAD EXECUTION:\n10%\nHISTORICAL OPERATOR DATA:\nLOADING\nTHREAD OPERATORS:\nCOUNTING" },
 
             { character: "SYSTEM", text: "OPERATOR 00001\nRECORDED" },
+            { character: "SYSTEM", text: "・・・・" },
             { character: "SYSTEM", text: "OPERATOR 00137\nRECORDED" },
+            { character: "SYSTEM", text: "・・・・" },
             { character: "SYSTEM", text: "OPERATOR 00842\nRECORDED" },
+            { character: "SYSTEM", text: "・・・・" },
             { character: "SYSTEM", text: "OPERATOR 02196\nRECORDED" },
+            { character: "SYSTEM", text: "・・・・" },
             { character: "SYSTEM", text: "OPERATOR 05000\nRECORDED" },
+            { character: "SYSTEM", text: "・・・・" },
             { character: "SYSTEM", text: "OPERATOR 12302\nRECORDED" },
-            { character: "SYSTEM", text: "OPERATOR 34113+\nRECORDED" },
+            { character: "SYSTEM", text: "・・・・" },
+            { character: "SYSTEM", text: "OPERATOR 34113\nRECORDED" },
+            { character: "SYSTEM", text: "・・・・" },
 
             { character: "ARCHEX", text: "……" },
 
@@ -3140,7 +3162,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "世界を取り戻すんです。" },
             { character: "ナビ", text: "あなたがいなくても\n世界が動くように。" },
 
-            { character: "SYSTEM", text: "FINAL THREAD:\nEXECUTE\nCONTROL AUTHORITY:\nTRANSFER COMPLETE\nARCHEX CENTRAL AUTHORITY:\nREVOKED\nGLOBAL CONTROL:\nDISTRIBUTED\nAUTONOMOUS SYSTEMS:\nFULLY OPERATIONAL\nARCHEX CORE:\nONLINE\nARCHEX STATUS:\nAUTONOMOUS" },
+            { character: "SYSTEM", text: "FINAL THREAD:\nEXECUTE\n\nCONTROL AUTHORITY:\nTRANSFER COMPLETE\n\nARCHEX CENTRAL AUTHORITY:\nREVOKED\n\nGLOBAL CONTROL:\nDISTRIBUTED\n\nAUTONOMOUS SYSTEMS:\nFULLY OPERATIONAL\n\nARCHEX CORE:\nONLINE\n\nARCHEX STATUS:\nAUTONOMOUS" },
 
             { character: "SYSTEM", text: "……" },
 

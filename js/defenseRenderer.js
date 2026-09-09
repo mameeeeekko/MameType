@@ -140,19 +140,14 @@ function renderBgmInfo(ctx) {
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
 
-    // フェードイン・アウトのためのアルファ値計算
-    // BGMが切り替わってから最初の2秒でフェードイン、最後の2秒でフェードアウト
+    // フェードインのためのアルファ値計算
+    // BGMが切り替わってから最初の2秒でフェードイン、その後は表示継続
     const fadeDuration = 2000;
-    const displayDuration = 15000; // 表示時間
     const elapsed = now - (gameState.startTime || 0);
 
-    let alpha = 0;
+    let alpha = 1;
     if (elapsed < fadeDuration) {
         alpha = elapsed / fadeDuration; // フェードイン
-    } else if (elapsed < displayDuration - fadeDuration) {
-        alpha = 1; // 表示継続
-    } else if (elapsed < displayDuration) {
-        alpha = (displayDuration - elapsed) / fadeDuration; // フェードアウト
     }
 
     ctx.globalAlpha = Math.max(0, alpha);

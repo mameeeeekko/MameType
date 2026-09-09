@@ -558,13 +558,16 @@ export const LONG_TEXT_TAGS = [
     "プログラミング",
     "自作キーボード",
     "セキュリティ",
-    "おもしろ"
+    "おもしろ",
+    "医療",
+    "時事",
+
 ];
 
 export const LONG_TEXT_CHALLENGE_TABLE = { 
-    0: { tags: [ { tag: "文学", weight: 5 }, { tag: "おもしろ", weight: 2 } ] },
-    1: { tags: [ { tag: "文学", weight: 5 }, { tag: "セキュリティ", weight: 2 } ] }, 
-    2: { tags: [ { tag: "おもしろ", weight: 5 }, { tag: "自作キーボード", weight: 2 } ] },
+    0: { tags: [ { tag: "文学", weight: 2 }, { tag: "おもしろ", weight: 2 }, { tag: "時事", weight: 3 } ] },
+    1: { tags: [ { tag: "文学", weight: 3 }, { tag: "セキュリティ", weight: 2 }, { tag: "医療", weight: 3 } ] }, 
+    2: { tags: [ { tag: "おもしろ", weight: 5 }, { tag: "自作キーボード", weight: 2 }, ] },
     3: { tags: [ { tag: "セキュリティ", weight: 4 }, { tag: "プログラミング", weight: 2 }, { tag: "自作キーボード", weight: 1 } ] } 
 };
 
@@ -1114,7 +1117,17 @@ export const SKILL_TREE = {
         id: "EXP_UP_1",
         skillId: "exp_up_1",
         ...buildSkill("normal", SKILL_DEPTH.MID, true, 1),
-        children: ["DEF_UP_2","SLOT_1"],
+        children: ["DEF_UP_2","SLOT_1","EXP_AUTO_1"],
+        requirements: buildRequirements(SKILL_DEPTH.MID),
+    },
+
+    // ★オートスキル：EXP +10%（常時発動）
+    EXP_AUTO_1: {
+        id: "EXP_AUTO_1",
+        skillId: "exp_auto_1",
+        ...buildSkill("time_attack", SKILL_DEPTH.MID, true, 1),
+        effect: { type: "expUp", value: 0.10 },
+        children: ["EXP_UP_2"],
         requirements: buildRequirements(SKILL_DEPTH.MID),
     },
 

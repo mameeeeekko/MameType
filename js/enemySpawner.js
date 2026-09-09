@@ -1,4 +1,4 @@
-import { Enemy, EnemyTypes, ItemEnemy, ItemTypes } from "./enemy.js";
+import { Enemy, EnemyTypes, ItemEnemy, ItemTypes, spawnBitEnemiesFor } from "./enemy.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getUISafeMinEnemyY } from "./enemyCore.js";
 import { getWord } from "./target.js";
@@ -59,6 +59,113 @@ function getUniqueWord(type, enemies = [], retry = 5){
 }
 
 // =====================================================
+// 共通：テキストラベル込みの当たり判定用矩形
+// =====================================================
+// 敵1体が実際に占有する領域 = 本体の円＋上部に表示される2行テキストの矩形。
+// スポーン時の重なり回避と、移動時の近接分離（enemy.js）で共用する。
+
+const LABEL_CHAR_WIDTH = 11;  // 17px モノスペースフォントの1文字幅（概算）
+const LABEL_TOP_MARGIN = 40;  // 上部2行テキスト分の高さ
+const LABEL_BOX_PADDING = 6;  // 矩形の余白
+
+/**
+ * 敵の表示領域（本体＋上部テキストラベル）を矩形として返す
+ * @param {number} x 敵の中心X
+ * @param {number} y 敵の中心Y
+ * @param {number} size 敵の半径
+ * @param {string} text 出題テキスト（かな）
+ * @param {string} [word] 表示テキスト（漢字含む）
+ * @param {string} [baseRomaji] ローマ字
+ * @returns {{x:number, y:number, w:number, h:number}}
+ */
+export function getLabelBox(x, y, size, text, word = "", baseRomaji = "") {
+    const radius = size || 15;
+    const textLen = (text?.length || 0);
+    const wordLen = (word?.length || 0);
+    const romaLen = (baseRomaji?.length || 0) || Math.ceil(textLen * 1.6);
+
+    // 漢字/日本語: 1文字約16〜17px、モノスペースローマ字: 1文字約10.5〜11px
+    const textW = textLen * 14;
+    const wordW = wordLen * 17;
+    const romaW = romaLen * 11;
+    const contentW = Math.max(textW, wordW, romaW, radius * 2);
+
+    const padding = 12; // 左右に十分なマージンを確保
+    const w = contentW + padding * 2;
+
+    // Y方向:
+    // 上段（word）ベースライン: y - radius - 15、文字高さを考慮して上端は約 y - radius - 38
+    // 下段（roma）ベースライン: y - radius
+    // 敵本体下端: y + radius + 4
+    const top = y - radius - 38;
+    const bottom = y + radius + 4;
+    return { x: x - w / 2, y: top, w, h: bottom - top };
+}
+
+/**
+ * 敵インスタンスからラベル矩形を取得するヘルパー
+ * @param {object} enemy
+ * @returns {{x:number, y:number, w:number, h:number}}
+ */
+export function getEnemyLabelBox(enemy) {
+    if (!enemy) return { x: 0, y: 0, w: 0, h: 0 };
+    const r = enemy.radius || enemy.type?.size || 15;
+    return getLabelBox(enemy.x || 0, enemy.y || 0, r, enemy.text, enemy.word, enemy.baseRomaji);
+}
+
+/**
+ * 敵の「文字列ラベル部分のみ」の矩形を返す（本体の円は含まない）
+ * updateEnemyTextOffsets による文字同士の重なり判定専用。
+ * 上段（word）ベースライン: y - radius - 15 / 下段（roma）ベースライン: y - radius
+ * @param {object} enemy
+ * @returns {{x:number, y:number, w:number, h:number}}
+ */
+export function getEnemyTextBox(enemy) {
+    if (!enemy) return { x: 0, y: 0, w: 0, h: 0 };
+    const r = enemy.radius || enemy.type?.size || 15;
+    return getTextBox(enemy.x || 0, enemy.y || 0, r, enemy.text, enemy.word, enemy.baseRomaji);
+}
+
+/**
+ * 文字列（上段word＋下段romaの2行）のみの矩形を計算する
+ * @returns {{x:number, y:number, w:number, h:number}}
+ */
+function getTextBox(x, y, radius, text, word = "", baseRomaji = "") {
+    const textLen = (text?.length || 0);
+    const wordLen = (word?.length || 0);
+    const romaLen = (baseRomaji?.length || 0) || Math.ceil(textLen * 1.6);
+
+    // 漢字/日本語: 1文字約17px、かな: 約14px、モノスペースローマ字: 約11px（概算）
+    // 英数字のみの単語は文字幅が狭い（約10px/文字）ため、誤検出を避けて縮めて見積もる
+    const isAsciiWord = /^[a-zA-Z0-9\s.,!?-]*$/.test(word || "");
+    const wordCharW = isAsciiWord ? 10 : 17;
+
+    const textW = textLen * 14;
+    const wordW = wordLen * wordCharW;
+    const romaW = romaLen * 11;
+    const contentW = Math.max(textW, wordW, romaW);
+
+    const padding = 6; // 左右の余白
+    const w = contentW + padding * 2;
+
+    // Y方向（本体を含まない・文字2行分のみ）:
+    // 上段（word）: ベースライン y - radius - 15 → 上端は約 y - radius - 29
+    // 下段（roma）: ベースライン y - radius → 下端は約 y - radius + 5
+    const top = y - radius - 29;
+    const bottom = y - radius + 5;
+    return { x: x - w / 2, y: top, w, h: bottom - top };
+}
+
+/**
+ * 2つの矩形が重なるか判定する
+ * @returns {boolean}
+ */
+export function boxesOverlap(a, b) {
+    return a.x < b.x + b.w && b.x < a.x + a.w &&
+           a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+// =====================================================
 // 共通：スポーン位置
 // =====================================================
 
@@ -66,7 +173,9 @@ function getSpawnPosition(
     player,
     canvas,
     size,
-    existingEnemies = []
+    existingEnemies = [],
+    text = "",
+    word = ""
 ){
 
     const padding = 10;
@@ -89,8 +198,7 @@ function getSpawnPosition(
         canvasHeight - size - padding;
 
     // 複数回トライして既存敵と重ならない位置を探す
-    const attempts = 18;
-    const margin = 8; // 最低余白
+    const attempts = 24;
 
     for (let i = 0; i < attempts; i++) {
         const angle = Math.random() * Math.PI * 2;
@@ -115,13 +223,13 @@ function getSpawnPosition(
             y = Math.min(Math.max(y, minY), maxY);
         }
 
-        // 重なりチェック
+        // 重なりチェック（テキストラベル込みの矩形で判定し、文字同士が重なるのを防ぐ）
         let ok = true;
+        const box = getLabelBox(x, y, size, text, word);
         for (const e of existingEnemies) {
             if (!e || e.isDead) continue;
-            const otherR = e.type?.size || e.radius || 15;
-            const dd = Math.hypot(x - (e.x || 0), y - (e.y || 0));
-            if (dd < (size + otherR + margin)) {
+            const otherBox = getEnemyLabelBox(e);
+            if (boxesOverlap(box, otherBox)) {
                 ok = false;
                 break;
             }
@@ -195,7 +303,7 @@ export function spawnEnemy(
     // 固定座標指定があれば使用、なければランダム
     const pos = entry.pos 
         ? { x: entry.pos.x, y: entry.pos.y } 
-        : getSpawnPosition(player, canvas, type.size, enemies);
+        : getSpawnPosition(player, canvas, type.size, enemies, target.text, target.word);
 
     const enemy = new Enemy(
         target.word,
@@ -240,6 +348,11 @@ export function spawnEnemy(
 
     enemy.baseRomaji =
         buildBaseRomaji(enemy.text);
+
+    // ★ビット連動ボス: 左右のビットを初期スポーンする（ビットも普通の敵として倒せる）
+    if (type.isBitBoss) {
+        spawnBitEnemiesFor(enemy, { enemies });
+    }
 
     return enemy;
 }
@@ -300,7 +413,9 @@ export function spawnItemEnemy(state, config, itemTableOverride){
             player,
             canvas,
             type.size,
-            state.enemies
+            state.enemies,
+            target.text,
+            target.word
         );
 
     // item生成

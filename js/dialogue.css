@@ -84,9 +84,10 @@
 }
 
 .log-chapter-title {
+    font-size: 12px;
     font-weight: bold;
     color: #8b949e;
-    margin-bottom: 8px;
+    margin-bottom: 1px;
     cursor: pointer;
     transition: color 0.2s;
 }
@@ -94,9 +95,9 @@
     color: #c9d1d9;
 }
 .log-chapter-status {
-    font-size: 12px;
+    font-size: 10px;
     color: #58a6ff;
-    margin-top: 4px;
+    margin-top: 1px;
 }
 .log-chapter-locked .log-chapter-title {
     opacity: 0.6;

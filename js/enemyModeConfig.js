@@ -850,7 +850,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
 
         case 6: // 【サボタージュ】HPが徐々に減る中、指定数撃破
             const sabotageKillTarget = killGoal + Math.floor(i / 3);
-            config.spawn.limit = Math.floor(sabotageKillTarget * 1.5);
+            config.spawn.limit = null;
             config.endConditions = { hpZero: true, killCount: sabotageKillTarget };
             config.clearConditions = { killCount: sabotageKillTarget };
             config.spawn.immediateOnClear = true;
@@ -878,7 +878,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
 
           case 7: // 【圧倒】途方もない数の敵を捌き切れ！ (Overwhelm)
             const overwhelmTime = timeLimit + (i * 500); // 長めの生存時間
-            config.spawn.interval *= 0.8; // 出現頻度を抑える (0.7 -> 0.8)
+            config.spawn.interval *= 0.6; // 出現頻度を抑える (0.7 -> 0.8)
             config.spawn.maxAlive = Math.min(14, maxAlive + 6); // 大幅増 → 画面に敵が溜まり続ける
             config.enemySpeedMultiplier = 0.6; // ★ 敵を低速化：到達が遅く、画面上に滞留して密度が上がる
             config.spawn.limit = null; // 無限湧き
@@ -2191,6 +2191,34 @@ export const STAGES = {
       type: "accuracy",
       thresholds: [0.75, 0.82, 0.90, 0.95, 0.99]
     }
-  }
+  },
+
+  // =====================================================
+  // ★ビット連動型ボス(BOSS_4)
+  // =====================================================
+  // 本体(BOSS_4)と左右のビット(BIT_LEFT / BIT_RIGHT)が電磁波ラインで薄く連結。
+  // ビットはプレイヤーには向かわず、本体周囲を楕円軌道で不規則に漂う。
+  // ビットは普通の敵と同じ設定(hitCount / tags / behaviors等)で倒せる。
+  // 撃破されると本体が bitReviveTime 秒後に復活させ、本体が死ねばビットも消える。
+  W4_WORLD_BOSS: {
+    phases: [
+      {
+        name: "phase 1",
+        spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
+        enemyTable: getTierEnemies("T6", ENEMY_TIER_BALANCED),
+        phaseConditions: { killCount: 20 }
+      },
+      {
+        name: "boss",
+        bgm: "bgm_boss1",
+        spawn: { interval: 1000, limit: 1, maxAlive: 1 },
+        enemyTable: [{ type: "BOSS_4", weight: 100, pos: { x: 800, y: 200 } }],
+        phaseConditions: { killCount: 1 }
+      }
+    ],
+    endConditions: { hpZero: true },
+    clearConditions: { survive: true },
+    star: { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
+  },
 
 };

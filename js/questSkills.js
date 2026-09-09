@@ -717,8 +717,13 @@ export const PASSIVE_SKILLS = {
     equipable: false,
   },
 
-
-
+  // オートスキル：獲得EXP +10%（常時発動）
+  exp_auto_1: {
+    name: "成長促進",
+    icon: "expup_1",
+    desc: "獲得経験値が10%上昇（常時発動）",
+    equipable: false,
+  },
 
 };
 
@@ -764,7 +769,7 @@ export const ACTIVE_SKILLS = {
     name: "リカバー",
     icon: "recover_3",
   desc: "HPを200回復",
-    cooldown: 160, //sec
+    cooldown: 150, //sec
     type: "heal",
     value: 200,
   },
@@ -792,7 +797,7 @@ export const ACTIVE_SKILLS = {
     name: "フリーズ8",
     icon: "freeze_3",
     desc: "敵を12秒間停止",
-    cooldown: 170,
+    cooldown: 160,
     type: "freeze",
     value: 12, // seconds
   },
@@ -838,7 +843,7 @@ export const ACTIVE_SKILLS = {
     name: "殲光",
     icon: "kill_all",
     desc: "すべての敵を撃破",
-    cooldown: 200,
+    cooldown: 220,
     type: "kill",
     value: {
       mode: "all",
@@ -850,7 +855,7 @@ export const ACTIVE_SKILLS = {
     name: "山嵐",
     icon: "knockback",
     desc: "画面端まで敵をノックバックさせる",
-    cooldown: 180, //200
+    cooldown: 160, //200
     type: "knockback",
     value: {
       mode: "edge"
@@ -880,7 +885,7 @@ export const ACTIVE_SKILLS = {
     name: "バリア",
     icon: "guard_3",
     desc: "12秒間無敵になる",
-    cooldown: 190,//240
+    cooldown: 180,//240
     type: "invincible",
     value: 12
   }

@@ -303,6 +303,8 @@
           <option value="自作キーボード">自作キーボード</option>
           <option value="おもしろ">おもしろ</option>
           <option value="プログラミング">プログラミング</option>
+          <option value="医療">医療</option>
+          <option value="時事">時事</option>
         </select>
       </div>
       <button id="startLongFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
@@ -518,10 +520,10 @@
             <label>Active Skill</label>
           </div>
           <div class="keybind-controls">
-            <select id="key-unlock"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
-            <select id="key-autolock"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
-            <select id="key-pause"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
-            <select id="key-skill"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option></select>
+            <select id="key-unlock"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option><option value="Control">CTRL</option><option value="ArrowUp">↑</option><option value="ArrowDown">↓</option><option value="ArrowLeft">←</option><option value="ArrowRight">→</option></select>
+            <select id="key-autolock"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option><option value="Control">CTRL</option><option value="ArrowUp">↑</option><option value="ArrowDown">↓</option><option value="ArrowLeft">←</option><option value="ArrowRight">→</option></select>
+            <select id="key-pause"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option><option value="Control">CTRL</option><option value="ArrowUp">↑</option><option value="ArrowDown">↓</option><option value="ArrowLeft">←</option><option value="ArrowRight">→</option></select>
+            <select id="key-skill"><option value="Tab">TAB</option><option value="Enter">ENTER</option><option value="Backspace">BS</option><option value="Delete">DEL</option><option value="Control">CTRL</option><option value="ArrowUp">↑</option><option value="ArrowDown">↓</option><option value="ArrowLeft">←</option><option value="ArrowRight">→</option></select>
           </div>
         </div>
         <button id="saveKeybindBtn">Save Keybinds</button>
@@ -1351,12 +1353,6 @@
   メインスクリプト
 ===================================================== -->
 <script type="module" src="./js/main.js"></script>
-
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./service-worker.js");
-}
-</script>
 
 <div id="screenOverlay"></div>
 

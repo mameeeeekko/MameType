@@ -136,19 +136,19 @@ export function showEnemyResult({
                     <div class="r-row"><span class="result-label">Misses</span><span class="result-value">${stats.mistakeCount}</span></div>
                     <div class="r-row"><span class="result-label">Accuracy</span><span class="result-value">${stats.accuracy.toFixed(1)}%</span></div>
                     <div class="r-row"><span class="result-label">gKPM</span><span class="result-value">${stats.gKpm.toFixed(0)}</span></div>
-                    <div class="r-row"><span class="result-label">PlayTime</span><span class="result-value">${((stats.endTime - stats.startTime)/1000).toFixed(1)}s</span></div>
-                    <div class="r-row"><span class="result-label">TypingTime</span><span class="result-value">${((stats.typingActiveTime)/1000).toFixed(1)}s</span></div>
+                    <div class="r-row"><span class="result-label">PlayTime</span><span class="result-value">${formatTimeMMSS((stats.endTime - stats.startTime) / 1000)}</span></div>
+                    <div class="r-row"><span class="result-label">TypingTime</span><span class="result-value">${formatTimeMMSS(stats.typingActiveTime / 1000)}</span></div>
                     <div class="r-row"><span class="result-label">MaxCombo</span><span class="result-value">${stats.maxCombo}</span></div>
                     <div class="r-row"><span class="result-label">MaxChain</span><span class="result-value">${stats.maxChainCount}</span></div>
                 </div>
 
                 <div class="result-badges">
-                    ${isNewRecord ? `<div class="r-badge new">NEW RECORD</div>` : ""}
+                    ${isNewRecord ? `<div class="result-note new">★ NEW RECORD</div>` : ""}
                     ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
                 </div>
 
-                <div class="online-ranking-container" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;">
-                    ${onlineUpdated ? `<div class="r-badge online-update">ONLINE RECORD UPDATED</div>` : ""}
+                <div class="online-ranking-container">
+                    ${onlineUpdated ? `<div class="result-note online">↑ ONLINE RECORD UPDATED</div>` : ""}
                     <div id="onlineRanking" class="result-online-ranking"></div>
                 </div>
             </div>
@@ -209,4 +209,12 @@ function formatSigned(value, digits = 2) {
     return num >= 0
         ? `+${num.toFixed(digits)}`
         : num.toFixed(digits);
+}
+
+// 秒 → m:ss（例: 5:24）
+function formatTimeMMSS(seconds) {
+    const total = Math.max(0, Math.floor(seconds || 0));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
 }

@@ -62,7 +62,6 @@ export function showResult({
   totalMistake,
   totalTime,
   solvedCount,
-  isTimeUp,
   mode,
   totalKpm,
   eScore,
@@ -136,17 +135,16 @@ export function showResult({
     <div class="r-row"><span class="result-label">Accuracy</span><span class="result-value">${accuracyText}</span></div>
     <div class="r-row"><span class="result-label">KPM</span><span class="result-value">${kpmText}</span></div>
     <div class="r-row"><span class="result-label">Misses</span><span class="result-value">${totalMistake}</span></div>
-    <div class="r-row"><span class="result-label">Time</span><span class="result-value">${Math.round(totalTime)}s</span></div>
+    <div class="r-row"><span class="result-label">Time</span><span class="result-value">${formatTimeMMSS(totalTime)}</span></div>
   </div>
 
   <div class="result-badges">
-    ${isTimeUp ? `<div class="r-badge timeup">時間切れ</div>` : ""}
-    ${isNewRecord ? `<div class="r-badge new">NEW RECORD</div>` : ""}
+    ${isNewRecord ? `<div class="result-note new">NEW RECORD</div>` : ""}
     ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
   </div>
 
-  <div class="online-ranking-container" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;">
-    ${(onlineUpdated && mode !== "miss_practice") ? `<div class="r-badge online-update">ONLINE RECORD UPDATED</div>` : ""}
+  <div class="online-ranking-container">
+    ${(onlineUpdated && mode !== "miss_practice") ? `<div class="result-note online">ONLINE RECORD UPDATED</div>` : ""}
     <div id="onlineRanking" class="result-online-ranking"></div>
   </div>
 
@@ -178,4 +176,12 @@ export function showResult({
       if (onlineRankingEl) onlineRankingEl.innerHTML = "";
     }
   });
+}
+
+// 秒 → m:ss（例: 5:24）
+function formatTimeMMSS(seconds) {
+  const total = Math.max(0, Math.floor(seconds || 0));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }

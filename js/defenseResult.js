@@ -149,7 +149,7 @@ function _renderStandardDefenseResult(stats, isFreeMode, rankingInfo) {
             ${stats.failed ? `<div class="result-failed">MISSION FAILED</div>` : ""}
 
             <div class="result-stats-grid">
-                <div class="r-row"><span class="result-label">PlayTime</span><span class="result-value">${((stats.endTime - stats.startTime) / 1000).toFixed(1)}s</span></div>
+                <div class="r-row"><span class="result-label">PlayTime</span><span class="result-value">${formatTimeMMSS((stats.endTime - stats.startTime) / 1000)}</span></div>
                 <div class="r-row"><span class="result-label">Solved</span><span class="result-value">${stats.solvedCount ?? 0}</span></div>
                 <div class="r-row"><span class="result-label">TotalChars</span><span class="result-value">${stats.countedTypedChars ?? 0} / ${totalKeyChars}</span></div>
                 <div class="r-row"><span class="result-label">TotalKeystrokes</span><span class="result-value">${stats.totalKeystrokes}</span></div>
@@ -161,12 +161,12 @@ function _renderStandardDefenseResult(stats, isFreeMode, rankingInfo) {
             </div>
 
             <div class="result-badges">
-                ${isNewRecord ? `<div class="r-badge new">NEW RECORD</div>` : ""}
+                ${isNewRecord ? `<div class="result-note new">★ NEW RECORD</div>` : ""}
                 ${isRankIn ? `<div class="r-badge rank">RANK IN ${rankPos ? rankPos+"位" : ""}</div>` : ""}
             </div>
 
-            <div class="online-ranking-container" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;">
-                ${onlineUpdated ? `<div class="r-badge online-update">ONLINE RECORD UPDATED</div>` : ""}
+            <div class="online-ranking-container">
+                ${onlineUpdated ? `<div class="result-note online">↑ ONLINE RECORD UPDATED</div>` : ""}
                 <div id="onlineRanking" class="result-online-ranking"></div>
             </div>
         </div>
@@ -242,7 +242,7 @@ function _renderQuestDefenseResult(stats) {
 
             <div class="quest-skill-block"  style="margin-bottom: 30px;">
                 <div class="quest-skill-stats" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px 16px;">
-                    <div class="quest-skill-stat"><div class="label">PlayTime</div><div class="value">${((stats.endTime - stats.startTime) / 1000).toFixed(2)}s</div></div>
+                    <div class="quest-skill-stat"><div class="label">PlayTime</div><div class="value">${formatTimeMMSS((stats.endTime - stats.startTime) / 1000)}</div></div>
                     <div class="quest-skill-stat"><div class="label">Typed Chars</div><div class="value">${stats.countedTypedChars ?? 0} / ${stats.totalKeyChars ?? 0}</div></div>                  
                     <div class="quest-skill-stat"><div class="label">Solved</div><div class="value">${stats.solvedCount ?? 0}</div></div>
                     <div class="quest-skill-stat"><div class="label">MaxCombo</div><div class="value">${stats.maxCombo ?? 0}</div></div>
@@ -282,4 +282,12 @@ function playCalcAnimation() {
         }, items.length * 140 + 120);
 
     }, 50);
+}
+
+// 秒 → m:ss（例: 5:24）
+function formatTimeMMSS(seconds) {
+    const total = Math.max(0, Math.floor(seconds || 0));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
 }

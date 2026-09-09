@@ -728,11 +728,19 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   border-radius: 8px;
   margin: 6px 3px 0 3px;
 }
-.r-badge.timeup { background: #ef4444; color: #fff; }
-.r-badge.new    { background: #f59e0b; color: #fff; }
 .r-badge.rank   { background: #10b981; color: #fff; }
-.r-badge.online-update { background: #3b82f6; color: #fff; }
-.r-badge.online   { background: #2563eb; color: #fff; }
+.r-badge.online { background: #2563eb; color: #fff; }
+
+/* 結果の記録更新表示(バッジではなくシンプルなテキスト) */
+.result-note {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 6px 4px 0;
+}
+.result-note.new    { color: #10b981; } /* ★ NEW RECORD(RANK IN と同じ緑) */
+.result-note.online { color: #3b82f6; } /* ↑ ONLINE RECORD UPDATED */
 
 
 .result-free-badge {
@@ -895,25 +903,25 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
     margin-top: 15px;
 }
 
+/* ONLINE RECORD UPDATED をランキングの左横に並べる */
 .online-ranking-container {
   display: flex;
-  justify-content: center; /* 中央揃え */
-  align-items: center;    /* 垂直方向中央揃え */
-  gap: 15px;              /* ランキングとバッジの間隔 */
-  margin-top: 20px;       /* 上の要素との間隔 */
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
   width: 100%;
 }
 
 .online-ranking-container .result-online-ranking {
-  flex-grow: 1; /* ランキング部分ができるだけ幅を取るように */
-  max-width: 400px; /* ランキングの最大幅（任意で調整） */
+  max-width: 400px; /* 幅はコンテンツに合わせる(上限のみ) */
 }
 
-.online-ranking-container .r-badge.online-update {
-  flex-shrink: 0; /* バッジが縮まないように */
-  /* 必要に応じて、バッジのスタイルを微調整 */
-  padding: 8px 16px;
-  font-size: 0.9em;
+.online-ranking-container .result-note.online {
+  flex-shrink: 0;
+  margin: 0;
+  padding-top: 4px; /* ランキング先頭行と縦位置を合わせる 4px*/
 }
 
 /* ボタン群 */
@@ -1451,6 +1459,19 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #ffffff !important;
   text-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
   box-shadow: 0 0 12px rgba(88, 166, 255, 0.3);
+}
+
+/* 難易度ボタン（EASY/NORMAL/HARD/MASTER）は4つ並んでも1行に収める
+   ※ createDifficultySelector で付与される .pattern-selector（wrap+gap:10px）より
+     後に宣言して、ラップされないように上書きする */
+.difficulty-buttons.pattern-selector {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.difficulty-buttons .pattern-btn {
+  padding: 8px 8px !important;
+  white-space: nowrap;
 }
 
 /* 設定項目行（スライダー） */
@@ -3419,29 +3440,31 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   position: relative;
 }
 
-/* 左パネル → 中央円 接続ライン */
+/* 左パネル → 中央円 接続ライン
+   ・中央コアとの間に余白を設けたため、従来より短くする
+   ・細めの1本線＋フェードイン→先端が淡く輝くシンプルなグラデーションで
+     スタイリッシュに（サイバー系UIの雰囲気に合わせたシアン系） */
 .hud-panel.left::after {
   content: "";
   position: absolute;
 
   top: 50%;
-  right: -54px;
+  right: -40px;
 
-  width: 54px;
-  height: 2px;
+  width: 40px;
+  height: 1.5px;
 
   transform: translateY(-50%);
 
   background: linear-gradient(
     90deg,
-    rgba(0,255,255,0.02) 0%,
-    rgba(0,255,255,0.08) 25%,
-    rgba(0,255,255,0.28) 60%,
-    rgba(0,255,255,0.95) 100%
+    rgba(0, 255, 255, 0.04) 0%,
+    rgba(0, 255, 255, 0.32) 60%,
+    rgba(0, 255, 255, 0.85) 100%
   );
 
   box-shadow:
-    0 0 6px rgba(0,255,255,0.35);
+    0 0 4px rgba(0, 255, 255, 0.22);
 }
 
 .hud-panel.left::before {
@@ -3449,7 +3472,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   position: absolute;
 
   top: 50%;
-  right: -56px;
+  right: -42px;
 
   width: 6px;
   height: 6px;
@@ -3467,7 +3490,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .hud-panel.left .connector-ring {
   position: absolute;
   top: 50%;
-  right: -62px;
+  right: -48px;
 
   width: 18px;
   height: 18px;
@@ -3554,8 +3577,16 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
        下端が overflow:hidden により切れてしまうため） */
   grid-template-rows: minmax(0, 1fr);
 
+  /* 左パネルと中央コアの間に余白を設ける
+     （中央↔右も同じ間隔で空け、円が中央に収まるバランスを維持） */
+  column-gap: 24px;
+
   width: min(1000px, calc(var(--dvw) * 95));
   height: calc(var(--dvh) * 90);
+
+  /* border を幅に含める。content-box のままだと実幅が 1000px+2px となり
+     親の .quest-page からわずかに横はみ出し → 横スクロールバーが出てしまう */
+  box-sizing: border-box;
 
   background: rgba(10,10,15,0.97);
   border: 1px solid rgba(0,255,255,0.15);
@@ -4013,11 +4044,11 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .quest-skill-bar {
   position: relative;
   width: 100%;
-  height: 10px;
+  /* 細めのシンプルなバー（スキル装備画面の .skill-bar と同じ6px） */
+  height: 6px;
   background: rgba(255,255,255,0.06);
   border-radius: 999px;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .quest-skill-bar-center {
@@ -4038,12 +4069,10 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 .quest-skill-bar-fill.up {
   background: linear-gradient(90deg, #00d2ff, #00ff9d);
-  box-shadow: 0 0 6px rgba(0,255,200,0.5);
 }
 
 .quest-skill-bar-fill.down {
   background: linear-gradient(90deg, #ff7b7b, #ff4747);
-  box-shadow: 0 0 6px rgba(255,80,80,0.4);
 }
 
 /* =========================
@@ -5717,6 +5746,67 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   margin-top: 1px;
 }
 
+/* =====================================================
+   横スクロールバー表示制御（クエストステータス / スキル装備画面）
+   ・基本は横スクロールバーを表示しない
+     （わずかな横はみ出しはクリップして吸収する）
+   ・モーダルboxの幅が縮んで内容が収まらなくなった時だけ
+     横スクロール（=横スクロールバー）を許可する
+     ※ box側をインラインサイズコンテナにして、
+       コンテナクエリで切り替えている
+   ===================================================== */
+
+/* モーダルboxを幅基準のサイズコンテナにする（縮み判定用） */
+.quest-stats-box {
+  container-type: inline-size;
+  container-name: quest-stats-box;
+}
+
+.quest-modal-box.quest-modal-skill {
+  container-type: inline-size;
+  container-name: quest-skill-modal;
+}
+
+/* ---- 基本：横スクロールしない ---- */
+/* クエストステータス画面（各ページ・右HUDパネル） */
+.quest-stats-modal .quest-page.active,
+.quest-stats-modal .hud-panel.right {
+  overflow-x: hidden;
+}
+
+/* カード内容はインラインで overflow-y 指定されているため、
+   横方向だけ important で上書きする */
+.quest-stats-modal .quest-bottom-card > div {
+  overflow-x: hidden !important;
+}
+
+/* スキル装備画面（コンテンツ領域・左カラム・スキル一覧） */
+.quest-modal-box.quest-modal-skill .quest-modal-content,
+.quest-modal-box.quest-modal-skill .skill-left-column,
+.quest-modal-box.quest-modal-skill .skill-list {
+  overflow-x: hidden;
+}
+
+/* ---- 縮んだ時だけ横スクロールを許可 ---- */
+@container quest-stats-box (max-width: 900px) {
+  .quest-stats-modal .quest-page.active,
+  .quest-stats-modal .hud-panel.right {
+    overflow-x: auto;
+  }
+
+  .quest-stats-modal .quest-bottom-card > div {
+    overflow-x: auto !important;
+  }
+}
+
+@container quest-skill-modal (max-width: 900px) {
+  .quest-modal-box.quest-modal-skill .quest-modal-content,
+  .quest-modal-box.quest-modal-skill .skill-left-column,
+  .quest-modal-box.quest-modal-skill .skill-list {
+    overflow-x: auto;
+  }
+}
+
 .skill-wrapper {
   /* display: flex; は2カラムレイアウト側で再定義 */
   gap: 18px;
@@ -6704,8 +6794,10 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
    モバイル調整
    ===================================================== */
 /* 中間幅（グリッドが2カラムに折り返す範囲）では、
-   行の高さ固定を行わずパネル全体をスクロールで収める */
-@container (min-width: 601px) and (max-width: 980px) {
+   行の高さ固定を行わずパネル全体をスクロールで収める
+   ※ 横スクロール制御のため .quest-stats-box をサイズコンテナにしているため、
+     従来どおりステージ（body）基準で評価されるよう stage を明示 */
+@container stage (min-width: 601px) and (max-width: 980px) {
   .quest-stats-hud {
     grid-template-rows: none;
     height: auto;
@@ -6714,7 +6806,9 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   }
 }
 
-@container (max-width: 600px) {
+/* ※ このブロックには .quest-stats-box / スキルモーダルbox 内の要素も含まれるため、
+   従来どおりステージ（body）基準で評価されるよう stage を明示 */
+@container stage (max-width: 600px) {
   h1 {
     font-size: 2rem;
   }
@@ -7194,6 +7288,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 /* ジョークスタッフ（タイピングで増殖）※色は控えめに：通常文字とあまり変わらない程度 */
 .joke-staff {
+  margin-bottom: 9em; /* ★ジョークスタッフ同士の間隔。本編行(.staff-roll-line)の5emより広めに取る。調整はここ def5em */
   animation: jokePopIn 0.3s ease-out;
 }
 

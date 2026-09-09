@@ -39,7 +39,7 @@ export function getDisplayFullRoma({ text, pos, typed, inputedRomaji }) {
 
     // 記号
     if (isSymbol(kana)) {
-      result += SYMBOL_TABLE[kana];
+      result += SYMBOL_TABLE[kana] ?? kana;   // ★ 未登録記号でも "undefined" を表示しない
       i += kana.length;
       continue;
     }
@@ -73,7 +73,7 @@ export function getDisplayFullRoma({ text, pos, typed, inputedRomaji }) {
         ? candidates.find(r => r.startsWith(typed)) || candidates[0]
         : candidates[0];
 
-    result += sel;
+    result += sel ?? kana;   // ★ 候補未登録の文字でも "undefined" を表示しない
     i += kana.length;
   }
 

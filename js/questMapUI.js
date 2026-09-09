@@ -602,7 +602,7 @@ export function renderQuestMapUI(){
                 if (shouldAskDialogueChoice) {
                     showDialoguePlaybackChoicePopup(
                         "全クリア後の特典：この会話を再生しますか？",
-                        () => startDialogue(dialogueId, showIntro, false, startGameFunction),
+                        () => startDialogue(dialogueId, showIntro, false),
                         showIntro
                     );
                 } else if (shouldSkipDialogue) {
@@ -661,6 +661,7 @@ function renderWorldSelector(container) {
         prevBtn.classList.add("disabled");
     } else {
         prevBtn.onclick = () => {
+            playSE("mapmove"); // ★ワールド移動SE
             setSelectedWorldId(unlocked[currentIndex - 1]);
             renderQuestMapUI();
         };
@@ -680,6 +681,7 @@ function renderWorldSelector(container) {
         nextBtn.classList.add("disabled");
     } else {
         nextBtn.onclick = () => {
+            playSE("mapmove"); // ★ワールド移動SE
             setSelectedWorldId(unlocked[currentIndex + 1]);
             renderQuestMapUI();
         };
@@ -726,7 +728,10 @@ function renderQuestSideMenu(container){
     menu.appendChild(createBtn("EQUIP SKILLS", () => openQuestMenuModal("skill")));
     menu.appendChild(createBtn("UPGRADE", () => openQuestMenuModal("starUpgrade")));
     menu.appendChild(createBtn("STATUS (I)", () => document.getElementById("hudDetailBtn").click()));
-    menu.appendChild(createBtn("LOG", () => showLog()));
+    menu.appendChild(createBtn("LOG", () => {
+        playSE("questmenu"); // ★ログメニューを開いた時のSE
+        showLog();
+    }));
     menu.appendChild(createBtn("SAVE / LOAD", () => document.getElementById("questSaveBtn").click()));
     menu.appendChild(createBtn("BACK", () => backToQuestMenu()));
 
@@ -801,6 +806,11 @@ function showLockMessage(text) {
 export function openQuestMenuModal(type = "difficulty") {
 
     const old = document.getElementById("questModal");
+
+    // ★メニューを開いた時のSE（開いているモーダルの再描画時は鳴らさない）
+    if (!old) {
+        playSE("questmenu");
+    }
 
     // ★再描画時（UPGRADE/REBUILD後など）に星強化リストのスクロール位置を引き継ぐ
     let savedStarListScroll = 0;
@@ -1005,6 +1015,9 @@ export function openQuestMenuModal(type = "difficulty") {
             function calcPreview(nextEquipped) {
 
                 // ★スキル未適用のベース値にする
+                // ★オートスキル(常時発動)のEXPボーナスをベースに含める
+                const autoExpBonus = getPlayerStats().autoExpBonus || 0;
+
                 const preview = {
                     chainRate: 1,
                     chainDecayRate: 1,
@@ -1012,7 +1025,7 @@ export function openQuestMenuModal(type = "difficulty") {
                     knockbackBonus: 1,
                     maxHp: 0,
                     defense: 0,
-                    expMultiplier: 1,
+                    expMultiplier: 1 + autoExpBonus,
                     itemSpawnMultiplier: 1,
                     damageNegateChance: 0,
                     reviveChance: 0,

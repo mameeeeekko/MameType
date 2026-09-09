@@ -1,5 +1,5 @@
 // enemyCore.js
-import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI, showGameMessage,renderSystemMessage, updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI, resetSpawnDotState} from "./enemyRenderer.js";
+import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI, showGameMessage,renderSystemMessage, updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI, resetSpawnDotState, updateEnemyTextOffsets} from "./enemyRenderer.js";
 import { fitCanvasToContainerFill } from "./canvasUtil.js";
 import { stageRect } from "./stageScale.js";
 import { buildBaseRomaji } from "./typingLogic.js";
@@ -29,7 +29,7 @@ import { markCleared, setStar, getStar, hasDialogueBeenPlayed, hasSeenTrueEnding
 import { STAR_EVALUATORS } from "./starEvaluator.js";
 import { submitScore } from "../online/submitScore.js"; 
 import { RANKING_VERSION } from "../js/version.js";
-import { loadKeybinds } from "./keybinds.js";
+import { loadKeybinds, isBoundKey } from "./keybinds.js";
 import { devOverride, applyOverride } from "../dev/devOverride.js";
 import { activateSkill, ACTIVE_SKILLS } from "./questSkills.js";
 import { shouldRunFrame, recordFrame } from "./performance.js";
@@ -241,6 +241,19 @@ export function killEnemy(enemy, state, options = {}) {
     // すでに死んでても統計未加算なら通す
     if (!enemy.isDead) {
         enemy.isDead = true;
+    }
+
+    // ★ビット連動ボス本体が撃破されたら、左右のビットも即時消滅させる
+    // （本体が死ねばビットも消える。スコア/チェインは加算しない）
+    if (enemy.isBitBoss) {
+        const slots = enemy.bitSlots || {};
+        ["left", "right"].forEach(side => {
+            const bit = slots[side]?.enemy;
+            if (bit && !bit.isDead) {
+                bit.isDead = true;
+                bit.lifeAfterDeath = 0;
+            }
+        });
     }
 
     const fromSkill = options.fromSkill ?? false;
@@ -651,6 +664,9 @@ function gameLoop(timestamp) {
     } catch (e) {
         // フォールバック不要：同期失敗してもゲーム継続
     }
+
+    // ★文字同士の重なり解消（本体同士の重なりではずらさない。弾は対象外）を描画前に実行
+    updateEnemyTextOffsets(enemies, lockedEnemy);
 
     renderEnemies(ctx, enemies, lockedEnemy, candidateEnemies);
     renderEnemies(ctx, enemyBullets, lockedEnemy, []);
@@ -1179,8 +1195,8 @@ export function handleEnemyKey(e) {
 
     // ★重要：Shiftキー単体などのシステムキー入力を無視する
     // 記号（!や?）を打つ際のShiftキーが入力バッファに入り込み、マッチングを阻害するのを防ぐ
-    const isActionKey = (e.code === keybinds.autoLock || e.code === keybinds.unlock || 
-                         e.code === keybinds.activeSkill);
+    const isActionKey = (isBoundKey(e, keybinds.autoLock) || isBoundKey(e, keybinds.unlock) ||
+                         isBoundKey(e, keybinds.activeSkill));
     if (e.key.length > 1 && !isActionKey) {
         return;
     }
@@ -1202,7 +1218,7 @@ export function handleEnemyKey(e) {
     // =====================
     // Active Skill 使用
     // =====================
-    if (e.code === keybinds.activeSkill) {
+    if (isBoundKey(e, keybinds.activeSkill)) {
         // アクティブスキルが禁止されている場合は使用不可
         if (gameState.player.disableActiveSkill) {
             playErrorSound();
@@ -1266,7 +1282,7 @@ export function handleEnemyKey(e) {
     // =====================
     // TABターゲット切替 近くの敵をロック
     // =====================
-    if (e.code === keybinds.autoLock) {
+    if (isBoundKey(e, keybinds.autoLock)) {
         // 入力バッファと候補をクリア（重要）
         typedBuffer = "";
         candidateEnemies = [];
@@ -1342,7 +1358,7 @@ export function handleEnemyKey(e) {
     // =====================
     // ロック解除処理 (デフォルト: Delete)
     // =====================
-    if (e.code === keybinds.unlock) {
+    if (isBoundKey(e, keybinds.unlock)) {
         // 候補（オレンジ色）を解除
         if (candidateEnemies.length > 0) {
             candidateEnemies.forEach(enemy => resetEnemyInput(enemy));
@@ -1788,7 +1804,11 @@ export async function startEnemyMode(config = {}) {
         isFreeMode: config.isFreeMode ?? false,
         isQuestMode: config.isQuestMode ?? false,
         customConditions: config.customConditions ?? null,
+        // ★ボス再起動用: bossOnlyモードを維持するためbossOnlyとbossPhaseIndexを保存
+        bossOnly: config.bossOnly ?? false,
+        bossPhaseIndex: config.bossPhaseIndex ?? null,
     };
+    console.log("[startEnemyMode] config.bossOnly:", config.bossOnly, "lastEnemyConfig.bossOnly:", lastEnemyConfig.bossOnly);
 
     // === Dev 用 ===================
     // フリーモード時はDevのステージ固定を無視して、選択されたステージ(DAILY)を優先する
@@ -1834,6 +1854,7 @@ export async function startEnemyMode(config = {}) {
 
             console.log("FREE MODE BOSS-ONLY: Applied boss phase", { stageId: currentStage, bossPhaseIndex });
         } else {
+            console.log("[startEnemyMode] NOT entering boss-only branch. config.bossOnly:", config.bossOnly, "baseStage:", !!baseStage, "phases:", baseStage?.phases?.length);
             const firstPhase = (baseStage.phases && baseStage.phases[0]) ? baseStage.phases[0] : {};
 
             // 1. DAILYの設定を継承しつつ、フェーズ構造をフラット化
@@ -2168,6 +2189,8 @@ export async function startEnemyMode(config = {}) {
     if (getSoundEnabled() && getSoundSettings().bgm) {
         playBGM(resolvedBgm, 1.0);
         gameState.startTime = getNow(); // BGM表示のために開始時間をセット
+    } else {
+        stopBGM(); // ★ BGM設定がOFFでも、マップBGM等が鳴り続けないように停止
     }
 
     const canvas = document.getElementById("enemyModeCanvas");
@@ -2321,6 +2344,13 @@ export function restartEnemyMode() {
     if (!lastEnemyConfig) return;
     endEnemyMode();
     startEnemyMode(lastEnemyConfig);
+}
+
+// ★直前のエネミーモードがboss-only（ボス戦のみ）だったかを返す
+export function wasLastModeBossOnly() {
+    const result = lastEnemyConfig?.bossOnly === true;
+    console.log("[wasLastModeBossOnly]", { lastEnemyConfig, result });
+    return result;
 }
 
 // ===============================

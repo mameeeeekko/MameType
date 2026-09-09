@@ -32,6 +32,7 @@ const coreAssets = [
   { type: "img", name: "quest_menu", src: "./assets/pic/quest_menu.png" },
   // SE
   { type: "sound", name: "select", src: "./assets/sound/se/select.mp3", composer: "", title: "", volume: 1.0 },
+  { type: "sound", name: "questmenu", src: "./assets/sound/se/questmenu.mp3", composer: "", title: "", volume: 1.0 },
   // BGM
   { type: "sound", name: "bgm_rainy", src: "./assets/sound/bgm/rainy.mp3", composer: "もえるごみ", title: "rainy", volume: 1.0 },
 ];
@@ -122,6 +123,7 @@ const remainingAssets = [
 
   // 音源
   // SE
+  { type: "sound", name: "mapmove", src: "./assets/sound/se/mapmove.mp3", composer: "", title: "", volume: 1.0 },
   { type: "sound", name: "kill1", src: "./assets/sound/se/kill1.mp3", composer: "", title: "", volume: 0.8 },
   { type: "sound", name: "kill2", src: "./assets/sound/se/kill2.mp3", composer: "", title: "", volume: 0.8 },
   { type: "sound", name: "kill3", src: "./assets/sound/se/kill3.mp3", composer: "", title: "", volume: 0.8 },
@@ -146,6 +148,8 @@ const remainingAssets = [
   { type: "sound", name: "trophy", src: "./assets/sound/se/trophy.mp3", composer: "", title: "", volume: 1.0 },
   { type: "sound", name: "skill_on", src: "./assets/sound/se/skillon.mp3", composer: "", title: "", volume: 1.0 },
   { type: "sound", name: "skill_off", src: "./assets/sound/se/skilloff.mp3", composer: "", title: "", volume: 1.0 },
+
+  { type: "sound", name: "bitspawn", src: "./assets/sound/se/bitspawn.mp3", composer: "", title: "", volume: 1.0 },
 
   // BGM
   { type: "sound", name: "bgm_rojiura", src: "./assets/sound/bgm/rojiura.mp3", composer: "もえるごみ", title: "rojiura", volume: 1.2 },
@@ -179,6 +183,9 @@ const remainingAssets = [
   { type: "sound", name: "bgm_1minute", src: "./assets/sound/bgm/1minute.mp3", composer: "もえるごみ", title: "1minute", volume: 1.0 }, //quest ex midboss
   { type: "sound", name: "bgm_yukkuriisoge", src: "./assets/sound/bgm/yukkuriisoge.mp3", composer: "watson", title: "ゆっくり急げ！", volume: 1.0 }, //quest ex boss
   { type: "sound", name: "bgm_vampire", src: "./assets/sound/bgm/vampire.mp3", composer: "なぐもりず", title: "Vampire-Twins", volume: 1.0 }, //quest ex exboss
+  { type: "sound", name: "bgm_broccoli", src: "./assets/sound/bgm/broccoli.mp3", composer: "なぐもりず", title: "Broccoli", volume: 1.0 }, //クエストマップ
+  { type: "sound", name: "bgm_mercury", src: "./assets/sound/bgm/mercury.mp3", composer: "Flehmann", title: "Mercury", volume: 1.0 }, //会話
+  { type: "sound", name: "bgm_otiru", src: "./assets/sound/bgm/otiru.mp3", composer: "もっぴーさうんど", title: "堕ちる", volume: 1.0 }, //エピローグ
 ];
 
 async function _loadAssetList(assetList, onProgress) {

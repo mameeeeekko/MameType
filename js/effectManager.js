@@ -11,10 +11,24 @@ export let bgmGain = null; // Exported
 export let seGain = null; // Exported
 export let typeGain = null; // Exported
 export let missGain = null; // Exported
+let typeVinylGain = null; // レコードノイズ用ゲインノード
+let typeWarmFilter = null; // ローパスフィルター（温かみ用）
 
 export let laserEffects = [];
-import { gameState } from "./gameCore.js";
+import { gameState, getSoundEnabled, getSoundSettings } from "./gameCore.js";
 import { scaledParticleCount } from "./performance.js";
+
+// ===========================================
+// ★ サウンド個別設定の一元判定
+// 設定画面の BGM / SE トグルをすべての再生経路に反映させるため、
+// effectManager 側で再生可否を判定する（呼び出し側のチェック漏れがあっても有効）
+// ===========================================
+function isBgmOn() {
+    return getSoundEnabled() && getSoundSettings().bgm;
+}
+function isSeOn() {
+    return getSoundEnabled() && getSoundSettings().soundeffect;
+}
 const loopingSounds = {};
 export let comboTierUpEffects = [];
 const playerDamageEffects = [];
@@ -23,6 +37,12 @@ export let timeBonusPopups = []; // ★タイムボーナスポップアップ�
 let buffers = {};
 let bgmSource = null;
 let bgmSourceGain = null; // 現在再生中のBGMの個別ゲイン（フェードアウト用）
+let currentBgmName = null; // 現在再生中のBGM名（フェード切り替え判定用）
+
+// ★ BGMフェード管理（古いタイマーの暴発防止）
+let bgmRequestId = 0;        // BGM操作の世代管理（新しい操作で古いタイマーを無効化）
+let bgmPendingTimer = null;  // 保留中のタイマー（フェード後の再生予約 / 停止予約）
+let bgmFadeOutActive = false; // フェードアウト中かどうか
 
 let initialized = false;
 
@@ -32,6 +52,22 @@ const volumes = {
     se: 0.5,
     type: 0.5,
     miss: 0.5
+};
+
+// ===========================================
+// BGM設定（クエストマップ・会話・エンディング用）
+// 後から簡単に変更可能
+// ===========================================
+export const BGM_CONFIG = {
+    QUEST_MAP: "bgm_broccoli",           // クエストマップ中のBGM
+    DIALOGUE: "bgm_mercury",               // 通常の会話パートのBGM
+    TRUE_ENDING_DIALOGUE: "bgm_otiru"   // 真エンディングのエピローグ会話用BGM
+};
+
+// フェード時間のデフォルト値（ミリ秒）
+const FADE_CONFIG = {
+    FADE_OUT_DURATION: 1500,  // フェードアウト時間
+    FADE_IN_DURATION: 2000    // フェードイン時間
 };
 
 /**
@@ -94,13 +130,24 @@ function getAudioContext() {
 
     if (!audioCtx) {
 
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // latencyHint: 'interactive' で低レイテンシ設定（タイピングゲーム向け）
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
 
         masterGain = audioCtx.createGain();
         bgmGain = audioCtx.createGain();
         seGain = audioCtx.createGain();
         typeGain = audioCtx.createGain();
         missGain = audioCtx.createGain();
+
+        // レコードノイズ用ゲインノード
+        typeVinylGain = audioCtx.createGain();
+        typeVinylGain.gain.value = 0.12; // ノイズの基本音量
+
+        // 温かみ用ローパスフィルター（Lo-Fi サウンド）
+        typeWarmFilter = audioCtx.createBiquadFilter();
+        typeWarmFilter.type = "lowpass";
+        typeWarmFilter.frequency.value = 3500; // カットオフ周波数（Hz）
+        typeWarmFilter.Q.value = 0.5;
 
         delayNode = audioCtx.createDelay();
         feedbackGain = audioCtx.createGain();
@@ -110,8 +157,13 @@ function getAudioContext() {
 
         bgmGain.connect(masterGain);
         seGain.connect(masterGain);
-        typeGain.connect(masterGain);
+        // typeGain は温かみフィルターを通してからマスターへ
+        typeGain.connect(typeWarmFilter);
+        typeWarmFilter.connect(masterGain);
         missGain.connect(masterGain);
+
+        // レコードノイズはマスターへ直接接続（typeGain とは独立）
+        typeVinylGain.connect(masterGain);
 
         delayNode.delayTime.value = 0.08; // ディレイ時間
         feedbackGain.gain.value = 0.14; // フィードバック量（エコーの繰り返し）
@@ -248,6 +300,125 @@ function playNoise(duration = 0.1, volume = 1.0, target = null) {
     noise.stop(ctx.currentTime+ duration);
 }
 
+/**
+ * レコードノイズ（ビニールクラックル）を再生する
+ * Lo-Fi Chill な雰囲気を出すためのレコードの針音・パチノイズ
+ * @param {number} intensity - ノイズの強度 (0.0 ~ 1.0)
+ */
+function playVinylCrackle(intensity = 1.0) {
+    const ctx = getAudioContext();
+
+    if (ctx.state !== "running") {
+        ctx.resume();
+    }
+
+    if (!typeVinylGain) return;
+
+    const now = ctx.currentTime;
+
+    // --- 1. パチパチというクリック音（レコードの針音） ---
+    const clickCount = 2 + Math.floor(Math.random() * 3); // 2〜4個のクリック
+
+    for (let c = 0; c < clickCount; c++) {
+        const clickTime = now + Math.random() * 0.04; // 0〜40ms の間にランダム配置
+        const clickDuration = 0.003 + Math.random() * 0.005; // 3〜8ms の短いクリック
+
+        const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * clickDuration));
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        // クリック音の生成（高周波成分が強い短いノイズ）
+        for (let i = 0; i < bufferSize; i++) {
+            const envelope = Math.exp(-i / (bufferSize * 0.1)); // 急激な減衰
+            data[i] = (Math.random() * 2 - 1) * envelope;
+        }
+
+        const clickSource = ctx.createBufferSource();
+        clickSource.buffer = buffer;
+
+        const clickGain = ctx.createGain();
+        const clickVolume = (0.03 + Math.random() * 0.04) * intensity; // 3〜7% の音量
+        clickGain.gain.setValueAtTime(clickVolume, clickTime);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, clickTime + clickDuration);
+
+        // バンドパスフィルターでレコードノイズらしい周波数帯域を抽出
+        const clickFilter = ctx.createBiquadFilter();
+        clickFilter.type = "bandpass";
+        clickFilter.frequency.value = 2000 + Math.random() * 4000; // 2kHz〜6kHz
+        clickFilter.Q.value = 1.5 + Math.random() * 2;
+
+        clickSource.connect(clickFilter);
+        clickFilter.connect(clickGain);
+        clickGain.connect(typeVinylGain);
+
+        clickSource.start(clickTime);
+        clickSource.stop(clickTime + clickDuration);
+    }
+
+    // --- 2. サーフェスノイズ（連続する微かなヒス音） ---
+    const hissDuration = 0.06;
+    const hissBufferSize = Math.floor(ctx.sampleRate * hissDuration);
+    const hissBuffer = ctx.createBuffer(1, hissBufferSize, ctx.sampleRate);
+    const hissData = hissBuffer.getChannelData(0);
+
+    for (let i = 0; i < hissBufferSize; i++) {
+        const envelope = Math.sin((i / hissBufferSize) * Math.PI); // サイン波エンベロープ
+        hissData[i] = (Math.random() * 2 - 1) * envelope * 0.3;
+    }
+
+    const hissSource = ctx.createBufferSource();
+    hissSource.buffer = hissBuffer;
+
+    const hissGain = ctx.createGain();
+    const hissVolume = (0.015 + Math.random() * 0.01) * intensity; // 1.5〜2.5% の音量
+    hissGain.gain.setValueAtTime(hissVolume, now);
+    hissGain.gain.exponentialRampToValueAtTime(0.001, now + hissDuration);
+
+    // ハイパスフィルターでヒス音らしく
+    const hissFilter = ctx.createBiquadFilter();
+    hissFilter.type = "highpass";
+    hissFilter.frequency.value = 4000 + Math.random() * 3000; // 4kHz〜7kHz
+
+    hissSource.connect(hissFilter);
+    hissFilter.connect(hissGain);
+    hissGain.connect(typeVinylGain);
+
+    hissSource.start(now);
+    hissSource.stop(now + hissDuration);
+
+    // --- 3. 低域のウーンという音（レコードの回転ムラ） ---
+    if (Math.random() < 0.3) { // 30% の確率で発生
+        const wowDuration = 0.08;
+        const wowOsc = ctx.createOscillator();
+        wowOsc.type = "sine";
+        wowOsc.frequency.setValueAtTime(4 + Math.random() * 3, now); // 4〜7Hz の低周波
+        wowOsc.frequency.exponentialRampToValueAtTime(2, now + wowDuration);
+
+        const wowGain = ctx.createGain();
+        wowGain.gain.setValueAtTime(0.008 * intensity, now);
+        wowGain.gain.exponentialRampToValueAtTime(0.001, now + wowDuration);
+
+        // ピッチを変調するためのオシレーター
+        const modulator = ctx.createOscillator();
+        modulator.type = "sine";
+        modulator.frequency.value = 0.5 + Math.random() * 1.5; // 0.5〜2Hz（回転ムラ）
+
+        const modGain = ctx.createGain();
+        modGain.gain.value = 5 + Math.random() * 8; // 変調度
+
+        modulator.connect(modGain);
+        modGain.connect(wowOsc.frequency);
+
+        wowOsc.connect(wowGain);
+        wowGain.connect(typeVinylGain);
+
+        wowOsc.start(now);
+        wowOsc.stop(now + wowDuration);
+        modulator.start(now);
+        modulator.stop(now + wowDuration);
+    }
+}
+
 // SEを流す関数
 export function playSE(
     name,
@@ -256,6 +427,9 @@ export function playSE(
     startOffset = 0,  //開始位置sec
     duration = null   //再生時間sec
 ) {
+    // ★ SE設定がOFFなら再生しない（全SE一括制御）
+    if (!isSeOn()) return;
+
     const ctx = getAudioContext();
 
     const buffer = buffers[name];
@@ -282,7 +456,9 @@ export function playSE(
 
 export function playTypeSound() {
 
-    const freq = 680 + Math.random() * 40;
+    // レコードの回転ムラをシミュレート（ピッチの微変動）
+    const wowModulation = 1 + (Math.random() - 0.5) * 0.008; // ±0.4% のピッチ変動
+    const freq = (680 + Math.random() * 40) * wowModulation;
 
     const ctx = getAudioContext();
 
@@ -317,9 +493,13 @@ export function playTypeSound() {
 
     osc.start();
     osc.stop(ctx.currentTime + 0.05);
+
+    // レコードノイズ（ビニールクラックル）を追加
+    playVinylCrackle(1.0);
 }
 
 export function playDialogueSound() {
+    if (!isSeOn()) return; // ★ SE設定がOFFなら再生しない
     const freq = 480 + Math.random() * 120;
     playTone(
         freq,
@@ -331,6 +511,7 @@ export function playDialogueSound() {
 }
 
 export function playSystemDialogueSound() {
+    if (!isSeOn()) return; // ★ SE設定がOFFなら再生しない
     const freq = 800 + Math.random() * 200; // 周波数を高く設定
     playTone(
         freq,
@@ -394,6 +575,7 @@ export function playErrorSound(){
 }
 
 export function playPhaseWarningSound() {
+    if (!isSeOn()) return; // ★ SE設定がOFFなら再生しない
 
     // G4
     playTone(
@@ -441,6 +623,9 @@ export function playComboTierUpSound(tier, isMax) {
 export function playLoopSE(name, volume = 1.0) {
     if (loopingSounds[name]) return; // すでに再生中なら何もしない
 
+    // ★ SE設定がOFFならループSEも再生しない（全SE一括制御）
+    if (!isSeOn()) return;
+
     const ctx = getAudioContext();
     const buffer = buffers[name];
     if (!buffer) return;
@@ -467,11 +652,19 @@ export function stopLoopSE(name) {
     }
 }
 
+// ★ 再生中のループSEをすべて停止する（SE設定OFF時に呼び出す）
+export function stopAllLoopSE() {
+    Object.keys(loopingSounds).forEach(name => stopLoopSE(name));
+}
+
 // ===========================================
 // BGM
 // ===========================================
 
 export function playBGM(name="bgm1", volume=1.0){
+
+    // ★ BGM設定がOFFなら再生しない（全BGM一括制御）
+    if (!isBgmOn()) return;
 
     const ctx = getAudioContext();
 
@@ -488,8 +681,8 @@ export function playBGM(name="bgm1", volume=1.0){
     // gameStateに現在のBGM情報を保存
     if (gameState) {
         gameState.currentBgmInfo = soundMeta[name] || null;
-    }    
-
+    }
+    currentBgmName = name;
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
@@ -505,9 +698,18 @@ export function playBGM(name="bgm1", volume=1.0){
 
     bgmSource = source;
     bgmSourceGain = gain;
+    bgmFadeOutActive = false;
 }
 
 export function stopBGM(){
+
+    // ★ 保留中のフェード/再生予約タイマーを無効化
+    bgmRequestId++;
+    if (bgmPendingTimer) {
+        clearTimeout(bgmPendingTimer);
+        bgmPendingTimer = null;
+    }
+    bgmFadeOutActive = false;
 
     if(bgmSource){
         try{ bgmSource.stop(); }catch{}
@@ -519,6 +721,7 @@ export function stopBGM(){
         bgmSourceGain = null;
     }
 
+    currentBgmName = null;
 }
 
 /**
@@ -544,10 +747,93 @@ export function fadeOutBGM(durationMs = 3500){
         bgmSourceGain.gain.linearRampToValueAtTime(0.0001, end);
     }catch(e){}
 
-    // フェード完了後にBGMを完全停止
-    setTimeout(() => {
+    // ★ フェードアウト状態を記録（同じBGMへの再フェードインを許可するため）
+    bgmFadeOutActive = true;
+    const myId = ++bgmRequestId;
+    if (bgmPendingTimer) {
+        clearTimeout(bgmPendingTimer);
+        bgmPendingTimer = null;
+    }
+
+    // フェード完了後にBGMを完全停止（新しい操作が入った場合は無効化）
+    bgmPendingTimer = setTimeout(() => {
+        bgmPendingTimer = null;
+        if (myId !== bgmRequestId) return;
+        bgmFadeOutActive = false;
         stopBGM();
     }, durationMs);
+}
+
+/**
+ * BGMをフェードアウトさせてから、新しいBGMをフェードインで再生します。
+ * 自然なクロスフェード遷移を実現します。
+ * @param {string} newName - 新しいBGMの名前
+ * @param {number} [fadeOutMs] - フェードアウト時間 (ms)。省略時はFADE_CONFIG.FADE_OUT_DURATION
+ * @param {number} [fadeInMs] - フェードイン時間 (ms)。省略時はFADE_CONFIG.FADE_IN_DURATION
+ * @param {number} [targetVolume] - 目標音量 (0.0～1.0)。省略時は1.0
+ */
+export function fadeBGMTo(newName, fadeInMs = FADE_CONFIG.FADE_IN_DURATION, fadeOutMs = FADE_CONFIG.FADE_OUT_DURATION, targetVolume = 1.0) {
+    // ★ BGM設定がOFFのときは、再生中のBGMをフェードアウトして停止するだけ
+    // （停止処理を通すことで、BGMをONに戻したときに正しく再再生できるようになる）
+    if (!isBgmOn()) {
+        fadeOutBGM(fadeOutMs);
+        return;
+    }
+
+    // 既に同じBGMが再生中で、かつフェードアウト中でない場合は何もしない
+    if (bgmSource && currentBgmName === newName && !bgmFadeOutActive) {
+        return;
+    }
+
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    // ★ 新しい操作の世代を記録し、古い保留タイマーを無効化
+    const myId = ++bgmRequestId;
+    if (bgmPendingTimer) {
+        clearTimeout(bgmPendingTimer);
+        bgmPendingTimer = null;
+    }
+    bgmFadeOutActive = false;
+
+    // 個別ボリューム（assetsLoader.jsのvolume）を反映
+    const individualVolume = soundMeta[newName]?.volume ?? 1.0;
+    const finalGain = targetVolume * individualVolume;
+
+    // フェードアウト中のBGMがない場合（初回再生など）は、直接フェードインで再生
+    if (!bgmSourceGain || !bgmSource) {
+        playBGM(newName, 0.0001);
+        // フェードイン
+        if (bgmSourceGain) {
+            const now = ctx.currentTime;
+            bgmSourceGain.gain.cancelScheduledValues(now);
+            bgmSourceGain.gain.setValueAtTime(0.0001, now);
+            bgmSourceGain.gain.linearRampToValueAtTime(finalGain, now + fadeInMs / 1000);
+        }
+        return;
+    }
+
+    // 既存のBGMをフェードアウト
+    const now = ctx.currentTime;
+    try {
+        bgmSourceGain.gain.cancelScheduledValues(now);
+        bgmSourceGain.gain.setValueAtTime(Math.max(bgmSourceGain.gain.value, 0.0001), now);
+        bgmSourceGain.gain.linearRampToValueAtTime(0.0001, now + fadeOutMs / 1000);
+    } catch (e) {}
+
+    // フェードアウト完了後に新しいBGMをフェードインで再生（新しい操作が入ったら破棄）
+    bgmPendingTimer = setTimeout(() => {
+        bgmPendingTimer = null;
+        if (myId !== bgmRequestId) return;
+        playBGM(newName, 0.0001);
+        // フェードイン
+        if (bgmSourceGain) {
+            const fadeInNow = ctx.currentTime;
+            bgmSourceGain.gain.cancelScheduledValues(fadeInNow);
+            bgmSourceGain.gain.setValueAtTime(0.0001, fadeInNow);
+            bgmSourceGain.gain.linearRampToValueAtTime(finalGain, fadeInNow + fadeInMs / 1000);
+        }
+    }, fadeOutMs);
 }
 
 // ===========================================

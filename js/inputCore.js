@@ -201,9 +201,14 @@ function resetCombo(state = gameState) {
     if (key === "　") key = " "; // 全角スペースの例外処理
     key = key.toLowerCase(); // 大文字は小文字に統一
 
+    // ★ キーボード環境差の吸収（チルダ系・円記号系の表記ゆれを正規化）
+    //   Mac JIS の Shift+^ は環境により ‾ / 〜 / ～ を返すことがあるため '~' に統一、
+    //   全角 ￥ は '¥' に統一する（〜 / ￥ を含む問題文を入力可能にするため）
+    if (key === "〜" || key === "～" || key === "‾") key = "~";
+    if (key === "￥") key = "¥";
 
-    // 許可する文字リストに英数字、プログラム用記号などを追加
-    if (!/^[a-z0-9.,!?\-\[\]\(\)@%:*+;{}<>=/\\_&|~^$#'" ]$/.test(key)) return { success: false, isMiss: false, charCount: 0 }; // 許可しない文字は無視
+    // 許可する文字リストに英数字、プログラム用記号などを追加（★ ¥ を追加）
+    if (!/^[a-z0-9.,!?\-\[\]\(\)@%:*+;{}<>=/\\_&|~^$#'"¥ ]$/.test(key)) return { success: false, isMiss: false, charCount: 0 }; // 許可しない文字は無視
 
     // ブラウザのデフォルト動作を抑制 (有効なキー入力の場合のみ)
     if (!silent && e.preventDefault) e.preventDefault();

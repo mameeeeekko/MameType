@@ -386,6 +386,8 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
     // モード設定からBGM IDを取得。なければデフォルトを再生
     const bgmId = config.mode?.bgm || "bgm_rainy";
     playBGM(bgmId, 1.0);
+  } else {
+    stopBGM(); // ★ BGM設定がOFFでも、マップBGM等が鳴り続けないように停止
   }
   gameState.startTime = getNow(); // BGM表示のために開始時間をセット
 
@@ -536,7 +538,7 @@ export async function doCountdown(config) {
 
         // 元の要素を復帰
         ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = originalDisplay[id]; });
-        
+
         updateGameButtonsUI(); // UIを更新
         // 速度メーター初期化
         gameState.speedCorrectChars = 0;
@@ -655,6 +657,13 @@ async function finishGame(config = {}) {
 
     const totalElapsed = Number(gameState.totalTime) || 0;
     const totalInputs = gameState.totalCorrect + gameState.totalMistake;
+
+    // ★クエストモード（スキルチャレンジ等）は daily の記録・eScoreランク勲章の対象外
+    const isQuestContext = !!(
+        gameState.currentQuestNode ||
+        gameState.currentChallenge?.isSkillMode ||
+        gameState.isQuestMode
+    );
 
     const accuracy =
         (shuffledTargets.length === 0 || totalInputs === 0)
@@ -807,7 +816,8 @@ async function finishGame(config = {}) {
           },
       gameState.currentMode.id,
       nowStr,
-      currentIsFreeMode
+      currentIsFreeMode,
+      isQuestContext
     );
 
     updateHud(updatedStats);
@@ -856,7 +866,7 @@ export function getERank(eScore) {
     if (eScore <= 123) return "C-"; if (eScore <= 140) return "C"; if (eScore <= 157) return "C+";
     if (eScore <= 174) return "B-"; if (eScore <= 191) return "B"; if (eScore <= 208) return "B+";
     if (eScore <= 225) return "A-"; if (eScore <= 242) return "A"; if (eScore <= 259) return "A+";
-    if (eScore <= 276) return "S"; if (eScore <= 299) return "Great!"; if (eScore <= 324) return "Rapid";
+    if (eScore <= 274) return "S"; if (eScore <= 299) return "Great!"; if (eScore <= 324) return "Rapid";
     if (eScore <= 349) return "Falcon"; if (eScore <= 374) return "ShootingStar"; if (eScore <= 399) return "Lightning";
     if (eScore <= 449) return "Bullet"; if (eScore <= 499) return "Flash"; if (eScore <= 549) return "Blitz";
     if (eScore <= 599) return "LaserBeam"; if (eScore <= 649) return "Martian"; if (eScore <= 699) return "Cosmo";
@@ -948,11 +958,9 @@ function speedTick(now){
     return;
   }
 
-  // 通常モードの描画更新ループ
-  renderState();
-
   if (gameState.currentMode.id === GameModes.TIME_ATTACK.id) {
     updateTimeAttack();
+    renderState(); // タイマー表示更新時のみ描画
   }
   if(now-lastSpeedUpdate>200){ 
     lastSpeedUpdate=now; 

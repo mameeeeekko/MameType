@@ -2,14 +2,31 @@
 
 import { getUISafeMinEnemyY, markDamageTaken, onEnemyRemovedByDamage, killEnemy } from "./enemyCore.js";
 import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect, 
-    spawnLaserEffect, spawnPlayerDamageEffect, spawnPlayerNegateEffect} from "./effectManager.js";
+    spawnLaserEffect, spawnPlayerDamageEffect, spawnPlayerNegateEffect, playSE} from "./effectManager.js";
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { getRandomWordForType, getWordForBehavior } from "./enemySpawner.js"; 
+import { getRandomWordForType, getWordForBehavior, getLabelBox, getEnemyLabelBox, boxesOverlap } from "./enemySpawner.js";
 import { devOverride } from "../dev/devOverride.js";
 import { addQuestItemPickup } from "./questPlayerStats.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getUIAnchorPosition } from "./enemyRenderer.js";
+import { STAGE_W, STAGE_H } from "./stageScale.js";
+
+/**
+ * 敵がボス（中ボス・大ボス・ビットボス等）かどうかを判定する
+ * @param {object} enemy
+ * @returns {boolean}
+ */
+export function isBossEnemy(enemy) {
+    if (!enemy) return false;
+    return Boolean(
+        enemy.isBoss ||
+        enemy.isBitBoss ||
+        enemy.type?.isBoss ||
+        enemy.type?.isBitBoss ||
+        (enemy.type?.id && String(enemy.type.id).toLowerCase().includes("boss"))
+    );
+}
 
 // =====================================================
 // 敵タイプ生成ルール
@@ -219,6 +236,11 @@ function getUnusedLetter(state, charType = 'alphabet') {
     ];
 }
 
+// ★物理押し出し（近接分離）は廃止：
+//   敵同士は本来の移動ルーチンで自然に貫通して進む（変な動き・飛びは発生しない）。
+//   文字列の重なりは enemyRenderer.updateEnemyTextOffsets による
+//   表示オフセット（textOffsetY）で解消する。
+
 export class Enemy {
 
     constructor(word, text, x, y, speed, type) {
@@ -251,6 +273,24 @@ export class Enemy {
         // ステージ目標敵
         this.isObjective = true;
 
+        // ---- ビット関連フィールド（ビット連動ボス / ビット共通） ----
+        this.isBitBoss = !!type?.isBitBoss; // ビット連動ボス本体か
+        this.isBit = !!type?.isBit;         // ビット（オプション兵装）か
+        this.bitOwner = null;               // ビット: 親ボス参照 / ボス本体: null
+        this.bitSlot = null;                // ビット: "left" / "right" / ボス本体: null
+        // ボス本体: 各スロットの状態 { left: {enemy, respawnTimer, typeId}, right: {...} }
+        this.bitSlots = {};
+        // ビット: ふわふわ動きのパラメータ（ノイズ風の滑らかな位相）
+        this._bitFloatPhaseX = Math.random() * Math.PI * 2;
+        this._bitFloatPhaseY = Math.random() * Math.PI * 2;
+        this._bitFloatSeedX = Math.random() * 1000;
+        this._bitFloatSeedY = Math.random() * 1000;
+        this.spawnAlpha = 1;                // フェードイン用アルファ（1 = 完全表示）
+
+        // ---- 文字列動的ずらし（ラベル重なり時の表示オフセット） ----
+        this.textOffsetY = 0;       // 現在の描画オフセット（補間値・負=上方向）
+        this.targetTextOffsetY = 0; // 目標オフセット（enemyRenderer.updateEnemyTextOffsets が毎フレーム設定）
+
     }
 
     update(player, difficulty, state, deltaTime){
@@ -265,6 +305,15 @@ export class Enemy {
             }
         }
 
+        // ★文字列ずらしオフセットのスムーズ補間（重なり解消後は0へスッと復帰する）
+        // ※フリーズ中でも復帰アニメーションが止まらないよう、フリーズ判定の前に実行する
+        const textOffsetDiff = (this.targetTextOffsetY || 0) - (this.textOffsetY || 0);
+        if (Math.abs(textOffsetDiff) < 0.05) {
+            this.textOffsetY = this.targetTextOffsetY || 0;
+        } else {
+            this.textOffsetY += textOffsetDiff * 0.2;
+        }
+
         // ★フリーズ判定（最優先）
         if (this.freezeTimer > 0) {
 
@@ -277,6 +326,11 @@ export class Enemy {
             return true;
         }
 
+        // ★ビット連動ボス: 撃破されたビットの復活管理（毎フレーム）
+        if (this.isBitBoss && !this.isDead) {
+            this._updateBitRespawn(state, deltaTime);
+        }
+
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy) || 0.0001;
@@ -285,14 +339,17 @@ export class Enemy {
         if(dist < player.radius + this.type.size){
 
             // ★追加：ボス接触は即死（復活スキル対象外）
-            const isBoss =
-                this.type?.id?.includes("boss") ||
-                this.isBoss;
+            const isBoss = isBossEnemy(this);
 
             if (isBoss) {
                 player.lastDeathCause = "boss_contact";
                 player.hp = 0;
                 this.isDead = true;
+
+                // ★ビット連動ボス本体が消滅するので、左右のビットも消す
+                if (this.isBitBoss) {
+                    this._killBits();
+                }
 
                 markDamageTaken();
                 onEnemyRemovedByDamage(this.isObjective);
@@ -323,9 +380,7 @@ export class Enemy {
                 const stats = getPlayerStatsForEnemy(statsMode);
                 const negateChance = Number(stats.damageNegateChance) || 0;
 
-                const isBoss =
-                    this.type?.id?.includes("boss") ||
-                    this.isBoss;
+                const isBoss = isBossEnemy(this);
 
                 if (
                     !isBoss &&
@@ -363,27 +418,11 @@ export class Enemy {
         }
         this.rotation += this.rotationSpeed * scale;
 
-        // 近接分離：他の敵と重ならないように軽く押し戻す
-        try {
-            const minGap = 4;
-            for (const other of state.enemies || []) {
-                if (!other || other === this || other.isDead) continue;
-                const otherR = other.type?.size || other.radius || 15;
-                const myR = this.type?.size || this.radius || 15;
-                const dxo = this.x - other.x;
-                const dyo = this.y - other.y;
-                const d = Math.hypot(dxo, dyo) || 0.0001;
-                const desired = myR + otherR + minGap;
-                if (d < desired) {
-                    const overlap = desired - d;
-                    const push = overlap * 0.5; // 自分側に少し押し戻す
-                    this.x += (dxo / d) * push;
-                    this.y += (dyo / d) * push;
-                }
-            }
-        } catch (err) {
-            // 安全のため失敗しても無視
-        }
+        // ★物理押し出し（近接分離）は廃止：敵同士は自然に貫通して進む。
+        //   ボスが召喚時に押される問題・前線の敵が押される問題も
+        //   押し出し処理自体がなくなったため発生しない。
+        //   文字列ラベルの重なりは enemyRenderer.updateEnemyTextOffsets が
+        //   textOffsetY を設定し、表示だけをずらして解消する。
 
         // behaviors処理 敵が出す弾や、召喚する敵の処理
         this.updateBehaviors(player, difficulty, state, deltaTime);
@@ -394,7 +433,106 @@ export class Enemy {
             this.y = minCenterY;
         }
 
+        // ★ビット: 本体へ向かわず、プレイヤーにも向かわない。本体の周りをふわふわ漂う
+        if (this.isBit && this.bitOwner && !this.bitOwner.isDead) {
+            this._updateBitFloat(deltaTime);
+        }
+
+        // ★ビット: フェードイン（復活時の登場演出）
+        if (this.isBit && this.spawnAlpha < 1) {
+            this.spawnAlpha = Math.min(1, this.spawnAlpha + deltaTime * 2.5);
+        }
+
         return !this.isDead;
+    }
+
+    // ====================================
+    // ビット連動ボス: 撃破されたビットの復活管理
+    // =====================================
+    _updateBitRespawn(state, deltaTime) {
+        if (this.isDead) return;
+        const reviveTime = this.type.bitReviveTime || 6;
+        for (const side of ["left", "right"]) {
+            const slot = this.bitSlots?.[side];
+            if (!slot) continue;
+            const bit = slot.enemy;
+            if (bit && !bit.isDead) continue; // 生存中
+            // 死んでいる: リスポーンカウントダウン後に再生成
+            if (!slot.respawnTimer) {
+                slot.respawnTimer = reviveTime;
+            } else {
+                slot.respawnTimer -= deltaTime;
+                if (slot.respawnTimer <= 0) {
+                    slot.respawnTimer = 0;
+                    if (this.isDead) continue; // 本体が死んでいたら復活しない
+                    const newBit = createBitEnemy(this, side, state);
+                    if (newBit) {
+                        slot.enemy = newBit;
+                        if (state?.enemies) state.enemies.push(newBit);
+                    }
+                }
+            }
+        }
+    }
+
+    // ====================================
+    // ビット連動ボス: 左右のビットを即時消滅させる
+    // =====================================
+    _killBits() {
+        for (const side of ["left", "right"]) {
+            const bit = this.bitSlots?.[side]?.enemy;
+            if (bit && !bit.isDead) {
+                bit.isDead = true;
+                bit.lifeAfterDeath = 0; // 即時消滅（スコア/チェイン加算なし）
+            }
+        }
+    }
+
+    // ====================================
+    // ビット: 本体周囲をふわふわ漂う（回転しない、不規則な浮遊）
+    // =====================================
+    _updateBitFloat(deltaTime) {
+        const boss = this.bitOwner;
+        if (!boss || boss.isDead) return;
+        const t = this.type;
+        const orbit = boss.type.bitOrbitRadius || 140;
+        const floatSpeed = t.bitFloatSpeed || 0.3;
+
+        // スムーズノイズ風の位相更新（ふわふわ感）
+        this._bitFloatPhaseX += deltaTime * floatSpeed * 0.7;
+        this._bitFloatPhaseY += deltaTime * floatSpeed * 0.5;
+
+        // 本体からの基本位置（左右にオフセット）
+        const dir = this.bitSlot === "left" ? -1 : 1;
+        const bossR = boss.radius || boss.type?.size || 30;
+        const bitR = this.radius || t.size || 15;
+        // ボスとビットの文字ラベル幅を考慮した十分な横方向オフセット
+        const baseOffset = Math.max(orbit, bossR + bitR + 70);
+        const baseX = boss.x + dir * baseOffset;
+        const baseY = boss.y;
+
+        // ふわふわした揺れ（左右の揺れは外側・上下を重視し、ボス本体方向へ潜り込まないようにする）
+        const range = orbit * 0.25;
+        const fx = Math.sin(this._bitFloatPhaseX + this._bitFloatSeedX) * range
+                 + Math.sin(this._bitFloatPhaseX * 1.7 + this._bitFloatSeedX * 0.3) * range * 0.3;
+        const fy = Math.cos(this._bitFloatPhaseY + this._bitFloatSeedY) * range * 0.7
+                 + Math.cos(this._bitFloatPhaseY * 1.3 + this._bitFloatSeedY * 0.5) * range * 0.3;
+
+        this.x = baseX + fx;
+        this.y = baseY + fy;
+
+        // ★ビットは押し出されない: ボスのラベルや相方ビットとの重なり回避は行わない。
+        //   自然な軌道位置（baseOffset + ふわふわ揺れ）で浮遊し続ける。
+        //   文字の重なりは文字ずらし（updateEnemyTextOffsets）、
+        //   ボス本体との重なりは浮かび上がらせ演出（textOverBody）側で読みやすさを担保。
+
+        // 画面内クランプ（UIセーフ）
+        const half = this.radius || t.size || 15;
+        this.x = Math.min(Math.max(this.x, half), STAGE_W - half);
+        const uiMin = getUISafeMinEnemyY(half);
+        this.y = Math.min(Math.max(this.y, uiMin), STAGE_H - half);
+
+        this.rotation += (t.rotationSpeed || 0) * (deltaTime * 60);
     }
 
     // ====================================
@@ -534,82 +672,104 @@ export class Enemy {
     
     spawnChildren(behavior, player, state){
 
-        const enemyType =
-            Object.values(EnemyTypes)
-                .find(
-                    t =>
-                    t.id === behavior.spawnType
-                );
+        // ★ spawnType は 文字列 または 配列 の両対応（配列ならランダムに1つ選択）
+        const spawnList =
+            Array.isArray(behavior.spawnType)
+                ? behavior.spawnType
+                : [behavior.spawnType];
+
+        const key = spawnList[
+            Math.floor(Math.random() * spawnList.length)
+        ];
+        if (!key) return;
+
+        // ★ 敵タイプ解決: 大文字KEYで直接引く → ダメなら id 一致検索（小文字id互換）
+        let enemyType =
+            EnemyTypes[key] ||
+            EnemyTypes[key.toUpperCase()];
+
+        if (!enemyType) {
+            enemyType =
+                Object.values(EnemyTypes)
+                    .find(
+                        t =>
+                        t.id === key
+                    );
+        }
 
         if(!enemyType) return;
 
-        for(
-            let i=0;
-            i<behavior.count;
-            i++
-        ){
-            const angle =
-                Math.random() * Math.PI * 2;
+        for (let i = 0; i < behavior.count; i++) {
+            const bossRadius = this.radius || this.type.size || 30;
+            const enemyRadius = enemyType.size || 15;
+            // ボスの外周付近（ボス半径＋敵半径 〜 +20px の範囲）から召喚する
+            const baseSpawnDist = bossRadius + enemyRadius;
 
-            const radius = 30;
+            const attempts = 16;
+            const firstAngle = Math.random() * Math.PI * 2;
+            let bestX = this.x + Math.cos(firstAngle) * baseSpawnDist;
+            let bestY = this.y + Math.sin(firstAngle) * baseSpawnDist;
 
-            let x =
-                this.x +
-                Math.cos(angle)*radius;
+            for (let a = 0; a < attempts; a++) {
+                // ボスの周囲360度ランダム（全方向・外周近辺）から召喚
+                const angle = Math.random() * Math.PI * 2;
+                const dist = baseSpawnDist + Math.random() * 20;
 
-            let y =
-                this.y +
-                Math.sin(angle)*radius;
+                let x = this.x + Math.cos(angle) * dist;
+                let y = this.y + Math.sin(angle) * dist;
 
-            // プレイヤーから一定距離（例：200px）を保つように出現位置を調整
-            const dx = x - player.x;
-            const dy = y - player.y;
-            const dist = Math.hypot(dx, dy) || 0.0001;
-            const minSpawnDist = 200;
+                // プレイヤーから最低距離（120px）を保つ
+                const dx = x - player.x;
+                const dy = y - player.y;
+                const pDist = Math.hypot(dx, dy) || 0.0001;
+                const minSpawnDist = 120;
+                if (pDist < minSpawnDist) {
+                    x = player.x + (dx / pDist) * minSpawnDist;
+                    y = player.y + (dy / pDist) * minSpawnDist;
+                }
 
-            if (dist < minSpawnDist) {
-                x = player.x + (dx / dist) * minSpawnDist;
-                y = player.y + (dy / dist) * minSpawnDist;
-            }
+                // 画面内・UIセーフ
+                const half = enemyRadius;
+                x = Math.min(Math.max(x, half + 10), STAGE_W - half - 10);
+                const uiMin = getUISafeMinEnemyY(half);
+                y = Math.min(Math.max(y, uiMin), STAGE_H - half - 10);
 
-            // 既存の敵や弾と重ならないように位置を微調整
-            const maxAdjust = 6;
-            let adjX = x;
-            let adjY = y;
-            let adjusted = false;
-            for (let a = 0; a < maxAdjust; a++) {
+                // 文字ラベル重なりチェック（ボス・既存敵・弾）
+                const testBox = getLabelBox(x, y, enemyRadius, enemyType.tags?.[0] || "enemy", "");
                 let conflict = false;
-                for (const e of [...state.enemies, ...(state.enemyBullets || [])]) {
-                    if (!e || e.isDead) continue;
-                    const otherR = e.type?.size || e.radius || 15;
-                    const d = Math.hypot(adjX - e.x, adjY - e.y);
-                    if (d < (otherR + (enemyType.size || 15) + 8)) {
-                        conflict = true;
-                        break;
+
+                // ボスとの文字重なり
+                const bossBox = getEnemyLabelBox(this);
+                if (boxesOverlap(testBox, bossBox)) {
+                    conflict = true;
+                } else {
+                    for (const e of [...(state.enemies || []), ...(state.enemyBullets || [])]) {
+                        if (!e || e.isDead) continue;
+                        const otherBox = getEnemyLabelBox(e);
+                        if (boxesOverlap(testBox, otherBox)) {
+                            conflict = true;
+                            break;
+                        }
                     }
                 }
+
+                bestX = x;
+                bestY = y;
                 if (!conflict) {
-                    adjusted = true;
                     break;
                 }
-                // 角度を少しずらして離す
-                const shift = (a + 1) * 12;
-                adjX = this.x + Math.cos(angle + shift * 0.0174533) * (radius + a * 10);
-                adjY = this.y + Math.sin(angle + shift * 0.0174533) * (radius + a * 10);
             }
 
             const enemy = createEnemyByType(
-                enemyType, adjX, adjY, state
+                enemyType, bestX, bestY, state
             );
 
             if (enemy) {
-
                 // 召喚敵はステージ目標外
                 enemy.isObjective = false;
                 // 召喚敵フラグ（目印用）
                 enemy.isSummoned = true;
                 state.enemies.push(enemy);
-
             }
         }
     }
@@ -638,24 +798,12 @@ export class Enemy {
             const vx = Math.cos(angle) * speed;
             const vy = Math.sin(angle) * speed;
             
-            let spawnX = this.x;
-            let spawnY = this.y;
-
-            // 弾の出現位置もプレイヤーに近すぎないように調整（例：100px）
-            const dx = spawnX - player.x;
-            const dy = spawnY - player.y;
-            const dist = Math.hypot(dx, dy) || 0.0001;
-            const minBulletDist = 100;
-
-            if (dist < minBulletDist) {
-                spawnX = player.x + (dx / dist) * minBulletDist;
-                spawnY = player.y + (dy / dist) * minBulletDist;
-            }
-
+            // ★発射位置はボスの中心（前の方式）:
+            // ボスの本体位置から360度方向へ弾が飛び出し、ホーミングでプレイヤーへ向かう
             const bullet = new BulletEnemy(
                 letter,
-                spawnX,
-                spawnY,
+                this.x,
+                this.y,
                 vx,
                 vy,
                 behavior.bullet
@@ -746,7 +894,9 @@ export class BulletEnemy extends Enemy{
     }
 
     update( player, difficulty, state, deltaTime ){
-        
+
+        // ※弾の文字列は動的ずらし対象外のため、textOffsetY は常に0（定位置）のまま。
+
         if (this.freezeTimer > 0) {
 
             this.freezeTimer -= deltaTime;
@@ -821,6 +971,9 @@ export class BulletEnemy extends Enemy{
 
         // 進行方向（プレイヤー側）を向くように回転を更新
         this.rotation = Math.atan2(this.vy, this.vx);
+
+        // ★物理押し出しは廃止：弾は自然なホーミング移動で敵・弾を貫通して進む。
+        //   ※弾の文字列は動的ずらし対象外：常に定位置（オフセット0）で描画する。
 
         // UI侵入防止（中心Yだけでなく、半径＋上部テキストラベルまでUIに重ならないようにする）
         const minCenterY = getUISafeMinEnemyY(this.radius || this.type?.size || 15);
@@ -1169,6 +1322,67 @@ function createEnemyByType(type, x, y, state){
 }
 
 // =====================================================
+// ビット連動ボス用: ビット生成
+// =====================================================
+function createBitEnemy(boss, side, state) {
+    const typeId = side === "left" ? boss.type.bitLeft : boss.type.bitRight;
+    const type = typeId ? EnemyTypes[typeId] : null;
+    if (!type) return null;
+
+    const wordData = getRandomWordForType(type);
+    if (!wordData) return null;
+
+    const orbit = boss.type.bitOrbitRadius || 120;
+    const dir = side === "left" ? -1 : 1;
+
+    const bit = new Enemy(
+        wordData.word,
+        wordData.text,
+        boss.x + dir * orbit,
+        boss.y,
+        type.speed || 0,
+        type
+    );
+
+    bit.baseRomaji = buildBaseRomaji(bit.text, 0);
+    bit.isBit = true;
+    bit.bitOwner = boss;
+    bit.bitSlot = side;
+    bit.isObjective = false; // ステージ目標外（ボス本体撃破のみがクリア条件）
+    bit._bitFloatPhaseX = Math.random() * Math.PI * 2;
+    bit._bitFloatPhaseY = Math.random() * Math.PI * 2;
+    bit._bitFloatSeedX = Math.random() * 1000;
+    bit._bitFloatSeedY = Math.random() * 1000;
+    bit.spawnAlpha = 0; // フェードイン開始（復活時の登場演出）
+
+    // ビット出現時の効果音を再生（type.spawnSound が設定されていれば再生）
+    if (getSoundEnabled() && getSoundSettings().soundeffect && type.spawnSound) {
+        playSE(type.spawnSound);
+    }
+
+    return bit;
+}
+
+/**
+ * ビット連動ボス生成時に、左右のビットを初期スポーンする。
+ * ビットは通常の敵と同じロックオン・入力・撃破経路で倒せる。
+ * 撃破されたビットは本体側(_updateBitRespawn)が bitReviveTime 秒後に復活させる。
+ *
+ * @param {Enemy} boss ビット連動ボス本体（BOSS_4 など）
+ * @param {{enemies: Enemy[]}} state state.enemies にビットを追加する
+ */
+export function spawnBitEnemiesFor(boss, state) {
+    if (!boss || !boss.type.isBitBoss || !state) return;
+    for (const side of ["left", "right"]) {
+        const typeId = side === "left" ? boss.type.bitLeft : boss.type.bitRight;
+        if (!typeId) continue;
+        const bit = createBitEnemy(boss, side, state);
+        boss.bitSlots[side] = { enemy: bit, respawnTimer: 0, typeId };
+        if (bit && state.enemies) state.enemies.push(bit);
+    }
+}
+
+// =====================================================
 // EnemyType設定
 // =====================================================
 /*
@@ -1403,21 +1617,131 @@ Object.assign(EnemyTypes, {
         ]
     },
 
+    // ==== ビット連動型ボス（オプション兵装） ====
+    // ・本体(BOSS_4)と左右のビット(BIT_LEFT / BIT_RIGHT)が電磁波ラインで薄く連結。
+    // ・ビットはプレイヤーには向かわず、本体周囲を楕円軌道で不規則に漂う。
+    // ・ビットは普通の敵と同じ設定(hitCount / tags / behaviors等)で倒せる。
+    //   撃破されると本体が bitReviveTime 秒後に復活させ、本体が死ねばビットも消える。
+    // ・復活時間を変えたいときは本体側の bitReviveTime を書き換えるだけ。
+    BOSS_4: {
+        id: "boss_4", name: "ボス 4: The Conductor",
+        color: "#9254de", shape: "gear", pattern: "circuit", size: 40,
+        speed: 0.12, rotationSpeed: 0.03, damage: 55,
+        tags: ["", "英語", "記号"], minLen: 13, maxLen: 20, score: 4000,
+        killSound: 5, killedEffect: "boss1", damageSound: 1,
+        hitCount: 6, knockback: 30,
+
+        // ★ビット連動設定
+        isBitBoss: true,             // ビット連動ボス本体であることを示すフラグ
+        bitReviveTime: 8,            // ★撃破されたビットの復活時間(秒)。好きな値に変更可能
+        bitLeft: "BIT_LEFT",         // 左ビットの敵タイプID
+        bitRight: "BIT_RIGHT",       // 右ビットの敵タイプID
+        bitOrbitRadius: 130,         // 本体からの離隔距離(px)。楕円軌道の半径
+
+        behaviors: [ // 本体の攻撃も既存の敵と同じ形式
+            { type: "attack", interval: 40, preDelay: 12, tags: ["","英語"], minLen: 8, maxLen: 12, damage: 100 },
+        ]
+    },
+
+    BIT_LEFT: {
+        id: "bit_left", name: "左ビット",
+        color: "#36cfc9", shape: "diamond", pattern: "circuit", size: 16,
+        speed: 0, // ふわふわ漂うため単体速度は0
+        damage: 20,
+        tags: [""], minLen: 3, maxLen: 6, score: 300,
+        killSound: 3, killedEffect: "enemy1", damageSound: 1,
+        spawnSound: "skill_on",           // ビット出現時の効果音
+        hitCount: 2, knockback: 20,      // ★ビットにも hitCount を設定可能
+        isBit: true,                      // ビットであることを示すフラグ
+
+        // ★ふわふわ動きパラメータ（このビット固有の動き方を調整）
+        bitFloatSpeed: 0.3,               // ふわふわの速度（大きいほど速く揺れる）
+        bitOrbitRadius: 130,              // ★本体からの離隔距離(px)。必要なら個別に上書き可
+
+        behaviors: [ // ビットの攻撃も既存の敵と同じ形式（shoot / spawn / attack）
+            { type: "shoot", interval: 15, preDelay: 1.0, bullet: { count: 3, speed: 1.0, damage: 8, size: 8, shape: "circle", color: "#36cfc9", charType: "alphabet" } },
+        ]
+    },
+
+    BIT_RIGHT: {
+        id: "bit_right", name: "右ビット",
+        color: "#40a9ff", shape: "diamond", pattern: "circuit", size: 16,
+        speed: 0, // ふわふわ漂うため単体速度は0
+        damage: 20,
+        tags: [""], minLen: 3, maxLen: 6, score: 300,
+        killSound: 3, killedEffect: "enemy1", damageSound: 1,
+        spawnSound: "skill_on",           // ビット出現時の効果音
+        hitCount: 2, knockback: 20,      // ★ビットにも hitCount を設定可能
+        isBit: true,                      // ビットであることを示すフラグ
+
+        // ★ふわふわ動きパラメータ（このビット固有の動き方を調整）
+        bitFloatSpeed: 0.3,
+        bitOrbitRadius: 130,
+
+        behaviors: [ // ビットの攻撃も既存の敵と同じ形式
+            { type: "shoot", interval: 15, preDelay: 1.0, bullet: { count: 3, speed: 1.0, damage: 8, size: 8, shape: "circle", color: "#40a9ff", charType: "alphabet" } },
+        ]
+    },
+
     LAST_BOSS: {
         id: "last_boss", name: "ラスボス: Singularity",
         color: "#000000", shape: "knot5", pattern: "honeycomb", size: 40,
-        speed: 0.1, rotationSpeed: 0.08, damage: 99,
-        tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 30, maxLen: 100, score: 10000, killedEffect: "boss2",
+        speed: 0.08, rotationSpeed: 0.08, damage: 99,
+        tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 25, maxLen: 100, score: 10000, killedEffect: "boss2",
         killSound: 5, damageSound: 1,
         hitCount: 10, knockback: 30,
+
+        // ★ビット連動設定
+        isBitBoss: true,             // ビット連動ボス本体であることを示すフラグ
+        bitReviveTime: 13,            // ★撃破されたビットの復活時間(秒)。好きな値に変更可能
+        bitLeft: "BIT_LEFT_LAST_BOSS",         // 左ビットの敵タイプID
+        bitRight: "BIT_RIGHT_LAST_BOSS",       // 右ビットの敵タイプID
+        bitOrbitRadius: 130,         // 本体からの離隔距離(px)。楕円軌道の半径
+
         behaviors: [
-            { type: "spawn", interval: 10, preDelay: 1.5, spawnType: "gray_circle_normal", count: 1 },
-            { type: "spawn", interval: 21, preDelay: 1.5, spawnType: "gray_square_small", count: 1 },
-            { type: "spawn", interval: 31, preDelay: 1.5, spawnType: "purple_circle_small", count: 1 },
-            { type: "shoot", interval: 15, preDelay: 0.8, bullet: { count: 8, speed: 1.0, damage: 50, size: 10, color: "#000000", shape: "arrow", homing: 0.02, charType: "alphabet" } },
-            { type: "shoot", interval: 36, preDelay: 0.8, bullet: { count: 3, speed: 0.4, damage: 50, size: 9, color: "#000000", shape: "circle", homing: 0.01, charType: "symbol" } },
-            { type: "shoot", interval: 26, preDelay: 0.8, bullet: { count: 3, speed: 0.9, damage: 50, size: 12, color: "#000000", shape: "circle", homing: 0.02, charType: "number" } },
+            { type: "spawn", interval: 30, preDelay: 1.5, spawnType: "gray_square_small", count: 1 },
             { type: "attack", interval: 45, preDelay: 12, tags: ["","英語","句読点"], minLen: 8, maxLen: 12, damage: 200 },
+        ]
+    },
+
+    BIT_LEFT_LAST_BOSS: {
+        id: "bit_left", name: "左ビット",
+        color: "#36cfc9", shape: "diamond", pattern: "circuit", size: 16,
+        speed: 0, // ふわふわ漂うため単体速度は0
+        damage: 20,
+        tags: [""], minLen: 5, maxLen: 10, score: 300,
+        killSound: 3, killedEffect: "enemy1", damageSound: 1,
+        spawnSound: "bitspawn",     // ビット出現時の効果音
+        hitCount: 2, knockback: 20,      // ★ビットにも hitCount を設定可能
+        isBit: true,                      // ビットであることを示すフラグ
+
+        // ★ふわふわ動きパラメータ（このビット固有の動き方を調整）
+        bitFloatSpeed: 0.3,               // ふわふわの速度（大きいほど速く揺れる）
+        bitOrbitRadius: 200,              // ★本体からの離隔距離(px)。必要なら個別に上書き可
+
+        behaviors: [ // ビットの攻撃も既存の敵と同じ形式（shoot / spawn / attack）
+            { type: "shoot", interval: 15, preDelay: 1.0, bullet: { count: 8, speed: 1.0, damage: 50, size: 8, shape: "circle", color: "#36cfc9", homing: 0.02,  charType: "alphabet" } },
+        ]
+    },
+
+    BIT_RIGHT_LAST_BOSS: {
+        id: "bit_right", name: "右ビット",
+        color: "#40a9ff", shape: "diamond", pattern: "circuit", size: 16,
+        speed: 0, // ふわふわ漂うため単体速度は0
+        damage: 20,
+        tags: [""], minLen: 5, maxLen: 10, score: 300,
+        killSound: 3, killedEffect: "enemy1", damageSound: 1,
+        spawnSound: "bitspawn",     // ビット出現時の効果音
+        hitCount: 2, knockback: 20,      // ★ビットにも hitCount を設定可能
+        isBit: true,                      // ビットであることを示すフラグ
+
+        // ★ふわふわ動きパラメータ（このビット固有の動き方を調整）
+        bitFloatSpeed: 0.3,
+        bitOrbitRadius: 200,
+
+        behaviors: [ // ビットの攻撃も既存の敵と同じ形式
+            { type: "shoot", interval: 26, preDelay: 1.0, bullet: { count: 3, speed: 0.9, damage: 50, size: 8, shape: "circle", color: "#40a9ff", homing: 0.02, charType: "number" } },
+            { type: "spawn", interval: 40, preDelay: 1.5, spawnType: "purple_circle_small", count: 1 },
         ]
     },
 
@@ -1437,19 +1761,64 @@ Object.assign(EnemyTypes, {
 
     EX_BOSS: {
         id: "extra_boss", name: "Ex Boss",
-        color: "#000000", shape: "circle", size: 60,
-        speed: 0.1, rotationSpeed: 0.04, damage: 99,
-        tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 30, maxLen: 100, score: 50000, killedEffect: "boss2",
+        color: "#000000", shape: "circle", size: 50,
+        speed: 0.08, rotationSpeed: 0.04, damage: 99,
+        tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 25, maxLen: 100, score: 50000, killedEffect: "boss2",
         killSound: 5, damageSound: 1,
         hitCount: 15, knockback: 30,
+
+        // ★ビット連動設定
+        isBitBoss: true,             // ビット連動ボス本体であることを示すフラグ
+        bitReviveTime: 12,            // ★撃破されたビットの復活時間(秒)。好きな値に変更可能
+        bitLeft: "BIT_LEFT_EX",         // 左ビットの敵タイプID
+        bitRight: "BIT_RIGHT_EX",       // 右ビットの敵タイプID
+        bitOrbitRadius: 130,         // 本体からの離隔距離(px)。楕円軌道の半径
+
         behaviors: [
-            { type: "spawn", interval: 10, preDelay: 1.5, spawnType: "gray_circle_normal", count: 1 },
-            { type: "spawn", interval: 21, preDelay: 1.5, spawnType: "gray_square_small", count: 1 },
-            { type: "spawn", interval: 31, preDelay: 1.5, spawnType: "purple_circle_normal", count: 1 },
-            { type: "shoot", interval: 15, preDelay: 0.8, bullet: { count: 9, speed: 1.0, damage: 80, size: 10, color: "#000000", shape: "arrow", homing: 0.02, charType: "alphabet" } },
-            { type: "shoot", interval: 36, preDelay: 0.8, bullet: { count: 5, speed: 0.4, damage: 80, size: 9, color: "#000000", shape: "circle", homing: 0.01, charType: "symbol" } },
-            { type: "shoot", interval: 26, preDelay: 0.8, bullet: { count: 5, speed: 0.9, damage: 80, size: 12, color: "#000000", shape: "circle", homing: 0.02, charType: "number" } },
+            { type: "spawn", interval: 25, preDelay: 1.5, spawnType: "gray_square_normal", count: 1 },
+            { type: "spawn", interval: 55, preDelay: 1.5, spawnType: "purple_circle_small", count: 1 },
             { type: "attack", interval: 40, preDelay: 12, tags: ["","英語","句読点"], minLen: 8, maxLen: 12, damage: 300 },
+        ]
+    },
+
+    BIT_LEFT_EX: {
+        id: "bit_left", name: "左ビット",
+        color: "#000000", shape: "circle", pattern: "circuit", size: 16,
+        speed: 0, // ふわふわ漂うため単体速度は0
+        damage: 20,
+        tags: [""], minLen: 6, maxLen: 12, score: 500,
+        killSound: 3, killedEffect: "enemy1", damageSound: 1,
+        spawnSound: "bitspawn",        // ビット出現時の効果音
+        hitCount: 2, knockback: 20,      // ★ビットにも hitCount を設定可能
+        isBit: true,                      // ビットであることを示すフラグ
+
+        // ★ふわふわ動きパラメータ（このビット固有の動き方を調整）
+        bitFloatSpeed: 0.3,               // ふわふわの速度（大きいほど速く揺れる）
+        bitOrbitRadius: 400,              // ★本体からの離隔距離(px)。必要なら個別に上書き可
+
+        behaviors: [ // ビットの攻撃も既存の敵と同じ形式（shoot / spawn / attack）
+            { type: "shoot", interval: 15, preDelay: 1.0, bullet: { count: 9, speed: 1.0, damage: 80, size: 8, shape: "circle", color: "#313131", homing: 0.02, charType: "alphabet" } },
+        ]
+    },
+
+    BIT_RIGHT_EX: {
+        id: "bit_right", name: "右ビット",
+        color: "#000000",shape: "circle", pattern: "circuit", size: 16,
+        speed: 0, // ふわふわ漂うため単体速度は0
+        damage: 20,
+        tags: [""], minLen: 6, maxLen: 12, score: 500,
+        killSound: 3, killedEffect: "enemy1", damageSound: 1,
+        spawnSound: "bitspawn",        // ビット出現時の効果音
+        hitCount: 2, knockback: 20,      // ★ビットにも hitCount を設定可能
+        isBit: true,                      // ビットであることを示すフラグ
+
+        // ★ふわふわ動きパラメータ（このビット固有の動き方を調整）
+        bitFloatSpeed: 0.3,
+        bitOrbitRadius: 400,
+
+        behaviors: [ // ビットの攻撃も既存の敵と同じ形式
+            { type: "shoot", interval: 26, preDelay: 1.0, bullet: { count: 5, speed: 0.9, damage: 80, size: 8, color: "#313131", shape: "circle", homing: 0.02, charType: "number" } },
+            { type: "shoot", interval: 36, preDelay: 1.0, bullet: { count: 5, speed: 0.4, damage: 80, size: 8, color: "#313131", shape: "circle", homing: 0.01, charType: "symbol" } },
         ]
     },
 
