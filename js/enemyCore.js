@@ -1777,10 +1777,12 @@ function isEnemyVisible(enemy) {
     if (!enemy) return false;
 
     const r = enemy.radius || 15;
-    // ゲーム内座標は physical pixels (DPR調整済み) で計算されているため
-    // 判定も表示サイズではなく canvas 自体の解像度を基準にするのが正しい
-    const cw = canvas.width;
-    const ch = canvas.height;
+    // 敵座標・スポーン境界は canvas.clientWidth / clientHeight（CSS px）基準。
+    // canvas.width / height（物理 px）を使うと dpr > 1 の環境で
+    // 判定境界が dpr 倍に膨らみ、画面外の敵まで「可視」扱いになるため
+    // CSS px に統一する。
+    const cw = canvas.clientWidth;
+    const ch = canvas.clientHeight;
 
     return (
         enemy.x + r > 0 &&

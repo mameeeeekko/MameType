@@ -722,6 +722,92 @@ document.addEventListener("DOMContentLoaded", () => {
     location.reload();
   });
 
+  // -----------------------------
+  // アップデート確認ボタン（VERSION）
+  // -----------------------------
+  const checkUpdateBtn = document.getElementById("checkUpdateBtn");
+  const updateCheckStatus = document.getElementById("updateCheckStatus");
+
+  if (updateCheckStatus) {
+    updateCheckStatus.textContent = `現在のバージョン: v${APP_VERSION}`;
+  }
+
+  checkUpdateBtn?.addEventListener("click", async () => {
+
+    if (!("serviceWorker" in navigator)) {
+      if (updateCheckStatus) {
+        updateCheckStatus.textContent = "この環境ではアップデート確認に対応していません。";
+      }
+      return;
+    }
+
+    checkUpdateBtn.disabled = true;
+    if (updateCheckStatus) {
+      updateCheckStatus.textContent = "アップデートを確認中...";
+    }
+
+    try {
+
+      const registration =
+        currentServiceWorkerRegistration ||
+        await navigator.serviceWorker.register("./service-worker.js");
+
+      await registration.update();
+
+      // -------------------------------------------
+      // 新しいバージョンを検出した場合、
+      // registration.onupdatefound 経由で
+      // 準備中モーダル（進捗バー）が自動表示される
+      // -------------------------------------------
+
+      if (registration.installing) {
+
+        if (updateCheckStatus) {
+          updateCheckStatus.textContent = "新しいバージョンをダウンロード中です...";
+        }
+
+      } else if (registration.waiting && navigator.serviceWorker.controller) {
+
+        // -------------------------------------------
+        // 「後で」で延期していた更新がある場合、
+        // 更新通知を再表示する
+        // -------------------------------------------
+
+        showUpdateNotification(registration);
+
+        if (updateCheckStatus) {
+          updateCheckStatus.textContent = "新しいバージョンの適用を待っています。「今すぐ更新」で適用できます。";
+        }
+
+      } else if (!navigator.serviceWorker.controller) {
+
+        // 初回ダウンロード（オフライン用データ取得）中
+        if (updateCheckStatus) {
+          updateCheckStatus.textContent = "オフライン用データを準備中です...";
+        }
+
+      } else {
+
+        if (updateCheckStatus) {
+          updateCheckStatus.textContent = `最新です（v${APP_VERSION}）`;
+        }
+
+      }
+
+    } catch (e) {
+
+      console.warn("Update check failed:", e);
+      if (updateCheckStatus) {
+        updateCheckStatus.textContent = "確認に失敗しました。ネットワーク接続を確認してください。";
+      }
+
+    } finally {
+
+      checkUpdateBtn.disabled = false;
+
+    }
+  });
+
 });
 
 // =====================================================
@@ -762,6 +848,11 @@ if ("serviceWorker" in navigator) {
           registration.installing;
 
         if (!installingWorker) {
+          // installing の取得に失敗した場合でも、waiting に
+          // 更新済みワーカーが待機していれば通知を出す（取りこぼし保険）
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            showUpdateNotification(registration);
+          }
           return;
         }
 
@@ -844,6 +935,36 @@ if ("serviceWorker" in navigator) {
           );
 
         });
+
+      // -----------------------------------------------
+      // 定期更新チェック
+      // update() はページロード時の 1 回しか走らないため、
+      // 開きっぱなしのタブ / PWA でも更新が検知されるように
+      // 1 時間毎 + タブ復帰時にもチェックする
+      // -----------------------------------------------
+
+      const checkForUpdate = () => {
+
+        registration.update()
+          .catch(error => {
+            console.warn(
+              "Service Worker update check failed:",
+              error
+            );
+          });
+
+      };
+
+      setInterval(checkForUpdate, 60 * 60 * 1000);
+
+      document.addEventListener(
+        "visibilitychange",
+        () => {
+          if (document.visibilityState === "visible") {
+            checkForUpdate();
+          }
+        }
+      );
 
     })
 
@@ -3319,6 +3440,10 @@ function bindKeyEvents() {
     // ★スタッフロール中は全ショートカットを無効化（ESCによるスキップはdialogue.js側で処理）
     if (window._staffRollActive) return;
 
+    // ★勲章・詳細ステータス系モーダル表示中は、キー入力をモーダル操作（閉じる/タブ切替）に限定する。
+    //   （それ以外のキーが handleGameKey / handleMenuKey 等に漏れて別メニューが開くのを防ぐ）
+    if (!e.ctrlKey && !e.metaKey && handleStatsModalKey(e)) return;
+
     // 管理者用DEVツール（Shift+Oで開閉）
     if (e.shiftKey && e.key.toLowerCase() === "o") {
       const panel = document.getElementById("devPanel");
@@ -3332,38 +3457,58 @@ function bindKeyEvents() {
       return;
     }
 
-    // ★クエストステータスモーダル表示中のタブ切替（MAIN / RECORD / PROGRESSION / SKILL）
-    // ゲーム中・ポーズ中でも handleGameKey / handlePauseKey に奪われないよう、先に処理する
-    const questStatsModalNow = document.getElementById("questStatsModal");
-    if (
-      questStatsModalNow &&
-      window.getComputedStyle(questStatsModalNow).display !== "none" &&
-      !e.ctrlKey &&
-      !e.metaKey
-    ) {
-      const tabPage = {
-        m: "main",
-        r: "record",
-        p: "progression",
-        s: "skill",
-      }[e.key.toLowerCase()];
-      if (tabPage) {
-        const questNavBtn = document.querySelector(
-          `.quest-page-nav button[data-page="${tabPage}"]`
-        );
-        if (questNavBtn) {
-          e.preventDefault();
-          questNavBtn.click();
-          return;
-        }
-      }
-    }
-
     if (handleResultKey(e)) return;
     if (handlePauseKey(e)) return;
     if (await handleGameKey(e)) return;
     if (handleMenuKey(e)) return;
   });
+}
+
+function handleStatsModalKey(e) {
+
+  // 勲章モーダル / 詳細ステータスモーダル（通常・クエスト）のいずれかが表示中かを判定
+  const modalTargets = [
+    { id: "achModal",          closeBtn: "achClose" },         // 勲章
+    { id: "playerStatsModal",  closeBtn: "statsClose" },       // 詳細ステータス（通常）
+    { id: "questStatsModal",   closeBtn: "statsCloseQuest" },  // 詳細ステータス（クエスト）
+  ];
+
+  const openModal = modalTargets.find(
+    ({ id }) => {
+      const m = document.getElementById(id);
+      return m && window.getComputedStyle(m).display !== "none";
+    }
+  );
+  if (!openModal) return false;
+
+  e.preventDefault(); // モーダル操作以外のデフォルト挙動・後続ハンドラーを全て止める
+
+  const key = e.key.toLowerCase();
+
+  // 閉じる（b / Escape）
+  if (key === "b" || key === "escape") {
+    document.getElementById(openModal.closeBtn)?.click();
+    return true;
+  }
+
+  // クエスト詳細ステータスのタブ切替（MAIN / RECORD / PROGRESSION / SKILL）
+  if (openModal.id === "questStatsModal") {
+    const tabPage = {
+      m: "main",
+      r: "record",
+      p: "progression",
+      s: "skill",
+    }[key];
+    if (tabPage) {
+      const questNavBtn = document.querySelector(
+        `.quest-page-nav button[data-page="${tabPage}"]`
+      );
+      questNavBtn?.click();
+    }
+  }
+
+  // それ以外のキーは全て無効（他メニューが開くのを防ぐ）
+  return true;
 }
 
 function handleResultKey(e) {

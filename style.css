@@ -6,6 +6,8 @@ style.css
 /* 全OSで共通表示するためのフォント変数
    （assets/fonts/fonts.css で self-host したフォントを使用） */
 :root {
+  color-scheme: dark;  /* ネイティブUI（スクロールバー等）をダーク仕様に */
+
   /* =====================================================
      ステージ（アプリ全体）の設定
      デザインサイズは 1600×900（16:9）で固定し、js/stageScale.js が
@@ -30,6 +32,37 @@ style.css
 html {
   height: 100%;
   background: #05080a;   /* ステージ外（レターボックス）の背景 */
+}
+
+/* =====================================================
+   スクロールバー共通設定（全要素）
+   全スクロール領域を Safari 風の黒系の細いバーに統一する。
+   ※ overflow: auto なので、内容が収まっている場合は
+      スクロールバー自体が表示されない。
+   ※ 個別にバーを消している箇所（#kana-scroll 等）は
+      詳細度が高いためそのまま優先される。
+===================================================== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 /* =====================================================
    ステージ：アプリ全体をデザインサイズ 1600×900（16:9）に固定し、
@@ -1397,14 +1430,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(88, 166, 255, 0.05);
 }
 
-/* 設定画面のスクロールバーをサイバー風に調整 */
-.free-config-container::-webkit-scrollbar {
-  width: 6px;
-}
-.free-config-container::-webkit-scrollbar-thumb {
-  background: rgba(88, 166, 255, 0.2);
-  border-radius: 3px;
-}
+/* スクロールバーは style.css 冒頭の共通設定（黒系）に統一 */
 
 .config-section-title {
   font-size: 11px;
@@ -2537,15 +2563,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   overflow-x: auto;
 }
 
-/* スクロールバー */
-#history::-webkit-scrollbar {
-  width: 8px;
-}
-
-#history::-webkit-scrollbar-thumb {
-  background: #30363d;
-  border-radius: 4px;
-}
+/* スクロールバーは style.css 冒頭の共通設定（黒系）に統一 */
 
 #history table {
   font-size: 0.68rem;
@@ -3389,7 +3407,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   max-width: 1200px; /* allow larger skill screen to show */
   max-height: calc(var(--dvh) * 92);
   overflow: auto;
-  max-height: calc(var(--dvh) * 80);
+  max-height: calc(var(--dvh) * 90);
   overflow-y: auto;
   background: rgba(13, 17, 23, 0.95);
   border: 1px solid rgba(88, 166, 255, 0.4);
@@ -3398,6 +3416,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   box-shadow: 0 8px 32px rgba(0,0,0,0.6);
   padding: 12px 14px;
 }
+
+/* スクロールバーは style.css 冒頭の共通設定（黒系）に統一 */
 
 #statsClose {
   position: absolute;
@@ -8132,24 +8152,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   padding-right: 6px;
 }
 
-/* スクロールバー */
-.star-upgrade-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.star-upgrade-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 3px;
-}
-
-.star-upgrade-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 215, 0, 0.3);
-  border-radius: 3px;
-}
-
-.star-upgrade-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 215, 0, 0.5);
-}
+/* スクロールバーは style.css 冒頭の共通設定（黒系）に統一 */
 
 .star-upgrade-item {
   display: flex;

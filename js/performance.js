@@ -71,14 +71,14 @@ const PROFILES = {
 
 const AUTO_EVAL_FRAMES = 30;   // 評価を行う間隔（フレーム数 / 60fps時 ≈ 0.5秒）
 const AUTO_LOWER_FPS = 35;     // 平均FPSがこれを下回る評価が続くと一段下げる
-const AUTO_LOWER_EVALS = 8;    // 「下げ」判定に必要な連続評価回数（≈4秒）
+const AUTO_LOWER_EVALS = 2;    // 「下げ」判定に必要な連続評価回数（≈1秒）
 const AUTO_RAISE_FPS = 45;     // 平均FPSがこれを上回る評価が続けば一段戻す
 const AUTO_RAISE_EVALS = 60;   // 「上げ」判定に必要な連続評価回数（≈30秒・ハンチング防止）
 
 // 自動劣化の「段階」を表すテーブル。auto はこの中の現在段階 index により値を決める。
 // stageIndex 0 = 完全品質（現状と同じ）, 1, 2 … と下がっていく。
 const AUTO_STAGES = [
-  { dprCap: 3,    particleScale: 1.0, effectsScale: 1.0, shadow: true,  fpsCap: 0 },
+  { dprCap: 2,    particleScale: 1.0, effectsScale: 1.0, shadow: true,  fpsCap: 0 },
   { dprCap: 2.0,  particleScale: 0.8, effectsScale: 0.8, shadow: true,  fpsCap: 0 },
   { dprCap: 1.5,  particleScale: 0.6, effectsScale: 0.6, shadow: true,  fpsCap: 0 },
   { dprCap: 1.0,  particleScale: 0.4, effectsScale: 0.4, shadow: false, fpsCap: 30 },
