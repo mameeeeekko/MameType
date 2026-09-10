@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.10";
+const CACHE_NAME = "mametype-v1.0.11";
 
 // =====================================================
 // コアアセット
@@ -35,6 +35,7 @@ const CORE_ASSETS = [
   // ---------------------------------------------------
 
   "./js/main.js",
+  "./js/saveDataNotice.js",
   "./js/fullscreenUtil.js",
   "./js/stageScale.js",
   "./js/gameCore.js",

@@ -50,6 +50,7 @@ import { playBGM, playSE, stopBGM, stopAllLoopSE, fadeBGMTo, fadeOutBGM, BGM_CON
 import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
 import { supabase } from "../online/supabase.js";
 import { startDefenseMode } from "./defenseCore.js";
+import { showSaveDataNoticeOnce } from "./saveDataNotice.js";
 
 // ================================
 // 🔹デイリーモードの固定設定
@@ -481,6 +482,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // 毎回免責事項を表示
       const disclaimerMessage = `このゲームのセーブデータは、お使いのブラウザ（ローカルストレージ）に保存されます。\n\nブラウザのキャッシュや履歴を削除すると、セーブデータが失われる可能性がありますのでご注意ください。\n\n大切なデータは、設定画面の「データ管理」からエクスポートしてバックアップを取ることをお勧めします。`;
       await showDisclaimer(disclaimerMessage);
+
+      // セーブデータの「保存場所」に関する案内（初回起動時のみ）
+      await showSaveDataNoticeOnce();
 
       // メインメニューを表示
       showMainMenu();
