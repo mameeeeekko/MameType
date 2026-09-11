@@ -291,62 +291,6 @@ export function enableAdaptiveShadowControl() {
 }
 
 // ============================================================
-// Windows 向け「小さい文字の太字化」（可読性補正）
-// ------------------------------------------------------------
-// Windows は GPU 合成レイヤー上の文字に ClearType（サブピクセルAA）を
-// 使えずグレースケール AA のみのため、特に小さい文字が
-// 「痩せて潰れた」ように見える。これを緩和するため、Canvas の
-// 小さい文字（16px 未満）を描いた直後に同色の細いストロークを
-// 重ねてわずかに太くする。
-//  - Mac / Linux では何もしない（見た目不変）
-//  - 追加コストは小さい文字の strokeText 1 回のみ
-//    （HUD・ローマ字等の数十文字/フレーム程度で軽微）
-// ============================================================
-let textThickenPatched = false;
-
-export function enableWindowsTextThickening() {
-  if (textThickenPatched) return;
-  textThickenPatched = true;
-
-  // Windows / Edge 判定。該当しない環境は何もしない。
-  const ua = navigator.userAgent || "";
-  const isWindows = /Win(dows| NT)/i.test(ua) ||
-    (navigator.userAgentData && navigator.userAgentData.platform === "Windows");
-  if (!isWindows) return;
-
-  const proto = CanvasRenderingContext2D.prototype;
-  if (typeof proto.fillText !== "function") return;
-  const origFillText = proto.fillText;
-
-  proto.fillText = function (text, x, y, maxWidth) {
-    origFillText.call(this, text, x, y, maxWidth);
-
-    try {
-      // ctx.font からフォントサイズ（ステージpx）を取り出す
-      const m = /(\d+(?:\.\d+)?)px/.exec(String(this.font || ""));
-      const size = m ? parseFloat(m[1]) : 0;
-      if (size > 0 && size < 16) {
-        const prevStrokeStyle = this.strokeStyle;
-        const prevLineWidth = this.lineWidth;
-        const prevLineJoin = this.lineJoin;
-
-        // 同色の細い縁取りで太くする（塗り色・グラデーションをそのまま使う）
-        this.strokeStyle = this.fillStyle;
-        this.lineWidth = Math.max(0.35, size * 0.05);
-        this.lineJoin = "round";
-        this.strokeText(text, x, y, maxWidth);
-
-        this.strokeStyle = prevStrokeStyle;
-        this.lineWidth = prevLineWidth;
-        this.lineJoin = prevLineJoin;
-      }
-    } catch (e) {
-      /* 太字化に失敗しても描画は継続 */
-    }
-  };
-}
-
-// ============================================================
 // フレーム間引き（FPSキャップ）＋ 実測による適応制御への入力
 // ============================================================
 //  * shouldRunFrame : fpsCap>0 のとき描画フレームを間引くゲート

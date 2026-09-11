@@ -37,7 +37,7 @@ import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
 import { fitStage, getStageScale } from "./stageScale.js";
-import { enableAdaptiveShadowControl, enableWindowsTextThickening, getProfile } from "./performance.js";
+import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
 import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
@@ -435,14 +435,6 @@ export function applyTitleMenuBackground() {
 document.addEventListener("DOMContentLoaded", () => {
   // ★描画品質に応じた「グロー影」の一括制御を有効化（起動時）
   enableAdaptiveShadowControl();
-
-  // ★Windows の文字可読性補正（グレースケールAAで痩せて潰れて見える対策）
-  //  - Canvas: 小さい文字を同色ストロークでわずかに太くする
-  //  - DOM:    body.win-text-thicken で -webkit-text-stroke / weight 500
-  enableWindowsTextThickening();
-  if (/Win/i.test(navigator.userAgent || "")) {
-    document.body.classList.add("win-text-thicken");
-  }
 
   cacheDOM();
 

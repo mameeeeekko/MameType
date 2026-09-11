@@ -29,10 +29,11 @@ style.css
              'Yu Gothic UI', system-ui, sans-serif;
   /* 日本語UI・タイピング表示用（丸ゴ寄りで統一） */
   --font-ja: 'M PLUS Rounded 1c', 'Noto Sans JP', 'Hiragino Maru Gothic ProN',
-             'Yu Gothic UI', system-ui, sans-serif;
+             'Yu Gothic UI', 'Meiryo', system-ui, sans-serif;
   /* 数字・等幅表示用 */
   --font-mono: 'Noto Sans Mono', 'Consolas', 'Courier New', monospace;
 }
+
 html {
   height: 100%;
   background: #05080a;   /* ステージ外（レターボックス）の背景 */
@@ -103,21 +104,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-/* =====================================================
-   Windows 専用の文字可読性補正
-   Windows は合成レイヤー上の文字で ClearType（サブピクセルAA）が
-   使えずグレースケールのみのため、小さい文字が痩せて潰れて見える。
-   js/main.js が Windows 判定時に body へ win-text-thicken を付与し、
-   わずかに縁を太くして可読性を上げる（Mac 等では適用されない）。
-   ※ font-weight: 500 は 'M PLUS Rounded 1c' の実ウェイト500が
-     同梱されているため疑似ボールドではなく綺麗に出る
-     （'Inter' は 500 を持たないため 400 のまま使われる）。
-   ===================================================== */
-body.win-text-thicken {
-  -webkit-text-stroke: 0.2px;
-  font-weight: 500;
 }
 
 /* R-TYPE風タクティカル背景
