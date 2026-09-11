@@ -22,8 +22,10 @@ export const QUALITY_LEVELS = ["auto", "high", "medium", "low"];
 
 const QUALITY_STORAGE_KEY = "typing_game_quality";
 
-// 手動レベル選択時のDPR上限。auto は適応制御により動的に決まるため null
-const QUALITY_DPR_CAPS = { auto: null, high: 2, medium: 1.5, low: 1 };
+// 手動レベル選択時のDPR上限。auto は適応制御により動的に決まるため null。
+// ※ low の下限は 1.0 ではなく 1.25：Windows の 125% 表示スケーリング
+//   （devicePixelRatio=1.25）で解像度が足りず文字がにじむのを防ぐ。
+const QUALITY_DPR_CAPS = { auto: null, high: 2, medium: 1.5, low: 1.25 };
 
 /** 現在の品質レベル名を返す（auto/high/medium/low） */
 export function getRenderQuality() {
@@ -57,7 +59,9 @@ const PROFILES = {
   auto:   { shadow: true, particleScale: 1.0, effectsScale: 1.0, fpsCap: 0, dprCap: 3, label: "Auto（自動）" },
   high:   { shadow: true, particleScale: 1.0, effectsScale: 1.0, fpsCap: 0, dprCap: 2.0, label: "High（高画質）" },
   medium: { shadow: true, particleScale: 0.7, effectsScale: 0.6, fpsCap: 0, dprCap: 1.5, label: "Medium（標準）" },
-  low:    { shadow: false, particleScale: 0.4, effectsScale: 0.3, fpsCap: 30, dprCap: 1.0, label: "Low（軽量）" },
+  // dprCap 1.25: 125%スケーリング環境で1:1解像度を確保（150%環境でも
+  // 1.5→1.25 の僅かな引き伸ばしに抑え、文字の滲みを防ぐ）
+  low:    { shadow: false, particleScale: 0.4, effectsScale: 0.3, fpsCap: 30, dprCap: 1.25, label: "Low（軽量）" },
 };
 
 // ------------------------------------------------------------
@@ -81,7 +85,8 @@ const AUTO_STAGES = [
   { dprCap: 2,    particleScale: 1.0, effectsScale: 1.0, shadow: true,  fpsCap: 0 },
   { dprCap: 2.0,  particleScale: 0.8, effectsScale: 0.8, shadow: true,  fpsCap: 0 },
   { dprCap: 1.5,  particleScale: 0.6, effectsScale: 0.6, shadow: true,  fpsCap: 0 },
-  { dprCap: 1.0,  particleScale: 0.4, effectsScale: 0.4, shadow: false, fpsCap: 30 },
+  // 最終段階でも dprCap は 1.25 を維持する（1.0 だと 125%表示環境で文字が滲む）
+  { dprCap: 1.25, particleScale: 0.4, effectsScale: 0.4, shadow: false, fpsCap: 30 },
 ];
 
 let autoStage = 0;        // 現在の auto 段階

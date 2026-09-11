@@ -1,4 +1,4 @@
-import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEMENTS } from "./playerStats.js";
+import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEMENTS, getAchievementProgress } from "./playerStats.js";
 import { savePlayerStats } from "./storage.js";
 import { getPlayerStatsForEnemy, getStarUpgradeLevel, getStarUpgradeTimeFactor, STAR_UPGRADE_MAX_LEVEL } from "./questPlayerStats.js";
 import { getClearedStageCount, getTotalStars, getAvailableMaxStars, hasSeenTrueEnding } from "./questProgress.js";
@@ -46,8 +46,24 @@ export function initAchievementsUI() {
   };
 }
 
+// ★勲章進捗の「現在 / 必要」表示用フォーマット
+// unit: "time" の場合は秒を受け取り「分/時間」表記に変換する
+function formatProgressTime(seconds) {
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}分`;
+  const h = seconds / 3600;
+  const display = h >= 10 ? Math.round(h) : Math.round(h * 10) / 10;
+  return `${display}時間`;
+}
+
+function formatAchievementProgress(prog) {
+  const current = prog.unit === "time" ? formatProgressTime(prog.current) : `${Math.floor(prog.current)}`;
+  const target = prog.unit === "time" ? formatProgressTime(prog.target) : `${prog.target}`;
+  return `${current} / ${target}`;
+}
+
 function renderAchievements(container) {
   const stats = getPlayerStats();
+  const progress = getAchievementProgress(stats); // ★各勲章の進捗（現在の回数/必要回数）
 
   const html = ACHIEVEMENTS.map(a => {
     // devOverrideがtrueなら強制的にアンロック状態にする
@@ -59,13 +75,22 @@ function renderAchievements(container) {
       Array.isArray(stats.seenAchievements) &&
       !stats.seenAchievements.includes(a.id);
 
-    // アンロックされていない実績は情報を隠す
-    const name = unlocked ? a.name : "？？？？？？";
-    const desc = unlocked ? a.desc : "（条件を満たすと表示されます）";
-    const icon = unlocked ? '🏆' : '❓';
+    // ★未取得でも条件に一度でも到達した勲章は、条件文と進捗（現在の回数/必要回数）だけ開示する
+    //   （進捗0の勲章は今まで通り非表示。薄暗いスタイルは取得するまでそのまま）
+    let name = unlocked ? a.name : "？？？？？？";
+    let desc = unlocked ? a.desc : "（条件を満たすと表示されます）";
+    let icon = unlocked ? '🏆' : '❓';
+    let progressHtml = "";
+    if (!unlocked) {
+      const prog = progress[a.id];
+      if (prog && prog.current >= 1) {
+        desc = a.desc;
+        progressHtml = `<div class="ach-progress">${formatAchievementProgress(prog)}</div>`;
+      }
+    }
 
     return `
-      <div class="ach-item ${unlocked ? "unlocked" : "locked"}" title="${unlocked ? a.desc : '未解除'}" style="position: relative;">
+      <div class="ach-item ${unlocked ? "unlocked" : "locked"}${progressHtml ? " revealed" : ""}" title="${(unlocked || progressHtml) ? a.desc : '未解除'}" style="position: relative;">
         ${isNew ? `
           <div class="ach-new-badge" style="
             position: absolute;
@@ -87,6 +112,7 @@ function renderAchievements(container) {
         <div class="ach-text-content">
           <div class="ach-name">${name}</div>
           <div class="ach-desc">${desc}</div>
+          ${progressHtml}
         </div>
       </div>
     `;
@@ -95,7 +121,7 @@ function renderAchievements(container) {
   // 実績リストのコンテナをクリアし、ヘッダーとグリッドを再構築
   container.innerHTML = `
     <div class="daily-stats-section">
-      勲章 ${(stats.achievements?.length || 0)}/${ACHIEVEMENTS.length}
+      勲章 ${(stats.achievements || []).filter(id => ACHIEVEMENTS.some(a => a.id === id)).length}/${ACHIEVEMENTS.length}
       <button id="achClose" class="achClose">×</button>
     </div>
     <div class="ach-grid">${html}</div>

@@ -508,6 +508,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // ステージスケールの初期適用（resize / fullscreenchange では自動更新される）
   fitStage();
 
+  // Webフォントの読み込み完了後に一度だけ再フィット。
+  // フォント確定前にCanvasへ描かれた「フォールバック字形」の残骸を
+  // 再描画させる（DOMテキストはブラウザが自動で再レイアウトする）。
+  // resize 発火で各モードの Canvas 再フィット（defenseCore 等）も走る。
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      fitStage();
+      window.dispatchEvent(new Event("resize"));
+    });
+  }
+
   // グローバルUIバー（全メニュー共通・左上）の表示制御を初期化
   initGlobalUiBar();
 

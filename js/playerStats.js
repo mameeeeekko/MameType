@@ -594,7 +594,10 @@ export function updateAchievements(stats, isFree = false, isQuest = false) {
   // 全実績解除
   // 「全実績解除」の実績自体を除いた総数
   const totalAchievements = ACHIEVEMENTS.filter(ach => ach.id !== 'all_achievements').length;
-  const currentUnlockedCount = a.filter(id => id !== "all_achievements").length;
+  // ★ACHIEVEMENTSに存在しないID（テスト用・旧ID）がカウントに含まれるのを防ぐ
+  const currentUnlockedCount = a.filter(id =>
+    id !== "all_achievements" && ACHIEVEMENTS.some(ach => ach.id === id)
+  ).length;
   if (currentUnlockedCount >= totalAchievements) {
     unlock("all_achievements");
   }
@@ -602,6 +605,32 @@ export function updateAchievements(stats, isFree = false, isQuest = false) {
   return unlockedNow;
 }
 
+
+/**
+ * クエストモードのアイテム取得数（回復/攻撃/支援）を集計する
+ * ※勲章判定(updateQuestAndEnemyAchievements)と進捗表示(getAchievementProgress)で共通使用
+ * @param {object} questStats - クエストモードのプレイヤー統計
+ * @returns {{heal: number, kill: number, support: number}}
+ */
+function getQuestItemCounts(questStats) {
+  const pickups = questStats?.questRecord?.itemPickupCount || {};
+  const heal = (pickups.heal_small || 0) +
+               (pickups.heal_medium || 0) +
+               (pickups.heal_large || 0) +
+               (pickups.heal_full || 0);
+  const kill = (pickups.kill_small || 0) +
+               (pickups.kill_medium || 0) +
+               (pickups.kill_large || 0) +
+               (pickups.kill_all || 0);
+  const support = (pickups.freeze_small || 0) +
+                  (pickups.freeze_medium || 0) +
+                  (pickups.freeze_large || 0) +
+                  (pickups.cooldown_small || 0) +
+                  (pickups.cooldown_medium || 0) +
+                  (pickups.cooldown_large || 0) +
+                  (pickups.cooldown_stock || 0);
+  return { heal, kill, support };
+}
 
 /**
  * クエストモードとエネミーモードに関連する実績を判定・更新する
@@ -693,29 +722,15 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
     }
 
     // ★クエストモードのアイテム取得数
-    const healItemCount = (questStats.questRecord?.itemPickupCount?.heal_small || 0) +
-                          (questStats.questRecord?.itemPickupCount?.heal_medium || 0) +
-                          (questStats.questRecord?.itemPickupCount?.heal_large || 0) +
-                          (questStats.questRecord?.itemPickupCount?.heal_full || 0);
-    if (healItemCount >= 50) unlock("item_heal_30");
+    // ※集計は getQuestItemCounts() で共通化（勲章進捗表示でも使用）
+    const { heal: healItemCount, kill: killItemCount, support: supportItemCount } = getQuestItemCounts(questStats);
+    if (healItemCount >= 50) unlock("item_heal_50"); // ★旧ID(item_heal_30)はACHIEVEMENTSに存在しないため修正
     if (healItemCount >= 1) unlock("item_heal_1");//test
 
-
-    const killItemCount = (questStats.questRecord?.itemPickupCount?.kill_small || 0) +
-                          (questStats.questRecord?.itemPickupCount?.kill_medium || 0) +
-                          (questStats.questRecord?.itemPickupCount?.kill_large || 0) +
-                          (questStats.questRecord?.itemPickupCount?.kill_all || 0);
-    if (killItemCount >= 50) unlock("item_kill_30");
+    if (killItemCount >= 50) unlock("item_kill_50"); // ★旧ID(item_kill_30)はACHIEVEMENTSに存在しないため修正
     if (killItemCount >= 1) unlock("item_kill_1");//test
 
-    const supportItemCount = (questStats.questRecord?.itemPickupCount?.freeze_small || 0) +
-                             (questStats.questRecord?.itemPickupCount?.freeze_medium || 0) +
-                             (questStats.questRecord?.itemPickupCount?.freeze_large || 0) +
-                             (questStats.questRecord?.itemPickupCount?.cooldown_small || 0) +
-                             (questStats.questRecord?.itemPickupCount?.cooldown_medium || 0) +
-                             (questStats.questRecord?.itemPickupCount?.cooldown_large || 0) +
-                             (questStats.questRecord?.itemPickupCount?.cooldown_stock || 0);
-    if (supportItemCount >= 50) unlock("item_support_30");
+    if (supportItemCount >= 50) unlock("item_support_50"); // ★旧ID(item_support_30)はACHIEVEMENTSに存在しないため修正
     if (supportItemCount >= 1) unlock("item_support_1");//test
 
     // ★アクティブスキル使用回数
@@ -736,6 +751,119 @@ function updateQuestAndEnemyAchievements(stats, unlock) {
   if (cleared.includes("W2_BOSS")) unlock("clear_world_2");
   if (cleared.includes("W3_BOSS")) unlock("clear_world_3");
   if (cleared.includes("WEX_BOSS")) unlock("clear_world_ex");
+}
+
+// ================================
+// 勲章の進捗取得（勲章モーダルの「現在の回数/必要回数」表示用）
+// ================================
+// 各勲章IDごとに { current: 現在の記録, target: 解除に必要な記録, unit: "time"は秒単位 } を返す。
+// ※条件が二値（ワールドクリア・真エンディング・ノーダメージクリア等）の勲章は
+//   「条件達成=解除」のため対象外。進捗0の勲章はUI側で今まで通り非表示になる。
+export function getAchievementProgress(stats) {
+  const progress = {};
+  const add = (id, current, target, unit = null) => {
+    progress[id] = { current: Math.max(0, current || 0), target, unit };
+  };
+
+  // ===== プレイ回数・時間 =====
+  add("first_play", stats.totalPlays, 1);
+  add("play_10", stats.totalPlays, 10);
+  add("play_100", stats.totalPlays, 100);
+  add("play_500", stats.totalPlays, 500);
+  add("play_1000", stats.totalPlays, 1000);
+
+  const totalPlayTime = (stats.regular?.totalGameTime || 0) +
+                        (stats.freeMode?.totalTime || 0) +
+                        (stats.enemyMode?.totalPlayTime || 0);
+  add("play_time_10h", totalPlayTime, 36000, "time");  // 10時間
+  add("play_time_50h", totalPlayTime, 180000, "time"); // 50時間
+
+  // ===== 日数・継続 =====
+  add("days_7", stats.days?.unique, 7);
+  add("days_30", stats.days?.unique, 30);
+  add("streak_3", stats.days?.streak, 3);
+  add("streak_7", stats.days?.streak, 7);
+  add("streak_14", stats.days?.streak, 14);
+  add("streak_30", stats.days?.streak, 30);
+
+  // ===== タイピングスキル =====
+  add("kpm_200", stats.regular?.maxSpeed, 200);
+  add("kpm_250", stats.regular?.maxSpeed, 250);
+  add("kpm_300", stats.regular?.maxSpeed, 300);
+  add("kpm_350", stats.regular?.maxSpeed, 350);
+  add("no_miss_10", stats.regular?.noMissClears, 10);
+
+  // ===== eScoreランク =====
+  add("rank_s", stats.regular?.maxEScore, 260);
+  add("rank_great", stats.regular?.maxEScore, 275);
+  add("rank_rapid", stats.regular?.maxEScore, 300);
+  add("rank_falcon", stats.regular?.maxEScore, 325);
+
+  // ===== フリー時間 =====
+  add("free_1h", stats.freeMode?.totalTime, 3600, "time");  // 1時間
+  add("free_10h", stats.freeMode?.totalTime, 36000, "time"); // 10時間
+
+  // ===== エネミーモード =====
+  add("max_chain_50", stats.enemyMode?.maxChain, 50);
+  add("max_chain_100", stats.enemyMode?.maxChain, 100);
+  add("enemy_combo_100", stats.enemyMode?.maxCombo, 100);
+  add("enemy_combo_200", stats.enemyMode?.maxCombo, 200);
+  add("enemy_combo_300", stats.enemyMode?.maxCombo, 300);
+  add("enemy_combo_350", stats.enemyMode?.maxCombo, 350);
+  add("play_daily_enemy_30", stats.enemyMode?.modes?.daily_enemy, 30);
+  add("play_daily_enemy_100", stats.enemyMode?.modes?.daily_enemy, 100);
+  add("enemy_kill_1000", stats.enemyMode?.totalKills, 1000);
+  add("gscore_10k", stats.enemyMode?.maxGScore, 10000);
+
+  // ===== 防衛モード =====
+  add("play_defense_1", stats.defenseMode?.totalPlays, 1);
+  add("play_defense_30", stats.defenseMode?.totalPlays, 30);
+  add("play_defense_100", stats.defenseMode?.totalPlays, 100);
+  add("defense_gscore_10k", stats.defenseMode?.maxGScore, 10000);
+  add("defense_overdrive", stats.defenseMode?.maxCombo, 251);
+  add("defense_solved_500", stats.defenseMode?.totalSolved, 500);
+
+  // ===== クエストモード =====
+  const clearedQuests = getClearedStageCount();
+  add("quest_clear_10", clearedQuests, 10);
+  add("quest_clear_50", clearedQuests, 50);
+
+  try {
+    const totalQuests = Object.values(QUEST_MAP).flatMap(world => world.nodes).length;
+    add("all_quests_clear", clearedQuests, totalQuests);
+
+    const questStats = getQuestPlayerStats();
+    add("quest_level_10", questStats.level, 10);
+    add("quest_level_50", questStats.level, 50);
+    add("quest_level_99", questStats.level, 99);
+
+    const unlockedSkills = questStats.skillTreeProgress?.unlockedNodes?.length || 0;
+    add("skill_unlock_10", unlockedSkills, 10);
+
+    const totalSkills = Object.keys(SKILL_TREE).length;
+    add("all_skills_unlocked", unlockedSkills, totalSkills);
+
+    add("total_stars_100", questStats.questRecord?.totalStars, 100);
+    add("total_stars_300", questStats.questRecord?.totalStars, 300);
+    add("total_stars_all", getTotalStars(), getTotalMaxStars());
+
+    const itemCounts = getQuestItemCounts(questStats);
+    add("item_heal_50", itemCounts.heal, 50);
+    add("item_kill_50", itemCounts.kill, 50);
+    add("item_support_50", itemCounts.support, 50);
+
+    const totalSkillUses = Object.values(questStats.questRecord?.activeSkillUseCount || {}).reduce((sum, count) => sum + count, 0);
+    add("active_skill_100_uses", totalSkillUses, 100);
+  } catch (e) {
+    // questPlayerStats等が参照できない場合はクエスト系の進捗を省略
+  }
+
+  // ===== 全勲章解除 =====
+  add("all_achievements",
+      (stats.achievements || []).filter(id => ACHIEVEMENTS.some(a => a.id === id)).length,
+      ACHIEVEMENTS.length);
+
+  return progress;
 }
 
 // ================================
