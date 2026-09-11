@@ -130,58 +130,82 @@ function getAudioContext() {
 
     if (!audioCtx) {
 
-        // latencyHint: 'interactive' で低レイテンシ設定（タイピングゲーム向け）
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+        // ★Windows 対策：オーディオデバイス無効・オーディオサービス停止・
+        //   ポリシー等で AudioContext の生成に失敗する環境がある。
+        //   ここで例外を投げると initAudio / loadSound が失敗し、
+        //   コアアセット読み込み全体が止まってゲームが起動しなくなるため、
+        //   例外を握りつぶして null を返し「音なしモード」で続行する。
+        const Ctor = window.AudioContext || window.webkitAudioContext;
+        if (!Ctor) {
+            console.warn("[audio] AudioContext 未対応環境のため音なしモードで続行します");
+            return null;
+        }
 
-        masterGain = audioCtx.createGain();
-        bgmGain = audioCtx.createGain();
-        seGain = audioCtx.createGain();
-        typeGain = audioCtx.createGain();
-        missGain = audioCtx.createGain();
+        try {
+            // latencyHint: 'interactive' で低レイテンシ設定（タイピングゲーム向け）
+            audioCtx = new Ctor({ latencyHint: 'interactive' });
+        } catch (e) {
+            console.warn("[audio] AudioContext 生成に失敗したため音なしモードで続行します:", e);
+            audioCtx = null;
+            return null;
+        }
 
-        // レコードノイズ用ゲインノード
-        typeVinylGain = audioCtx.createGain();
-        typeVinylGain.gain.value = 0.12; // ノイズの基本音量
+        try {
+            masterGain = audioCtx.createGain();
+            bgmGain = audioCtx.createGain();
+            seGain = audioCtx.createGain();
+            typeGain = audioCtx.createGain();
+            missGain = audioCtx.createGain();
 
-        // 温かみ用ローパスフィルター（Lo-Fi サウンド）
-        typeWarmFilter = audioCtx.createBiquadFilter();
-        typeWarmFilter.type = "lowpass";
-        typeWarmFilter.frequency.value = 3500; // カットオフ周波数（Hz）
-        typeWarmFilter.Q.value = 0.5;
+            // レコードノイズ用ゲインノード
+            typeVinylGain = audioCtx.createGain();
+            typeVinylGain.gain.value = 0.12; // ノイズの基本音量
 
-        delayNode = audioCtx.createDelay();
-        feedbackGain = audioCtx.createGain();
-        echoGain = audioCtx.createGain();
+            // 温かみ用ローパスフィルター（Lo-Fi サウンド）
+            typeWarmFilter = audioCtx.createBiquadFilter();
+            typeWarmFilter.type = "lowpass";
+            typeWarmFilter.frequency.value = 3500; // カットオフ周波数（Hz）
+            typeWarmFilter.Q.value = 0.5;
 
-        masterGain.connect(audioCtx.destination);
+            delayNode = audioCtx.createDelay();
+            feedbackGain = audioCtx.createGain();
+            echoGain = audioCtx.createGain();
 
-        bgmGain.connect(masterGain);
-        seGain.connect(masterGain);
-        // typeGain は温かみフィルターを通してからマスターへ
-        typeGain.connect(typeWarmFilter);
-        typeWarmFilter.connect(masterGain);
-        missGain.connect(masterGain);
+            masterGain.connect(audioCtx.destination);
 
-        // レコードノイズはマスターへ直接接続（typeGain とは独立）
-        typeVinylGain.connect(masterGain);
+            bgmGain.connect(masterGain);
+            seGain.connect(masterGain);
+            // typeGain は温かみフィルターを通してからマスターへ
+            typeGain.connect(typeWarmFilter);
+            typeWarmFilter.connect(masterGain);
+            missGain.connect(masterGain);
 
-        delayNode.delayTime.value = 0.08; // ディレイ時間
-        feedbackGain.gain.value = 0.14; // フィードバック量（エコーの繰り返し）
-        echoGain.gain.value = 0.20; // エコー全体の音量
+            // レコードノイズはマスターへ直接接続（typeGain とは独立）
+            typeVinylGain.connect(masterGain);
 
-        // フィードバックループ
-        delayNode.connect(feedbackGain);
-        feedbackGain.connect(delayNode);
+            delayNode.delayTime.value = 0.08; // ディレイ時間
+            feedbackGain.gain.value = 0.14; // フィードバック量（エコーの繰り返し）
+            echoGain.gain.value = 0.20; // エコー全体の音量
 
-        // 出力
-        delayNode.connect(echoGain);
-        echoGain.connect(masterGain);
+            // フィードバックループ
+            delayNode.connect(feedbackGain);
+            feedbackGain.connect(delayNode);
 
-        masterGain.gain.value = masterVolume;
-        bgmGain.gain.value = volumes.bgm;
-        seGain.gain.value = volumes.se;
-        typeGain.gain.value = volumes.type;
-        missGain.gain.value = volumes.miss;
+            // 出力
+            delayNode.connect(echoGain);
+            echoGain.connect(masterGain);
+
+            masterGain.gain.value = masterVolume;
+            bgmGain.gain.value = volumes.bgm;
+            seGain.gain.value = volumes.se;
+            typeGain.gain.value = volumes.type;
+            missGain.gain.value = volumes.miss;
+        } catch (e) {
+            // グラフ構築に失敗した場合も音なしモードへ
+            console.warn("[audio] オーディオグラフの構築に失敗したため音なしモードで続行します:", e);
+            audioCtx = null;
+            return null;
+        }
     }
 
     return audioCtx;
@@ -194,16 +218,25 @@ function getAudioContext() {
 export async function loadSound(asset) {
 
     const ctx = getAudioContext();
+    if (!ctx) return; // 音なしモード（AudioContext構築失敗環境）
 
-    const res = await fetch(asset.src);
-    const arrayBuffer = await res.arrayBuffer();
-
-    buffers[asset.name] = await ctx.decodeAudioData(arrayBuffer);
-    soundMeta[asset.name] = {
-        title: asset.title || "-",
-        composer: asset.composer || "-",
-        volume: asset.volume ?? 1.0,
-    };
+    try {
+        const res = await fetch(asset.src);
+        if (!res.ok) {
+            console.warn(`[audio] 音源の取得に失敗(${res.status}): ${asset.src}`);
+            return;
+        }
+        const arrayBuffer = await res.arrayBuffer();
+        buffers[asset.name] = await ctx.decodeAudioData(arrayBuffer);
+        soundMeta[asset.name] = {
+            title: asset.title || "-",
+            composer: asset.composer || "-",
+            volume: asset.volume ?? 1.0,
+        };
+    } catch (e) {
+        // ★1音源の失敗で読み込み全体（＝ゲーム起動）を止めない
+        console.warn(`[audio] 音源の読み込みに失敗: ${asset.src}`, e);
+    }
 }
 
 // ===========================================
@@ -214,6 +247,12 @@ export async function initAudio() {
     if (initialized) return;
 
     const ctx = getAudioContext();
+    if (!ctx) {
+        // ★音なしモード（AudioContext構築失敗環境）でも
+        //   ゲーム起動を止めないため initialized を立てて完了扱いにする
+        initialized = true;
+        return;
+    }
 
     if (ctx.state === "suspended") {
         try {
@@ -245,6 +284,7 @@ export function playTone(freq, duration, type="sine", volume=1.0, targetGainNode
     if(duration <= 0) return;
 
     const ctx = getAudioContext();
+    if (!ctx) return; // 音なしモード
 
     if (ctx.state !== "running") {
         try { ctx.resume(); } catch (e) {}
@@ -293,6 +333,7 @@ let _lastVinylTime = 0;
 
 function playNoise(duration = 0.1, volume = 1.0, target = null) {
     const ctx = getAudioContext();
+    if (!ctx) return; // 音なしモード
 
     if (ctx.state !== "running") {
         try { ctx.resume(); } catch (e) {}
@@ -396,6 +437,7 @@ function playVinylCrackle(intensity = 1.0) {
     if (getEffectsScale() < 0.5) return;
 
     const ctx = getAudioContext();
+    if (!ctx) return; // 音なしモード
 
     if (ctx.state !== "running") {
         try { ctx.resume(); } catch (e) {}
@@ -504,6 +546,7 @@ export function playSE(
     if (!isSeOn()) return;
 
     const ctx = getAudioContext();
+    if (!ctx) return; // 音なしモード
 
     const buffer = buffers[name];
     if (!buffer) return;
@@ -550,6 +593,7 @@ export function playTypeSound() {
     const freq = (680 + Math.random() * 40) * wowModulation;
 
     const ctx = getAudioContext();
+    if (!ctx) return; // 音なしモード
 
     playTone(
         freq,
@@ -740,6 +784,7 @@ export function playLoopSE(name, volume = 1.0) {
     if (!isSeOn()) return;
 
     const ctx = getAudioContext();
+    if (!ctx) return; // 音なしモード
     const buffer = buffers[name];
     if (!buffer) return;
 
@@ -780,6 +825,7 @@ export function playBGM(name="bgm1", volume=1.0){
     if (!isBgmOn()) return;
 
     const ctx = getAudioContext();
+    if (!ctx) return; // 音なしモード
 
     if (ctx.state !== "running") {
         ctx.resume();
