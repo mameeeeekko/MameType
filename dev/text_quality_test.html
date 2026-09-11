@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文字品質診断 - MameType</title>
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<style>
+  :root {
+    --font-ja: 'M PLUS Rounded 1c', 'Noto Sans JP', 'Hiragino Maru Gothic ProN',
+               'Yu Gothic UI', system-ui, sans-serif;
+    --font-ui: 'Inter', 'Noto Sans JP', 'Hiragino Maru Gothic ProN',
+               'Yu Gothic UI', system-ui, sans-serif;
+    --font-mono: 'Noto Sans Mono', 'Consolas', 'Courier New', monospace;
+  }
+  html { background: #05080a; color: #a3c8e4; font-family: var(--font-ja); }
+  body { margin: 0; padding: 16px 24px 64px; }
+  h1 { font-size: 18px; color: #9befff; }
+  h2 { font-size: 15px; color: #83abd9; margin: 28px 0 8px; }
+  .hint { color: #8b949e; font-size: 13px; line-height: 1.7; }
+  .warn { color: #ffb347; font-weight: bold; }
+  .ok { color: #7dff9f; }
+  #env { border: 1px solid rgba(88,166,255,0.3); border-radius: 8px; padding: 12px 16px; font-size: 13px; font-family: var(--font-mono); line-height: 1.8; background: rgba(88,166,255,0.05); }
+  .controls { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-size: 13px; margin: 10px 0; }
+  .controls label { display: flex; align-items: center; gap: 5px; }
+  .panel-wrap { margin: 14px 0; }
+  .panel-title { font-size: 13px; color: #9befff; margin: 10px 0 4px; font-family: var(--font-mono); }
+  .design { width: 1600px; height: 900px; background: linear-gradient(rgba(18,25,33,0.6), rgba(5,8,10,0.7)), repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px), #05080a; box-sizing: border-box; padding: 28px 36px; overflow: hidden; }
+  .design-origin { position: relative; }
+  .cols { display: flex; gap: 26px; }
+  .col { flex: 1; min-width: 0; }
+  .setbox { border: 1px solid rgba(88,166,255,0.35); border-radius: 10px; padding: 12px 16px; background: rgba(88,166,255,0.06); }
+  .settitle { font-weight: 900; color: #83abd9; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 8px rgba(88,166,255,0.4); }
+  .setrow { display: flex; align-items: center; gap: 6px; margin: 6px 0; font-weight: normal; color: #c0c0c0; font-size: 0.85rem; }
+  .setrow small { color: #8b949e; font-size: 0.8rem; letter-spacing: 0.5px; }
+  .hudbox { text-align: center; }
+  .matrix td { padding: 2px 10px; font-size: 13px; }
+  .matrix th { color: #83abd9; font-weight: 500; font-size: 12px; text-align: left; padding: 2px 10px; }
+  canvas.hud { background: transparent; }
+  .scale-note { font-family: var(--font-mono); font-size: 11px; color: #6e93b8; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>文字品質診断（Windows 用）</h1>
+<p class="hint">
+  本編と同じブラウザ・同じウィンドウサイズで開いてください。
+  下の 3 つのパネルは<b>同じ内容</b>を異なる方法で表示しています。
+  「どのパネルの文字が一番綺麗か」と「環境チェックの警告が出ていないか」を教えてください。
+</p>
+
+<h2>環境チェック</h2>
+<div id="env">読み込み中...</div>
+
+<h2>表示方法の比較（同じデザインを 3 種類の方法で表示）</h2>
+<div class="controls">
+  <span>Canvas DPR:</span>
+  <label><input type="radio" name="cap" value="raw" checked>本編準拠(端末そのまま)</label>
+  <label><input type="radio" name="cap" value="2">2.0</label>
+  <label><input type="radio" name="cap" value="1.5">1.5</label>
+  <label><input type="radio" name="cap" value="1.25">1.25</label>
+  <label><input type="radio" name="cap" value="1">1.0(低解像度)</label>
+  <label><input type="checkbox" id="optThick" checked>小さい文字を太く(Canvas)</label>
+  <label><input type="checkbox" id="optGlow" checked>グロー影</label>
+  <label><input type="checkbox" id="optWinThicken" checked>DOM太字化(stroke0.2+weight500)</label>
+</div>
+
+<div id="panels"></div>
+
+<script>
+"use strict";
+const STAGE_W = 1600, STAGE_H = 900;
+
+/* ---------------- 環境チェック ---------------- */
+function detectGPU() {
+  try {
+    const c = document.createElement("canvas");
+    const gl = c.getContext("webgl") || c.getContext("experimental-webgl");
+    if (!gl) return "WebGL 利用不可";
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    const r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    return String(r);
+  } catch (e) { return "検出失敗"; }
+}
+
+function renderEnv() {
+  const dpr = window.devicePixelRatio || 1;
+  const gpu = detectGPU();
+  const soft = /swiftshader|llvmpipe|software|basic render/i.test(gpu);
+  const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+  document.getElementById("env").innerHTML = `
+    <div>UA: ${navigator.userAgent}</div>
+    <div>devicePixelRatio: <b>${dpr}</b> / ウィンドウ: ${window.innerWidth}×${window.innerHeight} CSS px / ステージscale: ${s.toFixed(4)} / 実効ラスタ倍率 s×dpr: <b>${(s*dpr).toFixed(3)}</b></div>
+    <div>GPU: <b class="${soft ? "warn" : "ok"}">${gpu}</b></div>
+    ${soft ? '<div class="warn">⚠ GPU がソフトウェア描画(SwiftShader等)です。Chrome の「ハードウェア アクセラレーション」が無効の可能性 → Chrome設定 > システム > 「使用可能な場合はハードウェア アクセラレーションを使用する」を ON にして再起動してください。これが原因だと全体が汚くなります。</div>' : '<div class="ok">✔ GPU 描画は有効のようです</div>'}`;
+}
+
+/* ---------------- パネル生成 ---------------- */
+const METHODS = [
+  { id: "transform", title: "A. transform: scale（本編と同じ方式・デバイスpxスナップ済み）", note: "→ 本編がこれ。これが汚く見えるなら scale 方式かフォント描画の問題" },
+  { id: "zoom",      title: "B. CSS zoom（再レイアウト方式）", note: "→ これが明らかに綺麗なら、本編を zoom 方式へ刷新する価値あり" },
+  { id: "none",      title: "C. スケールなし（等倍・参考用。ウィンドウより大きい場合は横スクロール）", note: "→ これすら汚いなら、scale 以外（フォント/GPU/AA）が原因" },
+];
+
+function panelHTML(m) {
+  return `
+  <div class="panel-wrap">
+    <div class="panel-title">${m.title}</div>
+    <div id="wrap-${m.id}"></div>
+    <div class="scale-note">${m.note}</div>
+  </div>`;
+}
+
+function designHTML() {
+  return `
+  <div class="design">
+    <div class="cols">
+      <div class="col">
+        <div class="setbox">
+          <div class="settitle">SETTINGS</div>
+          <div class="setrow"><input type="checkbox" checked><span>タイプ音を鳴らす</span></div>
+          <div class="setrow"><input type="checkbox"><span>ミスタイプ時に画面を振動させる</span></div>
+          <div class="setrow"><small>BGM</small><input type="range" style="width:120px"><span style="font-family:var(--font-mono);">80</span></div>
+          <div class="setrow"><small>SE</small><input type="range" style="width:120px"><span style="font-family:var(--font-mono);">100</span></div>
+          <div class="setrow"><small>キーバインド</small><span>Backspace・Enter など</span></div>
+        </div>
+        <table class="matrix" style="margin-top:14px;">
+          <tr><th>サイズ</th><th>w400</th><th>w500</th><th>w500+stroke</th><th>w700</th></tr>
+          <tr><td>12px</td>
+            <td style="font-size:12px;font-weight:400;">撃破率 98.2%</td>
+            <td style="font-size:12px;font-weight:500;">撃破率 98.2%</td>
+            <td style="font-size:12px;font-weight:500;-webkit-text-stroke:0.2px;">撃破率 98.2%</td>
+            <td style="font-size:12px;font-weight:700;">撃破率 98.2%</td></tr>
+          <tr><td>14px</td>
+            <td style="font-size:14px;font-weight:400;">正確性 100%・コンボ</td>
+            <td style="font-size:14px;font-weight:500;">正確性 100%・コンボ</td>
+            <td style="font-size:14px;font-weight:500;-webkit-text-stroke:0.2px;">正確性 100%・コンボ</td>
+            <td style="font-size:14px;font-weight:700;">正確性 100%・コンボ</td></tr>
+          <tr><td>16px</td>
+            <td style="font-size:16px;font-weight:400;">こんにちは世界 ABC123</td>
+            <td style="font-size:16px;font-weight:500;">こんにちは世界 ABC123</td>
+            <td style="font-size:16px;font-weight:500;-webkit-text-stroke:0.2px;">こんにちは世界 ABC123</td>
+            <td style="font-size:16px;font-weight:700;">こんにちは世界 ABC123</td></tr>
+        </table>
+      </div>
+      <div class="col hudbox">
+        <canvas class="hud" data-h="280"></canvas>
+        <div class="scale-note">上: 本編HUD風（リング・Lv）</div>
+        <canvas class="hud" data-h="120"></canvas>
+        <div class="scale-note">下: スコア類</div>
+      </div>
+    </div>
+  </div>`;
+}
+/* HUD複製（本編 hud.js と同等の描画 + バリエーション適用） */
+function drawHud(canvas, cssH, opts) {
+  const cssW = 280;
+  const raw = window.devicePixelRatio || 1;
+  const capVal = opts.cap === "raw" ? null : parseFloat(opts.cap);
+  const limit = capVal === null ? raw : Math.max(1, Math.min(raw, capVal));
+  /* 表示デバイスpx比（パネルのscale×raw）× DPRキャップの割合 */
+  const capRatio = limit / raw;
+  const dprEff = capRatio * (opts.effScale || raw);
+
+  canvas.style.width = cssW + "px";
+  canvas.style.height = cssH + "px";
+  canvas.width = Math.max(1, Math.round(cssW * dprEff));
+  canvas.height = Math.max(1, Math.round(cssH * dprEff));
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dprEff, dprEff);
+
+  const cx = cssW / 2;
+
+  if (cssH === 280) {
+    const cy = 118;
+    ctx.clearRect(0, 0, cssW, cssH);
+    ctx.strokeStyle = "rgba(0,255,255,0.15)";
+    ctx.lineWidth = 10;
+    ctx.beginPath(); ctx.arc(cx, cy, 86, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = "rgba(0,255,255,0.95)";
+    if (opts.glow) { ctx.shadowBlur = 14; ctx.shadowColor = "rgba(0,255,255,0.9)"; }
+    ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(cx, cy, 86, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.72); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, 58, 0, Math.PI * 2); ctx.stroke();
+
+    const levelY = cy + 132;
+    fillTextThick(ctx, "Lv", cx - 4, levelY, { fill: "rgba(130,220,255,0.75)", font: "14px 'Noto Sans Mono', monospace", align: "right", thick: opts.thick });
+    fillTextThick(ctx, "42", cx + 4, levelY, { fill: "rgba(180,255,255,0.98)", font: "bold 22px 'Noto Sans Mono', monospace", align: "left", thick: opts.thick });
+  } else {
+    ctx.clearRect(0, 0, cssW, cssH);
+    fillTextThick(ctx, "SCORE", 250, 22, { fill: "#f0f6fc", font: "bold 12px 'Noto Sans Mono', monospace", align: "right", thick: opts.thick });
+    fillTextThick(ctx, "1,234,567", 250, 54, { fill: "#f0f6fc", font: "bold 30px 'Noto Sans Mono', monospace", align: "right", thick: opts.thick });
+    fillTextThick(ctx, "COMBO", 250, 84, { fill: "#f0f6fc", font: "bold 12px 'Noto Sans Mono', monospace", align: "right", thick: opts.thick });
+    fillTextThick(ctx, "x8.5", 250, 112, { fill: "#f0f6fc", font: "bold 30px 'Noto Sans Mono', monospace", align: "right", thick: opts.thick });
+    fillTextThick(ctx, "こんにちは のばしRO", 12, 40, { fill: "#e0e0e0", font: "bold 16px 'M PLUS Rounded 1c', sans-serif", align: "left", thick: opts.thick });
+    fillTextThick(ctx, "konnichiha", 12, 62, { fill: "#888888", font: "14px 'Noto Sans Mono', monospace", align: "left", thick: opts.thick });
+    fillTextThick(ctx, "TIME: 45.2", 12, 92, { fill: "#e0e0e0", font: "bold 14px 'Noto Sans Mono', monospace", align: "left", thick: opts.thick });
+  }
+}
+
+function fillTextThick(ctx, text, x, y, o) {
+  ctx.save();
+  ctx.fillStyle = o.fill;
+  ctx.font = o.font;
+  ctx.textAlign = o.align || "left";
+  ctx.fillText(text, x, y);
+  const m = /(\d+(?:\.\d+)?)px/.exec(o.font);
+  const size = m ? parseFloat(m[1]) : 0;
+  if (o.thick && size > 0 && size < 16) {
+    ctx.strokeStyle = o.fill;
+    ctx.lineWidth = Math.max(0.35, size * 0.05);
+    ctx.lineJoin = "round";
+    ctx.strokeText(text, x, y);
+  }
+  ctx.restore();
+}
+
+/* ---------------- レイアウト＆描画 ---------------- */
+function getOptions() {
+  return {
+    cap: document.querySelector('input[name="cap"]:checked').value,
+    thick: document.getElementById("optThick").checked,
+    glow: document.getElementById("optGlow").checked,
+    winThicken: document.getElementById("optWinThicken").checked,
+  };
+}
+
+function layout() {
+  const o = getOptions();
+  const availW = Math.max(320, window.innerWidth - 48);
+  const fit = Math.max(0.3, Math.min(1, availW / STAGE_W));
+  const raw = window.devicePixelRatio || 1;
+
+  /* デバイスpxスナップ（本編 fitStage と同じ計算） */
+  const dispWDev = Math.max(1, Math.floor(STAGE_W * fit * raw));
+  const snapped = dispWDev / (STAGE_W * raw);
+  const oxD = Math.round(((window.innerWidth - STAGE_W * snapped) / 2) * raw) / raw;
+
+  document.body.classList.toggle("win-thicken", o.winThicken);
+
+  METHODS.forEach((m) => {
+    const wrap = document.getElementById("wrap-" + m.id);
+    if (!wrap) return;
+    wrap.innerHTML = designHTML();
+    const d = wrap.querySelector(".design");
+
+    if (m.id === "transform") {
+      wrap.style.height = (STAGE_H * snapped) + "px";
+      d.style.transformOrigin = "0 0";
+      d.style.transform = `translateX(${oxD}px) scale(${snapped})`;
+    } else if (m.id === "zoom") {
+      wrap.style.height = (STAGE_H * fit) + "px";
+      d.style.zoom = String(fit);
+    } else {
+      wrap.style.height = STAGE_H + "px";
+    }
+
+    /* Canvas は各方式の実表示倍率に合わせてバッキングを作る */
+    const effScale = (m.id === "transform" ? snapped : (m.id === "zoom" ? fit : 1)) * raw;
+    wrap.querySelectorAll("canvas.hud").forEach((cv) => {
+      drawHud(cv, cv.dataset.h === "280" ? 280 : 120, { cap: o.cap, thick: o.thick, glow: o.glow, effScale });
+    });
+  });
+}
+
+document.getElementById("panels").innerHTML = METHODS.map(panelHTML).join("");
+renderEnv();
+layout();
+
+window.addEventListener("resize", () => { renderEnv(); layout(); });
+document.querySelectorAll('input[name="cap"], #optThick, #optGlow, #optWinThicken').forEach((el) => {
+  el.addEventListener("change", layout);
+});
+</script>
+<style>
+  body.win-thicken .setrow {
+    -webkit-text-stroke: 0.2px;
+    font-weight: 500;
+  }
+</style>
+</body>
+</html>
