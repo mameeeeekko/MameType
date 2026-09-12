@@ -214,8 +214,10 @@ async function loadCoreAssets(onProgress) {
 // ======================================================================
 // 残りアセットのバックグラウンド読み込み（低スペックPC対策）
 // ----------------------------------------------------------------------
-//  - 画像は IMAGE_CONCURRENCY 件、音声は SOUND_CONCURRENCY 件ずつしか
-//    同時に読み込まない（BGMのfetch+デコードが一斉に走るのを防ぐ）
+//  - フォントは FONT_CONCURRENCY 件、画像は IMAGE_CONCURRENCY 件、
+//    音声は SOUND_CONCURRENCY 件ずつしか同時に読み込まない
+//    （BGMのfetch+デコードが一斉に走るのを防ぐ）
+//  - フォントを最優先（タイピング表示の遅延防止）。
 //  - 音声キューは「デイリー各モードの先頭曲 → SE → その他BGM」の順。
 //    デイリー曲は最初から読み込むので、ゲーム開始時のBGM待ちを減らす。
 //  - 全アセット数に対する進捗を onProgress(loaded, total) で通知する。
@@ -223,6 +225,61 @@ async function loadCoreAssets(onProgress) {
 
 const IMAGE_CONCURRENCY = 4; // 画像の同時読み込み数
 const SOUND_CONCURRENCY = 2; // 音声の同時読み込み数（デコードの競合を防ぐ）
+
+// ---------------------------------------------------------------------
+// フォント（丸ゴ・Inter）サブセットの一括プリフェッチ
+// ---------------------------------------------------------------------
+//  self-host フォントは unicode-range サブセット（woff2 約200ファイル）に
+//  分かれており、各サブセットは「その文字を初めて表示した瞬間」に
+//  ネットワークから遅延取得される（font-display: swap）。
+//  → 漢字を含む問題（スタンダード / タイムアタック / 長文 / 防衛）では
+//    問題が変わるたびに新サブセットの取得待ちが発生し、タイピング表示が
+//    「フォールバック描画 → 差し替え」で遅れる。
+//    （SW はオンライン中は介入しないため、ページ側で HTTP キャッシュに
+//      事前に載せておく必要がある）
+//  → 起動後の裏読み込みで全サブセットを事前取得してタイピング中の
+//    フォント取得待ちをなくす。フォントは軽いため画像より先に読む。
+// ---------------------------------------------------------------------
+const FONT_CSS_URL = "./assets/fonts/fonts.css";
+const FONT_CONCURRENCY = 6; // フォントは軽いので多少並列でOK
+const FONT_GAP_MS = 4;      // 1件完了ごとの呼吸用インターバル
+
+/**
+ * fonts.css から woff2 サブセットの URL 一覧を抽出する。
+ * 相対パスは fonts.css の場所（/assets/fonts/）基準で解決する。
+ * 失敗時は [] を返しゲーム起動には影響させない。
+ */
+async function collectFontUrls() {
+  try {
+    const cssUrl = new URL(FONT_CSS_URL, location.href);
+    const res = await fetch(cssUrl.href, { cache: "no-cache" });
+    if (!res || !res.ok) return [];
+    const css = await res.text();
+    const urls = [];
+    const re = /url\((['"]?)([^'")]+\.woff2)\1\)/g;
+    let m;
+    while ((m = re.exec(css)) !== null) {
+      try {
+        urls.push(new URL(m[2], cssUrl).href);
+      } catch (e) { /* 不正URLは無視 */ }
+    }
+    return [...new Set(urls)];
+  } catch (e) {
+    console.warn("[fonts] フォント一覧の取得に失敗（プリフェッチをスキップ）:", e);
+    return [];
+  }
+}
+
+/** フォントファイルを1件取得して HTTP キャッシュに載せる（表示には使わない） */
+async function prefetchFont(url) {
+  const res = await fetch(url);
+  if (res && res.ok) {
+    // ボディを消費してキャッシュへの載りを確実にする
+    await res.arrayBuffer();
+  } else {
+    console.warn(`[fonts] フォント取得失敗(${res ? res.status : "no response"}): ${url}`);
+  }
+}
 
 // デイリー各モードの先頭曲
 //   スタンダード = bgm_rainy（コアアセットで既読）
@@ -243,6 +300,11 @@ const DAILY_PRELOAD_BGM_NAMES = [
  * @param {{type:string,name:string,src:string}} a
  */
 async function _loadOneAsset(a) {
+  if (a.type === "font") {
+    // フォントサブセット: HTTPキャッシュに載せることが目的（表示には使わない）
+    await prefetchFont(a.src);
+    return;
+  }
   if (a.type === "img") {
     await loadImage(a.name, a.src);
     return;
@@ -313,26 +375,34 @@ async function _runQueueWithLimit(queue, maxConcurrent, gapMs, onOneLoaded) {
  * @param {Function} [onProgress] - (loaded, total) の進捗通知
  */
 async function loadRemainingAssets(onProgress) {
-  // 種類ごとに分割（優先順位: 画像 → [デイリーBGM → SE → その他BGM]）
+  // 種類ごとに分割（優先順位: フォント → 画像 → [デイリーBGM → SE → その他BGM]）
+  // ※ フォントを最優先にするのは「タイピング表示の遅延防止」のため。
+  //    漢字を含むモード（スタンダード/タイムアタック/長文/防衛）は、
+  //    問題ごとに新サブセットを遅延取得すると表示が遅れるため、
+  //    全サブセットを先に HTTP キャッシュへ載せておく。
+  const fontUrls = await collectFontUrls();
+  const fontQueue = fontUrls.map(url => ({ type: "font", name: "font", src: url }));
   const imageQueue = remainingAssets.filter(a => a.type === "img");
   const bgmDailyQueue = remainingAssets.filter(a => DAILY_PRELOAD_BGM_NAMES.includes(a.name));
   const seQueue = remainingAssets.filter(a => a.type === "sound" && !a.name.startsWith("bgm_"));
   const bgmRestQueue = remainingAssets.filter(a => a.type === "sound" && a.name.startsWith("bgm_") && !DAILY_PRELOAD_BGM_NAMES.includes(a.name));
   const soundQueue = [...bgmDailyQueue, ...seQueue, ...bgmRestQueue];
 
-  const total = imageQueue.length + soundQueue.length;
+  const total = fontQueue.length + imageQueue.length + soundQueue.length;
   let loaded = 0;
   const report = () => {
     loaded++;
     try { onProgress?.(loaded, total); } catch (e) { /* 無視 */ }
   };
 
-  // 画像と音声はそれぞれ別の並列数で同時に進める
-  // → メニュー用画像が優先的に進みつつ、デイリー曲も最初から読み込まれる
+  // フォント・画像・音声はそれぞれ別の並列数で同時に進める
+  // → フォント（タイピング表示に直結）を最優先で進めつつ、
+  //   メニュー用画像とデイリー曲も最初から読み込まれる
   // ※ 裏読み込み中に重くならないよう、件数ごとに少し間を空ける
+  const fontPromise = _runQueueWithLimit(fontQueue, FONT_CONCURRENCY, FONT_GAP_MS, report);
   const imagePromise = _runQueueWithLimit(imageQueue, IMAGE_CONCURRENCY, 8, report);
   const soundPromise = _runQueueWithLimit(soundQueue, SOUND_CONCURRENCY, 30, report);
-  await Promise.all([imagePromise, soundPromise]);
+  await Promise.all([fontPromise, imagePromise, soundPromise]);
 
   try { onProgress?.(total, total); } catch (e) { /* 無視 */ }
   console.log("All remaining assets loaded in background.");

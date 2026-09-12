@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.20";
+const CACHE_NAME = "mametype-v1.0.21";
 
 // =====================================================
 // オフライン用データ（SWキャッシュ）の裏ダウンロードを
@@ -471,6 +471,44 @@ async function preCacheRemainingInBackground() {
   completed = total;
   notify("complete");
   console.log("Service Worker: Background cache complete.");
+
+  // ---------------------------------------------------------------
+  // フォントサブセット（fonts.css が参照する woff2 群）も事前キャッシュ。
+  //  self-host フォントは unicode-range サブセット（woff2 約200ファイル）に
+  //  分かれており、オフライン起動時にキャッシュがないと日本語表示が
+  //  フォールバックフォントになる・表示が遅れる。
+  //  （オンライン中はページ側 assetsLoader が HTTP キャッシュへ事前取得済み。
+  //    ここはオフライン対応のための補完）
+  // ---------------------------------------------------------------
+  try {
+    const fontCssRequest = new Request("./assets/fonts/fonts.css");
+    const fontCssResponse = await fetch(fontCssRequest);
+    if (fontCssResponse && fontCssResponse.ok) {
+      await cache.put(fontCssRequest, fontCssResponse.clone());
+      const fontCss = await fontCssResponse.text();
+      const fontUrls = [...new Set(
+        [...fontCss.matchAll(/url\((['"]?)([^'")]+\.woff2)\1\)/g)].map(m => m[2])
+      )];
+      for (const href of fontUrls) {
+        try {
+          // 相対URLは fonts.css の場所（/assets/fonts/）基準で解決する
+          const cssUrl = new URL("./assets/fonts/fonts.css", self.location.href);
+          const url = new URL(href, cssUrl).href;
+          const res = await fetch(new Request(url));
+          if (res && res.ok) {
+            await cache.put(new Request(url), res.clone());
+          }
+        } catch (e) {
+          // 1件の失敗は握りつぶし（次回起動時に再試行）
+        }
+        // 間隔を空けて、キャッシュロックの長時間占有を避ける
+        await new Promise(resolve => setTimeout(resolve, DEFERRED_INTERVAL_MS));
+      }
+      console.log(`Service Worker: Font cache complete. (${fontUrls.length} files)`);
+    }
+  } catch (e) {
+    console.warn("Service Worker: font precache failed:", e);
+  }
 }
 
 // =====================================================
