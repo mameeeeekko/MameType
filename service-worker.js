@@ -6,11 +6,84 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.15";
+const CACHE_NAME = "mametype-v1.0.17";
 
 // =====================================================
-// コアアセット
+// オフライン用データ（SWキャッシュ）の裏ダウンロードを
+// 段階的に行う（裏で重くならない対策）
+// ----------------------------------------------------------------------
+//  - install イベントで一括キャッシュすると、Windowsでは
+//    大量の同時fetch+デコードが走りメインスレッドを圧迫する。
+//  - 初回は起動に必要な最小セット（起動コア）だけを同期的に
+//    キャッシュし、残りは activate 後のアイドル時に数件ずつ
+//    少しずつキャッシュする（裏でも軽い）。
+//  - 残りは「低速キュー」として activate 時にバックグラウンドで
+//    1件ずつ取得する。取得失敗は握りつぶし（fetch時に都度取得）。
 // =====================================================
+
+// -----------------------------------------------------
+// 起動に必要な最小セット（install で同期キャッシュ）
+//  → ブート〜メニュー表示に必要なものだけ
+// -----------------------------------------------------
+
+const BOOT_CORE_ASSETS = [
+  "./",
+  "./index.html",
+  "./style.css",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./assets/fonts/fonts.css",
+
+  // ---------------------------------------------------
+  // メニュー画像 / サウンドアイコン
+  // ---------------------------------------------------
+
+  "./assets/pic/title_menu.png",
+  "./assets/pic/quest_menu.png",
+  "./assets/pic/sound1.png",
+  "./assets/pic/soundmute.png",
+
+  // ---------------------------------------------------
+  // 起動直後のメニュー描画・起動シーケンスに必要なJS
+  // ---------------------------------------------------
+
+  "./js/main.js",
+  "./js/version.js",
+  "./js/storage.js",
+  "./js/stageScale.js",
+  "./js/fullscreenUtil.js",
+  "./js/saveDataNotice.js",
+  "./js/assetsLoader.js",
+  "./js/effectManager.js",
+  "./js/gameCore.js",
+  "./js/renderer.js",
+  "./js/gameModes.js",
+  "./js/difficulties.js",
+  "./js/keybinds.js",
+  "./js/dialogue.js",
+  "./js/dialogue.css",
+  "./js/dialogueData.js",
+  "./js/analytics.js",
+];
+
+// -----------------------------------------------------
+// 残り（activate 後に裏で少しずつ取得する）
+//  → BOOT_CORE_ASSETS に無いものを自動抽出
+// -----------------------------------------------------
+
+const DEFERRED_ASSETS = CORE_ASSETS.filter(
+  url => !BOOT_CORE_ASSETS.includes(url)
+);
+
+// -----------------------------------------------------
+// 裏ダウンロードの同時取得数・間隔
+//  → 1件ずつ・少し間を空けて取得することで、
+//    Windows でも裏ダウンロード中の重さを抑える
+// -----------------------------------------------------
+
+const DEFERRED_CONCURRENCY = 1;
+const DEFERRED_INTERVAL_MS = 120;
 
 const CORE_ASSETS = [
   "./",
@@ -239,6 +312,7 @@ const DYNAMIC_ASSETS = [
   // ---------------------------------------------------
 
   "./assets/sound/se/select.mp3",
+
   "./assets/sound/se/questmenu.mp3",
   "./assets/sound/se/mapmove.mp3",
   "./assets/sound/se/kill1.mp3",

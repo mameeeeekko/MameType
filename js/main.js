@@ -300,6 +300,49 @@ function startRemainingLoadProgress() {
   });
 }
 
+// =====================================================
+// SWの裏ダウンロード進捗バー（中央下）
+// オフライン用データ / アップデートデータの取得中だけ表示する。
+// position: fixed なので 1600×900 ステージ座標基準で用意された
+// remaining-load-indicator と同じ見た目を再利用する。
+// =====================================================
+let _swDlHideTimer = null;
+
+function _showSwDownloadBar(message) {
+  const el = document.getElementById("swDownloadIndicator");
+  if (!el) return;
+  clearTimeout(_swDlHideTimer);
+  el.dataset.base = message || "ダウンロード中…";
+  const text = el.querySelector(".remaining-load-text");
+  if (text) text.textContent = el.dataset.base;
+  const fill = document.getElementById("swDownloadBarFill");
+  if (fill) fill.style.width = "0%";
+  el.classList.add("show");
+}
+
+function _updateSwDownloadBar(percent, detail) {
+  const el = document.getElementById("swDownloadIndicator");
+  if (!el) return;
+  const safe = Math.max(0, Math.min(100, Math.floor(Number(percent) || 0)));
+  const fill = document.getElementById("swDownloadBarFill");
+  if (fill) fill.style.width = safe + "%";
+  const text = el.querySelector(".remaining-load-text");
+  if (text) {
+    const base = el.dataset.base || "ダウンロード中…";
+    text.textContent = detail
+      ? `${base} ${safe}%　（${detail}）`
+      : `${base} ${safe}%`;
+  }
+}
+
+function _hideSwDownloadBar() {
+  clearTimeout(_swDlHideTimer);
+  _swDlHideTimer = setTimeout(() => {
+    const el = document.getElementById("swDownloadIndicator");
+    if (el) el.classList.remove("show");
+  }, 500);
+}
+
 // ============================================================
 // メニュー描画のキャッシュ無効化フック（循環参照回避のためwindow経由）
 // questProgress.js の markCleared / markTrueEndingSeen 等から呼ばれる
@@ -1083,13 +1126,21 @@ function showUpdateProgressPreparing() {
 
   // -----------------------------------------------
   // 表示
+  // ダウンロード中はモーダルを出さず、中央下のバーで
+  // 進捗を表示する（完了時にモーダルへ切り替える）
   // -----------------------------------------------
 
-  notification.style.display = "flex";
+  notification.style.display = "none";
 
-  requestAnimationFrame(() => {
-    notification.classList.add("show");
-  });
+  if (isFirstInstall) {
+    _showSwDownloadBar(
+      "オフラインデータをダウンロード中"
+    );
+  } else {
+    _showSwDownloadBar(
+      "アップデートデータをダウンロード中"
+    );
+  }
 
 
   if (isFirstInstall) {
@@ -1184,14 +1235,12 @@ function handleUpdateProgress(data) {
     updateProgressReceived = true;
     updateFileErrorCount = 0;
 
-    updateProgressUI(
-      0,
-      data.current || 0,
-      data.total || 0,
+    _showSwDownloadBar(
       isFirstInstall
-        ? "ダウンロードを開始しています..."
-        : "アップデートを開始しています..."
+        ? "オフラインデータをダウンロード中"
+        : "アップデートデータをダウンロード中"
     );
+    _updateSwDownloadBar(0, "");
 
     return;
   }
@@ -1205,11 +1254,9 @@ function handleUpdateProgress(data) {
 
     updateProgressReceived = true;
 
-    updateProgressUI(
+    _updateSwDownloadBar(
       data.percent || 0,
-      data.current || 0,
-      data.total || 0,
-      data.file || "ファイルを更新しています..."
+      ""
     );
 
     return;
@@ -1225,11 +1272,9 @@ function handleUpdateProgress(data) {
     updateProgressReceived = true;
     updateFileErrorCount++;
 
-    updateProgressUI(
+    _updateSwDownloadBar(
       data.percent || 0,
-      data.current || 0,
-      data.total || 0,
-      `一部のファイルをスキップしました`
+      "一部スキップ"
     );
 
     return;
@@ -1244,13 +1289,9 @@ function handleUpdateProgress(data) {
 
     updateProgressReceived = true;
 
-    updateProgressUI(
+    _updateSwDownloadBar(
       100,
-      data.total || 0,
-      data.total || 0,
-      isFirstInstall
-        ? "ダウンロードが完了しました"
-        : "アップデートの準備が完了しました"
+      ""
     );
 
     setTimeout(() => {
@@ -1258,7 +1299,10 @@ function handleUpdateProgress(data) {
       // -------------------------------------------
       // 初回インストール時は「オフラインで遊べるように
       // なった」通知を出す。アップデート時は従来通り
+      // （バーを消してからモーダルへ切り替える）
       // -------------------------------------------
+
+      _hideSwDownloadBar();
 
       if (isFirstInstall) {
         showOfflineReady();
@@ -1266,7 +1310,7 @@ function handleUpdateProgress(data) {
         showUpdateReady();
       }
 
-    }, 400);
+    }, 600);
 
   }
 
@@ -1351,6 +1395,20 @@ function updateProgressUI(
 
 function showUpdateReady() {
 
+  // 進捗バーは中央下のインジケータで表示済みなので、モーダル側のバーは常に隠す
+  const progressWrapper = document.getElementById("update-progress-wrapper");
+  if (progressWrapper) progressWrapper.style.display = "none";
+  _hideSwDownloadBar();
+
+  // ダウンロード中はモーダルを隠していたため、ここで表示する
+  const notification = document.getElementById("update-notification");
+  if (notification) {
+    notification.style.display = "flex";
+    requestAnimationFrame(() => {
+      notification.classList.add("show");
+    });
+  }
+
   const title =
     document.getElementById(
       "update-title"
@@ -1427,10 +1485,23 @@ function showUpdateReady() {
 
 function showOfflineReady() {
 
+  // 進捗バーは中央下のインジケータで表示済みなので、モーダル側のバーは常に隠す
+  const progressWrapper = document.getElementById("update-progress-wrapper");
+  if (progressWrapper) progressWrapper.style.display = "none";
+  _hideSwDownloadBar();
+
   const notification =
     document.getElementById(
       "update-notification"
     );
+
+  // ダウンロード中はモーダルを隠していたため、ここで表示する
+  if (notification) {
+    notification.style.display = "flex";
+    requestAnimationFrame(() => {
+      notification.classList.add("show");
+    });
+  }
 
   const title =
     document.getElementById(
@@ -1531,6 +1602,11 @@ function showOfflineReady() {
 function showUpdateNotification(
   registration
 ) {
+
+  // 進捗バーは中央下のインジケータで表示済みなので、モーダル側のバーは常に隠す
+  const progressWrapper = document.getElementById("update-progress-wrapper");
+  if (progressWrapper) progressWrapper.style.display = "none";
+  _hideSwDownloadBar();
 
   const notification =
     document.getElementById(
@@ -1655,8 +1731,9 @@ function showUpdateNotification(
         );
 
 
+      // ダウンロード中バーはモーダル側には出さない（中央下のインジケータで表示済み）
       if (progressWrapper) {
-        progressWrapper.style.display = "block";
+        progressWrapper.style.display = "none";
       }
 
 

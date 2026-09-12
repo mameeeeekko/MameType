@@ -8402,7 +8402,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
    body直下に置くため 1600×900 ステージ座標が基準になる。
    pointer-events: none でクリックを一切阻害しない。
    ===================================================== */
-#remainingLoadIndicator {
+#remainingLoadIndicator,
+#swDownloadIndicator {
   position: fixed;
   bottom: 18px;
   left: 50%;
@@ -8433,7 +8434,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   pointer-events: none;
   user-select: none;
 }
-#remainingLoadIndicator.show {
+#remainingLoadIndicator.show,
+#swDownloadIndicator.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
   visibility: visible;

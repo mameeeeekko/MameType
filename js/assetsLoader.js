@@ -236,14 +236,55 @@ const DAILY_PRELOAD_BGM_NAMES = [
 ];
 
 /**
+ * 1件読み込み。音声は「yield付き」で読み込む。
+ * 低スペックPC（特にWindows）では AudioContext.decodeAudioData と
+ * メインスレッドの描画がCPUを奪い合ってカクつくため、音声の前後に
+ * マイクロタスクを挟んで描画に譲る（同時進行は assetsLoader 側の並列数で制御）。
+ * @param {{type:string,name:string,src:string}} a
+ */
+async function _loadOneAsset(a) {
+  if (a.type === "img") {
+    await loadImage(a.name, a.src);
+    return;
+  }
+  if (a.type === "sound") {
+    // デコード前に1フレーム譲る（直前の完了処理・描画を先に流す）
+    await _yieldToMain();
+    try {
+      await loadSound(a);
+    } finally {
+      // デコード直後も1フレーム譲る（次のデコード開始前に描画を通す）
+      await _yieldToMain();
+    }
+  }
+}
+
+/** メインスレッドを1フレーム（rAF）譲る。rAF不可環境では setTimeout に退避 */
+function _yieldToMain() {
+  return new Promise(resolve => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve());
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
+
+/**
  * キュー方式で最大 maxConcurrent 件ずつ処理する汎用ローダー。
  * @param {Array} queue - アセット定義の配列
  * @param {number} maxConcurrent - 同時実行数
+ * @param {number} gapMs - 1件完了ごとに空ける間隔（ms）。メインスレッドの呼吸用
  * @param {Function} [onOneLoaded] - 1件完了ごとに呼ばれる
  */
-async function _runQueueWithLimit(queue, maxConcurrent, onOneLoaded) {
+async function _runQueueWithLimit(queue, maxConcurrent, gapMs, onOneLoaded) {
+  if (typeof gapMs === "function") {
+    onOneLoaded = gapMs;
+    gapMs = 0;
+  }
   let index = 0;
   const workerCount = Math.max(1, Math.min(maxConcurrent, queue.length));
+  const gap = Math.max(0, Number(gapMs) || 0);
   const workers = [];
   for (let w = 0; w < workerCount; w++) {
     workers.push((async () => {
@@ -252,12 +293,15 @@ async function _runQueueWithLimit(queue, maxConcurrent, onOneLoaded) {
         if (idx >= queue.length) break;
         const a = queue[idx];
         try {
-          if (a.type === "img") await loadImage(a.name, a.src);
-          else if (a.type === "sound") await loadSound(a);
+          await _loadOneAsset(a);
         } catch (e) {
           console.error(`[ASSET LOAD ERROR] name=${a.name} src=${a.src}`, e);
         }
         onOneLoaded?.(a);
+        // 1件完了ごとに少し間を空けてメインスレッドを呼吸させる
+        if (gap > 0) {
+          await new Promise(r => setTimeout(r, gap));
+        }
       }
     })());
   }
@@ -285,8 +329,9 @@ async function loadRemainingAssets(onProgress) {
 
   // 画像と音声はそれぞれ別の並列数で同時に進める
   // → メニュー用画像が優先的に進みつつ、デイリー曲も最初から読み込まれる
-  const imagePromise = _runQueueWithLimit(imageQueue, IMAGE_CONCURRENCY, report);
-  const soundPromise = _runQueueWithLimit(soundQueue, SOUND_CONCURRENCY, report);
+  // ※ 裏読み込み中に重くならないよう、件数ごとに少し間を空ける
+  const imagePromise = _runQueueWithLimit(imageQueue, IMAGE_CONCURRENCY, 8, report);
+  const soundPromise = _runQueueWithLimit(soundQueue, SOUND_CONCURRENCY, 30, report);
   await Promise.all([imagePromise, soundPromise]);
 
   try { onProgress?.(total, total); } catch (e) { /* 無視 */ }
