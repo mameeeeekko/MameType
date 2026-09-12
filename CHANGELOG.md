@@ -2,6 +2,32 @@
 
 ---
 
+## [1.0.24] - 2026-09-13
+
+### Fixed
+- ### 修正 1: `js/renderer.js` — 標準/タイムアタックモード
+
+__問題__: `renderNormal` の日本語表示が毎フレーム `innerHTML` を再構築していた。Windows でフォント再評価が頻発し、入力文字が遅れて表示される原因。
+
+__修正内容__:
+
+- `_normalJpSpans` スパンプールと `_normalPreparedText` キャッシュを追加
+- テキストが変わったときのみスパンを生成し、毎フレームは `className` のみ更新
+- `\r` / `\n` 文字の扱いも従来どおり（空文字に変換）
+- `resetRendererState` にプールリセットを追加
+
+### 修正 2: `js/defenseRenderer.js` — 防衛モード
+
+__問題__: `renderWordList` が毎フレーム `getDisplayFullRoma` と `measureText` を呼んでいた。漢字問題でこの計算が重く、Canvas 全体がカクつく原因。
+
+__修正内容__:
+
+- `_defenseRomaCacheKey` / `_defenseCachedRemainingRoma` キャッシュを追加
+- 現在単語・入力位置・入力文字列が変わったときのみ `getDisplayFullRoma` を再計算
+
+
+---
+
 ## [1.0.22] - 2026-09-12
 
 ### Fixed
