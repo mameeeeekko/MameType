@@ -29,6 +29,11 @@ let _lastAnimType = null;     // 前回の animType
 let _lastAnimProgress = -1;   // 前回の animProgress（0.005 以上変化で再描画）
 const CORRUPT_REDRAW_THRESHOLD = 0.004; // 再描画を発生させる最低変化量
 
+// ★防衛モードのローマ字表示キャッシュ
+// getDisplayFullRoma は漢字問題で重いため、入力状態が変わったときだけ再計算する
+let _defenseRomaCacheKey = "";
+let _defenseCachedRemainingRoma = "";
+
 /**
  * 座標をシードにした簡易的な乱数を生成します。
  * @param {number} x
@@ -684,14 +689,24 @@ function renderWordList(ctx, state) {
       // 現在の単語のひらがな部分を取得
       const currentWordText = textWords[currentWordIndex] || "";
 
-      // getDisplayFullRoma を使って、現在の単語の残りローマ字を生成
-      const fullRemainingRoma = getDisplayFullRoma({
-        text: currentWordText, // 現在の単語のひらがな
-        pos: state.currentWordPos, // ★修正: 現在の単語の入力位置を反映
-        typed: state.typed,
-        inputedRomaji: state.inputedRomaji,
-      });
-      const remainingRoma = fullRemainingRoma.substring(state.inputedRomaji.length + state.typed.length);
+      // ★キャッシュキー：現在単語 + 入力位置 + 入力文字列
+      // getDisplayFullRoma は漢字問題で重いため、入力状態が変わったときだけ再計算する
+      const romaCacheKey = `${currentWordIndex}|${state.currentWordPos}|${state.inputedRomaji}|${state.typed}`;
+
+      let remainingRoma;
+      if (romaCacheKey === _defenseRomaCacheKey) {
+        remainingRoma = _defenseCachedRemainingRoma;
+      } else {
+        _defenseRomaCacheKey = romaCacheKey;
+        const fullRemainingRoma = getDisplayFullRoma({
+          text: currentWordText,
+          pos: state.currentWordPos,
+          typed: state.typed,
+          inputedRomaji: state.inputedRomaji,
+        });
+        remainingRoma = fullRemainingRoma.substring(state.inputedRomaji.length + state.typed.length);
+        _defenseCachedRemainingRoma = remainingRoma;
+      }
 
       ctx.fillStyle = "#888";
       ctx.fillText(remainingRoma, romaX, y);
