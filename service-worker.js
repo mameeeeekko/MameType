@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.22";
+const CACHE_NAME = "mametype-v1.0.23";
 
 // =====================================================
 // オフライン用データ（SWキャッシュ）の裏ダウンロードを
@@ -74,7 +74,14 @@ const BOOT_CORE_ASSETS = [
 // -----------------------------------------------------
 
 const DEFERRED_CONCURRENCY = 1;
-const DEFERRED_INTERVAL_MS = 300;
+// ★v1.0.23: 300ms → 1200ms に緩和。
+//   頻繁な取得+キャッシュ書き込みは Windows（プロキシ/セキュリティソフト環境）で
+//   ネットワーク・ディスクI/Oを圧迫し、プレイ中の表示遅れ・カクつきの原因になる。
+const DEFERRED_INTERVAL_MS = 1200;
+
+// ★v1.0.23: ゲーム中フラグ（ページから GAME_ACTIVE メッセージで切替）。
+//   true の間は裏ダウンロードを完全に停止する。
+let gameActive = false;
 
 const CORE_ASSETS = [
   "./",
@@ -445,9 +452,24 @@ async function preCacheRemainingInBackground() {
     } catch (e) { /* 無視 */ }
   };
 
+  // ---------------------------------------------------------------
+  // ★v1.0.23: ゲーム中は裏ダウンロードを完全に停止する。
+  //   プレイ中のネットワーク帯域・ディスクI/Oの取り合いで
+  //   「打鍵表示の遅れ」「防衛モードのもっさり」が起きるため。
+  //   ページが GAME_ACTIVE(active:false) を送ってくるまで待機する。
+  // ---------------------------------------------------------------
+  const waitForGameIdle = async () => {
+    while (gameActive) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  };
+
   notify("start");
 
   for (const asset of NON_BOOT_ASSETS_TO_CACHE) {
+
+    // ゲームが始まったら再開を待つ
+    await waitForGameIdle();
 
     try {
       const request = new Request(asset);
@@ -490,6 +512,8 @@ async function preCacheRemainingInBackground() {
         [...fontCss.matchAll(/url\((['"]?)([^'")]+\.woff2)\1\)/g)].map(m => m[2])
       )];
       for (const href of fontUrls) {
+        // ゲームが始まったら再開を待つ
+        await waitForGameIdle();
         try {
           // 相対URLは fonts.css の場所（/assets/fonts/）基準で解決する
           const cssUrl = new URL("./assets/fonts/fonts.css", self.location.href);
@@ -693,6 +717,8 @@ self.addEventListener("activate", event => {
       } catch (e) {
         /* 無視 */
       }
+      // ---------------------------------------------\n      // ★v1.0.23: activate 完了（controlling 取得）後、\n      //   ページに対して「更新適用完了→再起動可能」を明示通知する。\n      // ---------------------------------------------\n      try {\n        const clients = await self.clients.matchAll({\n          type: "window",\n          includeUncontrolled: true\n        });\n        for (const client of clients) {\n          client.postMessage({\n            type: "UPDATE_CONTROLLING"\n          });\n        }\n      } catch (e) {\n        /* 通知失敗は無視 */\n      }\n
+      // ---------------------------------------------\n      // ★v1.0.23: activate 完了（controlling 取得）後、\n      //   ページに対して「更新適用完了→再起動可能」を明示通知する。\n      // ---------------------------------------------\n      try {\n        const clients = await self.clients.matchAll({\n          type: "window",\n          includeUncontrolled: true\n        });\n        for (const client of clients) {\n          client.postMessage({\n            type: "UPDATE_CONTROLLING"\n          });\n        }\n      } catch (e) {\n        /* 通知失敗は無視 */\n      }\n
 
       // ---------------------------------------------
       // 起動コア以外をバックグラウンドで事前キャッシュ
@@ -754,7 +780,27 @@ self.addEventListener("fetch", event => {
 // Message
 // =====================================================
 
-self.addEventListener("message", event => {
+self.addEventListener("message", async event => {
+
+  // ---------------------------------------------------------------
+  // ★v1.0.23: ページからのゲーム状態通知。
+  //   ゲーム中は裏ダウンロード（preCacheRemainingInBackground）を
+  //   停止させるために使う。
+  // ---------------------------------------------------------------
+  if (
+    event.data &&
+    event.data.type === "GAME_ACTIVE"
+  ) {
+
+    gameActive = !!event.data.active;
+
+    console.log(
+      "Service Worker: GAME_ACTIVE =",
+      gameActive
+    );
+
+    return;
+  }
 
   if (
     event.data &&
@@ -766,6 +812,23 @@ self.addEventListener("message", event => {
     );
 
     self.skipWaiting();
+
+    // ★v1.0.23: 「今すぐ更新」後にページ側が止まったままになるケースがあったため、
+    //   更新適用開始（activating 遷移）をページへ明示通知する。
+    try {
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true
+      });
+      for (const client of clients) {
+        client.postMessage({
+          type: "UPDATE_ACTIVATING"
+        });
+      }
+    } catch (e) {
+      /* ページへの通知失敗は無視 */
+    }
+
   }
 
 });
