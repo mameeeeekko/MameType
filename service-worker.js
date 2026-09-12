@@ -564,13 +564,13 @@ self.addEventListener("install", event => {
         // 進捗を開始
         // ---------------------------------------------
 
-        await notifyClients({
+        notifyClients({
           type: "UPDATE_PROGRESS",
           status: "start",
           current: 0,
           total: total,
           percent: 0
-        });
+        }).catch(() => {});
 
         // ---------------------------------------------
         // 1ファイルずつ取得
@@ -615,14 +615,14 @@ self.addEventListener("install", event => {
             // 進捗送信
             // -----------------------------------------
 
-            await notifyClients({
+            notifyClients({
               type: "UPDATE_PROGRESS",
               status: "progress",
               current: completed,
               total: total,
               percent: percent,
               file: asset
-            });
+            }).catch(() => {});
 
           } catch (error) {
 
@@ -636,7 +636,7 @@ self.addEventListener("install", event => {
             // 1ファイル失敗しても全体を止めない
             // -----------------------------------------
 
-            await notifyClients({
+            notifyClients({
               type: "UPDATE_PROGRESS",
               status: "file-error",
               current: completed,
@@ -645,7 +645,7 @@ self.addEventListener("install", event => {
                 (completed / total) * 100
               ),
               file: asset
-            });
+            }).catch(() => {});
           }
         }
 
@@ -653,13 +653,13 @@ self.addEventListener("install", event => {
         // 完了
         // ---------------------------------------------
 
-        await notifyClients({
+        notifyClients({
           type: "UPDATE_PROGRESS",
           status: "complete-boot",
           current: total,
           total: total,
           percent: 100
-        });
+        }).catch(() => {});
 
         console.log(
           "Service Worker: Asset update complete."
@@ -717,8 +717,24 @@ self.addEventListener("activate", event => {
       } catch (e) {
         /* 無視 */
       }
-      // ---------------------------------------------\n      // ★v1.0.23: activate 完了（controlling 取得）後、\n      //   ページに対して「更新適用完了→再起動可能」を明示通知する。\n      // ---------------------------------------------\n      try {\n        const clients = await self.clients.matchAll({\n          type: "window",\n          includeUncontrolled: true\n        });\n        for (const client of clients) {\n          client.postMessage({\n            type: "UPDATE_CONTROLLING"\n          });\n        }\n      } catch (e) {\n        /* 通知失敗は無視 */\n      }\n
-      // ---------------------------------------------\n      // ★v1.0.23: activate 完了（controlling 取得）後、\n      //   ページに対して「更新適用完了→再起動可能」を明示通知する。\n      // ---------------------------------------------\n      try {\n        const clients = await self.clients.matchAll({\n          type: "window",\n          includeUncontrolled: true\n        });\n        for (const client of clients) {\n          client.postMessage({\n            type: "UPDATE_CONTROLLING"\n          });\n        }\n      } catch (e) {\n        /* 通知失敗は無視 */\n      }\n
+
+      // ---------------------------------------------
+      // ★v1.0.23: activate 完了（controlling 取得）後、
+      //   ページに対して「更新適用完了→再起動可能」を明示通知する。
+      // ---------------------------------------------
+      try {
+        const clients = await self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true
+        });
+        for (const client of clients) {
+          client.postMessage({
+            type: "UPDATE_CONTROLLING"
+          });
+        }
+      } catch (e) {
+        /* 通知失敗は無視 */
+      }
 
       // ---------------------------------------------
       // 起動コア以外をバックグラウンドで事前キャッシュ
@@ -729,6 +745,7 @@ self.addEventListener("activate", event => {
     })()
   );
 });
+
 
 // =====================================================
 // Fetch
