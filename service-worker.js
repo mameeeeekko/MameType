@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.19";
+const CACHE_NAME = "mametype-v1.0.20";
 
 // =====================================================
 // オフライン用データ（SWキャッシュ）の裏ダウンロードを
@@ -419,6 +419,11 @@ async function notifyClients(message) {
  */
 async function preCacheRemainingInBackground() {
 
+  // オフライン中は取得できないので何もしない
+  if (navigator.onLine === false) {
+    return;
+  }
+
   const cache = await caches.open(CACHE_NAME).catch(() => null);
   if (!cache) return;
 
@@ -672,84 +677,37 @@ self.addEventListener("fetch", event => {
     return;
   }
 
+  // 同一オリジン以外は介入しない
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  // ------------------------------------------------------
+  // オンライン中は一切介入しない（navigator.onLine が
+  // 未定義な環境では「オンライン扱い」にして介入しない）
+  if (navigator.onLine !== false) {
+    return;
+  }
+
+  // ------------------------------------------------------
+  // オフライン時のみキャッシュから配信する
+  // ------------------------------------------------------
   event.respondWith(
-
-    fetch(event.request)
-
-      .then(networkResponse => {
-
-        // ---------------------------------------------
-        // オンライン時はネットワーク応答をそのまま返す。
-        // caches.match を先に実行しないことで、
-        // CacheStorage の排他ロック待ち（タイピング遅延・
-        // 起動失敗の原因）を無くす。
-        // ---------------------------------------------
-
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          networkResponse.type === "basic"
-        ) {
-
-          const responseToCache = networkResponse.clone();
-
-          // 書き込みは応答を待たせない（fire-and-forget）
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            })
-            .catch(error => {
-              console.error("Service Worker: cache.put failed:", error);
-            });
+    caches.match(event.request, { ignoreVary: true })
+      .then(cachedResponse => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-
-        return networkResponse;
-
+        return new Response("MameType is offline", {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
+          },
+        });
       })
-
-      .catch(networkError => {
-
-        // ---------------------------------------------
-        // ネットワーク取得に失敗したときだけキャッシュへフォールバック。
-        // それも無ければオフライン用の最小レスポンスを返す
-        // （throw してページ側へ失敗を連鎖させない）。
-        // ---------------------------------------------
-
-        console.error("Service Worker: Fetch failed:", networkError);
-
-        return caches.match(event.request, { ignoreVary: true })
-          .then(cachedResponse => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-
-            console.error(
-              "Service Worker: No cached response for",
-              event.request.url
-            );
-
-            return new Response("MameType is offline", {
-              status: 503,
-              statusText: "Service Unavailable",
-              headers: {
-                "Content-Type": "text/plain; charset=utf-8",
-                "Cache-Control": "no-store",
-              },
-            });
-          })
-          .catch(() => {
-            return new Response("MameType is offline", {
-              status: 503,
-              statusText: "Service Unavailable",
-              headers: {
-                "Content-Type": "text/plain; charset=utf-8",
-                "Cache-Control": "no-store",
-              },
-            });
-          });
-
-      })
-
   );
 
 });
