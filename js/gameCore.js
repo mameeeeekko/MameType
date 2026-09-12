@@ -109,8 +109,30 @@ export let shuffledTargets = [];
 export let isRetrying = false;
 
 export let isGameActive = false;
+
+// ★v1.0.23: ゲーム中は Service Worker / assetsLoader の裏読み込みを停止させる。
+//   Windows で裏ダウンロード中に「打鍵表示の遅れ」「防衛モードのもっさり」が
+//   起きるため、ゲーム開始/終了を SW（GAME_ACTIVE メッセージ）と
+//   ページ内ローダー（window.__mametypeGameActive フラグ）の両方へ通知する。
+let lastGameActivityNotified = false;
+function notifyGameActivity(active) {
+  const val = !!active;
+  if (val === lastGameActivityNotified) return; // 変化があった時だけ通知
+  lastGameActivityNotified = val;
+  try {
+    window.__mametypeGameActive = val;
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: "GAME_ACTIVE",
+        active: val
+      });
+    }
+  } catch (e) { /* 通知失敗は無視 */ }
+}
+
 export function setGameActive(v){
   isGameActive = v;
+  notifyGameActivity(v);
   // ★エネミー/防衛モードは startGame を経由しないため、ここで speedTick を再始動する
   if (v) ensureSpeedTickRunning();
 }
@@ -434,6 +456,7 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   gameState.currentChallenge = config.custom || {}; //skillTree関連フラグ
   gameState.currentSkillNodeId = config.custom?.nodeId || null;
   isGameActive = true;
+  notifyGameActivity(true); // ★裏読み込みを停止
   isFinishing = false;
   isRetrying = false;
   stopTimeAttackTimer();
@@ -750,6 +773,7 @@ async function finishGame(config = {}) {
         gameState.currentSkillNodeId = null;
 
         isGameActive = false;
+        notifyGameActivity(false); // ★裏読み込みを再開
         isFinishing = false;
         gameState.isEnding = false;
 
@@ -909,6 +933,7 @@ async function finishGame(config = {}) {
     }
 
     isGameActive = false;
+    notifyGameActivity(false); // ★裏読み込みを再開
 }
 
 export function getERank(eScore) {

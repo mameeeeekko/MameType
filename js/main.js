@@ -1061,6 +1061,52 @@ if ("serviceWorker" in navigator) {
         handleUpdateProgress(data);
       }
 
+      // ★v1.0.23: SW からの自動再起動用制御メッセージ
+      if (
+        data.type === "UPDATE_ACTIVATING" ||
+        data.type === "UPDATE_CONTROLLING"
+      ) {
+
+        if (!updateControllerChangeHandler) {
+
+          updateControllerChangeHandler = () => {
+
+            if (refreshing) {
+              return;
+            }
+
+            refreshing = true;
+
+            console.log(
+              "Service Worker: Controller changed. Reloading..."
+            );
+
+            window.location.reload();
+
+          };
+
+          navigator.serviceWorker.addEventListener(
+            "controllerchange",
+            updateControllerChangeHandler
+          );
+
+        }
+
+        if (!refreshing) {
+
+          setTimeout(() => {
+            if (!refreshing) {
+              refreshing = true;
+              console.warn(
+                "Service Worker: controllerchange timeout. Force reloading..."
+              );
+              window.location.reload();
+            }
+          }, 5000);
+
+        }
+      }
+
     }
   );
 
