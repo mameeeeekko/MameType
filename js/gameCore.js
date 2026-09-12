@@ -322,35 +322,28 @@ export function safeFlashMiss(){ if(isGameActive&&soundSettings.flash) flashMiss
 // 8. 描画初期化
 // =====================================================
 
-let pendingRender=false;
-
 export function initRenderer() {
   resetCandidates();
   renderState();
 }
 
-// 描画ラッパー（requestAnimationFrameでスムーズに）
+// ★v1.0.22: 描画ラッパーを同期呼び出しに戻した（安定状態へ復帰）
+//   以前の rAF 遅延 + renderer 側の rAF で二重遅延になり、
+//   「タイプした文字の表示が遅れる」原因になっていた。
+//   render() 側の再描画コストは軽いので直接呼ぶ。
 export function renderState() {
-  if (!pendingRender) {
-    pendingRender = true;
-
-    requestAnimationFrame(() => {
-      render({
-        text: gameState.text,               // gameState.text に変更
-        pos: gameState.pos,                 // gameState.pos に変更
-        typed: gameState.typed,             // gameState.typed に変更
-        inputedRomaji: gameState.inputedRomaji, // gameState.inputedRomaji に変更
-        displayWord: gameState.displayWord, // gameState.displayWord に変更
-                segments: gameState.segments,
-        correctCount: gameState.correctCount,   // gameState.correctCount に変更
-        mistakeCount: gameState.mistakeCount,   // gameState.mistakeCount に変更
-        isFreeMode: currentIsFreeMode,
-        isMissPractice: gameState.currentMode === GameModes.MISS_PRACTICE
-      });
-
-      pendingRender = false;
-    });
-  }
+  render({
+    text: gameState.text,               // gameState.text に変更
+    pos: gameState.pos,                 // gameState.pos に変更
+    typed: gameState.typed,             // gameState.typed に変更
+    inputedRomaji: gameState.inputedRomaji, // gameState.inputedRomaji に変更
+    displayWord: gameState.displayWord, // gameState.displayWord に変更
+            segments: gameState.segments,
+    correctCount: gameState.correctCount,   // gameState.correctCount に変更
+    mistakeCount: gameState.mistakeCount,   // gameState.mistakeCount に変更
+    isFreeMode: currentIsFreeMode,
+    isMissPractice: gameState.currentMode === GameModes.MISS_PRACTICE
+  });
 }
 
 // =====================================================
@@ -1017,12 +1010,15 @@ export function backToMenu(){
 // ★パフォーマンス:
 //  - ゲーム非アクティブ / 終了演出中は rAF ループを完全に停止する
 //    （再開は startGame / setGameActive(true) 内の ensureSpeedTickRunning が行う）
-//  - 通常・タイムアタック等の DOM モードでは performance.js の
-//    recordFrame（Auto品質の自動調整への入力）と shouldRunFrame（FPSキャップ）を適用する
+//  - ★v1.0.22: 毎フレームの renderState() を復活（安定状態へ復帰）。
+//    打鍵時のみの描画 + rAF二重遅延では「タイプ表示の遅れ」が
+//    起こるため、通常・タイムアタック等の DOM モードでは
+//    毎フレーム描画で常に最新を表示する。
+//  - performance.js の recordFrame（Auto品質の自動調整への入力）と
+//    shouldRunFrame（FPSキャップ）は従来どおり適用する
 //  - エネミー/防衛モードは各ゲームループ側で同じ処理を行うため、
 //    二重計測・ゲート競合を避けるためにここでは適用しない
 let speedTickActive = false;
-let lastTaRenderAt = 0;   // タイムアタックで最後に全体再描画した時刻
 let lastTaSecond = -1;    // タイムアタックで最後に表示した残り秒
 
 function ensureSpeedTickRunning() {
@@ -1054,14 +1050,12 @@ function speedTick(now){
     }
   }
 
+  // ★毎フレーム描画（安定状態へ復帰）。打鍵表示を常に最新に保つ
+  renderState();
+
   if (gameState.currentMode?.id === GameModes.TIME_ATTACK.id) {
-    const secChanged = updateTimeAttack();
-    // タイマー数値のDOM更新は updateTimeAttack 内で「秒が変わったときだけ」行う。
-    // 重い全体再描画（renderState）は秒変化時 or 最低250ms間隔に制限する。
-    if (secChanged || now - lastTaRenderAt > 250) {
-      lastTaRenderAt = now;
-      renderState();
-    }
+    // タイマー数値のDOM更新は updateTimeAttack 内で「秒が変わったときだけ」行う
+    updateTimeAttack();
   }
   if(now-lastSpeedUpdate>200){
     lastSpeedUpdate=now;

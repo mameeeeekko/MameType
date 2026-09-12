@@ -1799,30 +1799,65 @@ function showUpdateNotification(
       // 待機中SWへSKIP_WAITING
       // -------------------------------------------
 
-      if (registration.waiting) {
+      const applyUpdate = async () => {
 
-        registration.waiting.postMessage({
-          type: "SKIP_WAITING"
-        });
+        if (registration.waiting) {
 
-      } else {
-
-        console.warn(
-          "Service Worker: No waiting worker found."
-        );
-
-        // 念のため更新
-        registration.update()
-          .catch(error => {
-
-            console.error(
-              "Service Worker update failed:",
-              error
-            );
-
+          registration.waiting.postMessage({
+            type: "SKIP_WAITING"
           });
 
-      }
+        } else {
+
+          console.warn(
+            "Service Worker: No waiting worker found."
+          );
+
+          // 念のため更新を確認し、待機SWが出たら適用する
+          try {
+            await registration.update();
+          } catch (error) {
+            console.error("Service Worker update failed:", error);
+          }
+
+          let waiting = registration.waiting;
+          if (!waiting) {
+            // 取りこぼし保険: 登録情報を取り直して確認
+            try {
+              const reg = await navigator.serviceWorker.getRegistration();
+              waiting = reg ? reg.waiting : null;
+            } catch (e) { /* 無視 */ }
+          }
+
+          if (waiting) {
+            waiting.postMessage({ type: "SKIP_WAITING" });
+          } else {
+            // ★適用すべき更新が無い場合も「自動で再起動します」に合わせて
+            //   必ずページを再読み込みする（モーダルで止まりっぱなしを防ぐ）
+            console.warn(
+              "Service Worker: No update available. Reloading..."
+            );
+            setTimeout(() => window.location.reload(), 800);
+          }
+        }
+      };
+
+      applyUpdate();
+
+      // -------------------------------------------
+      // 保険: controllerchange が一定時間内に発生しなくても
+      // 「アップデート後、自動的に再起動します」どおりに
+      // 必ず再読み込みする（安全タイマー）
+      // -------------------------------------------
+      setTimeout(() => {
+        if (!refreshing) {
+          refreshing = true;
+          console.warn(
+            "Service Worker: controllerchange timeout. Force reloading..."
+          );
+          window.location.reload();
+        }
+      }, 5000);
 
     };
 
@@ -3532,6 +3567,23 @@ function bindKeyEvents() {
     // ★スタッフロール中は全ショートカットを無効化（ESCによるスキップはdialogue.js側で処理）
     if (window._staffRollActive) return;
 
+    // ★v1.0.22: アップデート通知モーダル表示中は裏のショートカットを一切通さない
+    //   （「更新画面の裏でキー操作が効いてしまう」問題の防止）
+    //   Escape / b のみ「後で」扱いで閉じられる
+    const updateModal = document.getElementById("update-notification");
+    if (
+      updateModal &&
+      updateModal.style.display !== "none" &&
+      updateModal.style.display !== "" &&
+      updateModal.classList.contains("show")
+    ) {
+      e.preventDefault();
+      if (e.key === "Escape" || e.key.toLowerCase() === "b") {
+        document.getElementById("update-later-btn")?.click();
+      }
+      return;
+    }
+
     // ★勲章・詳細ステータス系モーダル表示中は、キー入力をモーダル操作（閉じる/タブ切替）に限定する。
     //   （それ以外のキーが handleGameKey / handleMenuKey 等に漏れて別メニューが開くのを防ぐ）
     if (!e.ctrlKey && !e.metaKey && handleStatsModalKey(e)) return;
@@ -3851,6 +3903,14 @@ async function handleGameKey(e) {
   return true;
 }
 
+// ★v1.0.22: 画面の「実際の表示状態」を判定するヘルパ。
+//   style.display はインライン未設定の要素で "" になるため、
+//   CSS で display:none にされている隠れ画面まで
+//   「表示中」と誤判定して裏でショートカットが発火する問題を防ぐ。
+function isScreenVisible(div) {
+  return !!div && window.getComputedStyle(div).display !== "none";
+}
+
 function handleMenuKey(e) {
 
 
@@ -3967,7 +4027,7 @@ function handleMenuKey(e) {
     }
   }
 
-  if (settingsDiv.style.display !== "none") {
+  if (isScreenVisible(settingsDiv)) {
     if (key === "b" || key === "escape") {
       e.preventDefault();
       settingsBackBtn?.click();
@@ -3975,7 +4035,7 @@ function handleMenuKey(e) {
     return true;
   }
 
-  if (onlineRankingDiv.style.display !== "none") {
+  if (isScreenVisible(onlineRankingDiv)) {
     if (key === "b" || key === "escape") {
       e.preventDefault();
       rankingBackBtn?.click();
@@ -4011,7 +4071,7 @@ function handleMenuKey(e) {
     return true;
   }
 
-  if (recordsDiv.style.display !== "none") {
+  if (isScreenVisible(recordsDiv)) {
     if (key === "b" || key === "escape") {
       e.preventDefault();
       recordsBackBtn?.click();
@@ -4047,7 +4107,7 @@ function handleMenuKey(e) {
     return true;
   }
 
-  if (menuDiv.style.display !== "none") {
+  if (isScreenVisible(menuDiv)) {
     // メインメニュー
     switch (key) {
       case "h": startMenuBtn?.click(); break;
@@ -4067,7 +4127,7 @@ function handleMenuKey(e) {
     return true;
   }
 
-  if (startMenuDiv.style.display !== "none") {
+  if (isScreenVisible(startMenuDiv)) {
     // デイリーモードメニュー
     switch (key) {
       case "k": startBtn?.click(); break;
@@ -4088,7 +4148,7 @@ function handleMenuKey(e) {
     return true;
   }
 
-  if (freeStartMenuDiv.style.display !== "none") {
+  if (isScreenVisible(freeStartMenuDiv)) {
     // フリーモードメニュー
     switch (key) {
       case "k": freeStartBtn?.click(); break;
@@ -4110,7 +4170,7 @@ function handleMenuKey(e) {
     return true;
   }
 
-  if (questMenuDiv.style.display !== "none") {
+  if (isScreenVisible(questMenuDiv)) {
     // クエストモードメニュー
     switch (key) {
       case "c": // Continue
@@ -4133,7 +4193,7 @@ function handleMenuKey(e) {
     return true;
   }
 
-  if (questMapScreen.style.display !== "none") {
+  if (isScreenVisible(questMapScreen)) {
     // クエストマップ画面
     const sideMenu = document.getElementById("questSideMenu");
     if (sideMenu) {

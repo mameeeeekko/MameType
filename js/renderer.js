@@ -393,7 +393,14 @@ export function updateProgressText(currentIndex, total) {
 
 let lastRomaText = "";
 let lastTypedLen = -1;
-let pendingRender = false;
+
+// ===========================================
+// ★v1.0.22: render() を同期処理に戻した
+//   以前（安定状態）は speedTick の毎フレーム描画で
+//   タイプ表示が常に最新だったが、「軽量化」で
+//   打鍵時のみ + rAF二重遅延にした結果、
+//   「打った文字の表示が遅れる」が発生したため。
+// ===========================================
 
 // ===========================================
 // ★長文モードのスクロール表示用スパン再利用プール
@@ -414,25 +421,18 @@ function ensureSpanPool(pool, container, size) {
 
 export function render(state) {
 
-  if (pendingRender) return;
-  pendingRender = true;
+  renderWordDisplay(state);
 
-  requestAnimationFrame(() => {
-    pendingRender = false;
+  if (isLongTextMode) {
+    renderLongText(state);
+  } else {
+    renderNormal(state);
+  }
 
-    renderWordDisplay(state);
-
-    if (isLongTextMode) {
-      renderLongText(state);
-    } else {
-      renderNormal(state);
-    }
-
-    renderStats(state);
-    renderFreeModeBadge(state.isFreeMode); // Existing
-    renderMissModeBadge(state.isMissPractice); // Existing
-    renderBgmInfo(getNow()); // Call new BGM info rendering function
-  });
+  renderStats(state);
+  renderFreeModeBadge(state.isFreeMode); // Existing
+  renderMissModeBadge(state.isMissPractice); // Existing
+  renderBgmInfo(getNow()); // Call new BGM info rendering function
 }
 
 let longWordSpans = [];
