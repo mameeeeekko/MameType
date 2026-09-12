@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.18";
+const CACHE_NAME = "mametype-v1.0.19";
 
 // =====================================================
 // オフライン用データ（SWキャッシュ）の裏ダウンロードを
@@ -74,7 +74,7 @@ const BOOT_CORE_ASSETS = [
 // -----------------------------------------------------
 
 const DEFERRED_CONCURRENCY = 1;
-const DEFERRED_INTERVAL_MS = 120;
+const DEFERRED_INTERVAL_MS = 300;
 
 const CORE_ASSETS = [
   "./",
@@ -380,6 +380,15 @@ const ALL_ASSETS_TO_CACHE = [
   ])
 ];
 
+// 起動コア以外（activate 後にバックグラウンドで少しずつ取得する）
+//  install 時は起動コアだけをキャッシュして素早く有効化し、
+//  残りは interval を空けて 1 件ずつ取得する。
+//  （一括キャッシュは CacheStorage の排他ロックを長時間占有し、
+//     Windows のタイピング遅延・起動失敗の原因になるため）
+const NON_BOOT_ASSETS_TO_CACHE = ALL_ASSETS_TO_CACHE.filter(
+  url => !BOOT_CORE_ASSETS.includes(url)
+);
+
 // =====================================================
 // クライアントへ進捗を送信
 // =====================================================
@@ -400,6 +409,65 @@ async function notifyClients(message) {
   });
 }
 
+/**
+ * activate 後のバックグラウンド事前キャッシュ。
+ * 起動コア以外のアセットを「1件ずつ・間隔を空けて」取得して
+ * オフライン対応を完成させる。進捗は UPDATE_PROGRESS で通知する。
+ * キャッシュ書き込みは CacheStorage の排他ロックを短時間しか
+ * 占めないため、ページ側の要求（タイピング音 fetch など）が
+ * ロック待ちで遅延しなくなる。
+ */
+async function preCacheRemainingInBackground() {
+
+  const cache = await caches.open(CACHE_NAME).catch(() => null);
+  if (!cache) return;
+
+  const total = NON_BOOT_ASSETS_TO_CACHE.length;
+  if (total <= 0) return;
+
+  let completed = 0;
+
+  const notify = (status) => {
+    const percent = Math.floor((completed / total) * 100);
+    try {
+      notifyClients({
+        type: "UPDATE_PROGRESS",
+        status,
+        current: completed,
+        total,
+        percent,
+      });
+    } catch (e) { /* 無視 */ }
+  };
+
+  notify("start");
+
+  for (const asset of NON_BOOT_ASSETS_TO_CACHE) {
+
+    try {
+      const request = new Request(asset);
+      const response = await fetch(request);
+      if (response && response.ok) {
+        await cache.put(request, response.clone());
+      }
+      completed++;
+    } catch (e) {
+      // 1件の失敗で中断しない（次の起動時に再試行）
+      completed++;
+      console.error("Service Worker: background cache failed:", asset, e);
+    }
+
+    notify("progress");
+
+    // 間隔を空けて、キャッシュロックの長時間占有を避ける
+    await new Promise(resolve => setTimeout(resolve, DEFERRED_INTERVAL_MS));
+  }
+
+  completed = total;
+  notify("complete");
+  console.log("Service Worker: Background cache complete.");
+}
+
 // =====================================================
 // インストール
 // =====================================================
@@ -417,7 +485,7 @@ self.addEventListener("install", event => {
 
       .then(async cache => {
 
-        const total = ALL_ASSETS_TO_CACHE.length;
+        const total = BOOT_CORE_ASSETS.length;
 
         let completed = 0;
 
@@ -441,7 +509,7 @@ self.addEventListener("install", event => {
         // 1ファイルずつ取得
         // ---------------------------------------------
 
-        for (const asset of ALL_ASSETS_TO_CACHE) {
+        for (const asset of BOOT_CORE_ASSETS) {
 
           try {
 
@@ -520,7 +588,7 @@ self.addEventListener("install", event => {
 
         await notifyClients({
           type: "UPDATE_PROGRESS",
-          status: "complete",
+          status: "complete-boot",
           current: total,
           total: total,
           percent: 100
@@ -552,35 +620,44 @@ self.addEventListener("activate", event => {
   );
 
   event.waitUntil(
+    (async () => {
 
-    caches.keys()
-      .then(cacheNames => {
-
-        return Promise.all(
-
-          cacheNames.map(cacheName => {
-
-            if (cacheName !== CACHE_NAME) {
-
+      // ---------------------------------------------
+      // 旧バージョンのキャッシュを削除
+      // ---------------------------------------------
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames
+            .filter(name => name !== CACHE_NAME)
+            .map(name => {
               console.log(
                 "Service Worker: Deleting old cache:",
-                cacheName
+                name
               );
-
-              return caches.delete(cacheName);
-            }
-
-            return null;
-          })
-
+              return caches.delete(name);
+            })
         );
+      } catch (e) {
+        console.error("Service Worker: old cache cleanup failed:", e);
+      }
 
-      })
+      // ---------------------------------------------
+      // クライアントの制御権を取得
+      // ---------------------------------------------
+      try {
+        await self.clients.claim();
+      } catch (e) {
+        /* 無視 */
+      }
 
-      .then(() => {
-        return self.clients.claim();
-      })
+      // ---------------------------------------------
+      // 起動コア以外をバックグラウンドで事前キャッシュ
+      // （オフライン対応の完成。ページの読み込みは妨げない）
+      // ---------------------------------------------
+      await preCacheRemainingInBackground();
 
+    })()
   );
 });
 
@@ -597,68 +674,78 @@ self.addEventListener("fetch", event => {
 
   event.respondWith(
 
-    caches.match(event.request, { ignoreVary: true })
-      .then(cachedResponse => {
+    fetch(event.request)
+
+      .then(networkResponse => {
 
         // ---------------------------------------------
-        // キャッシュ優先
+        // オンライン時はネットワーク応答をそのまま返す。
+        // caches.match を先に実行しないことで、
+        // CacheStorage の排他ロック待ち（タイピング遅延・
+        // 起動失敗の原因）を無くす。
         // ---------------------------------------------
 
-        if (cachedResponse) {
-          return cachedResponse;
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          networkResponse.type === "basic"
+        ) {
+
+          const responseToCache = networkResponse.clone();
+
+          // 書き込みは応答を待たせない（fire-and-forget）
+          caches.open(CACHE_NAME)
+            .then(cache => {
+              cache.put(event.request, responseToCache);
+            })
+            .catch(error => {
+              console.error("Service Worker: cache.put failed:", error);
+            });
         }
 
+        return networkResponse;
+
+      })
+
+      .catch(networkError => {
+
         // ---------------------------------------------
-        // キャッシュにない場合はネットワーク
+        // ネットワーク取得に失敗したときだけキャッシュへフォールバック。
+        // それも無ければオフライン用の最小レスポンスを返す
+        // （throw してページ側へ失敗を連鎖させない）。
         // ---------------------------------------------
 
-        return fetch(event.request)
+        console.error("Service Worker: Fetch failed:", networkError);
 
-          .then(networkResponse => {
-
-            if (
-              !networkResponse ||
-              networkResponse.status !== 200 ||
-              networkResponse.type !== "basic"
-            ) {
-              return networkResponse;
+        return caches.match(event.request, { ignoreVary: true })
+          .then(cachedResponse => {
+            if (cachedResponse) {
+              return cachedResponse;
             }
 
-            const responseToCache =
-              networkResponse.clone();
-
-            caches.open(CACHE_NAME)
-              .then(cache => {
-
-                cache.put(
-                  event.request,
-                  responseToCache
-                );
-
-              })
-              .catch(error => {
-
-                console.error(
-                  "Service Worker: cache.put failed:",
-                  error
-                );
-
-              });
-
-            return networkResponse;
-
-          })
-
-          .catch(error => {
-
             console.error(
-              "Service Worker: Fetch failed:",
-              error
+              "Service Worker: No cached response for",
+              event.request.url
             );
 
-            // オフラインかつキャッシュにもない場合
-            throw error;
-
+            return new Response("MameType is offline", {
+              status: 503,
+              statusText: "Service Unavailable",
+              headers: {
+                "Content-Type": "text/plain; charset=utf-8",
+                "Cache-Control": "no-store",
+              },
+            });
+          })
+          .catch(() => {
+            return new Response("MameType is offline", {
+              status: 503,
+              statusText: "Service Unavailable",
+              headers: {
+                "Content-Type": "text/plain; charset=utf-8",
+                "Cache-Control": "no-store",
+              },
+            });
           });
 
       })
