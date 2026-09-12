@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.17";
+const CACHE_NAME = "mametype-v1.0.18";
 
 // =====================================================
 // オフライン用データ（SWキャッシュ）の裏ダウンロードを
@@ -66,15 +66,6 @@ const BOOT_CORE_ASSETS = [
   "./js/dialogueData.js",
   "./js/analytics.js",
 ];
-
-// -----------------------------------------------------
-// 残り（activate 後に裏で少しずつ取得する）
-//  → BOOT_CORE_ASSETS に無いものを自動抽出
-// -----------------------------------------------------
-
-const DEFERRED_ASSETS = CORE_ASSETS.filter(
-  url => !BOOT_CORE_ASSETS.includes(url)
-);
 
 // -----------------------------------------------------
 // 裏ダウンロードの同時取得数・間隔
@@ -400,7 +391,12 @@ async function notifyClients(message) {
   });
 
   clients.forEach(client => {
-    client.postMessage(message);
+    try {
+      client.postMessage(message);
+    } catch (e) {
+      // クライアントが閉じられた・メッセージング不能でも
+      // インストールの進捗通知を止めない
+    }
   });
 }
 

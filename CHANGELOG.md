@@ -2,6 +2,16 @@
 
 ---
 
+## [1.0.18] - 2026-09-11
+
+### Fixed
+- **service-worker.js の起動時 ReferenceError を修正（Windows で起動しない問題の根本原因）**
+  - `DEFERRED_ASSETS`（未使用の定数）が `CORE_ASSETS` の宣言より前にそれを参照しており、`const` の一時的デッドゾーンにより SW スクリプトの評価が `cannot access CORE_ASSETS before initialization` で失敗していた
+  - 未使用の `DEFERRED_ASSETS` を削除し、SW が正常に登録・実行されるように修正
+- `notifyClients()` を堅牢化 — 閉じられたクライアントへの `postMessage` 失敗で install の進捗通知が中断しないように
+
+---
+
 ## [1.0.17] - 2026-09-11
 
 ### Added
