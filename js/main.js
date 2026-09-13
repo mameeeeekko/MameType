@@ -804,9 +804,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // -----------------------------
   // -----------------------------------------------
   // ★起動時の軽量バージョンチェック（案A: 自動DLなし）
-  //    Windows で古いSW＋古いHTTPキャッシュのまま真っ黒で
-  //    止まるケースへの誘導用。version.js を no-store で1回だけ
-  //    取得して差分があれば設定画面の文言で案内する。
+  //    version.js を no-store で1回だけ取得し、差分があれば
+  //    「新しいバージョンがあります」のみ案内する。
   //    ゲーム起動・描画ループには介入しない。
   // -----------------------------------------------
   try {
@@ -817,7 +816,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (m && m[1] && m[1] !== APP_VERSION) {
           const el = document.getElementById("updateCheckStatus");
           if (el) {
-            el.textContent = `新しいバージョンがあります（v${m[1]}）。設定→「アップデートを確認」を押してください（現在 v${APP_VERSION}）。`;
+            el.textContent = `新しいバージョンがあります（v${m[1]}）。「アップデートを確認」を押してください。`;
           }
         }
       })
@@ -828,7 +827,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const updateCheckStatus = document.getElementById("updateCheckStatus");
 
   if (updateCheckStatus) {
-    updateCheckStatus.textContent = `実行中: v${APP_VERSION}（適用＝オフライン用データの更新。最新確認は「アップデートを確認」を押してください）`;
+    updateCheckStatus.textContent = `現在のバージョン: v${APP_VERSION}`;
   }
 
   checkUpdateBtn?.addEventListener("click", async () => {
@@ -861,12 +860,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
       await registration.update();
 
-      // ★Safari対策: onupdatefound 発火前に先行で準備中モーダルを表示
+      // ★準備中は中央下バーのみで進捗表示（モーダルで塞がない）。
+      //   Safariで postMessage が届かなくても、ポーリング保険で
+      //   waiting 検出→通知モーダルへ遷移させる。
       showUpdateProgressPreparing();
 
       if (updateCheckStatus) {
         updateCheckStatus.textContent = "新しいバージョンを確認しています...";
       }
+
+      // ★Safari対策: postMessage 取りこぼし保険のポーリング。
+      //   installing→waiting 遷移を最大30秒監視し、waiting 確定で通知表示。
+      try {
+        const pollStart = Date.now();
+        const pollTimer = setInterval(async () => {
+          try {
+            const reg = currentServiceWorkerRegistration ||
+              await navigator.serviceWorker.getRegistration();
+            if (!reg) {
+              if (Date.now() - pollStart > 30000) clearInterval(pollTimer);
+              return;
+            }
+            if (reg.waiting && navigator.serviceWorker.controller) {
+              clearInterval(pollTimer);
+              showUpdateNotification(reg);
+              if (updateCheckStatus) {
+                updateCheckStatus.textContent = "新しいバージョンの適用を待っています。「今すぐ更新」で適用できます。";
+              }
+            } else if (!reg.installing && Date.now() - pollStart > 30000) {
+              clearInterval(pollTimer);
+            }
+          } catch (e) { /* 無視 */ }
+        }, 1000);
+      } catch (e) { /* 無視 */ }
 
       if (registration.installing) {
 
@@ -897,7 +923,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
 
         if (updateCheckStatus) {
-          updateCheckStatus.textContent = `実行中 v${APP_VERSION} は最新です（オフライン用データも最新）`;
+          updateCheckStatus.textContent = `最新です（v${APP_VERSION}）`;
         }
 
       }
@@ -1141,6 +1167,12 @@ function showUpdateProgressPreparing() {
     return;
   }
 
+  // ★準備中は全画面モーダルで塞がない（Safariで操作不能になる問題対策）。
+  //   進捗は中央下バーのみで表示し、モーダルは waiting/installed 確定後
+  //   （「今すぐ更新／後で」が押せる状態）で初めて表示する。
+  _showSwDownloadBar("アップデートデータをダウンロード中");
+  _updateSwDownloadBar(0, "");
+
   const notification =
     document.getElementById(
       "update-notification"
@@ -1196,6 +1228,12 @@ function showUpdateProgressPreparing() {
     return;
   }
 
+  // ★初回インストール時のみモーダルで塞ぐ（オフライン用データ取得は
+  //   待ってもらう必要があるため）。アップデート準備中は中央下バーのみで、
+  //   モーダルは waiting 確定後に showUpdateNotification で表示する。
+  if (!isFirstInstall) {
+    return;
+  }
 
   // -----------------------------------------------
   // 表示 - モーダルを表示して進捗を確認できるようにする
@@ -3671,13 +3709,19 @@ function bindKeyEvents() {
     // ★v1.0.22: アップデート通知モーダル表示中は裏のショートカットを一切通さない
     //   （「更新画面の裏でキー操作が効いてしまう」問題の防止）
     //   Escape / b のみ「後で」扱いで閉じられる
+    //   ★準備中（ボタンなし＝ダウンロード中）は塞がないため、
+    //     「今すぐ更新／後で」ボタンがある完了状態のみキーを横取りする
     const updateModal = document.getElementById("update-notification");
-    if (
+    const updateNowBtn = document.getElementById("update-now-btn");
+    const updateModalBlocking =
       updateModal &&
       updateModal.style.display !== "none" &&
       updateModal.style.display !== "" &&
-      updateModal.classList.contains("show")
-    ) {
+      updateModal.classList.contains("show") &&
+      updateNowBtn &&
+      updateNowBtn.style.display !== "none" &&
+      updateNowBtn.style.display !== "";
+    if (updateModalBlocking) {
       e.preventDefault();
       if (e.key === "Escape" || e.key.toLowerCase() === "b") {
         document.getElementById("update-later-btn")?.click();
