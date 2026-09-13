@@ -902,6 +902,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     checkUpdateBtn.disabled = true;
+    // ★ユーザーが明示的にDLを開始した＝適用・再起動への同意と見なす
+    userInitiatedDownload = true;
     if (updateCheckStatus) {
       updateCheckStatus.textContent = "アップデートを確認中...";
     }
@@ -924,8 +926,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // ★Safari対策: postMessage 取りこぼし保険のポーリング。
-      //   installing→waiting 遷移を最大30秒監視し、waiting 確定で通知表示。
-      //   更新なし確定時は下バーを必ず消す（0%放置の防止）。
+      //   installing→waiting 遷移を最大30秒監視し、waiting 確定で
+      //   自動適用 or 通知表示。更新なし確定時は下バーを消す。
       try {
         const pollStart = Date.now();
         const pollTimer = setInterval(async () => {
@@ -945,15 +947,25 @@ document.addEventListener("DOMContentLoaded", () => {
               _stopEstimatedDlProgress();
               _updateSwDownloadBar(100, "");
               _hideSwDownloadBar();
-              showUpdateNotification(reg);
+              // ★ユーザー操作でのDLなら自動適用、バックグラウンド検出ならモーダル
+              if (userInitiatedDownload) {
+                autoApplyUpdate(reg);
+              } else {
+                showUpdateNotification(reg);
+              }
               if (updateCheckStatus) {
                 updateCheckStatus.textContent = "新しいバージョンの適用を待っています。「今すぐ更新」で適用できます。";
               }
             } else if (!reg.installing && Date.now() - pollStart > 30000) {
               clearInterval(pollTimer);
-              // ★更新なしでポーリング終了→下バーを掃除
-              _stopEstimatedDlProgress();
-              _hideSwDownloadBar();
+              // ★ポーリング終了（Safariでwaiting検出が取りこぼされた場合）:
+              //   ユーザー操作DLなら保険で自動適用、それ以外はバー掃除のみ
+              if (userInitiatedDownload) {
+                autoApplyUpdate(reg);
+              } else {
+                _stopEstimatedDlProgress();
+                _hideSwDownloadBar();
+              }
             }
           } catch (e) { /* 無視 */ }
         }, 1000);
@@ -994,6 +1006,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // ★更新なし確定→下バーを消す（0%放置の防止）
         _stopEstimatedDlProgress();
         _hideSwDownloadBar();
+        // ★フラグを戻す（以後のバックグラウンド検出で誤自動適用しない）
+        userInitiatedDownload = false;
 
       }
 
@@ -1029,6 +1043,10 @@ let updateFileErrorCount = 0;
 // ★適用中ガード: 「今すぐ更新」押下〜リロード完了まで true。
 //   この間の「アップデートを確認」押下・準備中モーダルの再表示を抑止する
 let isApplyingUpdate = false;
+// ★ユーザーが「最新版をオフライン用にダウンロード」を押して開始した
+//   （＝適用・再起動への同意を得た）ことを示すフラグ。
+//   true の間はダウンロード完了後にモーダルを出さず自動適用する。
+let userInitiatedDownload = false;
 
 
 // =====================================================
@@ -1501,6 +1519,15 @@ function handleUpdateProgress(data) {
 
       if (isFirstInstall) {
         showOfflineReady();
+      } else if (userInitiatedDownload) {
+        // ★ユーザー操作DL: モーダルは出さず、waiting検出（ポーリング）が
+        //   自動適用を開始する。ここでは完了表示のみ更新する。
+        try {
+          const st = document.getElementById("updateCheckStatus");
+          if (st) st.textContent = "ダウンロード完了。オフライン用キャッシュを更新中…自動で再起動します";
+        } catch (e) { /* 無視 */ }
+        _showSwDownloadBar("オフライン用キャッシュを更新中");
+        _updateSwDownloadBar(100, "");
       } else {
         showUpdateReady();
       }
@@ -1797,9 +1824,142 @@ function showOfflineReady() {
 // 更新通知
 // =====================================================
 
+// ★自動適用（ユーザーがDLボタンで開始した更新用・モーダルなし）
+//   SKIP_WAITING→controllerchange→自動リロード。5秒再送＋10秒保険で
+//   確実に再起動する。モーダル（今すぐ更新/後で）は出さない。
+function autoApplyUpdate(regOrNull) {
+
+  if (isApplyingUpdate) return; // 二重適用防止
+  isApplyingUpdate = true;
+  userInitiatedDownload = false;
+
+  // モーダルは出さない。設定ステータス文＋中央下バーで進行を表示
+  try {
+    const st = document.getElementById("updateCheckStatus");
+    if (st) st.textContent = `ダウンロード完了。オフライン用キャッシュを更新中…自動で再起動します（v${APP_VERSION}）`;
+  } catch (e) { /* 無視 */ }
+
+  _stopEstimatedDlProgress();
+  _showSwDownloadBar("オフライン用キャッシュを更新中");
+  _updateSwDownloadBar(100, "");
+
+  // -----------------------------------------------
+  // controllerchangeを先に登録
+  // -----------------------------------------------
+  if (updateControllerChangeHandler) {
+    try {
+      navigator.serviceWorker.removeEventListener("controllerchange", updateControllerChangeHandler);
+    } catch (e) { /* 無視 */ }
+  }
+
+  let _applyReloading = false;
+
+  updateControllerChangeHandler = () => {
+    if (_applyReloading) return;
+    _applyReloading = true;
+
+    // ★オフライン用キャッシュ版として今回の版を記録
+    _markCacheVersion(APP_VERSION);
+
+    console.log("Service Worker: Controller changed. Reloading...");
+
+    setTimeout(() => window.location.reload(), 300);
+  };
+
+  try {
+    navigator.serviceWorker.addEventListener("controllerchange", updateControllerChangeHandler);
+  } catch (e) { /* 無視 */ }
+
+  // -----------------------------------------------
+  // 待機中SWへSKIP_WAITING
+  // -----------------------------------------------
+  const applyUpdate = async () => {
+
+    // ★登録を取り直してから waiting を参照（クロージャ陳腐化防止）
+    let liveReg = regOrNull || currentServiceWorkerRegistration;
+    try {
+      const fresh = await navigator.serviceWorker.getRegistration();
+      if (fresh) {
+        liveReg = fresh;
+        currentServiceWorkerRegistration = fresh;
+      }
+    } catch (e) { /* 無視 */ }
+
+    if (liveReg && liveReg.waiting) {
+
+      liveReg.waiting.postMessage({
+        type: "SKIP_WAITING"
+      });
+
+    } else {
+
+      console.warn("Service Worker: No waiting worker found. Retrying update...");
+
+      try {
+        await (liveReg
+          ? liveReg.update()
+          : navigator.serviceWorker.register("./service-worker.js").then(r => r.update()));
+      } catch (error) {
+        console.error("Service Worker update failed:", error);
+      }
+
+      let waiting = liveReg ? liveReg.waiting : null;
+      if (!waiting) {
+        try {
+          const r2 = await navigator.serviceWorker.getRegistration();
+          waiting = r2 ? r2.waiting : null;
+        } catch (e) { /* 無視 */ }
+      }
+
+      if (waiting) {
+        waiting.postMessage({ type: "SKIP_WAITING" });
+      } else {
+        // ★適用すべき更新が無い場合も必ず再読み込みする
+        console.warn("Service Worker: No update available. Reloading...");
+        setTimeout(() => window.location.reload(), 800);
+      }
+    }
+  };
+
+  applyUpdate();
+
+  // -----------------------------------------------
+  // 保険: controllerchange が遅延しても段階的に再起動する
+  // -----------------------------------------------
+  setTimeout(async () => {
+    if (_applyReloading) return;
+    // 第一段: waiting がいれば再送する（登録も取り直す）
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) currentServiceWorkerRegistration = reg;
+      const w = (reg && reg.waiting) || (regOrNull && regOrNull.waiting);
+      if (w && !_applyReloading) {
+        console.warn("Service Worker: retry SKIP_WAITING...");
+        w.postMessage({ type: "SKIP_WAITING" });
+      }
+    } catch (e) { /* 無視 */ }
+  }, 5000);
+
+  setTimeout(() => {
+    if (!_applyReloading) {
+      _applyReloading = true;
+      _markCacheVersion(APP_VERSION);
+      console.warn("Service Worker: controllerchange timeout. Force reloading...");
+      setTimeout(() => window.location.reload(), 300);
+    }
+  }, 10000);
+}
+
 function showUpdateNotification(
   registration
 ) {
+
+  // ★ユーザーがDLボタンで開始した更新はモーダル不要。
+  //   自動適用（再起動）へ直行する。
+  if (userInitiatedDownload) {
+    autoApplyUpdate(registration);
+    return;
+  }
 
   // 進捗バーは中央下のインジケータで表示済みなので、モーダル側のバーは常に隠す
   const progressWrapper = document.getElementById("update-progress-wrapper");
