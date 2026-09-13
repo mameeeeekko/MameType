@@ -385,7 +385,7 @@ export function shuffleArray(array){
 // =====================================================
 let candidateCache = {};
 
-export function loadText(index) {
+export async function loadText(index) {
   const target = shuffledTargets[index];
   if (!target) return;
 
@@ -398,15 +398,17 @@ export function loadText(index) {
   gameState.inputedRomaji = "";
   candidates.length = 0;
 
-  // ① 先に描画だけする（軽い）
+  // フォント待機してから描画（Windows でのチラ見え防止）
+  if (document.fonts && document.fonts.ready) {
+    await document.fonts.ready;
+  }
   renderState();
-  // ② 重い処理は次フレームに回す
+
   requestAnimationFrame(() => {
     fullResetInput();
     resetCandidates();
   });
 
-  // startTime は初回のみ設定
   if (index === 0) {
     gameStartTime = getNow();
   }
