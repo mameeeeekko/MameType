@@ -193,7 +193,19 @@ function resetCombo(state = gameState) {
         // 既存のサイレント処理ロジック（もしあれば）
     }
 
-    if (!silent) safePlayTypeSound();   // タイプ音
+    // ★INP対策: タイプ音は入力→描画のクリティカルパスから外す。
+    //   Windows ChromeではAudioグラフ生成が重くINP約2秒の主因になるため、
+    //   音は非同期で後追い再生する（入力判定・描画を先に通す）。
+    if (!silent) {
+      try {
+        const play = () => { try { safePlayTypeSound(); } catch (e) {} };
+        if (typeof requestIdleCallback === "function") {
+          requestIdleCallback(play, { timeout: 50 });
+        } else {
+          setTimeout(play, 0);
+        }
+      } catch (e) { /* 音失敗は無視 */ }
+    }
     let key = e.key;
 
     // 全角を半角に変換（romaUtilsの共通処理を使用）

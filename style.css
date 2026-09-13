@@ -122,7 +122,6 @@ body.win #word, body.win #word-long, body.win #jp,
 body.win #roma, body.win #kana-scroll, body.win #roma-scroll {
   --font-ja: 'M PLUS Rounded 1c', 'Yu Gothic UI', 'Meiryo', 'Noto Sans JP', system-ui, sans-serif;
   -webkit-text-stroke: 0.2px currentColor;
-  text-shadow: 0 0 0.4px currentColor;
   font-weight: 500;
 }
 

@@ -2,6 +2,19 @@
 
 ---
 
+## [1.0.32] - 2026-09-13
+
+### Fixed
+- **「適用しています...」のバーが止まって見える問題の再修正**
+  - 適用開始時に `getRegistration()` で登録を取り直してから `waiting` を参照（クロージャ陳腐化の防止）
+  - `SKIP_WAITING` 再送時も登録を取り直す
+- **Windows ChromeでINP約2秒の主因を緩和**
+  - `inputCore.handleKey()` のタイプ音をクリティカルパスから外し、後追い再生に変更（`requestIdleCallback`／`setTimeout(0)`）
+  - 入力→描画を先に通すことでINPの「入力遅延」を短縮。音質・音量の仕様は不変
+  - Windowsのタイピング表示から `text-shadow` を外しペイント負荷を微減（`text-stroke` のみ維持、renderer不変）
+
+---
+
 ## [1.0.31] - 2026-09-13
 
 ### Fixed

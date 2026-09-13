@@ -1959,9 +1959,20 @@ function showUpdateNotification(
 
       const applyUpdate = async () => {
 
-        if (registration.waiting) {
+        // ★登録を取り直してから waiting を参照（クロージャ陳腐化防止）。
+        //   古い registration を掴んだままだと waiting=null のままになる。
+        let liveReg = registration;
+        try {
+          const fresh = await navigator.serviceWorker.getRegistration();
+          if (fresh) {
+            liveReg = fresh;
+            currentServiceWorkerRegistration = fresh;
+          }
+        } catch (e) { /* 無視 */ }
 
-          registration.waiting.postMessage({
+        if (liveReg.waiting) {
+
+          liveReg.waiting.postMessage({
             type: "SKIP_WAITING"
           });
 
@@ -1973,12 +1984,12 @@ function showUpdateNotification(
 
           // 念のため更新を確認し、待機SWが出たら適用する
           try {
-            await registration.update();
+            await liveReg.update();
           } catch (error) {
             console.error("Service Worker update failed:", error);
           }
 
-          let waiting = registration.waiting;
+          let waiting = liveReg.waiting;
           if (!waiting) {
             // 取りこぼし保険: 登録情報を取り直して確認
             try {
@@ -2008,10 +2019,11 @@ function showUpdateNotification(
       // -------------------------------------------
       setTimeout(async () => {
         if (refreshing) return;
-        // 第一段: waiting がいれば再送する
+        // 第一段: waiting がいれば再送する（登録も取り直す）
         try {
           const reg = await navigator.serviceWorker.getRegistration();
-          const w = (reg && reg.waiting) || registration.waiting;
+          if (reg) currentServiceWorkerRegistration = reg;
+          const w = (reg && reg.waiting) || liveReg.waiting || registration.waiting;
           if (w && !refreshing) {
             console.warn("Service Worker: retry SKIP_WAITING...");
             w.postMessage({ type: "SKIP_WAITING" });
