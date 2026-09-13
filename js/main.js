@@ -918,6 +918,8 @@ if ("serviceWorker" in navigator) {
           "Service Worker: New worker detected."
         );
 
+        let refreshing = false;
+
         installingWorker.onstatechange = () => {
 
           console.log(
