@@ -871,6 +871,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // ★Safari対策: postMessage 取りこぼし保険のポーリング。
       //   installing→waiting 遷移を最大30秒監視し、waiting 確定で通知表示。
+      //   更新なし確定時は下バーを必ず消す（0%放置の防止）。
       try {
         const pollStart = Date.now();
         const pollTimer = setInterval(async () => {
@@ -878,17 +879,23 @@ document.addEventListener("DOMContentLoaded", () => {
             const reg = currentServiceWorkerRegistration ||
               await navigator.serviceWorker.getRegistration();
             if (!reg) {
-              if (Date.now() - pollStart > 30000) clearInterval(pollTimer);
+              if (Date.now() - pollStart > 30000) {
+                clearInterval(pollTimer);
+                _hideSwDownloadBar();
+              }
               return;
             }
             if (reg.waiting && navigator.serviceWorker.controller) {
               clearInterval(pollTimer);
+              _hideSwDownloadBar();
               showUpdateNotification(reg);
               if (updateCheckStatus) {
                 updateCheckStatus.textContent = "新しいバージョンの適用を待っています。「今すぐ更新」で適用できます。";
               }
             } else if (!reg.installing && Date.now() - pollStart > 30000) {
               clearInterval(pollTimer);
+              // ★更新なしでポーリング終了→下バーを掃除
+              _hideSwDownloadBar();
             }
           } catch (e) { /* 無視 */ }
         }, 1000);
@@ -926,6 +933,9 @@ document.addEventListener("DOMContentLoaded", () => {
           updateCheckStatus.textContent = `最新です（v${APP_VERSION}）`;
         }
 
+        // ★更新なし確定→下バーを消す（0%放置の防止）
+        _hideSwDownloadBar();
+
       }
 
     } catch (e) {
@@ -934,6 +944,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (updateCheckStatus) {
         updateCheckStatus.textContent = "確認に失敗しました。ネットワーク接続を確認してください。";
       }
+
+      // ★失敗時も下バーを消す
+      _hideSwDownloadBar();
 
     } finally {
 
@@ -1879,12 +1892,20 @@ function showUpdateNotification(
 
       updateProgressUI(0, 0);
 
-      // 進捗を滑らかに進める
+      // ★適用進捗は時間経過で必ず100%まで単調増加させる（Safariで
+      //   controllerchange が遅延しても90%止まりに見せない）。
+      //   controllerchange が来たら即100%→リロード（下のハンドラ）。
       let pct = 0;
       const progressTimer = setInterval(() => {
-        pct = Math.min(pct + 10, 90);
+        pct = Math.min(pct + 2, 100);
         updateProgressUI(pct, currentFile);
-      }, 120);
+      }, 100);
+
+      // ★設定側にも適用中であることを明示（Cmd+R不要と伝える）
+      try {
+        const st = document.getElementById("updateCheckStatus");
+        if (st) st.textContent = "アップデートを適用中です。自動で再起動します...";
+      } catch (e) { /* 無視 */ }
 
 
       // -------------------------------------------
@@ -1982,10 +2003,21 @@ function showUpdateNotification(
       applyUpdate();
 
       // -------------------------------------------
-      // 保険: controllerchange が一定時間内に発生しなくても
-      // 「アップデート後、自動的に再起動します」どおりに
-      // 必ず再読み込みする（安全タイマー）
+      // 保険: controllerchange が遅延しても段階的に再起動する
+      // （Safari対策: 5秒→waiting再確認→10秒で強制リロード）
       // -------------------------------------------
+      setTimeout(async () => {
+        if (refreshing) return;
+        // 第一段: waiting がいれば再送する
+        try {
+          const reg = await navigator.serviceWorker.getRegistration();
+          const w = (reg && reg.waiting) || registration.waiting;
+          if (w && !refreshing) {
+            console.warn("Service Worker: retry SKIP_WAITING...");
+            w.postMessage({ type: "SKIP_WAITING" });
+          }
+        } catch (e) { /* 無視 */ }
+      }, 5000);
       setTimeout(() => {
         if (!refreshing) {
           refreshing = true;
@@ -1996,7 +2028,7 @@ function showUpdateNotification(
           );
           setTimeout(() => window.location.reload(), 300);
         }
-      }, 5000);
+      }, 10000);
 
     };
 
