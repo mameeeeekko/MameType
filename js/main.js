@@ -981,48 +981,10 @@ if ("serviceWorker" in navigator) {
       };
 
       // -----------------------------------------------
-      // 登録済みSWの更新チェック
+      // ※ 自動更新チェックは行わない
+      //    低スペックPC / Windows への負荷を避けるため、
+      //    「アップデートを確認」ボタンでのみ手動チェックする
       // -----------------------------------------------
-
-      registration.update()
-        .catch(error => {
-
-          console.warn(
-            "Service Worker update check failed:",
-            error
-          );
-
-        });
-
-      // -----------------------------------------------
-      // 定期更新チェック
-      // update() はページロード時の 1 回しか走らないため、
-      // 開きっぱなしのタブ / PWA でも更新が検知されるように
-      // 1 時間毎 + タブ復帰時にもチェックする
-      // -----------------------------------------------
-
-      const checkForUpdate = () => {
-
-        registration.update()
-          .catch(error => {
-            console.warn(
-              "Service Worker update check failed:",
-              error
-            );
-          });
-
-      };
-
-      setInterval(checkForUpdate, 60 * 60 * 1000);
-
-      document.addEventListener(
-        "visibilitychange",
-        () => {
-          if (document.visibilityState === "visible") {
-            checkForUpdate();
-          }
-        }
-      );
 
     })
 
@@ -1164,6 +1126,11 @@ function showUpdateProgressPreparing() {
       "update-later-btn"
     );
 
+  const updateNote =
+    document.querySelector(
+      ".update-note"
+    );
+
 
   if (!notification) {
     return;
@@ -1171,23 +1138,13 @@ function showUpdateProgressPreparing() {
 
 
   // -----------------------------------------------
-  // 表示
-  // ダウンロード中はモーダルを出さず、中央下のバーで
-  // 進捗を表示する（完了時にモーダルへ切り替える）
+  // 表示 - モーダルを表示して進捗を確認できるようにする
   // -----------------------------------------------
 
-  notification.style.display = "none";
-
-  if (isFirstInstall) {
-    _showSwDownloadBar(
-      "オフラインデータをダウンロード中"
-    );
-  } else {
-    _showSwDownloadBar(
-      "アップデートデータをダウンロード中"
-    );
-  }
-
+  notification.style.display = "flex";
+  requestAnimationFrame(() => {
+    notification.classList.add("show");
+  });
 
   if (isFirstInstall) {
 
@@ -1239,6 +1196,10 @@ function showUpdateProgressPreparing() {
 
   if (progressText) {
     progressText.textContent = "0%";
+  }
+
+  if (updateNote) {
+    updateNote.style.display = "none";
   }
 
   // -----------------------------------------------
@@ -1300,9 +1261,11 @@ function handleUpdateProgress(data) {
 
     updateProgressReceived = true;
 
-    _updateSwDownloadBar(
+    updateProgressUI(
       data.percent || 0,
-      ""
+      data.current || 0,
+      data.total || 0,
+      data.file || ""
     );
 
     return;
@@ -1441,20 +1404,6 @@ function updateProgressUI(
 
 function showUpdateReady() {
 
-  // 進捗バーは中央下のインジケータで表示済みなので、モーダル側のバーは常に隠す
-  const progressWrapper = document.getElementById("update-progress-wrapper");
-  if (progressWrapper) progressWrapper.style.display = "none";
-  _hideSwDownloadBar();
-
-  // ダウンロード中はモーダルを隠していたため、ここで表示する
-  const notification = document.getElementById("update-notification");
-  if (notification) {
-    notification.style.display = "flex";
-    requestAnimationFrame(() => {
-      notification.classList.add("show");
-    });
-  }
-
   const title =
     document.getElementById(
       "update-title"
@@ -1480,6 +1429,14 @@ function showUpdateReady() {
       "update-file-text"
     );
 
+  const updateNote =
+    document.querySelector(
+      ".update-note"
+    );
+
+  // ダウンロード100%表示
+  updateProgressUI(100, 0, 0, "");
+
 
   if (title) {
 
@@ -1500,7 +1457,7 @@ function showUpdateReady() {
   if (fileText) {
 
     fileText.textContent =
-      "アップデートを適用できます。";
+      "「今すぐ更新」を押すと適用されます。";
 
   }
 
@@ -1519,6 +1476,15 @@ function showUpdateReady() {
 
     laterButton.style.display =
       "inline-flex";
+
+  }
+
+
+  if (updateNote) {
+
+    updateNote.style.display = "block";
+    updateNote.textContent =
+      "アップデート後、自動的に再起動します。";
 
   }
 
@@ -1766,6 +1732,16 @@ function showUpdateNotification(
           "update-progress-wrapper"
         );
 
+      const progressBar =
+        document.getElementById(
+          "update-progress-bar"
+        );
+
+      const progressText =
+        document.getElementById(
+          "update-progress-text"
+        );
+
       const fileText =
         document.getElementById(
           "update-file-text"
@@ -1777,26 +1753,33 @@ function showUpdateNotification(
         );
 
 
-      // ダウンロード中バーはモーダル側には出さない（中央下のインジケータで表示済み）
+      // 更新適用中にプログレスバー・進捗％・ファイル数を表示
       if (progressWrapper) {
-        progressWrapper.style.display = "none";
+        progressWrapper.style.display = "block";
       }
-
 
       if (message) {
-
         message.textContent =
           "アップデートを適用しています...";
-
       }
 
+      const TOTAL_FILES = 1;
+      let currentFile = 0;
 
-      if (fileText) {
+      const updateProgressUI = (pct, fileIdx) => {
+        if (progressBar) progressBar.style.width = pct + "%";
+        if (progressText) progressText.textContent = pct + "%";
+        if (fileText) fileText.textContent = `${fileIdx}/${TOTAL_FILES} files`;
+      };
 
-        fileText.textContent =
-          "MameTypeを再起動しています...";
+      updateProgressUI(0, 0);
 
-      }
+      // 進捗を滑らかに進める
+      let pct = 0;
+      const progressTimer = setInterval(() => {
+        pct = Math.min(pct + 10, 90);
+        updateProgressUI(pct, currentFile);
+      }, 120);
 
 
       // -------------------------------------------
@@ -1826,11 +1809,14 @@ function showUpdateNotification(
 
         refreshing = true;
 
+        clearInterval(progressTimer);
+        updateProgressUI(100, TOTAL_FILES);
+
         console.log(
           "Service Worker: Controller changed. Reloading..."
         );
 
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 300);
 
       };
 
@@ -1898,10 +1884,12 @@ function showUpdateNotification(
       setTimeout(() => {
         if (!refreshing) {
           refreshing = true;
+          clearInterval(progressTimer);
+          updateProgressUI(100, TOTAL_FILES);
           console.warn(
             "Service Worker: controllerchange timeout. Force reloading..."
           );
-          window.location.reload();
+          setTimeout(() => window.location.reload(), 300);
         }
       }, 5000);
 

@@ -7743,6 +7743,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
   cursor: pointer;
 
+  text-align: center;
+
   transition:
     transform 0.15s ease,
     opacity 0.15s ease,

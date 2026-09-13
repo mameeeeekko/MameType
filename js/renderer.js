@@ -393,11 +393,6 @@ export function updateProgressText(currentIndex, total) {
 
 let lastRomaText = "";
 let lastTypedLen = -1;
-// ★通常モードの日本語表示用スパン再利用プール
-// 毎フレーム innerHTML を再構築せず、スパンの className だけ更新することで
-// Windows でのフォント再評価による表示遅延を解消する
-let _normalJpSpans = [];
-let _normalPreparedText = "";
 
 // ===========================================
 // ★v1.0.22: render() を同期処理に戻した
@@ -453,8 +448,6 @@ let currentFinalSegments = [];
 export function resetRendererState() {
   lastRomaText = "";
   lastTypedLen = -1;
-  _normalPreparedText = "";
-  _normalJpSpans.length = 0;
   lastLongText = "";
   longWordSpans = [];
   currentFinalSegments = [];
@@ -481,7 +474,6 @@ export function resetRendererState() {
 
   const jp = dom.jp();
   if (jp) jp.innerHTML = "";
-  _normalJpSpans.length = 0;
 }
 
 /**
@@ -854,60 +846,46 @@ function renderLongText(state) {
 }
 
 function renderNormal({ text, pos, typed, inputedRomaji }) {
-  const jpDiv = dom.jp();
-  if (jpDiv) {
-    if (isEnglish(text)) {
-      jpDiv.style.display = "none";
-    } else {
-      jpDiv.style.display = "inline-block";
+const jpDiv = dom.jp();
+if (jpDiv) {
+   if (isEnglish(text)) {
+     jpDiv.style.display = "none";
+   } else {
+    jpDiv.style.display = "inline-block";
 
-      // テキストが変わったときだけスパン生成（DOM生成は最小限）
-      if (text !== _normalPreparedText) {
-        _normalPreparedText = text;
-        jpDiv.innerHTML = "";
-        _normalJpSpans.length = 0;
-        ensureSpanPool(_normalJpSpans, jpDiv, text.length);
-        for (let i = 0; i < _normalJpSpans.length; i++) {
-          const c = text[i];
-          _normalJpSpans[i].textContent = (c === '\n' || c === '\r') ? '' : c;
-        }
-      }
+  const done = text.slice(0, pos);
+  const remain = text.slice(pos);
+  jpDiv.innerHTML = `<span class="done">${done}</span>${remain}`;
+}
+}
 
-      // 毎フレーム：className だけ更新（DOM生成なし）
-      for (let i = 0; i < _normalJpSpans.length; i++) {
-        _normalJpSpans[i].className = i < pos ? "done" : "";
+const romaDiv = dom.roma();
+if (romaDiv) {
+  const displayFull = getDisplayFullRoma({ text, pos, typed, inputedRomaji });
+  const typedLen = inputedRomaji.length + typed.length;
+
+  if (displayFull !== lastRomaText || typedLen !== lastTypedLen) {
+    lastRomaText = displayFull;
+    lastTypedLen = typedLen;
+
+    romaDiv.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+
+    for (let j = 0; j < displayFull.length; j++) {
+      const s = document.createElement("span");
+      const char = displayFull[j];
+      if (char === ' ') {
+        s.textContent = '␣';
+        s.classList.add('space-char');
+      } else {
+        s.textContent = char;
       }
+      if (j < typedLen) s.className = "done";
+      fragment.appendChild(s);
     }
+    romaDiv.appendChild(fragment);
   }
-
-  // ローマ字部分は変更時のみ再構築
-  const romaDiv = dom.roma();
-  if (romaDiv) {
-    const displayFull = getDisplayFullRoma({ text, pos, typed, inputedRomaji });
-    const typedLen = inputedRomaji.length + typed.length;
-
-    if (displayFull !== lastRomaText || typedLen !== lastTypedLen) {
-      lastRomaText = displayFull;
-      lastTypedLen = typedLen;
-
-      romaDiv.innerHTML = "";
-      const fragment = document.createDocumentFragment();
-
-      for (let j = 0; j < displayFull.length; j++) {
-        const s = document.createElement("span");
-        const char = displayFull[j];
-        if (char === ' ') {
-          s.textContent = '␣';
-          s.classList.add('space-char');
-        } else {
-          s.textContent = char;
-        }
-        if (j < typedLen) s.className = "done";
-        fragment.appendChild(s);
-      }
-      romaDiv.appendChild(fragment);
-    }
-  }
+}
 }
 
 function renderStats({ correctCount, mistakeCount }) {
