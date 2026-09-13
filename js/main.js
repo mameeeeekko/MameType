@@ -328,6 +328,8 @@ function _updateSwDownloadBar(percent, detail) {
   const safe = Math.max(0, Math.min(100, Math.floor(Number(percent) || 0)));
   const fill = document.getElementById("swDownloadBarFill");
   if (fill) fill.style.width = safe + "%";
+  // ★最後に表示した%を記録（推定進捗の再開起点に使用）
+  _lastShownDlPct = safe;
   const text = el.querySelector(".remaining-load-text");
   if (text) {
     const base = el.dataset.base || "ダウンロード中…";
@@ -375,10 +377,16 @@ function _getCacheVersion() {
 // =====================================================
 let _estimatedDlTimer = null;
 let _estimatedDlPct = 0;
+// ★バーに最後に表示した%（2フェーズDLの連続性を保つために使用）
+let _lastShownDlPct = 0;
 
-function _startEstimatedDlProgress() {
+function _startEstimatedDlProgress(startPct) {
   _stopEstimatedDlProgress();
-  _estimatedDlPct = 0;
+  // ★既に表示中の%から継続する（start再受信で0%に戻らないように）
+  _estimatedDlPct = Math.max(
+    0,
+    Math.min(90, Number(startPct) || 0)
+  );
   _estimatedDlTimer = setInterval(() => {
     _estimatedDlPct = Math.min(_estimatedDlPct + 1, 90);
     _updateSwDownloadBar(_estimatedDlPct, "");
@@ -1266,10 +1274,20 @@ function showUpdateProgressPreparing() {
   // ★準備中は全画面モーダルで塞がない（Safariで操作不能になる問題対策）。
   //   進捗は中央下バーのみで表示し、モーダルは waiting/installed 確定後
   //   （「今すぐ更新／後で」が押せる状態）で初めて表示する。
+  // ★2フェーズDL対応: 既にバー表示中なら0%に戻さず現在の%から継続
+  const wasBarVisible = (() => {
+    const el = document.getElementById("swDownloadIndicator");
+    return !!(el && el.classList.contains("show"));
+  })();
   _showSwDownloadBar("最新版をオフライン用にダウンロード中");
-  _updateSwDownloadBar(0, "");
+  if (!wasBarVisible) {
+    _updateSwDownloadBar(0, "");
+  }
   // ★Safari対策: postMessage が届かなくてもバーが動いて見えるよう推定進捗を開始
-  _startEstimatedDlProgress();
+  //   （既に表示中なら現在の%から継続）
+  if (!_estimatedDlTimer) {
+    _startEstimatedDlProgress(wasBarVisible ? _lastShownDlPct : 0);
+  }
 
   const notification =
     document.getElementById(
@@ -1442,10 +1460,15 @@ function handleUpdateProgress(data) {
     updateProgressUI(0, 0, 0, "");
 
     _showSwDownloadBar("最新版をオフライン用にダウンロード中");
-    // ★途中で0%に戻らないよう、推定タイマーが動いていなければ0%から開始
+    // ★2フェーズDL対応: フェーズ②の start 再受信でも0%に戻さない。
+    //   バーが既に表示中なら現在の%から推定を継続する。
     if (!_estimatedDlTimer) {
-      _updateSwDownloadBar(0, "");
-      _startEstimatedDlProgress();
+      const wasVisible = (() => {
+        const el = document.getElementById("swDownloadIndicator");
+        return !!(el && el.classList.contains("show"));
+      })();
+      _updateSwDownloadBar(wasVisible ? _lastShownDlPct : 0, "");
+      _startEstimatedDlProgress(wasVisible ? _lastShownDlPct : 0);
     }
 
     return;
@@ -1500,8 +1523,32 @@ function handleUpdateProgress(data) {
   // 全ファイル完了
   // -----------------------------------------------
 
-  // ★完了ステータス名の統一: SW側は "complete-boot" を送るため両方受理
-  if (data.status === "complete" || data.status === "complete-boot") {
+  // ★フェーズ①（起動コア）完了: フェーズ②（残り全アセットのDL）が
+  //   直後に始まるため、ここではバーを消さず表示を継続する。
+  //   （complete-boot でバーを隠すと、フェーズ②の start 再受信時に
+  //     再表示され幅が0%にリセットされる＝「100%→いきなり0%」の原因）
+  if (data.status === "complete-boot") {
+
+    updateProgressReceived = true;
+
+    if (userInitiatedDownload || isFirstInstall) {
+      // ★バー・推定を止めずフェーズ②へ引き継ぐ（表示は連続）
+      return;
+    }
+
+    // バックグラウンド検出時は従来どおり完了扱いで通知へ
+    _stopEstimatedDlProgress();
+    _updateSwDownloadBar(100, "");
+    setTimeout(() => {
+      _hideSwDownloadBar();
+      showUpdateReady();
+    }, 600);
+
+    return;
+  }
+
+  // ★全ファイル完了（フェーズ②含む）
+  if (data.status === "complete") {
 
     updateProgressReceived = true;
 
