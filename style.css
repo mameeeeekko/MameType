@@ -106,6 +106,23 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* =====================================================
+   Windows のみ: UI全体の文字のにじみ対策（弱め）
+   ・丸ゴ自ホストはヒンティングが弱く、ClearType＋125%/150%
+     スケーリング＋ステージ transform でにじんで見えるため
+   ・-webkit-text-stroke 0.15px＋タイピング表示のみ weight 500
+     （500は同梱済みの実ウェイトなので疑似ボールドにならない）
+   ・描画コストは静的CSSのみ。renderer/毎フレーム描画は不変
+   ===================================================== */
+body.win #word, body.win #word-long, body.win #jp,
+body.win #roma, body.win #kana-scroll, body.win #roma-scroll {
+  -webkit-text-stroke: 0.15px currentColor;
+  font-weight: 500;
+}
+body.win {
+  -webkit-text-stroke: 0.1px currentColor;
+}
+
 /* R-TYPE風タクティカル背景
    ※ html 側に敷くことでステージ（16:9フレーム）外の余白にも
      背景が続いて見え、フレームの境界が目立たなくなる */
@@ -7725,6 +7742,12 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 
 .update-button {
+
+  display: inline-flex;
+
+  justify-content: center;
+
+  align-items: center;
 
   min-width: 130px;
 

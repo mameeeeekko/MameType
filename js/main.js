@@ -476,6 +476,15 @@ export function applyTitleMenuBackground() {
 // DOM 取得・初期化
 // =====================================================
 document.addEventListener("DOMContentLoaded", () => {
+  // ★Windows のみ UI全体の文字にじみ対策クラスを付与（静的CSSのみ）
+  try {
+    const ua = navigator.userAgent || "";
+    const pf = navigator.platform || "";
+    if (/Windows/i.test(ua) || /^Win/i.test(pf)) {
+      document.body.classList.add("win");
+    }
+  } catch (e) { /* 判定失敗時は無視 */ }
+
   // ★描画品質に応じた「グロー影」の一括制御を有効化（起動時）
   enableAdaptiveShadowControl();
 
@@ -506,10 +515,20 @@ document.addEventListener("DOMContentLoaded", () => {
       document.removeEventListener("keydown", handleBootKey);
 
       // 最初にコアアセットのみを読み込む
-      await loadCoreAssets((loaded, total) => {
-        const percent = Math.floor((loaded / total) * 100);
-        setLoadingText(`Loading... ${percent}%`);
-      });
+      // ★黒画面対策: loadCoreAssets が例外/停滞しても真っ黒のままにしない
+      try {
+        await Promise.race([
+          loadCoreAssets((loaded, total) => {
+            const percent = Math.floor((loaded / total) * 100);
+            setLoadingText(`Loading... ${percent}%`);
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("core timeout")), 30000)),
+        ]);
+      } catch (e) {
+        console.warn("Core assets load issue (continue boot):", e);
+        setLoadingText("読み込みに時間がかかっています...");
+        await new Promise(r => setTimeout(r, 800));
+      }
 
       // バックグラウンドで残りのアセットを読み込み開始（awaitしない）
       // 進捗は中央下の細いプログレスバー（インジケータ）で表示する
@@ -783,6 +802,28 @@ document.addEventListener("DOMContentLoaded", () => {
   // -----------------------------
   // アップデート確認ボタン（VERSION）
   // -----------------------------
+  // -----------------------------------------------
+  // ★起動時の軽量バージョンチェック（案A: 自動DLなし）
+  //    Windows で古いSW＋古いHTTPキャッシュのまま真っ黒で
+  //    止まるケースへの誘導用。version.js を no-store で1回だけ
+  //    取得して差分があれば設定画面の文言で案内する。
+  //    ゲーム起動・描画ループには介入しない。
+  // -----------------------------------------------
+  try {
+    fetch("./js/version.js", { cache: "no-store" })
+      .then(res => res.ok ? res.text() : "")
+      .then(text => {
+        const m = text && text.match(/APP_VERSION\s*=\s*["']([^"']+)["']/);
+        if (m && m[1] && m[1] !== APP_VERSION) {
+          const el = document.getElementById("updateCheckStatus");
+          if (el) {
+            el.textContent = `新しいバージョンがあります（v${m[1]}）。設定→「アップデートを確認」を押してください（現在 v${APP_VERSION}）。`;
+          }
+        }
+      })
+      .catch(() => { /* ネットワーク失敗時は無視 */ });
+  } catch (e) { /* 無視 */ }
+
   const checkUpdateBtn = document.getElementById("checkUpdateBtn");
   const updateCheckStatus = document.getElementById("updateCheckStatus");
 
@@ -812,11 +853,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       await registration.update();
 
-      // -------------------------------------------
-      // 新しいバージョンを検出した場合、
-      // registration.onupdatefound 経由で
-      // 準備中モーダル（進捗バー）が自動表示される
-      // -------------------------------------------
+      // ★Safari対策: onupdatefound 発火前に先行で準備中モーダルを表示
+      showUpdateProgressPreparing();
+
+      if (updateCheckStatus) {
+        updateCheckStatus.textContent = "新しいバージョンを確認しています...";
+      }
 
       if (registration.installing) {
 
@@ -1244,6 +1286,9 @@ function handleUpdateProgress(data) {
     updateProgressReceived = true;
     updateFileErrorCount = 0;
 
+    // ★モーダル側も0%で即時更新（Safariで中央下バーのみ進む問題対策）
+    updateProgressUI(0, 0, 0, "");
+
     _showSwDownloadBar(
       isFirstInstall
         ? "オフラインデータをダウンロード中"
@@ -1296,7 +1341,8 @@ function handleUpdateProgress(data) {
   // 全ファイル完了
   // -----------------------------------------------
 
-  if (data.status === "complete") {
+  // ★完了ステータス名の統一: SW側は "complete-boot" を送るため両方受理
+  if (data.status === "complete" || data.status === "complete-boot") {
 
     updateProgressReceived = true;
 

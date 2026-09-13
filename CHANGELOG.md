@@ -2,6 +2,24 @@
 
 ---
 
+## [1.0.28] - 2026-09-13
+
+### Fixed
+- **Safariでアップデート進捗が自動で増えない問題を修正**
+  - 「アップデートを確認」押下直後に準備中モーダル（0%）を先行表示（`onupdatefound` 発火待ちを解消）
+  - `start` 受信時にモーダル側バーも0%で即時更新（中央下バーのみ進む問題を解消）
+  - 完了ステータス名の不一致を修正（SW側 `complete-boot` を受信側でも受理）
+- **「今すぐ更新」ボタンの文字を中央揃えに修正**
+  - `.update-button` に `display:inline-flex; justify-content:center; align-items:center` を追加（`text-align` のみでは `inline-flex` で中央化されないため）
+- **WindowsのUI全体の文字のにじみを軽減**
+  - Windows判定で `body.win` を付与し、静的CSSのみで補正（`-webkit-text-stroke`＋タイピング表示のみ `weight:500`、実ウェイト同梱済み）
+  - renderer/毎フレーム描画は不変のため、タイピング表示遅延なし
+- **Windowsでhardresetしないと真っ黒のまま起動しない問題を緩和**
+  - 起動時に `version.js` を `no-store` で1回だけ取得し、差分があれば設定画面に更新誘導を表示（案A: 自動DLなし、ゲーム起動・描画に介入しない）
+  - `loadCoreAssets` に30秒タイムアウト＋継続フォールバックを追加し、停滞しても真っ黒のままにしない
+
+---
+
 ## [1.0.27] - 2026-09-13
 
 ### Fixed
