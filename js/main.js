@@ -343,6 +343,53 @@ function _hideSwDownloadBar() {
   }, 500);
 }
 
+// =====================================================
+// ★オフライン用キャッシュ版の記録・取得
+//   「オンライン（実行中）vX」と「オフラインで動く版 vY」を
+//   分けて表示するための localStorage 管理。
+//   保存タイミング: 適用開始（再起動直前）・初回DL完了
+// =====================================================
+const CACHE_VERSION_KEY = "mametype_applied_version";
+
+function _markCacheVersion(version) {
+  try {
+    localStorage.setItem(CACHE_VERSION_KEY, version || APP_VERSION);
+  } catch (e) { /* localStorage不可は無視 */ }
+}
+
+function _getCacheVersion() {
+  try {
+    return localStorage.getItem(CACHE_VERSION_KEY) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+// =====================================================
+// ★Safari向け推定進捗（ダウンロード中バーが0%で固まらないように）
+//   Safariはinstall中の新SWからの postMessage をページへ届けられない
+//   （controllingでないため）。実測が来ない間も1秒毎+1%（最大90%）で
+//   バーを進めて「動いている」ことを見せる。実測が届いたら上書き。
+// =====================================================
+let _estimatedDlTimer = null;
+let _estimatedDlPct = 0;
+
+function _startEstimatedDlProgress() {
+  _stopEstimatedDlProgress();
+  _estimatedDlPct = 0;
+  _estimatedDlTimer = setInterval(() => {
+    _estimatedDlPct = Math.min(_estimatedDlPct + 1, 90);
+    _updateSwDownloadBar(_estimatedDlPct, "");
+  }, 1000);
+}
+
+function _stopEstimatedDlProgress() {
+  if (_estimatedDlTimer) {
+    clearInterval(_estimatedDlTimer);
+    _estimatedDlTimer = null;
+  }
+}
+
 // ============================================================
 // メニュー描画のキャッシュ無効化フック（循環参照回避のためwindow経由）
 // questProgress.js の markCleared / markTrueEndingSeen 等から呼ばれる
@@ -827,7 +874,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const updateCheckStatus = document.getElementById("updateCheckStatus");
 
   if (updateCheckStatus) {
-    updateCheckStatus.textContent = `現在のバージョン: v${APP_VERSION}`;
+    const cached = _getCacheVersion();
+    if (cached && cached === APP_VERSION) {
+      updateCheckStatus.textContent = `オンライン/オフラインとも v${APP_VERSION} で遊べます`;
+    } else if (cached) {
+      updateCheckStatus.textContent = `オンライン（実行中）: v${APP_VERSION} ／ オフライン用キャッシュ: v${cached}（「最新版をオフライン用にダウンロード」で更新できます）`;
+    } else {
+      updateCheckStatus.textContent = `オンライン（実行中）: v${APP_VERSION} ／ オフライン用キャッシュ: 未保存（最初に「最新版をオフライン用にダウンロード」を実行してください）`;
+    }
   }
 
   checkUpdateBtn?.addEventListener("click", async () => {
@@ -881,12 +935,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!reg) {
               if (Date.now() - pollStart > 30000) {
                 clearInterval(pollTimer);
+                _stopEstimatedDlProgress();
                 _hideSwDownloadBar();
               }
               return;
             }
             if (reg.waiting && navigator.serviceWorker.controller) {
               clearInterval(pollTimer);
+              _stopEstimatedDlProgress();
+              _updateSwDownloadBar(100, "");
               _hideSwDownloadBar();
               showUpdateNotification(reg);
               if (updateCheckStatus) {
@@ -895,6 +952,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (!reg.installing && Date.now() - pollStart > 30000) {
               clearInterval(pollTimer);
               // ★更新なしでポーリング終了→下バーを掃除
+              _stopEstimatedDlProgress();
               _hideSwDownloadBar();
             }
           } catch (e) { /* 無視 */ }
@@ -930,10 +988,11 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
 
         if (updateCheckStatus) {
-          updateCheckStatus.textContent = `最新です（v${APP_VERSION}）`;
+          updateCheckStatus.textContent = `オンライン/オフラインとも v${APP_VERSION} で遊べます（オフライン用キャッシュ最新）`;
         }
 
         // ★更新なし確定→下バーを消す（0%放置の防止）
+        _stopEstimatedDlProgress();
         _hideSwDownloadBar();
 
       }
@@ -946,6 +1005,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // ★失敗時も下バーを消す
+      _stopEstimatedDlProgress();
       _hideSwDownloadBar();
 
     } finally {
@@ -1133,6 +1193,9 @@ if ("serviceWorker" in navigator) {
 
             refreshing = true;
 
+            // ★オフライン用キャッシュ版として今回の版を記録
+            _markCacheVersion(APP_VERSION);
+
             console.log(
               "Service Worker: Controller changed. Reloading..."
             );
@@ -1183,8 +1246,10 @@ function showUpdateProgressPreparing() {
   // ★準備中は全画面モーダルで塞がない（Safariで操作不能になる問題対策）。
   //   進捗は中央下バーのみで表示し、モーダルは waiting/installed 確定後
   //   （「今すぐ更新／後で」が押せる状態）で初めて表示する。
-  _showSwDownloadBar("アップデートデータをダウンロード中");
+  _showSwDownloadBar("最新版をオフライン用にダウンロード中");
   _updateSwDownloadBar(0, "");
+  // ★Safari対策: postMessage が届かなくてもバーが動いて見えるよう推定進捗を開始
+  _startEstimatedDlProgress();
 
   const notification =
     document.getElementById(
@@ -1356,12 +1421,10 @@ function handleUpdateProgress(data) {
     // ★モーダル側も0%で即時更新（Safariで中央下バーのみ進む問題対策）
     updateProgressUI(0, 0, 0, "");
 
-    _showSwDownloadBar(
-      isFirstInstall
-        ? "オフラインデータをダウンロード中"
-        : "アップデートデータをダウンロード中"
-    );
+    _showSwDownloadBar("最新版をオフライン用にダウンロード中");
     _updateSwDownloadBar(0, "");
+    // ★実測進捗開始（Safariで届かない場合は推定タイマーが動いている）
+    _startEstimatedDlProgress();
 
     return;
   }
@@ -1413,10 +1476,18 @@ function handleUpdateProgress(data) {
 
     updateProgressReceived = true;
 
+    // ★実測進捗で完了したので推定タイマーを停止
+    _stopEstimatedDlProgress();
+
     _updateSwDownloadBar(
       100,
       ""
     );
+
+    // ★初回DL完了時はオフライン用キャッシュ版を記録
+    if (isFirstInstall) {
+      _markCacheVersion(APP_VERSION);
+    }
 
     setTimeout(() => {
 
@@ -1938,6 +2009,9 @@ function showUpdateNotification(
         clearInterval(progressTimer);
         updateProgressUI(100, TOTAL_FILES);
 
+        // ★オフライン用キャッシュ版として今回の版を記録
+        _markCacheVersion(APP_VERSION);
+
         console.log(
           "Service Worker: Controller changed. Reloading..."
         );
@@ -2038,6 +2112,8 @@ function showUpdateNotification(
           console.warn(
             "Service Worker: controllerchange timeout. Force reloading..."
           );
+          // ★オフライン用キャッシュ版として今回の版を記録
+          _markCacheVersion(APP_VERSION);
           setTimeout(() => window.location.reload(), 300);
         }
       }, 10000);
