@@ -828,10 +828,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const updateCheckStatus = document.getElementById("updateCheckStatus");
 
   if (updateCheckStatus) {
-    updateCheckStatus.textContent = `現在のバージョン: v${APP_VERSION}`;
+    updateCheckStatus.textContent = `実行中: v${APP_VERSION}（適用＝オフライン用データの更新。最新確認は「アップデートを確認」を押してください）`;
   }
 
   checkUpdateBtn?.addEventListener("click", async () => {
+
+    // ★適用中は再入場させない（モーダル初期化で詰むのを防止）
+    if (isApplyingUpdate) {
+      if (updateCheckStatus) {
+        updateCheckStatus.textContent = "アップデートを適用中です。そのままお待ちください...";
+      }
+      return;
+    }
 
     if (!("serviceWorker" in navigator)) {
       if (updateCheckStatus) {
@@ -889,7 +897,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
 
         if (updateCheckStatus) {
-          updateCheckStatus.textContent = `最新です（v${APP_VERSION}）`;
+          updateCheckStatus.textContent = `実行中 v${APP_VERSION} は最新です（オフライン用データも最新）`;
         }
 
       }
@@ -919,6 +927,9 @@ let updateControllerChangeHandler = null;
 let updateProgressReceived = false;
 let isFirstInstall = false;
 let updateFileErrorCount = 0;
+// ★適用中ガード: 「今すぐ更新」押下〜リロード完了まで true。
+//   この間の「アップデートを確認」押下・準備中モーダルの再表示を抑止する
+let isApplyingUpdate = false;
 
 
 // =====================================================
@@ -1124,6 +1135,11 @@ if ("serviceWorker" in navigator) {
 // =====================================================
 
 function showUpdateProgressPreparing() {
+
+  // ★適用中は再初期化しない（二重モーダル・ボタン消失の防止）
+  if (isApplyingUpdate) {
+    return;
+  }
 
   const notification =
     document.getElementById(
@@ -1767,6 +1783,9 @@ function showUpdateNotification(
 
 
     updateButton.onclick = () => {
+
+      // ★適用中ガードを立てる（この間の確認ボタン押下を抑止）
+      isApplyingUpdate = true;
 
       updateButton.disabled = true;
 

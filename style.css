@@ -107,20 +107,23 @@ body {
 }
 
 /* =====================================================
-   Windows のみ: UI全体の文字のにじみ対策（弱め）
+   Windows のみ: UI全体の文字のにじみ対策
    ・丸ゴ自ホストはヒンティングが弱く、ClearType＋125%/150%
      スケーリング＋ステージ transform でにじんで見えるため
-   ・-webkit-text-stroke 0.15px＋タイピング表示のみ weight 500
-     （500は同梱済みの実ウェイトなので疑似ボールドにならない）
+   ・小さいUI文字はヒンティング済みの Yu Gothic UI / Meiryo を
+     優先し、タイピング大文字のみ丸ゴ維持＋stroke で補正
    ・描画コストは静的CSSのみ。renderer/毎フレーム描画は不変
    ===================================================== */
+body.win {
+  --font-ui: 'Yu Gothic UI', 'Meiryo', 'M PLUS Rounded 1c', 'Noto Sans JP', system-ui, sans-serif;
+  --font-ja: 'Yu Gothic UI', 'Meiryo', 'M PLUS Rounded 1c', 'Noto Sans JP', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+}
 body.win #word, body.win #word-long, body.win #jp,
 body.win #roma, body.win #kana-scroll, body.win #roma-scroll {
-  -webkit-text-stroke: 0.15px currentColor;
+  --font-ja: 'M PLUS Rounded 1c', 'Yu Gothic UI', 'Meiryo', 'Noto Sans JP', system-ui, sans-serif;
+  -webkit-text-stroke: 0.2px currentColor;
+  text-shadow: 0 0 0.4px currentColor;
   font-weight: 500;
-}
-body.win {
-  -webkit-text-stroke: 0.1px currentColor;
 }
 
 /* R-TYPE風タクティカル背景
