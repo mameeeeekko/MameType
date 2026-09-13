@@ -316,7 +316,9 @@ function _showSwDownloadBar(message) {
   const text = el.querySelector(".remaining-load-text");
   if (text) text.textContent = el.dataset.base;
   const fill = document.getElementById("swDownloadBarFill");
-  if (fill) fill.style.width = "0%";
+  // ★既に表示中なら幅を0%に戻さない（途中でバーが0に戻る問題対策）
+  const wasVisible = el.classList.contains("show");
+  if (fill && !wasVisible) fill.style.width = "0%";
   el.classList.add("show");
 }
 
@@ -1440,9 +1442,11 @@ function handleUpdateProgress(data) {
     updateProgressUI(0, 0, 0, "");
 
     _showSwDownloadBar("最新版をオフライン用にダウンロード中");
-    _updateSwDownloadBar(0, "");
-    // ★実測進捗開始（Safariで届かない場合は推定タイマーが動いている）
-    _startEstimatedDlProgress();
+    // ★途中で0%に戻らないよう、推定タイマーが動いていなければ0%から開始
+    if (!_estimatedDlTimer) {
+      _updateSwDownloadBar(0, "");
+      _startEstimatedDlProgress();
+    }
 
     return;
   }
@@ -1455,6 +1459,11 @@ function handleUpdateProgress(data) {
   if (data.status === "progress") {
 
     updateProgressReceived = true;
+
+    // ★実測が届いたら推定を停止し、実測%を中央下バーにも反映
+    //   （Windowsでは実測、Safariでは推定タイマーがバーを進める）
+    _stopEstimatedDlProgress();
+    _updateSwDownloadBar(data.percent || 0, "");
 
     updateProgressUI(
       data.percent || 0,
@@ -1476,6 +1485,8 @@ function handleUpdateProgress(data) {
     updateProgressReceived = true;
     updateFileErrorCount++;
 
+    // ★推定と実測が競合しないよう停止してから実測%を反映
+    _stopEstimatedDlProgress();
     _updateSwDownloadBar(
       data.percent || 0,
       "一部スキップ"
