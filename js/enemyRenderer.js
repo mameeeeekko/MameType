@@ -12,7 +12,7 @@ import { renderEnemyBehaviorEffect,renderFreezeAura } from "./effectManager.js";
 import { images } from "./assetsLoader.js";
 import { defineShapePath } from "./shapeDefinitions.js";
 import { stageRect, STAGE_W, STAGE_H } from "./stageScale.js";
-import { getEnemyTextBox, boxesOverlap } from "./enemySpawner.js";
+import { getEnemyTextBox } from "./enemySpawner.js";
 
 // テキストが英数字・記号のみ（英語問題）か判定
 const isEnglish = (str) => /^[a-zA-Z0-9\s.,!?-]+$/.test(str);
@@ -114,6 +114,28 @@ export function renderQuestBackground(ctx, node) {
  */
 export function updateEnemyTextOffsets(targets, lockedEnemy) {
 
+    // ★見た目・判定ロジック不変の軽量化: 矩形の事前計算＋Map/クロージャ削減でGCを抑制。
+    //   ずらし量・方向・上限・復帰挙動の計算式は従来どおり。
+    if (!targets || targets.length === 0) return;
+    let liveCount = 0;
+    for (let k = 0; k < targets.length; k++) {
+        const t = targets[k];
+        if (t && !t.isDead && !t.isBullet && (t.text || t.word)) liveCount++;
+    }
+    if (liveCount === 0) return;
+    // 1体だけの fast path（ペア判定なし。最終書き込み結果は従来と同一）
+    if (liveCount === 1) {
+        for (let k = 0; k < targets.length; k++) {
+            const t = targets[k];
+            if (t && !t.isDead && !t.isBullet && (t.text || t.word)) {
+                t.targetTextOffsetY = 0;
+                t.textOverBody = false;
+                return;
+            }
+        }
+        return;
+    }
+
     const list = (targets || []).filter(t => t && !t.isDead && !t.isBullet && (t.text || t.word));
     if (list.length === 0) return;
 
@@ -131,38 +153,43 @@ export function updateEnemyTextOffsets(targets, lockedEnemy) {
     const MAX_OFFSET = 80; // ずらし上限（上下それぞれ。密集時でも行き場があるように）
 
     // 目標値を毎フレーム再計算する（重なりが解消されたら0へ戻る）
-    const offsets = new Map();
-    for (const t of list) offsets.set(t, 0);
-
-    // 現在の累積オフセット込みの「文字列のみ」の矩形を取得
-    const boxOf = (t) => {
-        const b = getEnemyTextBox(t);
-        return { x: b.x, y: b.y + offsets.get(t), w: b.w, h: b.h };
-    };
+    // ★配列＋ベース矩形の事前計算で、ペア判定中のMap/オブジェクト生成を排除（計算式は同一）
+    const n = list.length;
+    const baseX = new Array(n);
+    const baseY = new Array(n);
+    const baseW = new Array(n);
+    const baseH = new Array(n);
+    for (let k = 0; k < n; k++) {
+        const b = getEnemyTextBox(list[k]);
+        baseX[k] = b.x; baseY[k] = b.y; baseW[k] = b.w; baseH[k] = b.h;
+    }
+    const offArr = new Array(n).fill(0);
 
     // ペアワイズ解消（数パス回して連鎖的な重なりにも対応）
     for (let pass = 0; pass < 4; pass++) {
         let moved = false;
 
-        for (let i = 0; i < list.length; i++) {
-            for (let j = i + 1; j < list.length; j++) {
-                const a = list[i];
-                const b = list[j];
-                const boxA = boxOf(a);
-                const boxB = boxOf(b);
-                if (!boxesOverlap(boxA, boxB)) continue;
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                const aY = baseY[i] + offArr[i];
+                const bY = baseY[j] + offArr[j];
+                // boxesOverlap と同一判定（インライン化で関数呼び出し・確保を排除）
+                if (!(baseX[i] < baseX[j] + baseW[j] && baseX[j] < baseX[i] + baseW[i] &&
+                      aY < bY + baseH[j] && bY < aY + baseH[i])) continue;
 
                 const overlapY =
-                    Math.min(boxA.y + boxA.h, boxB.y + boxB.h) -
-                    Math.max(boxA.y, boxB.y);
+                    Math.min(aY + baseH[i], bY + baseH[j]) -
+                    Math.max(aY, bY);
                 const push = overlapY + PADDING;
 
+                const a = list[i];
+                const b = list[j];
                 const aLocked = a === lockedRef;
                 const bLocked = b === lockedRef;
                 if (aLocked && bLocked) continue; // 両方ロックは基本発生しない
 
-                const aCenter = boxA.y + boxA.h / 2;
-                const bCenter = boxB.y + boxB.h / 2;
+                const aCenter = aY + baseH[i] / 2;
+                const bCenter = bY + baseH[j] / 2;
 
                 // ずらす側と方向の決定:
                 // 基本は「相手の文字列から離れる方向」へずらす。
@@ -171,11 +198,11 @@ export function updateEnemyTextOffsets(targets, lockedEnemy) {
                 // 文字列が積み重なって逆に読めなくなる。
                 // → ロック文字列を挟んで「外側」の文字列を「外側方向」へずらし、
                 //   ロック文字列の周囲に空白ができるようにする。
-                let mover;
+                let moverIdx;
                 let dir; // 1: 下へ離れる, -1: 上へ離れる
                 if (aLocked || bLocked) {
                     // ロック中のペア: 動ける方をロック文字列から離れる方向へずらす
-                    mover = aLocked ? b : a;
+                    moverIdx = aLocked ? j : i;
                     const moverCenter = aLocked ? bCenter : aCenter;
                     const lockedCenter = aLocked ? aCenter : bCenter;
                     dir = moverCenter >= lockedCenter ? 1 : -1;
@@ -184,24 +211,24 @@ export function updateEnemyTextOffsets(targets, lockedEnemy) {
                     const aDist = Math.abs(aCenter - anchorCenterY);
                     const bDist = Math.abs(bCenter - anchorCenterY);
                     if (aDist >= bDist) {
-                        mover = a;
+                        moverIdx = i;
                         dir = aCenter >= bCenter ? 1 : -1;
                     } else {
-                        mover = b;
+                        moverIdx = j;
                         dir = bCenter >= aCenter ? 1 : -1;
                     }
                 } else {
                     // ロック中の敵がいない場合: 従来どおり画面下側の文字を上段へずらす
-                    mover = (a.y !== b.y) ? (a.y > b.y ? a : b) : b;
+                    moverIdx = (a.y !== b.y) ? (a.y > b.y ? i : j) : j;
                     dir = -1;
                 }
 
-                const cur = offsets.get(mover);
+                const cur = offArr[moverIdx];
                 const newOffset = dir > 0
                     ? Math.min(MAX_OFFSET, cur + push)
                     : Math.max(-MAX_OFFSET, cur - push);
                 if (newOffset !== cur) {
-                    offsets.set(mover, newOffset);
+                    offArr[moverIdx] = newOffset;
                     moved = true;
                 }
             }
@@ -210,8 +237,8 @@ export function updateEnemyTextOffsets(targets, lockedEnemy) {
         if (!moved) break;
     }
 
-    for (const t of list) {
-        t.targetTextOffsetY = offsets.get(t);
+    for (let k = 0; k < n; k++) {
+        list[k].targetTextOffsetY = offArr[k];
     }
 
     // =====================
@@ -219,18 +246,22 @@ export function updateEnemyTextOffsets(targets, lockedEnemy) {
     // 位置はずらさず（文字と文字が重なった場合だけずらす）、
     // textOverBody フラグを立てて描画側で文字だけ浮かび上がらせる
     // =====================
-    for (const t of list) {
-        const tb = getEnemyTextBox(t);
-        const tBox = { x: tb.x, y: tb.y + offsets.get(t), w: tb.w, h: tb.h };
+    for (let k = 0; k < n; k++) {
+        const t = list[k];
+        const tX = baseX[k];
+        const tY = baseY[k] + offArr[k];
+        const tW = baseW[k];
+        const tH = baseH[k];
 
         let over = false;
-        for (const o of list) {
-            if (o === t) continue;
+        for (let m = 0; m < n; m++) {
+            if (m === k) continue;
+            const o = list[m];
 
             const r = o.radius || o.type?.size || 15;
             // 円（本体）と矩形（文字列）の重なり判定
-            const cx = Math.max(tBox.x, Math.min(o.x, tBox.x + tBox.w));
-            const cy = Math.max(tBox.y, Math.min(o.y, tBox.y + tBox.h));
+            const cx = Math.max(tX, Math.min(o.x, tX + tW));
+            const cy = Math.max(tY, Math.min(o.y, tY + tH));
             const dx = o.x - cx;
             const dy = o.y - cy;
 
@@ -2096,31 +2127,63 @@ function drawArmorShell(ctx, r) {
 
 // ===============================
 // Chain UI Render
+// ★見た目不変の軽量化: DOM取得のキャッシュ＋変化時のみ書き込み
+// （色・文言・レイアウト・更新タイミングの見た目は同一）
 // ===============================
+// DOM参照キャッシュ（初回取得後は使い回し。要素が作り直された場合は再取得）
+let _chainEls = null;
+let _chainElsReady = false;
+// 前回書き込み値（変化時のみDOMへ反映し、スタイル再計算を抑制）
+let _chainLast = { ratioQ: -1, band: -1, label: "", value: -1, mul: "" };
+
+function getChainEls() {
+    if (_chainElsReady && _chainEls && _chainEls.bar && document.contains(_chainEls.bar)) return _chainEls;
+    _chainEls = {
+        bar: document.getElementById("chainBar"),
+        label: document.getElementById("chainLabel"),
+        value: document.getElementById("chainValue"),
+        mul: document.getElementById("chainMultiplier"),
+    };
+    _chainElsReady = true;
+    // 固定スタイルは初回のみ設定（毎フレームの上書きを排除。見た目は同一）
+    if (_chainEls.label) _chainEls.label.style.color = "#e4e4e4";
+    if (_chainEls.value) _chainEls.value.style.color = "#e4e4e4";
+    if (_chainEls.mul) {
+        _chainEls.mul.style.color = "#e4e4e4";
+        _chainEls.mul.style.order = "-1";
+        _chainEls.mul.style.marginBottom = "4px";
+    }
+    return _chainEls;
+}
+
 export function renderChainUI(gameState){
 
     const stats = gameState.enemyStats;
 
     if(!stats) return;
 
-    const bar = document.getElementById("chainBar");
-    const label = document.getElementById("chainLabel");
-    const value = document.getElementById("chainValue");
-    const mul = document.getElementById("chainMultiplier");    
+    const { bar, label, value, mul } = getChainEls();
 
     if(!bar || !label || !value) return;
 
-    label.style.color = "#e4e4e4";
-    value.style.color = "#e4e4e4";
-    if(mul) mul.style.color = "#e4e4e4";
-
     const ratio = stats.chainBar / stats.chainBarMax;
 
-    bar.style.width = (ratio * 100) + "%";
+    // 幅は0.5%刻みに量子化（見た目の滑らかさは維持しつつstyle書き込みを間引き）
+    const ratioQ = Math.round(ratio * 200) / 200;
+    if (ratioQ !== _chainLast.ratioQ) {
+        _chainLast.ratioQ = ratioQ;
+        bar.style.width = (ratioQ * 100) + "%";
+    }
 
     // 表示　チェインカウント
-    label.textContent = "CHAIN";
-    value.textContent = stats.chainCount;
+    if (_chainLast.label !== "CHAIN") {
+        _chainLast.label = "CHAIN";
+        label.textContent = "CHAIN";
+    }
+    if (_chainLast.value !== stats.chainCount) {
+        _chainLast.value = stats.chainCount;
+        value.textContent = stats.chainCount;
+    }
     // 表示　ボーナス倍率
     const multiplier = getChainMultiplier(stats.chainCount);
 
@@ -2131,26 +2194,30 @@ export function renderChainUI(gameState){
             ? ` (×${bonus.toFixed(1)})`
             : "";
 
-        mul.textContent = `x${multiplier.toFixed(1)}${bonusText}`;
-        // 上表示用
-        mul.style.order = "-1";
-        // 少し余白
-        mul.style.marginBottom = "4px";
+        const mulText = `x${multiplier.toFixed(1)}${bonusText}`;
+        if (_chainLast.mul !== mulText) {
+            _chainLast.mul = mulText;
+            mul.textContent = mulText;
+        }
 
     }
 
-    // 色変化
-    if(ratio < 0.25){
-        bar.style.background =
-        "linear-gradient(90deg,#ff6b6b,#ff3b3b)";
-    }
-    else if(ratio < 0.5){
-        bar.style.background =
-        "linear-gradient(90deg,#ffd93d,#ff9f1c)";
-    }
-    else{
-        bar.style.background =
-        "linear-gradient(90deg,#4ecdc4,#44aaff)";
+    // 色変化（帯域が変わったときだけbackgroundを書き換え）
+    const band = ratio < 0.25 ? 0 : ratio < 0.5 ? 1 : 2;
+    if (band !== _chainLast.band) {
+        _chainLast.band = band;
+        if(band === 0){
+            bar.style.background =
+            "linear-gradient(90deg,#ff6b6b,#ff3b3b)";
+        }
+        else if(band === 1){
+            bar.style.background =
+            "linear-gradient(90deg,#ffd93d,#ff9f1c)";
+        }
+        else{
+            bar.style.background =
+            "linear-gradient(90deg,#4ecdc4,#44aaff)";
+        }
     }
 
 }
@@ -2193,6 +2260,14 @@ export function initComboTierBar() {
             block
         );
     }
+    // ★キャッシュ無効化（作り直し後の初回更新で必ず再描画させる）
+    _comboTierWrapperCache = null;
+    _comboTierLastKey = null;
+    prevComboTier = -1;
+    // chain表示の前回値もリセット（再開時に古い値でスキップしない）
+    _chainElsReady = false;
+    _chainEls = null;
+    _chainLast = { ratioQ: -1, band: -1, label: "", value: -1, mul: "" };
 }
 
 /* =====================
@@ -2200,13 +2275,27 @@ export function initComboTierBar() {
 ===================== */
 
 let prevComboTier = -1;
+// ★見た目不変の軽量化: wrapperキャッシュ＋変化時のみblock更新（表示結果は同一）
+let _comboTierWrapperCache = null;
+let _comboTierLastKey = null;
+let _enemyCanvasCache = null;
+
+function getComboTierWrapper() {
+    if (_comboTierWrapperCache && document.contains(_comboTierWrapperCache)) return _comboTierWrapperCache;
+    _comboTierWrapperCache = document.getElementById("comboTierWrapper");
+    _comboTierLastKey = null; // 作り直し時は必ず再描画
+    return _comboTierWrapperCache;
+}
+
+function getEnemyModeCanvasEl() {
+    if (_enemyCanvasCache && document.contains(_enemyCanvasCache)) return _enemyCanvasCache;
+    _enemyCanvasCache = document.getElementById("enemyModeCanvas");
+    return _enemyCanvasCache;
+}
 
 export function updateComboTierBar(stats, isQuestMode = false) {
 
-    const tierWrapper =
-        document.getElementById(
-            "comboTierWrapper"
-        );
+    const tierWrapper = getComboTierWrapper();
 
     if (!tierWrapper) return;
 
@@ -2233,6 +2322,21 @@ export function updateComboTierBar(stats, isQuestMode = false) {
             currentTier = i;
         }
     }
+
+    // 現在tierの進捗を量子化（0.5%刻み）し、変化がなければblockのDOM更新をスキップ。
+    // class/--fillの最終表示は同一。flash・効果音・ポップアップの条件判定は従来どおり行う。
+    let progressQ = -1;
+    if (currentTier >= 0 && !isOverdrive) {
+        const tier = COMBO_TIERS[currentTier];
+        const range = tier.max - tier.min;
+        const value = combo - tier.min;
+        const progress = Math.max(0, Math.min(1, value / range));
+        progressQ = Math.round(progress * 200) / 200; // 0.5%刻み
+    }
+    const barKey = combo + "|" + currentTier + "|" + (isOverdrive ? 1 : 0) + "|" + progressQ;
+    const barDirty = barKey !== _comboTierLastKey;
+    if (barDirty) {
+        _comboTierLastKey = barKey;
 
     // =====================
     // block更新
@@ -2297,6 +2401,7 @@ export function updateComboTierBar(stats, isQuestMode = false) {
         }
 
     }
+    }
 
     // =====================
     // Flash
@@ -2325,8 +2430,9 @@ export function updateComboTierBar(stats, isQuestMode = false) {
             // Tier上昇時のエフェクト（MAXではない）
             const isNowOverdrive = combo >= OVERDRIVE_COMBO;
             if (!isNowOverdrive) {
+                const enemyCanvasEl = getEnemyModeCanvasEl();
                 const tierWrapperRect = stageRect(tierWrapper);
-                const canvasRect = stageRect(document.getElementById("enemyModeCanvas"));
+                const canvasRect = stageRect(enemyCanvasEl);
                 const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
                 const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
                 spawnComboTierUpEffect(centerX, centerY, currentTier, false);
@@ -2349,8 +2455,9 @@ export function updateComboTierBar(stats, isQuestMode = false) {
     const wasOverdrive = stats.prevCombo < OVERDRIVE_COMBO;
 
     if (wasOverdrive && isOverdrive) {
+        const enemyCanvasEl = getEnemyModeCanvasEl();
         const tierWrapperRect = stageRect(tierWrapper);
-        const canvasRect = stageRect(document.getElementById("enemyModeCanvas"));
+        const canvasRect = stageRect(enemyCanvasEl);
         const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
         const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
         const lastTier = COMBO_TIERS.length - 1; // 最後のティア
@@ -2832,12 +2939,13 @@ function triggerCooldownSpeedPopup(multiplier) {
     };
 }
 
-function drawCooldownSpeedPopup(ctx, canvas) {
+function drawCooldownSpeedPopup(ctx, canvas, deltaTime = 1 / 60) {
 
     if (!cooldownSpeedPopup) return;
 
     const popup = cooldownSpeedPopup;
-    popup.timer++;
+    // ★deltaTimeベースでリフレッシュレート非依存に
+    popup.timer += deltaTime * 60;
 
     const progress = popup.timer / popup.duration;
 
@@ -2925,7 +3033,7 @@ function drawCooldownSpeedPopup(ctx, canvas) {
     ctx.restore();
 }
 
-export function renderActiveSkillUI(ctx, state, canvas) {
+export function renderActiveSkillUI(ctx, state, canvas, deltaTime = 1 / 60) {
     const equipped = getEquippedActiveSkills();
     const skillId = equipped?.[0];
     const skill = ACTIVE_SKILLS?.[skillId];
@@ -3015,7 +3123,7 @@ export function renderActiveSkillUI(ctx, state, canvas) {
 
     // コンボで獲得したクールタイム短縮倍率のポップアップ
     // （スキルUI表示中＝装備中のみ描画される）
-    drawCooldownSpeedPopup(ctx, canvas);
+    drawCooldownSpeedPopup(ctx, canvas, deltaTime);
 }
 
 function drawSkillIconCircle(ctx, skill, x, y, size, ready) {

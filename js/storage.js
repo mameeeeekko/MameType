@@ -1,7 +1,38 @@
 // storage.js
 
 import { QUEST_MAP } from "./questMap.js";
-import { getTotalStars, getAvailableMaxStars } from "./questProgress.js";
+
+// ================================
+// スロット固有の★集計（グローバルの現在値を参照しない）
+// ================================
+function calcSlotStars(stars) {
+  if (!stars || typeof stars !== "object") return 0;
+  let total = 0;
+  for (const key of Object.keys(stars)) {
+    total += stars[key] || 0;
+  }
+  return total;
+}
+
+function canEnterNodeForSlot(node, world, clearedSet) {
+  const allNexts = new Set(world.nodes.flatMap(n => n.next || []));
+  if (!allNexts.has(node.id)) return true;
+  const prevNodes = world.nodes.filter(n => (n.next || []).includes(node.id));
+  return prevNodes.some(n => clearedSet.has(n.id));
+}
+
+function calcSlotMaxStars(progress) {
+  const unlockedWorlds = progress?.unlockedWorlds ?? [];
+  const clearedSet = new Set(progress?.cleared ?? []);
+  let count = 0;
+  for (const [worldId, world] of Object.entries(QUEST_MAP)) {
+    if (!unlockedWorlds.includes(worldId)) continue;
+    for (const node of world.nodes) {
+      if (canEnterNodeForSlot(node, world, clearedSet)) count++;
+    }
+  }
+  return count * 5;
+}
 
 // ================================
 // Keys
@@ -549,6 +580,79 @@ export async function importPlayerStats(file, defaultStats) {
 const QUEST_SLOTS_KEY = "quest_slots";
 const QUEST_AUTO_KEY = "quest_auto_save";
 
+// ================================
+// 🔹クエスト滞在時間タイマー（壁時計ベース）
+// マップ・会話・ポーズ・スキル挑戦すべて含めた合計を
+// questRecord.totalPlayTime に加算する。戦闘ごとの加算とは別系統。
+// battleTime（avgKpm分母用）とは分離している。
+// ================================
+let questSessionStart = null;
+// 1回のflush上限（スリープ・放置の異常値防止）。1800秒=30分。
+const QUEST_SESSION_FLUSH_CAP_SEC = 1800;
+
+function readQuestPlayerStatsRaw() {
+  try {
+    return JSON.parse(localStorage.getItem("questPlayerStats") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeQuestPlayerStatsRaw(stats) {
+  try {
+    localStorage.setItem("questPlayerStats", JSON.stringify(stats));
+  } catch { /* 無視 */ }
+}
+
+// セッション開始（多重開始は無視）
+export function startQuestSession() {
+  if (questSessionStart != null) return;
+  questSessionStart = Date.now();
+}
+
+// 未確定の滞在時間を確定して totalPlayTime に加算する
+// @returns 加算した秒数
+export function flushQuestSessionTime() {
+  if (questSessionStart == null) return 0;
+  const now = Date.now();
+  let deltaSec = (now - questSessionStart) / 1000;
+  if (!(deltaSec > 0)) {
+    questSessionStart = now;
+    return 0;
+  }
+  // 異常値クランプ
+  if (deltaSec > QUEST_SESSION_FLUSH_CAP_SEC) deltaSec = QUEST_SESSION_FLUSH_CAP_SEC;
+
+  const stats = readQuestPlayerStatsRaw();
+  if (stats) {
+    if (!stats.questRecord) stats.questRecord = {};
+    // 旧セーブ移行：totalBattleTimeが無ければ初回に現totalPlayTimeで初期化
+    if (stats.questRecord.totalBattleTime == null) {
+      stats.questRecord.totalBattleTime = stats.questRecord.totalPlayTime || 0;
+    }
+    stats.questRecord.totalPlayTime = (stats.questRecord.totalPlayTime || 0) + deltaSec;
+    writeQuestPlayerStatsRaw(stats);
+  }
+  questSessionStart = now;
+  // オートセーブに反映（再入防止のため直接書き込み）
+  try {
+    const data = getQuestSnapshot();
+    localStorage.setItem(QUEST_AUTO_KEY, JSON.stringify(data));
+  } catch { /* 無視 */ }
+  return deltaSec;
+}
+
+// セッション停止（flushして破棄）
+export function stopQuestSession() {
+  flushQuestSessionTime();
+  questSessionStart = null;
+}
+
+// セッション破棄（加算せず捨てる。ロード／ニューゲームの切替用）
+export function resetQuestSession() {
+  questSessionStart = null;
+}
+
 function getQuestSnapshot() {
   return {
     progress: JSON.parse(localStorage.getItem("questProgress")),
@@ -567,6 +671,8 @@ export function loadQuestSlots() {
 // 🔹オートセーブ（常時上書き）
 // ================================
 export function autoSaveQuest() {
+  // ★保存直前の滞在時間を確定させる（セッション計測中のみ）
+  try { flushQuestSessionTime(); } catch { /* 無視 */ }
   const data = getQuestSnapshot();
   localStorage.setItem(QUEST_AUTO_KEY, JSON.stringify(data));
 }
@@ -592,7 +698,7 @@ export function saveQuestSlot(slotIndex) {
     progress,
     playerStats: stats,
     stars,
-    
+
     // ===== UI用サマリー =====
     summary: {
       level: stats.level ?? 1,
@@ -602,8 +708,10 @@ export function saveQuestSlot(slotIndex) {
       stage: getStageFromNode(furthestNode),
       // ★ 配列からカウント
       cleared: progress.cleared?.length ?? 0,
-      currentStars: getTotalStars(), // 現在の獲得★
-      maxStars: getAvailableMaxStars(),               // 最大★（後述）
+      // ★ 全クリア＝真エンディング到達（スロット固有。グローバル実績は参照しない）
+      hasSeenTrueEnding: !!progress.hasSeenTrueEnding,
+      currentStars: calcSlotStars(stars), // スロット固有の獲得★
+      maxStars: calcSlotMaxStars(progress), // スロット固有の最大★
       playTime: stats.questRecord?.totalPlayTime ?? 0 // プレイ時間（秒）
     },
 

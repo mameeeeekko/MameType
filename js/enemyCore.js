@@ -39,6 +39,7 @@ import { closeDialogue, startDialogue, DIALOGUE_DATA, showDialoguePlaybackChoice
 let currentStage = "STAGE1";
 let loopId = null;
 let currentEnemyDifficulty = null;
+let forceNextEnemyFrame = false; // ★キー入力直後のフレーム間引きを防止するフラグ
 
 const canvas = document.getElementById("enemyModeCanvas");
 const ctx = canvas.getContext("2d");
@@ -365,11 +366,13 @@ function gameLoop(timestamp) {
     //   1) recordFrame : 生のrAF間隔を記録（Auto品質の自動調整の入力）
     //   2) shouldRunFrame : Low/Auto低位ステージ時は描画フレームを間引く
     // （updateはdeltaTime加算方式のためスキップしてもゲーム速度は変わらない）
+    // ★キー入力直後（forceNextEnemyFrame）は間引きをバイパスし、入力遅延を防止する
     recordFrame(timestamp);
-    if (!shouldRunFrame(timestamp)) {
+    if (!forceNextEnemyFrame && !shouldRunFrame(timestamp)) {
         loopId = requestAnimationFrame(gameLoop);
         return;
     }
+    forceNextEnemyFrame = false;
     
     const now = timestamp; 
     const diff = getCurrentDifficulty(
@@ -505,7 +508,7 @@ function gameLoop(timestamp) {
         updateUISafeTop();
     }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
     
     // 背景描画（クエストノードの設定を優先し、なければステージの設定を使用）
     if (gameState.enemyStats.activeBgImage) {
@@ -655,12 +658,19 @@ function gameLoop(timestamp) {
     // 毎フレーム：プレイヤー防御値を同期
     // クエスト中は `getPlayerStatsForEnemy("quest")` の最終ステータスを
     // 参照して `player.defense` を上書きする（スキルの反映漏れ防止）
+    // ★見た目・数値は不変の軽量化: localStorage+JSON.parseを毎フレーム実行せず、
+    //   30フレーム毎に再取得したキャッシュ値を使う（反映漏れ防止の趣旨は維持）
     // =========================
     try {
         if (gameState.isQuestMode) {
-            const statsMode = gameState.isQuestMode ? "quest" : "enemy";
-            const syncStats = getPlayerStatsForEnemy(statsMode);
-            player.defense = Number(syncStats.defense) || 0;
+            if (gameLoop._defSyncFrame == null) gameLoop._defSyncFrame = 0;
+            gameLoop._defSyncFrame++;
+            if (gameLoop._defSyncFrame === 1 || gameLoop._defSyncFrame % 30 === 0) {
+                const statsMode = gameState.isQuestMode ? "quest" : "enemy";
+                const syncStats = getPlayerStatsForEnemy(statsMode);
+                gameLoop._defSyncCache = Number(syncStats.defense) || 0;
+            }
+            if (gameLoop._defSyncCache != null) player.defense = gameLoop._defSyncCache;
         }
     } catch (e) {
         // フォールバック不要：同期失敗してもゲーム継続
@@ -683,7 +693,7 @@ function gameLoop(timestamp) {
 
         // Render Active Skill UI only in Quest Mode
     if (gameState.isQuestMode) {
-        renderActiveSkillUI(ctx, gameState, canvas);
+        renderActiveSkillUI(ctx, gameState, canvas, deltaTime);
     }
 
     // Render Active Attack UI (defense typing) if any enemy has an active attack
@@ -698,24 +708,24 @@ function gameLoop(timestamp) {
     renderPhaseWarning(ctx, stats, canvas);
   
 
-    // エフェクト描画
-    renderEnemyEffects(ctx);
-    renderItemSkillEffects(ctx);
-    renderHitWaveEffects(ctx);
+    // エフェクト描画（★deltaTimeを渡してリフレッシュレート非依存に）
+    renderEnemyEffects(ctx, deltaTime);
+    renderItemSkillEffects(ctx, deltaTime);
+    renderHitWaveEffects(ctx, deltaTime);
 
-    renderLockOnEffects(ctx);
-    renderLaserEffects(ctx); // ★追加
-    renderPlayerDamageEffects(ctx); // レーザーダメージ
-    renderPlayerNegateEffects(ctx); // 敵の攻撃防いだエフェクト
+    renderLockOnEffects(ctx, deltaTime);
+    renderLaserEffects(ctx, deltaTime); // ★追加
+    renderPlayerDamageEffects(ctx, deltaTime); // レーザーダメージ
+    renderPlayerNegateEffects(ctx, deltaTime); // 敵の攻撃防いだエフェクト
 
-    renderShotEffects(ctx);
-    renderHitParticles(ctx);
-    renderKnockbackEffects(ctx);
+    renderShotEffects(ctx, deltaTime);
+    renderHitParticles(ctx, deltaTime);
+    renderKnockbackEffects(ctx, deltaTime);
   
-    renderChainBreakEffects(ctx);
-    renderComboTierUpEffects(ctx);
-    renderScorePopups(ctx);
-    renderDamagePopups(ctx);
+    renderChainBreakEffects(ctx, deltaTime);
+    renderComboTierUpEffects(ctx, deltaTime);
+    renderScorePopups(ctx, deltaTime);
+    renderDamagePopups(ctx, deltaTime);
 
         // =============================================================
         // スポーン処理
@@ -1024,13 +1034,16 @@ function gameLoop(timestamp) {
                     // クエストモードの場合の分岐
                     if (lastEnemyConfig?.isQuestMode) {
                         const node = gameState.currentQuestNode;
-                        const endDialogueId = `${node.id}_end`;
-                        const dialogueData = DIALOGUE_DATA?.[endDialogueId];
+                        // ★currentQuestNodeがnullの場合でもTypeErrorでリザルト遷移が
+                        //   止まらないよう、会話なしでリザルトへフォールバックする
+                        const endDialogueId = node ? `${node.id}_end` : null;
+                        const dialogueData = endDialogueId ? (DIALOGUE_DATA?.[endDialogueId] ?? null) : null;
 
                     // ★★★ 修正箇所 ★★★
                     // DIALOGUE_DATAに会話が存在しなくてもstartDialogueを呼び出すように変更。
                     // これにより、ランダム会話のフォールバック処理が正しく機能するようになります。
-                    if (!isFailed) {
+                    // ★endDialogueIdがnull（currentQuestNode消失）の場合も会話をスキップしてリザルトへ直行
+                    if (!isFailed && endDialogueId) {
                         const hasPlayed = hasDialogueBeenPlayed(endDialogueId);
                         const shouldAskDialogueChoice = dialogueData?.showOnce && hasSeenTrueEnding();
                         const shouldSkipDialogue = dialogueData?.showOnce && hasPlayed && !hasSeenTrueEnding();
@@ -1201,6 +1214,8 @@ export function handleEnemyKey(e) {
     if (e.key.length > 1 && !isActionKey) {
         return;
     }
+
+    forceNextEnemyFrame = true;
 
     if (gameState.enemyStats.lastKeyTime > 0) {
 
@@ -2428,7 +2443,8 @@ export async function endEnemyMode(isAbort = false) {
     }
 
     //スコア等の計算
-    stats.endTime = getNow();
+    // ★生performance.now()ベースに統一（ポーズ中はループ側でstartTimeをずらすため、getNow()併用だと二重補正になる）
+    stats.endTime = performance.now();
 
     const elapsedSec = Math.max(0.001, stats.typingActiveTime / 1000);
     const gKpm = (stats.correctCount / elapsedSec) * 60;
@@ -2562,7 +2578,7 @@ export async function endEnemyMode(isAbort = false) {
                 {
                     player,
                     stage,
-                    now: getNow(),
+                    now: performance.now(), // ★生時計に統一（startTimeと同系統）
                     startTime: enemyStartTime
                 },
                 stage.star
@@ -2707,8 +2723,10 @@ export async function endEnemyMode(isAbort = false) {
         };
 
         // クエストモードの詳細ステータス記録
+        // ★battleTimeは生performance.now()ベースの実戦闘時間（ポーズ二重補正なし）。
+        //   playTimeはクエスト滞在タイマー側で加算するため渡さない。
         updateQuestStats({
-            playTime: (stats.endTime - stats.startTime)/1000,
+            battleTime: Math.max(0, (performance.now() - (stats.startTime ?? performance.now()))/1000),
             kills: stats.defeatedCount,
             typed: stats.correctCount,
             miss: stats.mistakeCount,

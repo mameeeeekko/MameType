@@ -393,14 +393,25 @@ export function updateProgressText(currentIndex, total) {
 
 let lastRomaText = "";
 let lastTypedLen = -1;
+let _normalRomaSpans = []; // 通常モード用ローマ字スパン参照リスト（再利用）
 
-// ===========================================
-// ★v1.0.22: render() を同期処理に戻した
-//   以前（安定状態）は speedTick の毎フレーム描画で
-//   タイプ表示が常に最新だったが、「軽量化」で
-//   打鍵時のみ + rAF二重遅延にした結果、
-//   「打った文字の表示が遅れる」が発生したため。
-// ===========================================
+let lastDisplayWord = "";
+let lastLongText = "";
+let lastLongPos = -1;
+let lastLongSpanIndex = -1;
+
+let lastLongKanaKey = "";
+let lastLongRomaKey = "";
+
+let lastJpText = null;
+let lastJpPos = -1;
+let _jpDoneSpan = null;
+let _jpRemainNode = null;
+
+let lastCorrectCount = -1;
+let lastMistakeCount = -1;
+let lastFreeMode = null;
+let lastMissMode = null;
 
 // ===========================================
 // ★長文モードのスクロール表示用スパン再利用プール
@@ -418,9 +429,7 @@ function ensureSpanPool(pool, container, size) {
   }
 }
 
-
 export function render(state) {
-
   renderWordDisplay(state);
 
   if (isLongTextMode) {
@@ -430,13 +439,12 @@ export function render(state) {
   }
 
   renderStats(state);
-  renderFreeModeBadge(state.isFreeMode); // Existing
-  renderMissModeBadge(state.isMissPractice); // Existing
-  renderBgmInfo(getNow()); // Call new BGM info rendering function
+  renderFreeModeBadge(state.isFreeMode);
+  renderMissModeBadge(state.isMissPractice);
+  renderBgmInfo(getNow());
 }
 
 let longWordSpans = [];
-let lastLongText = "";
 
 // 長文用のセグメント情報をキャッシュする
 let currentFinalSegments = [];
@@ -448,7 +456,26 @@ let currentFinalSegments = [];
 export function resetRendererState() {
   lastRomaText = "";
   lastTypedLen = -1;
+  _normalRomaSpans = [];
+
+  lastDisplayWord = "";
   lastLongText = "";
+  lastLongPos = -1;
+  lastLongSpanIndex = -1;
+
+  lastLongKanaKey = "";
+  lastLongRomaKey = "";
+
+  lastJpText = null;
+  lastJpPos = -1;
+  _jpDoneSpan = null;
+  _jpRemainNode = null;
+
+  lastCorrectCount = -1;
+  lastMistakeCount = -1;
+  lastFreeMode = null;
+  lastMissMode = null;
+
   longWordSpans = [];
   currentFinalSegments = [];
 
@@ -618,14 +645,20 @@ function renderWordDisplay(state) {
 
   // 通常
   if (!isLongTextMode) {
-    wordDiv.textContent = displayWord;
+    if (displayWord !== lastDisplayWord) {
+      lastDisplayWord = displayWord;
+      wordDiv.textContent = displayWord;
+    }
     return;
   }
 
   // テキストまたは表示用漢字が変わった場合のみ再生成
   const cacheKey = displayWord + "|" + text;
-  if (cacheKey !== lastLongText) {
+  const textChanged = cacheKey !== lastLongText;
+  if (textChanged) {
     lastLongText = cacheKey;
+    lastLongPos = -1;
+    lastLongSpanIndex = -1;
     wordDiv.innerHTML = "";
     longWordSpans = [];
     currentFinalSegments = buildFinalSegments(displayWord, text, segments);
@@ -645,6 +678,12 @@ function renderWordDisplay(state) {
     wordDiv.appendChild(frag);
   }
 
+  // pos が前回と同じならハイライトもスクロールも更新不要（高速早期リターン）
+  if (!textChanged && pos === lastLongPos) {
+    return;
+  }
+  lastLongPos = pos;
+
   // ハイライト状態の更新
   let activeKanjiIdx = 0;
   let currentSpanIndex = 0; // 現在の文字の<span>要素のインデックス
@@ -658,7 +697,6 @@ function renderWordDisplay(state) {
 
     const span = longWordSpans[spanIndex];
     if (!span) continue;
-
 
     const charDoneAt = seg.start + (seg.t ? seg.t.length : 0);
 
@@ -679,29 +717,35 @@ function renderWordDisplay(state) {
     currentSpanIndex = Math.max(0, longWordSpans.length - 1);
   }
 
-// ===== 中央追従スクロール =====
-const container = dom.wordLongWrap();
-const current = longWordSpans[currentSpanIndex];
-if (!container || !current) return;
+  // 現在の文字インデックスが前回と同じならレイアウト再計算とスクロール設定をスキップ（Layout Thrashing防止）
+  if (currentSpanIndex === lastLongSpanIndex && !textChanged) {
+    return;
+  }
+  lastLongSpanIndex = currentSpanIndex;
 
-const containerHeight = container.clientHeight;
-const contentHeight = container.scrollHeight;
+  // ===== 中央追従スクロール =====
+  const container = dom.wordLongWrap();
+  const current = longWordSpans[currentSpanIndex];
+  if (!container || !current) return;
 
-// 現在文字の中央位置
-const charCenter = current.offsetTop + current.offsetHeight / 2;
+  const containerHeight = container.clientHeight;
+  const contentHeight = container.scrollHeight;
 
-// 目標スクロール位置（中央配置）
-let targetScroll = charCenter - containerHeight / 2;
+  // 現在文字の中央位置
+  const charCenter = current.offsetTop + current.offsetHeight / 2;
 
-// ----- 下端クランプ（最後で止める）-----
-const maxScroll = contentHeight - containerHeight;
-if (targetScroll > maxScroll) targetScroll = maxScroll;
+  // 目標スクロール位置（中央配置）
+  let targetScroll = charCenter - containerHeight / 2;
 
-// ----- 上端クランプ -----
-if (targetScroll < 0) targetScroll = 0;
+  // ----- 下端クランプ（最後で止める）-----
+  const maxScroll = contentHeight - containerHeight;
+  if (targetScroll > maxScroll) targetScroll = maxScroll;
 
-// 適用
-container.scrollTop = targetScroll;
+  // ----- 上端クランプ -----
+  if (targetScroll < 0) targetScroll = 0;
+
+  // 適用
+  container.scrollTop = targetScroll;
 }
 
 function renderLongText(state) {
@@ -769,23 +813,28 @@ function renderLongText(state) {
 
       const visibleKana = chars.slice(start, start + DISPLAY_LEN);
 
-      // ★スパンを再利用し、textContent / className だけ差し替える
-      ensureSpanPool(_kanaSpanPool, kanaScroll, DISPLAY_LEN);
-      for (let i = 0; i < _kanaSpanPool.length; i++) {
-        const span = _kanaSpanPool[i];
+      const kanaKey = `${text}|${safePos}|${start}`;
+      if (kanaKey !== lastLongKanaKey) {
+        lastLongKanaKey = kanaKey;
 
-        if (i < visibleKana.length) {
-          // visibleKanaのi番目の要素は、元のchars配列では start + i 番目にあたる
-          const originalCharIndexInChars = start + i;
+        // ★スパンを再利用し、textContent / className だけ差し替える
+        ensureSpanPool(_kanaSpanPool, kanaScroll, DISPLAY_LEN);
+        for (let i = 0; i < _kanaSpanPool.length; i++) {
+          const span = _kanaSpanPool[i];
 
-          span.style.display = "";
-          span.textContent = visibleKana[i].char;
-          span.className = originalCharIndexInChars < safePos ? "done"
-            : originalCharIndexInChars === safePos ? "current" : "";
-        } else {
-          // 使わないスパンは非表示にして再利用に備える
-          span.style.display = "none";
-          span.className = "";
+          if (i < visibleKana.length) {
+            // visibleKanaのi番目の要素は、元のchars配列では start + i 番目にあたる
+            const originalCharIndexInChars = start + i;
+
+            span.style.display = "";
+            span.textContent = visibleKana[i].char;
+            span.className = originalCharIndexInChars < safePos ? "done"
+              : originalCharIndexInChars === safePos ? "current" : "";
+          } else {
+            // 使わないスパンは非表示にして再利用に備える
+            span.style.display = "none";
+            span.className = "";
+          }
         }
       }
     }
@@ -799,7 +848,6 @@ function renderLongText(state) {
     const CENTER_POS = Math.floor(DISPLAY_LEN / 2);
 
     const displayFull = getDisplayFullRoma({ text, pos, typed, inputedRomaji });
-
 
     // ★改行と、改行直後のスペースを1文字スペースに統一
     const cleanedRoma = displayFull.replace(/(\r?\n[ 　]*)+/g, ' ');
@@ -816,91 +864,135 @@ function renderLongText(state) {
       start = Math.max(safePos - CENTER_POS, 0);
     }
 
-    const visibleRoma = romaMap.slice(start, start + DISPLAY_LEN);
-    const relativeTyped = typedLen - start;
+    const romaKey = `${displayFull}|${safePos}|${start}`;
+    if (romaKey !== lastLongRomaKey) {
+      lastLongRomaKey = romaKey;
 
-    // ★スパンを再利用し、textContent / className だけ差し替える
-    ensureSpanPool(_romaSpanPool, romaScroll, DISPLAY_LEN);
-    for (let i = 0; i < _romaSpanPool.length; i++) {
-      const s = _romaSpanPool[i];
+      const visibleRoma = romaMap.slice(start, start + DISPLAY_LEN);
 
-      if (i < visibleRoma.length) {
-        const char = visibleRoma[i].char;
-        const isDone = i < safePos - start;
+      // ★スパンを再利用し、textContent / className だけ差し替える
+      ensureSpanPool(_romaSpanPool, romaScroll, DISPLAY_LEN);
+      for (let i = 0; i < _romaSpanPool.length; i++) {
+        const s = _romaSpanPool[i];
 
-        s.style.display = "";
-        if (char === ' ') {
-          s.textContent = '␣';
-          s.className = isDone ? "space-char done" : "space-char";
+        if (i < visibleRoma.length) {
+          const char = visibleRoma[i].char;
+          const isDone = i < safePos - start;
+
+          s.style.display = "";
+          if (char === ' ') {
+            s.textContent = '␣';
+            s.className = isDone ? "space-char done" : "space-char";
+          } else {
+            s.textContent = char;
+            s.className = isDone ? "done" : "";
+          }
         } else {
-          s.textContent = char;
-          s.className = isDone ? "done" : "";
+          // 使わないスパンは非表示にして再利用に備える
+          s.style.display = "none";
+          s.className = "";
         }
-      } else {
-        // 使わないスパンは非表示にして再利用に備える
-        s.style.display = "none";
-        s.className = "";
       }
     }
   }
 }
 
 function renderNormal({ text, pos, typed, inputedRomaji }) {
-const jpDiv = dom.jp();
-if (jpDiv) {
-   if (isEnglish(text)) {
-     jpDiv.style.display = "none";
-   } else {
-    jpDiv.style.display = "inline-block";
+  const jpDiv = dom.jp();
+  if (jpDiv) {
+    if (isEnglish(text)) {
+      jpDiv.style.display = "none";
+    } else {
+      jpDiv.style.display = "inline-block";
 
-  const done = text.slice(0, pos);
-  const remain = text.slice(pos);
-  jpDiv.innerHTML = `<span class="done">${done}</span>${remain}`;
-}
-}
+      if (text !== lastJpText || pos !== lastJpPos) {
+        lastJpText = text;
+        lastJpPos = pos;
 
-const romaDiv = dom.roma();
-if (romaDiv) {
-  const displayFull = getDisplayFullRoma({ text, pos, typed, inputedRomaji });
-  const typedLen = inputedRomaji.length + typed.length;
+        const done = text.slice(0, pos);
+        const remain = text.slice(pos);
 
-  if (displayFull !== lastRomaText || typedLen !== lastTypedLen) {
-    lastRomaText = displayFull;
-    lastTypedLen = typedLen;
-
-    romaDiv.innerHTML = "";
-    const fragment = document.createDocumentFragment();
-
-    for (let j = 0; j < displayFull.length; j++) {
-      const s = document.createElement("span");
-      const char = displayFull[j];
-      if (char === ' ') {
-        s.textContent = '␣';
-        s.classList.add('space-char');
-      } else {
-        s.textContent = char;
+        // innerHTMLパースを排除し、テキストノード更新でゼロアロケーション化
+        if (!_jpDoneSpan || !_jpRemainNode || jpDiv.firstChild !== _jpDoneSpan) {
+          jpDiv.innerHTML = "";
+          _jpDoneSpan = document.createElement("span");
+          _jpDoneSpan.className = "done";
+          _jpRemainNode = document.createTextNode("");
+          jpDiv.appendChild(_jpDoneSpan);
+          jpDiv.appendChild(_jpRemainNode);
+        }
+        _jpDoneSpan.textContent = done;
+        _jpRemainNode.textContent = remain;
       }
-      if (j < typedLen) s.className = "done";
-      fragment.appendChild(s);
     }
-    romaDiv.appendChild(fragment);
   }
-}
+
+  const romaDiv = dom.roma();
+  if (romaDiv) {
+    const displayFull = getDisplayFullRoma({ text, pos, typed, inputedRomaji });
+    const typedLen = inputedRomaji.length + typed.length;
+
+    if (displayFull !== lastRomaText || typedLen !== lastTypedLen) {
+      const textChanged = displayFull !== lastRomaText;
+      lastRomaText = displayFull;
+      lastTypedLen = typedLen;
+
+      if (textChanged || _normalRomaSpans.length !== displayFull.length) {
+        // 文字列が変わった場合のみスパンを新規構成
+        romaDiv.innerHTML = "";
+        _normalRomaSpans = [];
+        const fragment = document.createDocumentFragment();
+
+        for (let j = 0; j < displayFull.length; j++) {
+          const s = document.createElement("span");
+          const char = displayFull[j];
+          if (char === ' ') {
+            s.textContent = '␣';
+            s.className = j < typedLen ? "space-char done" : "space-char";
+          } else {
+            s.textContent = char;
+            if (j < typedLen) s.className = "done";
+          }
+          _normalRomaSpans.push(s);
+          fragment.appendChild(s);
+        }
+        romaDiv.appendChild(fragment);
+      } else {
+        // 文字列同一で打鍵位置のみ進んだ場合：既存スパンのclassNameのみ更新（ゼロアロケーション・GCゼロ）
+        for (let j = 0; j < _normalRomaSpans.length; j++) {
+          const s = _normalRomaSpans[j];
+          const isSpace = displayFull[j] === ' ';
+          const isDone = j < typedLen;
+          if (isSpace) {
+            s.className = isDone ? "space-char done" : "space-char";
+          } else {
+            s.className = isDone ? "done" : "";
+          }
+        }
+      }
+    }
+  }
 }
 
 function renderStats({ correctCount, mistakeCount }) {
-const statsDiv = dom.stats();
-if (!statsDiv) return;
+  if (correctCount === lastCorrectCount && mistakeCount === lastMistakeCount) return;
+  lastCorrectCount = correctCount;
+  lastMistakeCount = mistakeCount;
 
-const total = correctCount + mistakeCount;
-const accuracy = total === 0 ? 100 : Math.round((correctCount / total) * 100);
-statsDiv.innerHTML = `正タイプ数: ${correctCount}　ミスタイプ数: ${mistakeCount}　正確性: ${accuracy}%`;
+  const statsDiv = dom.stats();
+  if (!statsDiv) return;
+
+  const total = correctCount + mistakeCount;
+  const accuracy = total === 0 ? 100 : Math.round((correctCount / total) * 100);
+  statsDiv.textContent = `正タイプ数: ${correctCount}　ミスタイプ数: ${mistakeCount}　正確性: ${accuracy}%`;
 }
 
 /* =====================================================
   ゲーム中のフリーモード表示
   ===================================================== */
 function renderFreeModeBadge(isFreeMode) {
+  if (isFreeMode === lastFreeMode) return;
+  lastFreeMode = isFreeMode;
   const badge = dom.freeModeBadge();
   if (!badge) return;
 
@@ -911,34 +1003,48 @@ function renderFreeModeBadge(isFreeMode) {
   ゲーム中のミスモード表示
   ===================================================== */
 function renderMissModeBadge(isMissPractice) {
+  if (isMissPractice === lastMissMode) return;
+  lastMissMode = isMissPractice;
   const badge = dom.missModeBadge();
 
   if (!badge) return;
   badge.style.display = isMissPractice ? "block" : "none";
-
-
 }
 
 /**
  * 現在再生中のBGM情報を表示する
  * @param {number} now - 現在のタイムスタンプ
  */
-function renderBgmInfo(now) {
+// ★見た目不変の軽量化: textContent/opacity/displayは変化時のみ書き込む
+let _bgmInfoLast = { key: null, opacityQ: -1, visible: null };
+export function renderBgmInfo(now) {
     const info = gameState.currentBgmInfo;
     const displayEl = dom.bgmInfoDisplay();
 
     if (!displayEl) return;
     // startTimeがリセットされている場合も非表示
     if (!info || !gameState.startTime || gameState.startTime === 0) {
-        displayEl.style.opacity = "0";
+        if (_bgmInfoLast.visible !== false) {
+            _bgmInfoLast.visible = false;
+            _bgmInfoLast.key = null;
+            _bgmInfoLast.opacityQ = -1;
+            displayEl.style.opacity = "0";
+        }
         return;
     }
 
     // Update text content
-    displayEl.textContent = `♪ ${info.title} / ${info.composer}`;
+    const key = `♪ ${info.title} / ${info.composer}`;
+    if (_bgmInfoLast.key !== key) {
+        _bgmInfoLast.key = key;
+        _bgmInfoLast.visible = true;
+        displayEl.textContent = key;
+    }
 
     // Make element visible
-    displayEl.style.display = "block";
+    if (displayEl.style.display !== "block") {
+        displayEl.style.display = "block";
+    }
 
     // Fade in/out logic
     const fadeInDuration = 2000;   // 2秒でフェードイン
@@ -961,5 +1067,11 @@ function renderBgmInfo(now) {
         alpha = 0;
     }
 
-    displayEl.style.opacity = Math.max(0, alpha).toString();
+    const clamped = Math.max(0, alpha);
+    // 1%刻みに量子化（見た目のフェードは維持しつつstyle書き込みを間引き）
+    const opacityQ = Math.round(clamped * 100) / 100;
+    if (opacityQ !== _bgmInfoLast.opacityQ) {
+        _bgmInfoLast.opacityQ = opacityQ;
+        displayEl.style.opacity = opacityQ.toString();
+    }
 }

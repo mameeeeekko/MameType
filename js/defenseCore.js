@@ -32,6 +32,7 @@ const ctx = canvas.getContext("2d");
 let loopId = null;
 let defenseLoopActive = false;
 let endingSequence = false;
+let forceNextDefenseFrame = false; // ★キー入力直後など即時描画が必要なフレームを優先実行するフラグ
 
 let defenseState = { // gameState.enemyStats として扱われる
   isActive: false,
@@ -234,7 +235,7 @@ export function startDefenseMode(config = {}) {
     missPenalty: missPenaltyMs,
     corruptionRate: 0,
     wordList: [longText],
-    startTime: getNow(),
+    startTime: performance.now(), // ★endTime/ループtimestampと同系統の生時計に統一
     typed: "",
     inputedRomaji: "",
     currentWordPos: 0,
@@ -352,7 +353,7 @@ export function startDefenseMode(config = {}) {
       defenseState.transitionMsg = null;
       defenseState.nextPhaseGoal = null;
       // タイマーを開始
-      defenseState.startTime = getNow();
+      defenseState.startTime = performance.now(); // ★生時計に統一
   }, 2500);
   // ----------------
 
@@ -378,11 +379,13 @@ function gameLoop(timestamp) {
   //   1) recordFrame : 生のrAF間隔を記録（Auto品質の自動調整の入力）
   //   2) shouldRunFrame : Low/Auto低位ステージ時は描画フレームを間引く
   // （remainingTimeはdeltaTime減算方式のためスキップしても時間がずれない）
+  // ★キー入力直後（forceNextDefenseFrame）は低スペック時でも間引きをバイパスし、入力遅延を完全にゼロにする
   recordFrame(timestamp);
-  if (!shouldRunFrame(timestamp)) {
+  if (!forceNextDefenseFrame && !shouldRunFrame(timestamp)) {
     loopId = requestAnimationFrame(gameLoop);
     return;
   }
+  forceNextDefenseFrame = false;
 
   const now = timestamp;
   const deltaTime = now - (gameState._lastFrameTime || now);
@@ -405,7 +408,8 @@ function gameLoop(timestamp) {
   } else if (defenseState.endingAnimation?.active) {
     // 終了演出アニメーション中の侵食率・パーティクル更新
     const anim = defenseState.endingAnimation;
-    const elapsed = getNow() - anim.startTime;
+    // ★startTimeはループの生timestamp系なので、elapsedも生時計で統一
+    const elapsed = performance.now() - anim.startTime;
     anim.progress = Math.min(1.0, Math.max(0, elapsed / anim.duration));
 
     if (anim.type === 'failure') {
@@ -418,14 +422,15 @@ function gameLoop(timestamp) {
       defenseState.corruptionRate = Math.max(0, anim.initialCorruption * (1 - ease));
     }
 
-    // パーティクルの更新
+    // パーティクルの更新（★deltaTime(ms)を60fps基準のフレームスケールに正規化し、リフレッシュレート非依存に）
     if (anim.particles) {
+      const scale = (deltaTime / 1000) * 60; // deltaTimeはミリ秒 → 秒に換算してから60fps基準スケール化
       for (const p of anim.particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.98;
-        p.vy *= 0.98;
-        p.life -= p.decay;
+        p.x += p.vx * scale;
+        p.y += p.vy * scale;
+        p.vx *= Math.pow(0.98, scale);
+        p.vy *= Math.pow(0.98, scale);
+        p.life -= p.decay * scale;
         p.alpha = Math.max(0, p.life);
       }
     }
@@ -450,8 +455,8 @@ function gameLoop(timestamp) {
   // コンボバー更新
   updateDefenseComboTierBar(defenseState);
 
-  // ポップアップエフェクト描画
-  renderTimeBonusPopups(ctx);
+    // ポップアップエフェクト描画（★deltaTimeはミリ秒のため、effectManager側は秒前提なので1000で割って渡す）
+    renderTimeBonusPopups(ctx, deltaTime / 1000);
 
   // 終了判定
   if (!endingSequence) {
@@ -505,7 +510,7 @@ export function startDefenseEndingSequence(isFailed) {
   defenseState.endingAnimation = {
     active: true,
     type: isFailed ? 'failure' : 'success',
-    startTime: getNow(),
+    startTime: performance.now(), // ★elapsed側と同系統の生時計に統一
     duration: duration,
     initialCorruption: initialCorruption,
     progress: 0,
@@ -697,6 +702,11 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
         }
 
         playErrorSound();
+
+        // ★キー入力直後に同期描画し、入力ラグをゼロにする
+        forceNextDefenseFrame = true;
+        renderDefenseUI(ctx, defenseState);
+        updateDefenseComboTierBar(defenseState);
 
         return;
     }
@@ -992,11 +1002,14 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
 
         defenseState.wordPool = currentPool;
         defenseState.poolIndex = currentIndex;
+      }
     }
-        // -----------------------------------------------------
+    // -----------------------------------------------------
 
-        return;
-    }
+    // ★キー入力直後（途中入力、1文字正解、単語完成すべて）に即時同期描画し、入力ラグをゼロにする
+    forceNextDefenseFrame = true;
+    renderDefenseUI(ctx, defenseState);
+    updateDefenseComboTierBar(defenseState);
 }
 
 async function endDefenseMode(isAbort = false) {
@@ -1030,7 +1043,8 @@ async function endDefenseMode(isAbort = false) {
   showHud(true);
 
   const stats = gameState.enemyStats;
-  stats.endTime = getNow();
+  // ★生performance.now()ベースに統一（ポーズ中はループ側でstartTimeをずらすため、getNow()併用だと二重補正になる）
+  stats.endTime = performance.now();
 
   // defenseStateの最終状態もstatsにマージ
   Object.assign(stats, {
@@ -1093,7 +1107,7 @@ async function endDefenseMode(isAbort = false) {
             {
               player: defenseState, // defenseStateからプレイヤー情報を参照
               stage: stageConfig,
-              now: getNow(),
+              now: performance.now(), // ★生時計に統一（startTimeと同系統）
               startTime: defenseState.startTime,
             },
             stageConfig.star
@@ -1157,8 +1171,10 @@ async function endDefenseMode(isAbort = false) {
       };
 
       // ★★★ 修正箇所: クエストモードの総合的な統計情報を更新する処理を追加 ★★★
+      // ★battleTimeは生performance.now()ベースの実戦闘時間（ポーズ二重補正なし）。
+      //   playTimeはクエスト滞在タイマー側で加算するため渡さない。
       updateQuestStats({
-        playTime: (questStats.endTime - questStats.startTime) / 1000,
+        battleTime: Math.max(0, (performance.now() - (questStats.startTime ?? performance.now())) / 1000),
         kills: questStats.solvedCount, // 防衛モードではsolvedCountをkillsとして記録
         typed: questStats.correctCount,
         miss: questStats.mistakeCount,

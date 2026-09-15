@@ -302,6 +302,7 @@ export function resetQuestAll() {
         },
         questRecord: {
             totalPlayTime: 0,
+            totalBattleTime: 0, // ★戦闘時間のみ（avgKpmの分母用）
             totalPlays: 0,
             totalKills: 0,
             totalTyped: 0,

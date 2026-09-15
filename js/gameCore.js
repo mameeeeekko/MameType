@@ -13,7 +13,7 @@ import {
   render, initProgressBar, updateProgressBar, updateProgressText, markProgressDoneFromRight,
   initSpeedBar, updateSpeedBar,
   setLongTextMode, setUIMode, resetRendererState,
-  initTimeBar, setTimeLeft, setSolvedCount
+  initTimeBar, setTimeLeft, setSolvedCount, renderBgmInfo
 } from './renderer.js';
 import { closeDialogue } from './dialogue.js';
 import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, playTestSound as playTestSoundEffect } from "./effectManager.js";
@@ -1077,8 +1077,10 @@ function speedTick(now){
     }
   }
 
-  // ★毎フレーム描画（安定状態へ復帰）。打鍵表示を常に最新に保つ
-  renderState();
+  // ★タイピング文字・ステータスの描画はキー入力時（inputCore）に即時同期実行されるため、
+  //   毎フレームの無条件 renderState() を廃止（低スペックPCのCPU負荷・入力遅延を根本解消）。
+  //   時間経過でフェードするBGM曲名表示のみ毎フレーム更新する。
+  renderBgmInfo(getNow());
 
   if (gameState.currentMode?.id === GameModes.TIME_ATTACK.id) {
     // タイマー数値のDOM更新は updateTimeAttack 内で「秒が変わったときだけ」行う

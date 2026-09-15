@@ -634,12 +634,12 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
 
     // ミッションパターンごとの説明
     const missionDescriptions = [
-        { name: "撃破", desc: "時間無制限！指定数の敵を撃破せよ！" },
+        { name: "撃破", desc: "指定数の敵を撃破せよ！" },
         { name: "生存", desc: "制限時間まで生き残れ！" },
-        { name: "殲滅", desc: "敵を全て殲滅せよ！時間まで生き延びてもクリア！" },
+        { name: "殲滅", desc: "敵を全て殲滅せよ！" },
         { name: "電撃戦", desc: "短時間で敵を撃破せよ！HPが減ると敵が加速！" },
         { name: "精密防衛", desc: "高密度攻撃を防衛せよ！" },
-        { name: "タイムアタック", desc: "時間内に指定数撃破！速さが全て！" },
+        { name: "タイムアタック", desc: "時間内に指定数撃破！" },
         { name: "サボタージュ", desc: "HP減少の中、敵を撃破せよ！" },
         { name: "圧倒", desc: "低速の敵が大量に滞留！捌き切れ！" },
         { name: "精密射撃", desc: "ミスなく敵を撃破せよ！" },

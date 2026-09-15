@@ -18,7 +18,6 @@ import {
   exportQuestData,
   importQuestData,
 } from "./storage.js";
-import { startQuestSession, stopQuestSession, resetQuestSession, flushQuestSessionTime } from "./storage.js";
 import * as Game from "./gameCore.js";
 import { gameState, getLastSpecialModeInfo, getPaused, setPaused, backToMenu, getNow } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
@@ -52,19 +51,6 @@ import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
 import { supabase } from "../online/supabase.js";
 import { startDefenseMode } from "./defenseCore.js";
 import { showSaveDataNoticeOnce } from "./saveDataNotice.js";
-
-// ================================
-// 🔹Safari判定（アップデート表示の分岐用）
-// ================================
-// ★Safariは中央下ダウンロードバーが0%で固まる問題があるため、
-//   バーを出さず設定のステータス文のみで進捗を伝える。
-//   UA判定: "safari" を含み、chrome/crios/edg/android を含まない場合に true
-//   （Chrome/Edge の UA にも "Safari" が含まれるため、否定先読みで除外する）。
-let isSafari = false;
-try {
-  const ua = navigator.userAgent || "";
-  isSafari = /^((?!chrome|android|crios|edg).)*safari/i.test(ua);
-} catch (e) { /* 判定失敗時は無視 */ }
 
 // ================================
 // 🔹デイリーモードの固定設定
@@ -340,8 +326,6 @@ function _showSwDownloadBar(message) {
 }
 
 function _updateSwDownloadBar(percent, detail) {
-  // ★Safariでは中央下バーを出さないため、更新もしない
-  if (isSafari) return;
   const el = document.getElementById("swDownloadIndicator");
   if (!el) return;
   const safe = Math.max(0, Math.min(100, Math.floor(Number(percent) || 0)));
@@ -395,6 +379,16 @@ function _getCacheVersion() {
 //   バーを進めて「動いている」ことを見せる。実測が届いたら上書き。
 //   ※Safariでは中央下バー自体を出さないため、この推定進捗は使わない。
 // =====================================================
+// ★Safari判定: 中央下ダウンロードバーを非表示にし、設定ステータス文のみで進捗を伝える。
+//   Safariはダウンロード中バーが0%で固まる問題があるため、バーを出さず文字のみで管理する。
+//   判定は UA に "safari" を含み、Chrome/CriOS/Edge/Android を含まない場合に true
+//   （Chrome/Edge の UA にも "Safari" が含まれるため、否定先読みで除外する）。
+let isSafari = false;
+try {
+  const ua = navigator.userAgent || "";
+  isSafari = /^((?!chrome|android|crios|edg).)*safari/i.test(ua);
+} catch (e) { /* 判定失敗時は無視 */ }
+
 let _estimatedDlTimer = null;
 let _estimatedDlPct = 0;
 // ★バーに最後に表示した%（2フェーズDLの連続性を保つために使用）
@@ -662,20 +656,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // グローバルUIバー（全メニュー共通・左上）の表示制御を初期化
   initGlobalUiBar();
-
-  // ★クエスト滞在時間の取りこぼし防止：タブ非表示・ページ離脱時に確定する
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      try { flushQuestSessionTime(); } catch { /* 無視 */ }
-    }
-  });
-  window.addEventListener("pagehide", () => {
-    try { flushQuestSessionTime(); } catch { /* 無視 */ }
-  });
-  // ★定期確定（60秒毎。セッション外はno-op。長時間マップ放置の取りこぼし防止）
-  setInterval(() => {
-    try { flushQuestSessionTime(); } catch { /* 無視 */ }
-  }, 60000);
 
   bindModeStartEvents();
   bindResultEvents();
@@ -987,15 +967,23 @@ document.addEventListener("DOMContentLoaded", () => {
               if (Date.now() - pollStart > 30000) {
                 clearInterval(pollTimer);
                 _stopEstimatedDlProgress();
-                _hideSwDownloadBar();
+                // ★Safariでは中央下バーを出していないため、非表示化はスキップ
+                if (!isSafari) {
+                  _hideSwDownloadBar();
+                }
               }
               return;
             }
             if (reg.waiting && navigator.serviceWorker.controller) {
               clearInterval(pollTimer);
-              _stopEstimatedDlProgress();
-              _updateSwDownloadBar(100, "");
-              _hideSwDownloadBar();
+              // ★Safariでは中央下バーを出さないため、バー系はスキップ
+              if (!isSafari) {
+                _stopEstimatedDlProgress();
+                _updateSwDownloadBar(100, "");
+                _hideSwDownloadBar();
+              } else {
+                _stopEstimatedDlProgress();
+              }
               // ★ユーザー操作でのDLなら自動適用、バックグラウンド検出ならモーダル
               if (userInitiatedDownload) {
                 autoApplyUpdate(reg);
@@ -1011,11 +999,14 @@ document.addEventListener("DOMContentLoaded", () => {
               clearInterval(pollTimer);
               // ★ポーリング終了（Safariでwaiting検出が取りこぼされた場合）:
               //   ユーザー操作DLなら保険で自動適用、それ以外はバー掃除のみ
+              //   Safariでは中央下バーを出していないため、非表示化はスキップ
               if (userInitiatedDownload) {
                 autoApplyUpdate(reg);
               } else {
                 _stopEstimatedDlProgress();
-                _hideSwDownloadBar();
+                if (!isSafari) {
+                  _hideSwDownloadBar();
+                }
               }
             }
           } catch (e) { /* 無視 */ }
@@ -1059,7 +1050,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ★更新なし確定→下バーを消す（0%放置の防止）
         _stopEstimatedDlProgress();
-        _hideSwDownloadBar();
+        // ★Safariでは中央下バーを出していないため、非表示化はスキップ
+        if (!isSafari) {
+          _hideSwDownloadBar();
+        }
         // ★フラグを戻す（以後のバックグラウンド検出で誤自動適用しない）
         userInitiatedDownload = false;
 
@@ -1074,7 +1068,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // ★失敗時も下バーを消す
       _stopEstimatedDlProgress();
-      _hideSwDownloadBar();
+      // ★Safariでは中央下バーを出していないため、非表示化はスキップ
+      if (!isSafari) {
+        _hideSwDownloadBar();
+      }
 
     } finally {
 
@@ -2541,7 +2538,7 @@ function renderQuestSlots() {
         <div class="slot-header">
           <div class="slot-left">
             <span>SLOT ${i + 1}</span>
-            ${(s.hasSeenTrueEnding ?? slot.progress?.hasSeenTrueEnding ?? false) ? '<span class="slot-cleared">CLEARED</span>' : ''}
+            ${s.cleared > 0 ? '<span class="slot-cleared">CLEARED</span>' : ''}
           </div>
           <span class="slot-date">${date}</span>
         </div>
@@ -2590,7 +2587,6 @@ function renderQuestSlots() {
       )) return;
 
       saveQuestSlot(i);
-      reloadQuestPlayerStats(); // ★flush後の最新値をメモリに反映
       renderQuestSlots();
       // カスタムイベントでセーブ完了を通知（モーダル外からの待機用）
       try {
@@ -2615,7 +2611,6 @@ function renderQuestSlots() {
         return;
       }
 
-      resetQuestSession(); // ★旧セッション破棄（他スロットの時間が混ざらないように）
       reloadQuestProgress();
       reloadQuestPlayerStats();
       updateHud(null, { isQuestMode: true });
@@ -3657,7 +3652,6 @@ export function hideAllScreens() {
 }
 
 function showMainMenu() {
-  stopQuestSession(); // ★クエスト滞在を確定して計測停止
   hideAllScreens();
   updateHud(null, { isQuestMode: false }); // HUDを通常モードに戻す
   closeDialogue(); // ★会話モーダルを閉じる
@@ -3690,14 +3684,12 @@ function showQuestMenu() {
   showMenuBackground("quest_menu"); //クエストメニュー画面
 }
 function showStartMenu() { 
-  stopQuestSession(); // ★クエスト滞在を確定して計測停止
   hideAllScreens(); 
   fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (startMenuDiv) startMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示 
   showMenuBackground("title_menu");
 }
 function showFreeStartMenu() {
-  stopQuestSession(); // ★クエスト滞在を確定して計測停止
   hideAllScreens();
   fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (freeStartMenuDiv) freeStartMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示
@@ -3740,8 +3732,6 @@ export function showQuestMap() {
   hideAllScreens();
   showMenuBackground(false); // クエストマップは専用の描画があるため隠す
   reloadQuestProgress();
-  reloadQuestPlayerStats(); // ★セッションflush後の最新値をメモリに反映
-  startQuestSession(); // ★クエスト滞在計測開始（マップ・会話・ポーズ含む）
   
   questMapScreen.style.display = "block";
   renderQuestMapUI();
@@ -3791,8 +3781,6 @@ function bindMenuEvents() {
 
   questSaveBtn?.addEventListener("click", () => {
     playSE("questmenu"); // ★SAVE/LOADメニューを開いた時のSE
-    flushQuestSessionTime(); // ★開いた時点の滞在時間を確定して表示に反映
-    reloadQuestPlayerStats(); // ★flush後の最新値をメモリに反映
     questSaveMenuDiv.classList.remove("hidden");
     renderQuestSlots();
   });
@@ -3929,7 +3917,6 @@ function bindModeStartEvents() {
       await new Promise(r => setTimeout(r, 1000));
   
       // 進行状況の初期化
-      resetQuestSession(); // ★旧セッション破棄（旧データの時間が混ざらないように）
       resetQuestAll();
       // ★ MODIFIED: resetQuestAll の後にプロローグを再生するように移動
       // これにより、プロローグ再生済みのフラグがリセットされなくなります。
@@ -4152,7 +4139,6 @@ function bindMenuBackEvents() {
 
 //クエストサイドメニューの戻るボタン用
 export function backToQuestMenu() {
-  stopQuestSession(); // ★クエスト滞在を確定して計測停止
   closeDialogue(); // ★会話モーダルを閉じる
   showQuestMenu();
 }

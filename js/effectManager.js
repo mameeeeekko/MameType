@@ -1128,11 +1128,13 @@ export function spawnPlayerNegateEffect(
 // ===============================
 // 敵attackのレーザーの描出および、ガード演出
 // ===============================
-export function renderLaserEffects(ctx) {
+export function renderLaserEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = laserEffects.length - 1; i >= 0; i--) {
         const e = laserEffects[i];
-        e.life--;
-        const t = e.life / e.maxLife;
+        e.life -= scale;
+        const t = Math.min(1, Math.max(0, e.life / e.maxLife));
         const alpha = Math.sin(t * Math.PI); // フェードイン・アウト
         
         // ★防御成功時はレーザーの終点をバリア位置に補正
@@ -1256,14 +1258,16 @@ export function renderLaserEffects(ctx) {
     }
 }
 
-export function renderHitWaveEffects(ctx){
+export function renderHitWaveEffects(ctx, deltaTime = 1 / 60){
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
 
     for(let i = hitWaveEffects.length - 1; i >= 0; i--){
 
         const e = hitWaveEffects[i];
 
-        e.life--;
-        e.radius += 6;
+        e.life -= scale;
+        e.radius += 6 * scale;
 
         const t = Math.max(e.life / e.maxLife, 0);
 
@@ -1294,19 +1298,21 @@ export function renderHitWaveEffects(ctx){
 }
 
 
-export function renderPlayerDamageEffects(ctx) {
+export function renderPlayerDamageEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = playerDamageEffects.length - 1; i >= 0; i--) {
         const e = playerDamageEffects[i];
-        e.life--;
-        const t = 1 - (e.life / e.maxLife); // 0 -> 1
+        e.life -= scale;
+        const t = Math.min(1, Math.max(0, 1 - (e.life / e.maxLife))); // 0 -> 1（負のlife保護）
         const alpha = Math.sin((1 - t) * Math.PI); // フェードアウト
 
         // 💥 パーティクル描画
         e.particles.forEach(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life--;
-            const pAlpha = p.life / p.maxLife;
+            p.x += p.vx * scale;
+            p.y += p.vy * scale;
+            p.life -= scale;
+            const pAlpha = Math.max(0, p.life / p.maxLife);
             ctx.save();
             ctx.globalAlpha = pAlpha;
             ctx.fillStyle = "#ff6b6b";
@@ -1347,12 +1353,14 @@ export function renderPlayerDamageEffects(ctx) {
     }
 }
 
-export function renderPlayerNegateEffects(ctx) {
+export function renderPlayerNegateEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = playerNegateEffects.length - 1; i >= 0; i--) {
 
         const e = playerNegateEffects[i];
 
-        e.life--;
+        e.life -= scale;
 
         // 寿命切れなら削除
         if (e.life <= 0) {
@@ -1376,10 +1384,10 @@ export function renderPlayerNegateEffects(ctx) {
 
         // 💥 パーティクル描画
         e.particles.forEach(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life--;
-            const pAlpha = p.life / p.maxLife;
+            p.x += p.vx * scale;
+            p.y += p.vy * scale;
+            p.life -= scale;
+            const pAlpha = Math.max(0, p.life / p.maxLife);
             ctx.save();
             ctx.globalAlpha = pAlpha;
             ctx.fillStyle = "#45bffc";
@@ -1876,7 +1884,9 @@ export function spawnEnemyEffect(x, y, effect = "enemy1") {
     }
 }
 
-export function renderEnemyEffects(ctx) {
+export function renderEnemyEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
 
     // 毎フレームの filter() による新配列生成（GC負荷）を避け、インプレースで詰める
     let writeIndex = 0;
@@ -1890,12 +1900,18 @@ export function renderEnemyEffects(ctx) {
 
     for (const p of particles) {
 
-        if (p.vx != null) p.x += p.vx;
-        if (p.vy != null) p.y += p.vy;
+        if (p.vx != null) p.x += p.vx * scale;
+        if (p.vy != null) p.y += p.vy * scale;
 
-        p.life--;
+        p.life -= scale;
 
-        const alpha = p.life / p.maxLife;
+        // ★scale>1の高リフレッシュレート環境（Safari 120fps 等）では、life が 0 を
+        //   飛び越えて負になるフレームが発生する。負の life のまま描画すると
+        //   t > 1 → radius < 0 → createRadialGradient が IndexSizeError を投げ、
+        //   gameLoop が停止（フリーズ・チカチカ）するため、描画前に除外する。
+        if (p.life <= 0) continue;
+
+        const alpha = Math.max(0, p.life / p.maxLife);
 
         ctx.save();
 
@@ -1950,9 +1966,9 @@ export function renderEnemyEffects(ctx) {
         // 中ボス1：パーティクル
         // =====================================
         else if (p.type === "midboss1_particle") {
-            // 速度減衰
-            p.vx *= 0.98;
-            p.vy *= 0.98;
+            // 速度減衰（★フレームレート非依存: 1フレームあたり0.98倍を維持）
+            p.vx *= Math.pow(0.98, scale);
+            p.vy *= Math.pow(0.98, scale);
 
             // 時間経過で色を変化させる (白銀 -> 黄 -> オレンジ)
             const lifeRatio = p.life / p.maxLife;
@@ -1975,8 +1991,9 @@ export function renderEnemyEffects(ctx) {
         // ラストボス：パーティクル
         // =====================================
         else if (p.type === "boss2_particle") {
-            p.vx *= 0.98;
-            p.vy *= 0.98;
+            // 速度減衰（★フレームレート非依存: 1フレームあたり0.98倍を維持）
+            p.vx *= Math.pow(0.98, scale);
+            p.vy *= Math.pow(0.98, scale);
 
             const lifeRatio = p.life / p.maxLife;
             if (lifeRatio > 0.7) ctx.fillStyle = "#d3adf7"; // 紫
@@ -2348,17 +2365,19 @@ export function spawnKnockbackEffect(x, y){
     }
 }
 
-export function renderKnockbackEffects(ctx){
+export function renderKnockbackEffects(ctx, deltaTime = 1 / 60){
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
 
     for(let i = knockbackEffects.length - 1; i >= 0; i--){
 
         const e = knockbackEffects[i];
 
-        e.x += e.vx;
-        e.y += e.vy;
-        e.life--;
+        e.x += e.vx * scale;
+        e.y += e.vy * scale;
+        e.life -= scale;
 
-        const alpha = e.life / 20;
+        const alpha = Math.max(0, e.life / 20);
 
         ctx.save();
 
@@ -2395,15 +2414,17 @@ export function spawnLockOnEffect(enemy) {
     });
 }
 
-export function renderLockOnEffects(ctx) {
+export function renderLockOnEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = lockOnEffects.length - 1; i >= 0; i--) {
         const e = lockOnEffects[i];
 
-        e.life--;
-        const t = e.life / e.maxLife;
+        e.life -= scale;
+        const t = Math.min(1, Math.max(0, e.life / e.maxLife));
 
         // 角度回転
-        e.angle += 0.1;
+        e.angle += 0.1 * scale;
 
         // サイズ縮小
         const size = e.size * t;
@@ -2443,11 +2464,13 @@ export function spawnShotEffect(sx, sy, tx, ty) {
     });
 }
 
-export function renderShotEffects(ctx) {
+export function renderShotEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = shotEffects.length - 1; i >= 0; i--) {
         const s = shotEffects[i];
 
-        s.progress += s.speed;
+        s.progress += s.speed * scale;
 
         if (s.progress >= 1) {
             shotEffects.splice(i, 1);
@@ -2513,14 +2536,16 @@ export function playHitEffect(x, y) {
     });
 }
 
-export function renderHitParticles(ctx) {
+export function renderHitParticles(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = hitEffects.length - 1; i >= 0; i--) {
         const e = hitEffects[i];
 
-        e.life--;
-        e.radius += 2.5;
+        e.life -= scale;
+        e.radius += 2.5 * scale;
 
-        const alpha = e.life / e.maxLife;
+        const alpha = Math.max(0, e.life / e.maxLife);
 
         ctx.save();
         ctx.globalAlpha = alpha;
@@ -2781,10 +2806,12 @@ export function spawnChainBreakEffect(x, y) {
     });
 }
 
-export function renderChainBreakEffects(ctx) {
+export function renderChainBreakEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = chainBreakEffects.length - 1; i >= 0; i--) {
         const e = chainBreakEffects[i];
-        e.life--;
+        e.life -= scale;
 
         if (e.life <= 0) {
             chainBreakEffects.splice(i, 1);
@@ -2794,9 +2821,9 @@ export function renderChainBreakEffects(ctx) {
         const t = e.life / e.maxLife;
 
         if (e.type === "particle") {
-            e.x += e.vx;
-            e.y += e.vy;
-            e.rotation += e.rotationSpeed;
+            e.x += e.vx * scale;
+            e.y += e.vy * scale;
+            e.rotation += e.rotationSpeed * scale;
             ctx.save();
             ctx.globalAlpha = t;
             ctx.fillStyle = `rgba(255, ${100 + 100 * (1 - t)}, ${100 + 100 * (1 - t)}, ${t})`; // 白 -> 赤
@@ -2833,12 +2860,14 @@ export function spawnScorePopup(x, y, score, multiplier) {
     });
 }
 
-export function renderScorePopups(ctx) {
+export function renderScorePopups(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
 
     for (const p of scorePopups) {
 
-        p.life++;
-        p.y += p.vy;
+        p.life += scale;
+        p.y += p.vy * scale;
 
         const alpha = 1 - (p.life / p.maxLife);
 
@@ -2893,14 +2922,16 @@ export function spawnDamagePopup(x, y, damage) {
     });
 }
 
-export function renderDamagePopups(ctx) {
+export function renderDamagePopups(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
 
     for (let i = damagePopups.length - 1; i >= 0; i--) {
         const p = damagePopups[i];
 
-        p.y += p.vy;
-        p.life--;
-        p.alpha -= 0.02;
+        p.y += p.vy * scale;
+        p.life -= scale;
+        p.alpha -= 0.02 * scale;
 
         ctx.save();
         ctx.globalAlpha = p.alpha;
@@ -2948,15 +2979,17 @@ export function spawnTimeBonusPopup(x, y, text, options = {}) {
  * タイムボーナスのポップアップを描画します。
  * @param {CanvasRenderingContext2D} ctx - 描画コンテキスト
  */
-export function renderTimeBonusPopups(ctx) {
+export function renderTimeBonusPopups(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = timeBonusPopups.length - 1; i >= 0; i--) {
         const p = timeBonusPopups[i];
 
         // 'float' タイプの場合のみY座標を動かす
         if (p.type === 'float') {
-            p.y += p.vy;
+            p.y += p.vy * scale;
         }
-        p.life--;
+        p.life -= scale;
 
         // ★★★ アニメーションタイプに関わらず、アルファ値の計算を適用する ★★★
         const FADE_IN_DURATION = 60;  // フェードインにかける時間（約1秒）
@@ -3014,10 +3047,12 @@ export function spawnComboTierUpEffect(x, y, tier, isMax) {
     }
 }
 
-export function renderComboTierUpEffects(ctx) {
+export function renderComboTierUpEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
     for (let i = comboTierUpEffects.length - 1; i >= 0; i--) {
         const e = comboTierUpEffects[i];
-        e.life--;
+        e.life -= scale;
 
         if (e.life <= 0) {
             comboTierUpEffects.splice(i, 1);
@@ -3713,7 +3748,9 @@ function spawnItemCooldownEffect({
 // RENDER
 // ======================================
 
-export function renderItemSkillEffects(ctx) {
+export function renderItemSkillEffects(ctx, deltaTime = 1 / 60) {
+    // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
+    const scale = deltaTime * 60;
 
     for (
         let i = itemSkillEffects.length - 1;
@@ -3723,10 +3760,10 @@ export function renderItemSkillEffects(ctx) {
 
         const e = itemSkillEffects[i];
 
-        e.life--;
+        e.life -= scale;
 
         const alpha =
-            e.life / e.maxLife;
+            Math.max(0, e.life / e.maxLife);
 
         ctx.save();
 
@@ -3754,7 +3791,7 @@ export function renderItemSkillEffects(ctx) {
         // ======================================
         else if (e.type === "skill_kill_lock") {
 
-            e.angle += 0.15;
+            e.angle += 0.15 * scale;
 
             ctx.translate(e.x, e.y);
             ctx.rotate(e.angle);
@@ -3798,8 +3835,8 @@ export function renderItemSkillEffects(ctx) {
         // ======================================
         else if (e.type === "item_kill_particle") {
 
-            e.x += e.vx;
-            e.y += e.vy;
+            e.x += e.vx * scale;
+            e.y += e.vy * scale;
 
             ctx.fillStyle = "#ffb347";
 
@@ -3819,7 +3856,7 @@ export function renderItemSkillEffects(ctx) {
         // ======================================
         else if (e.type === "skill_heal_circle") {
 
-            e.angle += 0.05;
+            e.angle += 0.05 * scale;
 
             ctx.translate(e.x, e.y);
             ctx.rotate(e.angle);
@@ -3850,8 +3887,8 @@ export function renderItemSkillEffects(ctx) {
         // ======================================
         else if (e.type === "item_heal_particle") {
 
-            e.x += e.vx;
-            e.y += e.vy;
+            e.x += e.vx * scale;
+            e.y += e.vy * scale;
 
             ctx.fillStyle = "#79ff93";
 
@@ -3871,7 +3908,7 @@ export function renderItemSkillEffects(ctx) {
         // ======================================
         else if (e.type === "skill_freeze_hex") {
 
-            e.angle += 0.05;
+            e.angle += 0.05 * scale;
 
             ctx.translate(e.x, e.y);
             ctx.rotate(e.angle);
@@ -3995,8 +4032,8 @@ export function renderItemSkillEffects(ctx) {
             e.type === "skill_knockback_particle"
         ){
 
-            e.x += e.vx;
-            e.y += e.vy;
+            e.x += e.vx * scale;
+            e.y += e.vy * scale;
 
             ctx.fillStyle =
                 "#d9d9d9";
@@ -4032,7 +4069,7 @@ export function renderItemSkillEffects(ctx) {
 
             const t = Math.max(0, Math.min(1, remaining / duration));
 
-            e.angle += 0.02;
+            e.angle += 0.02 * scale;
 
             // =========================
             // ① コア
@@ -4088,7 +4125,7 @@ export function renderItemSkillEffects(ctx) {
             // =========================
             if (!e.particles) e.particles = [];
 
-            if (Math.random() < 0.35) {
+            if (Math.random() < 1 - Math.pow(0.65, scale)) {
                 const a = Math.random() * Math.PI * 2;
                 const d = e.radius + Math.random() * 40;
 
@@ -4102,9 +4139,9 @@ export function renderItemSkillEffects(ctx) {
             }
 
             for (const p of e.particles) {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life--;
+                p.x += p.vx * scale;
+                p.y += p.vy * scale;
+                p.life -= scale;
 
                 const a = p.life / 40;
 
@@ -4144,9 +4181,9 @@ export function renderItemSkillEffects(ctx) {
         else if (e.type === "skill_revive_cross") {
 
             const t =
-                1 - (e.life / e.maxLife);
+                Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
 
-            e.angle += 0.03;
+            e.angle += 0.03 * scale;
 
             // 外周リング
             ctx.strokeStyle = "#7dff9f";
@@ -4230,8 +4267,8 @@ export function renderItemSkillEffects(ctx) {
 
         else if (e.type === "skill_revive_particle") {
 
-            e.x += e.vx;
-            e.y += e.vy;
+            e.x += e.vx * scale;
+            e.y += e.vy * scale;
 
             ctx.fillStyle = "#8dffae";
 
@@ -4254,7 +4291,7 @@ export function renderItemSkillEffects(ctx) {
         // ======================================
         else if (e.type === "skill_cooldown_hud") {
 
-            e.angle += 0.25;
+            e.angle += 0.25 * scale;
 
             ctx.translate(e.x, e.y);
             ctx.rotate(e.angle);
@@ -4275,7 +4312,7 @@ export function renderItemSkillEffects(ctx) {
         // ======================================
         else if (e.type === "item_cooldown_line") {
 
-            e.x += e.vx;
+            e.x += e.vx * scale;
 
             ctx.strokeStyle = "#d0d0d0";
             ctx.lineWidth = 2;

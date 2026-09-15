@@ -72,6 +72,7 @@ const DEFAULT_STATS = {
     // クエストモード詳細ステータス
     questRecord: {
         totalPlayTime: 0,
+        totalBattleTime: 0, // ★戦闘時間のみ（avgKpmの分母用。マップ/会話/ポーズは含めない）
         totalPlays: 0,
         totalKills: 0,
         totalTyped: 0,
@@ -327,6 +328,18 @@ export function reloadQuestPlayerStats() {
 }
 
 function saveStats() {
+    // ★セッションflushでstorage側が進んでいる場合、メモリ側で上書き消ししないよう同期する
+    try {
+        const raw = JSON.parse(localStorage.getItem("questPlayerStats") || "null");
+        const storedPlay = raw?.questRecord?.totalPlayTime;
+        if (typeof storedPlay === "number" && storedPlay > (playerStats.questRecord?.totalPlayTime || 0)) {
+            playerStats.questRecord.totalPlayTime = storedPlay;
+        }
+        const storedBattle = raw?.questRecord?.totalBattleTime;
+        if (typeof storedBattle === "number" && playerStats.questRecord?.totalBattleTime == null) {
+            playerStats.questRecord.totalBattleTime = storedBattle;
+        }
+    } catch { /* 無視 */ }
     localStorage.setItem("questPlayerStats", JSON.stringify(playerStats));
     autoSaveQuest();
 }
@@ -705,9 +718,14 @@ export function getCooldownSpeed(
 // ===============================
 export function updateQuestStats(result = {}) {
     const stats = playerStats.questRecord;
+    if (stats.totalBattleTime == null) {
+        // ★旧セーブ移行：初回のみ現totalPlayTimeで初期化
+        stats.totalBattleTime = stats.totalPlayTime || 0;
+    }
 
     stats.totalPlays++;
-    stats.totalPlayTime += result.playTime || 0;
+    // ★playTimeはクエスト滞在タイマー側で加算するため、ここでは加算しない（二重計上防止）
+    stats.totalBattleTime += result.battleTime || 0;
     stats.totalKills += result.kills || 0;
     stats.totalTyped += result.typed || 0;
     stats.totalMiss += result.miss || 0;
@@ -758,8 +776,8 @@ export function updateQuestStats(result = {}) {
     // =========================
     const totalAll = stats.totalTyped + stats.totalMiss;
 
-    stats.avgKpm = stats.totalPlayTime > 0
-        ? (stats.totalTyped / stats.totalPlayTime) * 60
+    stats.avgKpm = stats.totalBattleTime > 0
+        ? (stats.totalTyped / stats.totalBattleTime) * 60
         : 0;
 
     stats.avgAccuracy = totalAll > 0

@@ -20,6 +20,70 @@ let _bgGridH = 0;
 // 明滅アクセント対象セル（約5%）の事前列挙。毎フレームの全セル seededRandom 走査を避ける
 let _bgAccentCells = [];
 
+// ★A: オフスクリーンのDPR対応用
+// 本体キャンバスは canvasUtil で「実効DPR × stageScale」のバッキングを持つため、
+// CSS px等倍のオフスクリーンを毎フレーム拡大転写するとぼやけ＋Chromeのスケーラ負荷になる。
+// オフスクリーンをDPR実解像度で作り、等倍転写することで見た目をシャープにしつつ負荷を下げる。
+// （描画内容・色・配置は同一）
+let _bgGridDpr = 0;
+let _corruptDpr = 0;
+
+// ★B: 毎フレーム生成していたグラデーションのキャッシュ
+let _scanGrad = null;
+let _scanGradH = 0;
+// 中央コア用スプライト（放射グラデーションを事前レンダリング）
+let _coreSprite = null;
+const CORE_SPRITE_SIZE = 160;
+
+// ★A: tierWrapper配置のキャッシュ（値は固定なので変化時のみ書き込み）
+let _tierPosLast = { w: -1, l: -1, t: -1 };
+
+// ★A: 単語幅・ローマ字のキャッシュ（フォント固定のため使い回し可能）
+let _wordWidthCache = new Map();
+let _romaFullCache = { key: null, value: "" };
+let _wordListRef = null;
+let _wordsCache = null;
+let _textWordsCache = null;
+
+/** 単語の描画幅を取得（font + word でキャッシュ。表示結果は同一） */
+function getCachedWordWidth(ctx, font, word) {
+  const key = font + "|" + word;
+  let w = _wordWidthCache.get(key);
+  if (w === undefined) {
+    ctx.font = font;
+    _lastFont = font;
+    w = ctx.measureText(word).width;
+    if (_wordWidthCache.size > 512) _wordWidthCache.clear();
+    _wordWidthCache.set(key, w);
+  }
+  return w;
+}
+
+// ★A: stats文字列化のキャッシュ（toFixed/toLocaleStringを間引き）
+let _statsCache = { key: null, timeText: "", scoreText: "", typedText: "", corruptText: "" };
+// ★A: font設定のキャッシュ（同一fontの再設定を排除）
+let _lastFont = null;
+function setFontCached(ctx, f) {
+  if (_lastFont !== f) {
+    _lastFont = f;
+    ctx.font = f;
+  }
+}
+
+/**
+ * 本体キャンバスの実効DPR（バッキングpx / CSS px）を返す。
+ * canvasUtil.fitCanvasToContainerFill が設定した実サイズから逆算するため、
+ * 品質設定・stageScaleの変更に自動追従する。
+ */
+function getCanvasDpr(ctx, cw) {
+  const bw = ctx.canvas.width || 0;
+  if (bw > 0 && cw > 0) {
+    const dpr = bw / cw;
+    if (Number.isFinite(dpr) && dpr > 0) return dpr;
+  }
+  return 1;
+}
+
 // 侵食グリッド（corruption が変化したときのみ再計算）
 let _corruptCanvas = null;
 let _corruptW = 0;
@@ -44,6 +108,11 @@ function seededRandom(x, y) {
 export function renderDefenseUI(ctx, state) {
   const cw = ctx.canvas.clientWidth;
   const ch = ctx.canvas.clientHeight;
+
+  // ★A: fontキャッシュはフレーム単位でリセット
+  // （effectManager等が同じctxに直接fontを設定するため、フレーム跨ぎでは信用しない。
+  //   フレーム内の font 切替（stats 4回 + wordList 行ごと）はこのキャッシュで吸収する）
+  _lastFont = null;
 
   const centerX = cw / 2;
   const centerY = ch / 2;
@@ -88,12 +157,15 @@ export function renderDefenseUI(ctx, state) {
   //   侵食率・演出状態がしきい値以上変化したときだけ再描画する。
   //   毎フレームの全セル再計算（≈1万セル × Math.hypot/Math.sin）を
   //   1回の drawImage に置き換える。
-  if (!_corruptCanvas || _corruptW !== cw || _corruptH !== ch) {
+  // ★A: オフスクリーンは本体と同じ実効DPRで作り等倍転写（内容・色は同一）。
+  const uiDpr = getCanvasDpr(ctx, cw);
+  if (!_corruptCanvas || _corruptW !== cw || _corruptH !== ch || _corruptDpr !== uiDpr) {
     _corruptCanvas = document.createElement("canvas");
-    _corruptCanvas.width = cw;
-    _corruptCanvas.height = ch;
+    _corruptCanvas.width = Math.max(1, Math.round(cw * uiDpr));
+    _corruptCanvas.height = Math.max(1, Math.round(ch * uiDpr));
     _corruptW = cw;
     _corruptH = ch;
+    _corruptDpr = uiDpr;
     _lastCorruption = -1; // サイズ変更時は必ず再描画させる
   }
 
@@ -104,7 +176,10 @@ export function renderDefenseUI(ctx, state) {
     Math.abs(animProgress - _lastAnimProgress) >= CORRUPT_REDRAW_THRESHOLD;
 
   if (corruptionDirty) {
-    redrawCorruptionGrid(_corruptCanvas.getContext("2d"), {
+    const offCtx = _corruptCanvas.getContext("2d");
+    offCtx.setTransform(1, 0, 0, 1, 0, 0);
+    offCtx.scale(uiDpr, uiDpr);
+    redrawCorruptionGrid(offCtx, {
       cw, ch, centerX, centerY,
       hexSize, horizDist, vertDist,
       startX, startY, endX, endY,
@@ -117,8 +192,8 @@ export function renderDefenseUI(ctx, state) {
     _lastAnimProgress = animProgress;
   }
 
-  // キャッシュ済み侵食グリッドを 1 回の drawImage で転写
-  ctx.drawImage(_corruptCanvas, 0, 0);
+  // キャッシュ済み侵食グリッドを等倍で転写（DPR一致のため拡大処理なし）
+  ctx.drawImage(_corruptCanvas, 0, 0, cw, ch);
 
   // 3. 中央のコア（三重装甲光輪）
   renderTrinityShield(ctx, state);
@@ -130,6 +205,7 @@ export function renderDefenseUI(ctx, state) {
   renderWordList(ctx, state);
 
   // 7. コンボバーの位置とサイズを調整
+  // ★A: 値は固定なので変化時のみ書き込み（見た目は同一、レイアウト無効化を抑制）
   const tierWrapper = document.getElementById("defenseComboTierWrapper");
   if (tierWrapper) {
     const rightUiX = cw - 180; // 右側UIの基準X座標
@@ -137,10 +213,16 @@ export function renderDefenseUI(ctx, state) {
     const barWidth = 120;      // バーの幅をさらに短くする
     const displayCenterY = ch / 2;
     const barOffsetY = 18; // オフセットを調整し、入力文字の真下に配置
+    const topPx = displayCenterY + barOffsetY;
 
-    tierWrapper.style.width = `${barWidth}px`;
-    tierWrapper.style.left = `${romaX}px`; // ローマ字の開始位置に合わせる
-    tierWrapper.style.top = `${displayCenterY + barOffsetY}px`;
+    if (_tierPosLast.w !== barWidth || _tierPosLast.l !== romaX || _tierPosLast.t !== topPx) {
+      _tierPosLast.w = barWidth;
+      _tierPosLast.l = romaX;
+      _tierPosLast.t = topPx;
+      tierWrapper.style.width = `${barWidth}px`;
+      tierWrapper.style.left = `${romaX}px`; // ローマ字の開始位置に合わせる
+      tierWrapper.style.top = `${topPx}px`;
+    }
   }
 
   // 8. 終了アニメーション演出（パージウェーブ、パーティクル、フラッシュ等）
@@ -221,7 +303,8 @@ function renderBgmInfo(ctx) {
     ctx.globalAlpha = Math.max(0, alpha);
 
     // 曲名
-    ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
+    // ★A: font設定もキャッシュ経路に統一（_lastFontの整合性を保つ）
+    setFontCached(ctx, "bold 14px 'M PLUS Rounded 1c', sans-serif");
     ctx.fillStyle = "#e4e4e4";
     ctx.fillText(`♪ ${info.title} / ${info.composer}`, x, y);
 
@@ -236,6 +319,7 @@ function renderBgmInfo(ctx) {
 function renderCyberGridBackground(ctx) {
   const cw = ctx.canvas.clientWidth;
   const ch = ctx.canvas.clientHeight;
+  const dpr = getCanvasDpr(ctx, cw);
   const time = performance.now();
 
   // 1. 背景色
@@ -243,21 +327,25 @@ function renderCyberGridBackground(ctx) {
   ctx.fillRect(0, 0, cw, ch);
 
   // 2. 静的なハニカムグリッド線 — オフスクリーンキャッシュ
+  // ★A: オフスクリーンを本体と同じ実効DPRで作り等倍転写（内容・色は同一）。
+  // 従来のCSS px等倍→拡大転写はぼやけ＋Chromeのスケーラ負荷の原因だった。
   const hexSize = 40;
   const hexWidth = Math.sqrt(3) * hexSize;
   const hexHeight = 2 * hexSize;
   const horizDist = hexWidth;
   const vertDist = hexHeight * 3 / 4;
 
-  // サイズが変わったときのみキャッシュを再生成
-  if (!_bgGridCanvas || _bgGridW !== cw || _bgGridH !== ch) {
+  // サイズ・DPRが変わったときのみキャッシュを再生成
+  if (!_bgGridCanvas || _bgGridW !== cw || _bgGridH !== ch || _bgGridDpr !== dpr) {
     _bgGridCanvas = document.createElement("canvas");
-    _bgGridCanvas.width = cw;
-    _bgGridCanvas.height = ch;
+    _bgGridCanvas.width = Math.max(1, Math.round(cw * dpr));
+    _bgGridCanvas.height = Math.max(1, Math.round(ch * dpr));
     _bgGridW = cw;
     _bgGridH = ch;
+    _bgGridDpr = dpr;
 
     const offCtx = _bgGridCanvas.getContext("2d");
+    offCtx.scale(dpr, dpr);
     offCtx.strokeStyle = "rgba(0, 150, 200, 0.1)";
     offCtx.lineWidth = 1;
 
@@ -276,22 +364,24 @@ function renderCyberGridBackground(ctx) {
     }
   }
 
-  // キャッシュ済みグリッド線を 1 回の drawImage で転写
-  ctx.drawImage(_bgGridCanvas, 0, 0);
+  // キャッシュ済みグリッド線を等倍で転写（DPR一致のため拡大処理なし）
+  ctx.drawImage(_bgGridCanvas, 0, 0, cw, ch);
 
+  // ★B: save/restoreを1回に集約し、fillStyle文字列生成を削減。
+  // 明滅アクセントは事前列挙の約5%セルのみ（対象・色・配置は同一）。
   ctx.save();
 
   // 3. ランダムな明滅アクセント（対象は事前列挙済みの全体の約5%のみ）
   for (let i = 0; i < _bgAccentCells.length; i++) {
     const cell = _bgAccentCells[i];
     const blinkAlpha = (Math.sin(time * 0.0005 + cell.col + cell.row) + 1) / 2 * 0.3;
-    ctx.fillStyle = `rgba(0, 200, 255, ${blinkAlpha})`;
+    ctx.fillStyle = `rgba(0, 200, 255, ${blinkAlpha.toFixed(3)})`;
     drawHexagon(ctx, cell.cx, cell.cy, hexSize, true);
   }
 
   // 4. 四隅のコーナーアクセント
   const cornerSize = 30;
-  const cornerAlpha = (Math.sin(time * 0.0003) + 1) / 2 * 0.5 + 0.2; // 0.2 ~ 0.7
+  const cornerAlpha = ((Math.sin(time * 0.0003) + 1) / 2 * 0.5 + 0.2).toFixed(3); // 0.2 ~ 0.7
   ctx.strokeStyle = `rgba(0, 220, 255, ${cornerAlpha})`;
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -321,49 +411,62 @@ function renderDefenseStats(ctx, state) {
   const cw = ctx.canvas.clientWidth;
   const ch = ctx.canvas.clientHeight;
 
-  ctx.font = "bold 18px 'Noto Sans Mono', monospace";
+  // ★A: 文字列化（toFixed/toLocaleString）は変化時のみ再計算。表示内容は同一。
+  // 0.1秒表示・整数表示なので、キー変化がなければ前回文字列を使い回す。
+  const timeKey = Math.ceil(state.remainingTime / 100);
+  const corruptKey = Math.round(state.corruptionRate * 1000);
+  const key = timeKey + "|" + corruptKey + "|" + (state.countedTypedChars || 0) +
+    "|" + (state.totalCharsToType || 0) + "|" + (state.gScore || 0) + "|" + (state.currentCombo || 0);
+  if (key !== _statsCache.key) {
+    _statsCache.key = key;
+    _statsCache.timeText = `TIME: ${(state.remainingTime / 1000).toFixed(1)}`;
+    _statsCache.timeRed = (state.remainingTime / 1000) < 10;
+    _statsCache.corruptText = `CORRUPTION: ${(state.corruptionRate * 100).toFixed(1)}%`;
+    _statsCache.corruptRed = (state.corruptionRate * 100) > 80;
+    const marginChars = (state.countedTypedChars || 0) - (state.totalCharsToType || 0);
+    _statsCache.marginText = `MARGIN: ${marginChars >= 0 ? `+${marginChars}` : marginChars}`;
+    _statsCache.marginBlue = marginChars >= 0;
+    _statsCache.scoreText = (state.gScore || 0).toLocaleString();
+    _statsCache.comboText = (state.currentCombo || 0).toLocaleString();
+  }
+
+  setFontCached(ctx, "bold 18px 'Noto Sans Mono', monospace");
   ctx.textAlign = "center";
 
   // 残り時間
-  const time = (state.remainingTime / 1000).toFixed(1);
-  ctx.fillStyle = time < 10 ? "#ff4d4d" : "#e0e0e0";
-  ctx.fillText(`TIME: ${time}`, cw / 2, 30);
+  ctx.fillStyle = _statsCache.timeRed ? "#ff4d4d" : "#e0e0e0";
+  ctx.fillText(_statsCache.timeText, cw / 2, 30);
 
   // 侵食率
-  const corruption = (state.corruptionRate * 100).toFixed(1);
-  ctx.fillStyle = corruption > 80 ? "#ff4d4d" : "#e0e0e0";
-  ctx.fillText(`CORRUPTION: ${corruption}%`, cw / 2, 60);
+  ctx.fillStyle = _statsCache.corruptRed ? "#ff4d4d" : "#e0e0e0";
+  ctx.fillText(_statsCache.corruptText, cw / 2, 60);
 
   // 目標文字数との差分 (マージン)
-  const marginChars = state.countedTypedChars - state.totalCharsToType;
-  const marginText = marginChars >= 0 ? `+${marginChars}` : marginChars;
   // 目標達成後は色を変える
-  ctx.fillStyle = marginChars >= 0 ? "#a5d6ff" : "#e0e0e0";
-  ctx.fillText(`MARGIN: ${marginText}`, cw / 2, 90);
+  ctx.fillStyle = _statsCache.marginBlue ? "#a5d6ff" : "#e0e0e0";
+  ctx.fillText(_statsCache.marginText, cw / 2, 90);
 
   // --- 右上のスコア表示 ---
-  const score = state.gScore || 0;
   const scoreX = cw - 12;
   const scoreY = 12;
 
   ctx.save();
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
-  ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+  setFontCached(ctx, "bold 12px 'Noto Sans Mono', monospace");
   ctx.fillStyle = "#f0f6fc";
   ctx.fillText("SCORE", scoreX, scoreY + 25);
-  ctx.font = "bold 30px 'Noto Sans Mono', monospace";
-  ctx.fillText(score.toLocaleString(), scoreX, scoreY + 25 + 14);
+  setFontCached(ctx, "bold 30px 'Noto Sans Mono', monospace");
+  ctx.fillText(_statsCache.scoreText, scoreX, scoreY + 25 + 14);
 
   // --- 右上のコンボ数表示 ---
-  const combo = state.currentCombo || 0;
   const comboY = scoreY + 25 + 14 + 45; // スコアの下に配置（さらに距離を離す）
 
-  ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+  setFontCached(ctx, "bold 12px 'Noto Sans Mono', monospace");
   ctx.fillStyle = "#f0f6fc";
   ctx.fillText("COMBO", scoreX, comboY);
-  ctx.font = "bold 30px 'Noto Sans Mono', monospace";
-  ctx.fillText(combo.toLocaleString(), scoreX, comboY + 14);
+  setFontCached(ctx, "bold 30px 'Noto Sans Mono', monospace");
+  ctx.fillText(_statsCache.comboText, scoreX, comboY + 14);
 
   ctx.restore();
 
@@ -374,7 +477,42 @@ function renderDefenseStats(ctx, state) {
 
 
 /**
+ * コア用スプライト（放射グラデーション）を事前生成して返す。
+ * ★B: 毎フレーム createRadialGradient していたものを、アニメ状態3種ぶんだけ事前生成。
+ * 見た目は同一（色・半径・アルファは従来の計算値をそのまま焼き付け）。
+ */
+function getCoreSprite(kind, coreAlpha) {
+  const size = CORE_SPRITE_SIZE;
+  const key = kind + "|" + Math.round(coreAlpha * 40) / 40;
+  if (_coreSprite && _coreSprite.key === key) return _coreSprite.canvas;
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const g = c.getContext("2d");
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  if (kind === "success") {
+    grad.addColorStop(0, `rgba(220, 250, 255, ${coreAlpha * 1.4})`);
+    grad.addColorStop(0.5, `rgba(100, 220, 255, ${coreAlpha})`);
+    grad.addColorStop(1, `rgba(0, 80, 200, 0)`);
+  } else if (kind === "failureHot") {
+    grad.addColorStop(0, `rgba(255, 180, 180, ${coreAlpha * 1.2})`);
+    grad.addColorStop(0.7, `rgba(200, 40, 40, ${coreAlpha * 0.8})`);
+    grad.addColorStop(1, `rgba(80, 0, 0, 0)`);
+  } else {
+    grad.addColorStop(0, `rgba(150, 220, 255, ${coreAlpha * 1.2})`);
+    grad.addColorStop(0.7, `rgba(50, 150, 200, ${coreAlpha * 0.8})`);
+    grad.addColorStop(1, `rgba(0, 50, 100, 0)`);
+  }
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  _coreSprite = { key, canvas: c };
+  return c;
+}
+
+/**
  * コアの三重装甲光輪「トリニティ・シールド」を描画します。
+ * ★B: shadowBlur を「影なし多重線」に置換（静止画では判別困難、ChromeのSkia負荷を削減）。
+ * 色・半径・本数・配置・回転は従来どおり。
  * @param {CanvasRenderingContext2D} ctx - 描画コンテキスト
  * @param {object} state - 防衛モードの状態オブジェクト
  */
@@ -427,24 +565,12 @@ function renderTrinityShield(ctx, state) {
   }
 
   // コアのメインの輝き
-  const coreGrad = ctx.createRadialGradient(x, y, 0, x, y, coreRadius);
-  if (animType === "success") {
-    coreGrad.addColorStop(0, `rgba(220, 250, 255, ${coreAlpha * 1.4})`);
-    coreGrad.addColorStop(0.5, `rgba(100, 220, 255, ${coreAlpha})`);
-    coreGrad.addColorStop(1, `rgba(0, 80, 200, 0)`);
-  } else if (animType === "failure" && corruption > 0.5) {
-    coreGrad.addColorStop(0, `rgba(255, 180, 180, ${coreAlpha * 1.2})`);
-    coreGrad.addColorStop(0.7, `rgba(200, 40, 40, ${coreAlpha * 0.8})`);
-    coreGrad.addColorStop(1, `rgba(80, 0, 0, 0)`);
-  } else {
-    coreGrad.addColorStop(0, `rgba(150, 220, 255, ${coreAlpha * 1.2})`);
-    coreGrad.addColorStop(0.7, `rgba(50, 150, 200, ${coreAlpha * 0.8})`);
-    coreGrad.addColorStop(1, `rgba(0, 50, 100, 0)`);
-  }
-  ctx.fillStyle = coreGrad;
-  ctx.beginPath();
-  ctx.arc(x, y, coreRadius, 0, Math.PI * 2);
-  ctx.fill();
+  // ★B: 毎フレームの createRadialGradient を事前レンダリング済みスプライトの転写に置換。
+  // 色・半径の計算式は従来どおり、見た目は同一。
+  const coreKind = animType === "success" ? "success"
+    : (animType === "failure" && corruption > 0.5 ? "failureHot" : "normal");
+  const coreSprite = getCoreSprite(coreKind, coreAlpha);
+  ctx.drawImage(coreSprite, x - coreRadius, y - coreRadius, coreRadius * 2, coreRadius * 2);
 
   // コア内部のデジタルパターン (グリッド)
   const gridAlpha = coreAlpha * 0.6;
@@ -494,14 +620,26 @@ function renderTrinityShield(ctx, state) {
     ? `rgba(255, 100, 100, ${innerRingAlpha})`
     : `rgba(150, 255, 255, ${innerRingAlpha})`; // シアン系
   ctx.lineWidth = animType === "success" ? 2.2 : 1.5;
-  ctx.shadowColor = `rgba(150, 255, 255, ${innerRingAlpha * 0.6})`;
-  ctx.shadowBlur = animType === "success" ? 14 : 8;
-
-  ctx.beginPath();
-  for (let angle = 0; angle < Math.PI * 2; angle += (segmentLength + gapLength) / innerRingRadius) {
-    ctx.arc(0, 0, innerRingRadius, angle, angle + segmentLength / innerRingRadius);
-  }
-  ctx.stroke();
+    ctx.shadowBlur = 0; // ★B: 影は無効化し、下の多重グロー線で再現
+    // ★B: セグメントパスを1回だけ構築し、グロー2本＋本体の3回ストロークで
+    //     従来の shadowBlur のにじみを再現（色・半径・配置は同一）。
+    const ringPath = new Path2D();
+    for (let angle = 0; angle < Math.PI * 2; angle += (segmentLength + gapLength) / innerRingRadius) {
+      ringPath.arc(0, 0, innerRingRadius, angle, angle + segmentLength / innerRingRadius);
+    }
+    const isFail = animType === "failure" && corruption > 0.4;
+    const glowR = isFail ? "255, 100, 100" : "150, 255, 255";
+    ctx.strokeStyle = `rgba(${glowR}, ${innerRingAlpha * 0.12})`;
+    ctx.lineWidth = (animType === "success" ? 2.2 : 1.5) + 6;
+    ctx.stroke(ringPath);
+    ctx.strokeStyle = `rgba(${glowR}, ${innerRingAlpha * 0.22})`;
+    ctx.lineWidth = (animType === "success" ? 2.2 : 1.5) + 2.5;
+    ctx.stroke(ringPath);
+    ctx.strokeStyle = isFail
+      ? `rgba(255, 100, 100, ${innerRingAlpha})`
+      : `rgba(150, 255, 255, ${innerRingAlpha})`; // シアン系
+    ctx.lineWidth = animType === "success" ? 2.2 : 1.5;
+    ctx.stroke(ringPath);
 
   // 侵食によるデータストリームの乱れ (赤色グリッチ)
   if (corruption > 0.2 && animType !== "success") {
@@ -541,11 +679,26 @@ function renderTrinityShield(ctx, state) {
       ? `rgba(255, 80, 80, ${ringAlpha})`
       : `rgba(120, 200, 255, ${ringAlpha})`;
     ctx.lineWidth = (1 + i * 0.5) * (animType === "success" ? 1.5 : 1);
-    ctx.shadowColor = `rgba(120, 200, 255, ${ringAlpha * 0.5})`;
-    ctx.shadowBlur = animType === "success" ? 12 : 6;
+    ctx.shadowBlur = 0; // ★B: 影は無効化し、下の多重グロー線で再現
 
-    // 六角形を描画
-    drawHexagon(ctx, 0, 0, ringRadius);
+    // ★B: 六角形パスを1回構築し、グロー2本＋本体の3回ストロークで
+    //     従来の shadowBlur（色 rgba(120,200,255) 系）のにじみを再現。
+    const glowR = animType === "failure" && corruption > 0.4 ? "255, 80, 80" : "120, 200, 255";
+    const mainLw = (1 + i * 0.5) * (animType === "success" ? 1.5 : 1);
+    ctx.strokeStyle = `rgba(${glowR}, ${ringAlpha * 0.10})`;
+    ctx.lineWidth = mainLw + 5;
+    buildHexagonPath(ctx, 0, 0, ringRadius);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(${glowR}, ${ringAlpha * 0.20})`;
+    ctx.lineWidth = mainLw + 2;
+    buildHexagonPath(ctx, 0, 0, ringRadius);
+    ctx.stroke();
+    ctx.strokeStyle = animType === "failure" && corruption > 0.4
+      ? `rgba(255, 80, 80, ${ringAlpha})`
+      : `rgba(120, 200, 255, ${ringAlpha})`;
+    ctx.lineWidth = mainLw;
+    buildHexagonPath(ctx, 0, 0, ringRadius);
+    ctx.stroke();
 
     // 侵食によるバリアの破損 (赤色ライン)
     // ★Math.random の代わりに seededRandom を使用し、侵食率が変わるまで
@@ -573,13 +726,10 @@ function renderTrinityShield(ctx, state) {
 }
 
 /**
- * ヘルパー関数：六角形を描画
- * @param {CanvasRenderingContext2D} ctx 
- * @param {number} x 
- * @param {number} y 
- * @param {number} size 
+ * ヘルパー関数：六角形のパスのみを構築（描画は呼び出し側で stroke/fill）
+ * ★B: グローの多重ストロークのため、パス構築と描画を分離。
  */
-function drawHexagon(ctx, x, y, size, fill = false) {
+function buildHexagonPath(ctx, x, y, size) {
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
     const angle = (Math.PI / 3) * i + Math.PI / 6; // pointy-topped hexagon
@@ -592,6 +742,17 @@ function drawHexagon(ctx, x, y, size, fill = false) {
     }
   }
   ctx.closePath();
+}
+
+/**
+ * ヘルパー関数：六角形を描画
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {number} x 
+ * @param {number} y 
+ * @param {number} size 
+ */
+function drawHexagon(ctx, x, y, size, fill = false) {
+  buildHexagonPath(ctx, x, y, size);
   if (fill) {
     ctx.fill();
   } else {
@@ -612,14 +773,24 @@ function renderWordList(ctx, state) {
   const ch = ctx.canvas.clientHeight;
 
   const list = state.wordList[0];
-  // ★ 表示は「ターゲット（スペースを含む1文字列）」ごとに行を分ける。
-  //    targets が無い場合は従来どおり split(" ") でフォールバック。
-  const words = list.targets
-    ? list.targets.map(t => t.word)
-    : list.word.split(' ');
-  const textWords = list.targets
-    ? list.targets.map(t => t.text)
-    : list.text.split(' ');
+  // ★A: 単語配列の生成は wordList が変わったときだけ（毎フレームの map/split を排除）
+  let words, textWords;
+  if (_wordListRef === list && _wordsCache) {
+    words = _wordsCache;
+    textWords = _textWordsCache;
+  } else {
+    // ★ 表示は「ターゲット（スペースを含む1文字列）」ごとに行を分ける。
+    //    targets が無い場合は従来どおり split(" ") でフォールバック。
+    words = list.targets
+      ? list.targets.map(t => t.word)
+      : list.word.split(' ');
+    textWords = list.targets
+      ? list.targets.map(t => t.text)
+      : list.text.split(' ');
+    _wordListRef = list;
+    _wordsCache = words;
+    _textWordsCache = textWords;
+  }
   let charCount = 0;
   let currentWordIndex = -1;
 
@@ -658,7 +829,8 @@ function renderWordList(ctx, state) {
 
     // --- 日本語（漢字交じり）表示 ---
     const jpX = cw - 180; // 少し左にずらす
-    ctx.font = isCurrent ? "bold 22px 'M PLUS Rounded 1c', sans-serif" : "18px 'M PLUS Rounded 1c', sans-serif";
+    const jpFont = isCurrent ? "bold 22px 'M PLUS Rounded 1c', sans-serif" : "18px 'M PLUS Rounded 1c', sans-serif";
+    setFontCached(ctx, jpFont);
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom"; // 下揃えにして、ローマ字との位置関係を安定させる
     ctx.fillStyle = isCurrent ? "#e0e0e0" : "#4a4a4a";
@@ -668,7 +840,8 @@ function renderWordList(ctx, state) {
     if (isCurrent) {
       // ハイライト用の背景
       ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
-      const textWidth = ctx.measureText(word).width;
+      // ★A: measureText は font+word 単位でキャッシュ（毎フレームの計測を排除）
+      const textWidth = getCachedWordWidth(ctx, jpFont, word);
       ctx.fillRect(jpX - textWidth - 10, y - lineSpacing * 0.8, textWidth + 220, lineSpacing * 1.5);
 
       // 再度単語を描画（ハイライトの上から）
@@ -677,20 +850,27 @@ function renderWordList(ctx, state) {
 
       // --- ローマ字表示 ---
       const romaX = jpX + 15;
-      ctx.font = "16px 'Noto Sans Mono', monospace";
+      setFontCached(ctx, "16px 'Noto Sans Mono', monospace");
       ctx.textAlign = "left";
       ctx.textBaseline = "bottom";
 
       // 現在の単語のひらがな部分を取得
       const currentWordText = textWords[currentWordIndex] || "";
 
-      // getDisplayFullRoma を使って、現在の単語の残りローマ字を生成
-      const fullRemainingRoma = getDisplayFullRoma({
-        text: currentWordText, // 現在の単語のひらがな
-        pos: state.currentWordPos, // ★修正: 現在の単語の入力位置を反映
-        typed: state.typed,
-        inputedRomaji: state.inputedRomaji,
-      });
+      // ★A: getDisplayFullRoma の結果は入力状態キーでキャッシュ
+      //    （入力が変化したフレームだけ再計算。生成される文字列は同一）
+      const romaKey = currentWordText + "|" + state.currentWordPos + "|" +
+        state.typed + "|" + state.inputedRomaji;
+      if (_romaFullCache.key !== romaKey) {
+        _romaFullCache.key = romaKey;
+        _romaFullCache.value = getDisplayFullRoma({
+          text: currentWordText, // 現在の単語のひらがな
+          pos: state.currentWordPos, // ★修正: 現在の単語の入力位置を反映
+          typed: state.typed,
+          inputedRomaji: state.inputedRomaji,
+        });
+      }
+      const fullRemainingRoma = _romaFullCache.value;
       const remainingRoma = fullRemainingRoma.substring(state.inputedRomaji.length + state.typed.length);
 
       ctx.fillStyle = "#888";
@@ -881,26 +1061,74 @@ export function initDefenseComboTierBar() {
     tierWrapper.appendChild(barContainer);
 
     prevComboTier = -1;
+    // ★キャッシュ無効化（作り直し後の初回更新で必ず再描画させる）
+    _defTierWrapperCache = null;
+    _defBlocksCache = null;
+    _defFillCache = null;
+    _defMultWrapCache = null;
+    _defMultValCache = null;
+    _defLastBarKey = null;
+    _defLastMultText = null;
+    _defLastMultVis = null;
 }
 
 let prevComboTier = -1;
+// ★見た目不変の軽量化: DOMキャッシュ＋変化時のみ更新（表示結果は同一）
+let _defTierWrapperCache = null;
+let _defBlocksCache = null;
+let _defFillCache = null;
+let _defMultWrapCache = null;
+let _defMultValCache = null;
+let _defCanvasCache = null;
+let _defLastBarKey = null;
+let _defLastMultText = null;
+let _defLastMultVis = null;
+
+function getDefenseTierEls() {
+    const wrapper = (_defTierWrapperCache && document.contains(_defTierWrapperCache))
+        ? _defTierWrapperCache
+        : document.getElementById("defenseComboTierWrapper");
+    if (wrapper !== _defTierWrapperCache) {
+        _defTierWrapperCache = wrapper;
+        _defBlocksCache = null; _defFillCache = null;
+        _defMultWrapCache = null; _defMultValCache = null;
+        _defLastBarKey = null; _defLastMultText = null; _defLastMultVis = null;
+        if (wrapper) {
+            const blocks = wrapper.querySelectorAll(".defense-combo-bar-block");
+            _defBlocksCache = blocks;
+            _defFillCache = Array.from(blocks, b => b.querySelector(".defense-combo-bar-fill"));
+            _defMultWrapCache = wrapper.querySelector(".defense-combo-multiplier");
+            _defMultValCache = document.getElementById("defenseMultiplierValue");
+        }
+    }
+    return wrapper;
+}
+
+function getDefenseCanvasEl() {
+    if (_defCanvasCache && document.contains(_defCanvasCache)) return _defCanvasCache;
+    _defCanvasCache = document.getElementById("defenseModeCanvas");
+    return _defCanvasCache;
+}
 
 export function updateDefenseComboTierBar(stats) {
-  const tierWrapper = document.getElementById("defenseComboTierWrapper");
+  const tierWrapper = getDefenseTierEls();
   if (!tierWrapper) return;
 
   const combo = stats.currentCombo;
-  const blocks = tierWrapper.querySelectorAll(".defense-combo-bar-block");
+  const blocks = _defBlocksCache;
+  if (!blocks) return;
   const isOverdrive = combo >= DEFENSE_OVERDRIVE_COMBO;
   // ★追加: 開始演出中は倍率表示を隠す
   const isTransitioning = stats.isTransitioning;
-  const multiplierElWrapper = tierWrapper.querySelector(".defense-combo-multiplier");
-  if (multiplierElWrapper) {
-    multiplierElWrapper.style.visibility = isTransitioning ? 'hidden' : 'visible';
+  const multiplierElWrapper = _defMultWrapCache;
+  const vis = isTransitioning ? 'hidden' : 'visible';
+  if (multiplierElWrapper && _defLastMultVis !== vis) {
+    _defLastMultVis = vis;
+    multiplierElWrapper.style.visibility = vis;
   }
 
   // --- コンボ倍率の計算と表示 ---
-  const multiplierValueEl = document.getElementById("defenseMultiplierValue");
+  const multiplierValueEl = _defMultValCache;
   if (multiplierValueEl) {
     let multiplier = 1.0;
     for (const tier of DEFENSE_SCORE_CONFIG.comboMultipliers) {
@@ -909,7 +1137,11 @@ export function updateDefenseComboTierBar(stats) {
         break;
       }
     }
-    multiplierValueEl.textContent = multiplier.toFixed(1);
+    const multText = multiplier.toFixed(1);
+    if (_defLastMultText !== multText) {
+      _defLastMultText = multText;
+      multiplierValueEl.textContent = multText;
+    }
   }
   // --------------------------
 
@@ -920,9 +1152,23 @@ export function updateDefenseComboTierBar(stats) {
     }
   }
 
+  // 進捗を量子化（0.5%刻み）し、バー表示に変化がなければclass/style更新をスキップ。
+  // flash・効果音の条件判定は従来どおり行う（表示結果は同一）。
+  let progressQ = -1;
+  if (currentTier >= 0 && !isOverdrive) {
+    const tier = DEFENSE_COMBO_TIERS[currentTier];
+    const range = tier.max - tier.min;
+    const value = combo - tier.min;
+    const progress = Math.max(0, Math.min(1, value / range));
+    progressQ = Math.round(progress * 200) / 200;
+  }
+  const barKey = combo + "|" + currentTier + "|" + (isOverdrive ? 1 : 0) + "|" + progressQ;
+  if (barKey !== _defLastBarKey) {
+    _defLastBarKey = barKey;
+
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
-    const fillEl = block.querySelector(".defense-combo-bar-fill");
+    const fillEl = _defFillCache ? _defFillCache[i] : block.querySelector(".defense-combo-bar-fill");
     if (!fillEl) continue;
 
     block.classList.remove("filled", "active", "overdrive");
@@ -942,6 +1188,7 @@ export function updateDefenseComboTierBar(stats) {
       fillEl.style.width = `${progress * 100}%`;
     }
   }
+  }
 
   if (currentTier > prevComboTier && currentTier > 0) {
     const flashBlock = blocks[currentTier - 1];
@@ -952,8 +1199,9 @@ export function updateDefenseComboTierBar(stats) {
 
       const isNowOverdrive = combo >= DEFENSE_OVERDRIVE_COMBO;
       if (!isNowOverdrive) {
+        const canvasEl = getDefenseCanvasEl();
         const tierWrapperRect = stageRect(tierWrapper);
-        const canvasRect = stageRect(document.getElementById("defenseModeCanvas"));
+        const canvasRect = stageRect(canvasEl);
         const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
         const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
         spawnComboTierUpEffect(centerX, centerY, currentTier, false);
@@ -964,8 +1212,9 @@ export function updateDefenseComboTierBar(stats) {
 
   const wasOverdrive = stats.prevCombo < DEFENSE_OVERDRIVE_COMBO;
   if (wasOverdrive && isOverdrive) {
+    const canvasEl = getDefenseCanvasEl();
     const tierWrapperRect = stageRect(tierWrapper);
-    const canvasRect = stageRect(document.getElementById("defenseModeCanvas"));
+    const canvasRect = stageRect(canvasEl);
     const centerX = tierWrapperRect.left + tierWrapperRect.width / 2 - canvasRect.left;
     const centerY = tierWrapperRect.top + tierWrapperRect.height / 2 - canvasRect.top;
     const lastTier = DEFENSE_COMBO_TIERS.length - 1;
