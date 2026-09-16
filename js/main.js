@@ -1044,6 +1044,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
       await registration.update();
 
+      // ★オフラインキャッシュの手動ダウンロードを開始
+      if (registration.active) {
+        registration.active.postMessage({
+          type: "START_OFFLINE_CACHE"
+        });
+      } else if (registration.installing) {
+        registration.installing.postMessage({
+          type: "START_OFFLINE_CACHE"
+        });
+      }
+
       // ★ダウンロード開始時の初期化
       _setOfflineModalStatus("ダウンロード中です...");
       

@@ -736,9 +736,9 @@ self.addEventListener("activate", event => {
         /* 通知失敗は無視 */
       }
 
-      // ★削除: 起動時の自動ダウンロード
-      // ユーザーが設定から明示的に「オフライン用データをダウンロード」を
-      // 押した場合にのみダウンロードを開始する（手動開始に変更）
+      // ★v1.0.40: オフラインキャッシュの自動ダウンロードを廃止
+      // ユーザーが設定から明示的に「最新版をオフライン用にダウンロード」を
+      // 押した場合にのみダウンロードを開始する（完全手動開始に変更）
       // await preCacheRemainingInBackground();
 
     })()
@@ -844,6 +844,24 @@ self.addEventListener("message", async event => {
     } catch (e) {
       /* ページへの通知失敗は無視 */
     }
+
+  }
+
+  // =====================================================
+  // ★v1.0.40: 設定画面から「オフライン用データをダウンロード」
+  // を押したときの手動開始ハンドラ
+  // =====================================================
+  if (
+    event.data &&
+    event.data.type === "START_OFFLINE_CACHE"
+  ) {
+
+    console.log(
+      "Service Worker: START_OFFLINE_CACHE received (manual download)"
+    );
+
+    // バックグラウンドで非同期実行（await しない）
+    preCacheRemainingInBackground();
 
   }
 
