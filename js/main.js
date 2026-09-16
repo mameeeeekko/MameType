@@ -601,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const percent = Math.floor((loaded / total) * 100);
             setLoadingText(`Loading... ${percent}%`);
           }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("core timeout")), 30000)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("core timeout")), 8000)),
         ]);
       } catch (e) {
         console.warn("Core assets load issue (continue boot):", e);
@@ -1254,6 +1254,23 @@ if ("serviceWorker" in navigator) {
         data.type === "UPDATE_CONTROLLING"
       ) {
 
+        // ★UPDATE_CONTROLLING は SW の activate + clients.claim() が完了した通知。
+        //   この時点で navigator.serviceWorker.controller は既に新 SW に切り替わっており、
+        //   controllerchange イベントは発火しないケースがある（ハードリセット直後など）。
+        //   controllerchange を待たず、即リロードする。
+        if (data.type === "UPDATE_CONTROLLING") {
+          if (!updateRefreshing) {
+            updateRefreshing = true;
+            _markCacheVersion(APP_VERSION);
+            console.log(
+              "Service Worker: UPDATE_CONTROLLING received. Reloading..."
+            );
+            window.location.reload();
+          }
+          return;
+        }
+
+        // UPDATE_ACTIVATING の場合は従来通り controllerchange を待つ
         if (!updateControllerChangeHandler) {
 
           updateControllerChangeHandler = () => {
@@ -1284,6 +1301,8 @@ if ("serviceWorker" in navigator) {
 
         if (!updateRefreshing) {
 
+          // ★タイムアウトを延長（ハードリセット直後は SW の activate に
+          //   時間がかかる場合があるため、8秒待ってから強制リロードする）
           setTimeout(() => {
             if (!updateRefreshing) {
               updateRefreshing = true;
@@ -1292,7 +1311,7 @@ if ("serviceWorker" in navigator) {
               );
               window.location.reload();
             }
-          }, 5000);
+          }, 8000);
 
         }
       }

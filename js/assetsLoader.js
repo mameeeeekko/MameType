@@ -252,7 +252,7 @@ const FONT_GAP_MS = 4;      // 1件完了ごとの呼吸用インターバル
 async function collectFontUrls() {
   try {
     const cssUrl = new URL(FONT_CSS_URL, location.href);
-    const res = await fetch(cssUrl.href, { cache: "no-cache" });
+    const res = await fetch(cssUrl.href);
     if (!res || !res.ok) return [];
     const css = await res.text();
     const urls = [];

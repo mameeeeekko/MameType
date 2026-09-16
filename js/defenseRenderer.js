@@ -44,6 +44,7 @@ let _romaFullCache = { key: null, value: "" };
 let _wordListRef = null;
 let _wordsCache = null;
 let _textWordsCache = null;
+let _wordsCacheLength = 0; // ★ targets.length をキャッシュして補充後の変化を検知
 
 /** 単語の描画幅を取得（font + word でキャッシュ。表示結果は同一） */
 function getCachedWordWidth(ctx, font, word) {
@@ -773,9 +774,10 @@ function renderWordList(ctx, state) {
   const ch = ctx.canvas.clientHeight;
 
   const list = state.wordList[0];
-  // ★A: 単語配列の生成は wordList が変わったときだけ（毎フレームの map/split を排除）
+  // ★A: 単語配列の生成は wordList が変わったとき、または targets が補充されたときだけ再生成
   let words, textWords;
-  if (_wordListRef === list && _wordsCache) {
+  const currentTargetsLen = list.targets?.length ?? 0;
+  if (_wordListRef === list && _wordsCache && _wordsCacheLength === currentTargetsLen) {
     words = _wordsCache;
     textWords = _textWordsCache;
   } else {
@@ -790,6 +792,7 @@ function renderWordList(ctx, state) {
     _wordListRef = list;
     _wordsCache = words;
     _textWordsCache = textWords;
+    _wordsCacheLength = currentTargetsLen; // ★ 補充後の length を保存
   }
   let charCount = 0;
   let currentWordIndex = -1;
