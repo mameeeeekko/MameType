@@ -7506,7 +7506,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 10000;
+  z-index: 10900;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7519,109 +7519,126 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 .offline-download-overlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.7);
   z-index: -1;
 }
 
 .offline-download-content {
   position: relative;
   z-index: 1;
-  background-color: #1a1a1a;
-  border: 3px solid #00ff00;
+  background: rgba(13, 17, 23, 0.95);
+  border: 1px solid rgba(88, 166, 255, 0.35);
   border-radius: 8px;
-  padding: 30px;
-  max-width: 500px;
+  padding: 24px 28px 20px;
+  max-width: 340px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-  animation: offlineDlSlideIn 0.3s ease-out;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  animation: offlineDlFadeIn 0.25s ease-out;
 }
 
-@keyframes offlineDlSlideIn {
+@keyframes offlineDlFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.9);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 }
 
-.offline-download-content h2 {
-  color: #00ff00;
-  margin: 0 0 20px 0;
-  font-size: 20px;
+.offline-download-content .offline-dl-title {
+  color: #c5d9f0;
+  font-size: 14px;
+  font-weight: bold;
+  margin: 0 0 18px 0;
+  letter-spacing: 0.5px;
   font-family: var(--font-ui);
 }
 
 .offline-dl-progress-wrapper {
-  position: relative;
-  margin: 20px 0;
+  margin: 0 auto 14px;
+  width: 220px;
 }
 
 .offline-dl-progress-bar {
   width: 100%;
-  height: 20px;
-  background-color: #333;
-  border: 2px solid #00ff00;
-  border-radius: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.10);
   overflow: hidden;
-  position: relative;
 }
 
 .offline-dl-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #00ff00, #00dd00);
+  border-radius: 2px;
+  background: linear-gradient(90deg, #58a6ff, #9fe870);
   width: 0%;
-  transition: width 0.2s ease;
+  transition: width 0.2s linear;
 }
 
 .offline-dl-progress-text {
-  color: #00ff00;
-  font-size: 14px;
-  margin-top: 8px;
-  font-weight: bold;
-  font-family: var(--font-mono);
+  color: #a3c8e4;
+  font-size: 11px;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+  font-family: var(--font-ui);
 }
 
 .offline-dl-status {
-  color: #fff;
-  font-size: 14px;
-  margin: 15px 0;
+  color: #c5d9f0;
+  font-size: 12px;
+  margin: 12px 0 0;
   line-height: 1.5;
   font-family: var(--font-ja);
 }
 
-.offline-dl-file-info {
-  color: #aaa;
-  font-size: 12px;
-  margin: 10px 0;
-  min-height: 20px;
-  font-family: var(--font-mono);
-}
-
 .offline-dl-note {
-  background-color: #222;
-  border-left: 3px solid #00ff00;
-  padding: 12px;
-  margin: 15px 0;
-  text-align: left;
+  margin: 14px auto 0;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 4px;
+  text-align: center;
 }
 
 .offline-dl-note p {
-  color: #ccc;
-  font-size: 12px;
-  margin: 5px 0;
+  color: #8a9bb0;
+  font-size: 11px;
+  margin: 0;
   line-height: 1.4;
   font-family: var(--font-ja);
 }
+
+.offline-dl-cancel-btn {
+  margin-top: 16px;
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ff7b7b;
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.offline-dl-cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff9e9e;
+}
+
+.offline-dl-cancel-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+
 
 .offline-dl-cancel-btn {
   margin-top: 20px;

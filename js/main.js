@@ -436,20 +436,7 @@ function _showOfflineDownloadModal() {
   _offlineModalActive = true;
   _offlineModalBlockKeybinds = true;
   modal.classList.remove("hidden");
-  
-  // Safari対応：進捗表示が不可の場合は注記を表示
-  const safariNote = document.getElementById("offlineDlSafariNote");
-  if (safariNote) {
-    safariNote.style.display = isSafari ? "block" : "none";
-  }
-  
-  // キャンセルボタン設定
-  const cancelBtn = document.getElementById("offlineDlCancelBtn");
-  if (cancelBtn) {
-    cancelBtn.disabled = false;
-    cancelBtn.onclick = _handleOfflineDownloadCancel;
-  }
-  
+
   // プログレスバーをリセット
   _updateOfflineModalProgress(0);
 }
@@ -474,9 +461,6 @@ function _updateOfflineModalProgress(percent, fileInfo) {
   if (progressText) {
     progressText.textContent = `${Math.floor(percent)}%`;
   }
-  if (fileInfoEl && fileInfo) {
-    fileInfoEl.textContent = fileInfo;
-  }
 }
 
 function _setOfflineModalStatus(status) {
@@ -487,18 +471,13 @@ function _setOfflineModalStatus(status) {
 }
 
 function _handleOfflineDownloadCancel() {
-  // キャンセル処理：フラグをリセット
   userInitiatedDownload = false;
   _hideOfflineDownloadModal();
-  
-  // 背景の操作を再度受け付ける
   _offlineModalBlockKeybinds = false;
-  
   const checkUpdateBtn = document.getElementById("checkUpdateBtn");
   if (checkUpdateBtn) {
     checkUpdateBtn.disabled = false;
   }
-  
   if (updateCheckStatus) {
     updateCheckStatus.textContent = "ダウンロードをキャンセルしました。";
   }
@@ -1034,7 +1013,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ★モーダルを表示してダウンロード開始
     userInitiatedDownload = true;
     _showOfflineDownloadModal();
-    _setOfflineModalStatus("ダウンロードを準備しています...");
+    _setOfflineModalStatus("ダウンロード中...");
     
     try {
 
@@ -1056,7 +1035,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // ★ダウンロード開始時の初期化
-      _setOfflineModalStatus("ダウンロード中です...");
+      _setOfflineModalStatus("ダウンロード中...");
       
       // ★Safari対策: postMessage が届かなくても、ポーリング保険で
       //   waiting 検出→自動適用
@@ -1076,7 +1055,7 @@ document.addEventListener("DOMContentLoaded", () => {
               clearInterval(pollTimer);
               // ★ユーザー操作でのDLなら自動適用
               if (userInitiatedDownload) {
-                _setOfflineModalStatus("ダウンロード完了。自動で再起動します...");
+                _setOfflineModalStatus("最新版です。再起動します...");
                 _updateOfflineModalProgress(100);
                 setTimeout(() => {
                   autoApplyUpdate(reg);
@@ -1086,7 +1065,7 @@ document.addEventListener("DOMContentLoaded", () => {
               clearInterval(pollTimer);
               // ★ポーリング終了：ユーザー操作DLなら保険で自動適用
               if (userInitiatedDownload) {
-                _setOfflineModalStatus("ダウンロード完了。自動で再起動します...");
+                _setOfflineModalStatus("最新版です。再起動します...");
                 _updateOfflineModalProgress(100);
                 setTimeout(() => {
                   autoApplyUpdate(reg);
@@ -1098,19 +1077,19 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (e) { /* 無視 */ }
 
       if (registration.installing) {
-        _setOfflineModalStatus("ダウンロード中です...");
+        _setOfflineModalStatus("ダウンロード中...");
       } else if (registration.waiting && navigator.serviceWorker.controller) {
         // 既に準備完了している場合
-        _setOfflineModalStatus("ダウンロード完了。自動で再起動します...");
+        _setOfflineModalStatus("最新版です。再起動します...");
         _updateOfflineModalProgress(100);
         setTimeout(() => {
           autoApplyUpdate(registration);
         }, 1000);
       } else if (!navigator.serviceWorker.controller) {
-        _setOfflineModalStatus("ダウンロード中です...");
+        _setOfflineModalStatus("ダウンロード中...");
       } else {
         // 更新なし
-        _setOfflineModalStatus("既に最新版です。キャッシュは最新です。");
+        _setOfflineModalStatus("最新版です。オフラインでも遊べます。");
         _updateOfflineModalProgress(100);
         userInitiatedDownload = false;
         setTimeout(() => {
@@ -1378,6 +1357,11 @@ if ("serviceWorker" in navigator) {
 
 function showUpdateProgressPreparing() {
 
+  // ★ユーザーがボタンを押していない場合は表示しない
+  if (!userInitiatedDownload) {
+    return;
+  }
+
   // ★適用中は再初期化しない（二重モーダル・ボタン消失の防止）
   if (isApplyingUpdate) {
     return;
@@ -1391,7 +1375,7 @@ function showUpdateProgressPreparing() {
   if (isSafari) {
     const st = document.getElementById("updateCheckStatus");
     if (st) {
-      st.textContent = "最新版をダウンロード中…完了後に自動で再起動します";
+      st.textContent = "最新版をダウンロード中…";
     }
   } else {
     // ★2フェーズDL対応: 既にバー表示中なら0%に戻さず現在の%から継続
@@ -1399,7 +1383,7 @@ function showUpdateProgressPreparing() {
       const el = document.getElementById("swDownloadIndicator");
       return !!(el && el.classList.contains("show"));
     })();
-    _showSwDownloadBar("最新版をオフライン用にダウンロード中");
+    _showSwDownloadBar("オフライン用ダウンロード中");
     if (!wasBarVisible) {
       _updateSwDownloadBar(0, "");
     }
@@ -1558,6 +1542,14 @@ function showUpdateProgressPreparing() {
 
 function handleUpdateProgress(data) {
 
+  // ★ユーザー起動のダウンロード中は、オフラインダウンロードモーダル側も更新
+  if (userInitiatedDownload) {
+    _updateOfflineModalProgress(
+      data.percent || 0,
+      data.file || ""
+    );
+  }
+
   const notification =
     document.getElementById(
       "update-notification"
@@ -1583,7 +1575,7 @@ function handleUpdateProgress(data) {
 
     // ★Safari向け: 中央下バーを出さず、設定ステータス文のみで進捗を伝える
     if (!isSafari) {
-      _showSwDownloadBar("最新版をオフライン用にダウンロード中");
+      _showSwDownloadBar("オフライン用ダウンロード中");
       // ★2フェーズDL対応: フェーズ②の start 再受信でも0%に戻さない。
       //   バーが既に表示中なら現在の%から推定を継続する。
       if (!_estimatedDlTimer) {
@@ -1600,7 +1592,7 @@ function handleUpdateProgress(data) {
       try {
         const st = document.getElementById("updateCheckStatus");
         if (st) {
-          st.textContent = "最新版をダウンロード中…完了後に自動で再起動します";
+          st.textContent = "最新版をダウンロード中…";
         }
       } catch (e) { /* 無視 */ }
     }
@@ -1629,7 +1621,7 @@ function handleUpdateProgress(data) {
       try {
         const st = document.getElementById("updateCheckStatus");
         if (st) {
-          st.textContent = "最新版をダウンロード中…完了後に自動で再起動します";
+          st.textContent = "最新版をダウンロード中…";
         }
       } catch (e) { /* 無視 */ }
     }
@@ -1640,6 +1632,11 @@ function handleUpdateProgress(data) {
       data.total || 0,
       data.file || ""
     );
+
+    // ★ユーザー起動時はオフラインモーダルのステータスも更新
+    if (userInitiatedDownload) {
+      _setOfflineModalStatus("ダウンロード中...");
+    }
 
     return;
   }
@@ -4264,15 +4261,8 @@ function bindKeyEvents() {
     if (window._staffRollActive) return;
 
     // ★オフラインダウンロードモーダル表示中は全キーショートカットを無効化
-    // ただしキャンセルボタンはエンター・スペースで操作可能
     if (_offlineModalActive) {
       e.preventDefault();
-      const cancelBtn = document.getElementById("offlineDlCancelBtn");
-      if (cancelBtn && !cancelBtn.disabled) {
-        if (e.key === "Enter" || e.key === " ") {
-          cancelBtn.click();
-        }
-      }
       return;
     }
 
