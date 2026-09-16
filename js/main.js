@@ -423,6 +423,88 @@ function _stopEstimatedDlProgress() {
 }
 
 // ============================================================
+// オフラインデータダウンロード進捗モーダル
+// 設定画面から「オフライン用データをダウンロード」を押したときに表示
+// ============================================================
+let _offlineModalActive = false;
+let _offlineModalBlockKeybinds = true;
+
+function _showOfflineDownloadModal() {
+  const modal = document.getElementById("offlineDownloadModal");
+  if (!modal) return;
+  
+  _offlineModalActive = true;
+  _offlineModalBlockKeybinds = true;
+  modal.classList.remove("hidden");
+  
+  // Safari対応：進捗表示が不可の場合は注記を表示
+  const safariNote = document.getElementById("offlineDlSafariNote");
+  if (safariNote) {
+    safariNote.style.display = isSafari ? "block" : "none";
+  }
+  
+  // キャンセルボタン設定
+  const cancelBtn = document.getElementById("offlineDlCancelBtn");
+  if (cancelBtn) {
+    cancelBtn.disabled = false;
+    cancelBtn.onclick = _handleOfflineDownloadCancel;
+  }
+  
+  // プログレスバーをリセット
+  _updateOfflineModalProgress(0);
+}
+
+function _hideOfflineDownloadModal() {
+  const modal = document.getElementById("offlineDownloadModal");
+  if (!modal) return;
+  
+  modal.classList.add("hidden");
+  _offlineModalActive = false;
+  _offlineModalBlockKeybinds = false;
+}
+
+function _updateOfflineModalProgress(percent, fileInfo) {
+  const progressFill = document.getElementById("offlineDlProgressFill");
+  const progressText = document.getElementById("offlineDlProgressText");
+  const fileInfoEl = document.getElementById("offlineDlFileInfo");
+  
+  if (progressFill) {
+    progressFill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+  }
+  if (progressText) {
+    progressText.textContent = `${Math.floor(percent)}%`;
+  }
+  if (fileInfoEl && fileInfo) {
+    fileInfoEl.textContent = fileInfo;
+  }
+}
+
+function _setOfflineModalStatus(status) {
+  const statusEl = document.getElementById("offlineDlStatus");
+  if (statusEl) {
+    statusEl.textContent = status;
+  }
+}
+
+function _handleOfflineDownloadCancel() {
+  // キャンセル処理：フラグをリセット
+  userInitiatedDownload = false;
+  _hideOfflineDownloadModal();
+  
+  // 背景の操作を再度受け付ける
+  _offlineModalBlockKeybinds = false;
+  
+  const checkUpdateBtn = document.getElementById("checkUpdateBtn");
+  if (checkUpdateBtn) {
+    checkUpdateBtn.disabled = false;
+  }
+  
+  if (updateCheckStatus) {
+    updateCheckStatus.textContent = "ダウンロードをキャンセルしました。";
+  }
+}
+
+// ============================================================
 // メニュー描画のキャッシュ無効化フック（循環参照回避のためwindow経由）
 // questProgress.js の markCleared / markTrueEndingSeen 等から呼ばれる
 // ============================================================
@@ -932,7 +1014,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   checkUpdateBtn?.addEventListener("click", async () => {
 
-    // ★適用中は再入場させない（モーダル初期化で詰むのを防止）
+    // ★適用中は再入場させない
     if (isApplyingUpdate) {
       if (updateCheckStatus) {
         updateCheckStatus.textContent = "アップデートを適用中です。そのままお待ちください...";
@@ -948,12 +1030,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     checkUpdateBtn.disabled = true;
-    // ★ユーザーが明示的にDLを開始した＝適用・再起動への同意と見なす
+    
+    // ★モーダルを表示してダウンロード開始
     userInitiatedDownload = true;
-    if (updateCheckStatus) {
-      updateCheckStatus.textContent = "アップデートを確認中...";
-    }
-
+    _showOfflineDownloadModal();
+    _setOfflineModalStatus("ダウンロードを準備しています...");
+    
     try {
 
       const registration =
@@ -962,21 +1044,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       await registration.update();
 
-      // ★準備中は中央下バーのみで進捗表示（モーダルで塞がない）。
-      //   Safariで postMessage が届かなくても、ポーリング保険で
-      //   waiting 検出→通知モーダルへ遷移させる。
-      showUpdateProgressPreparing();
-
-      if (updateCheckStatus) {
-        // ★Safariは中央下バーを出さないため、設定のステータス文で進捗を伝える
-        updateCheckStatus.textContent = isSafari
-          ? "最新版をダウンロード中…完了後に自動で再起動します"
-          : "新しいバージョンを確認しています...";
-      }
-
-      // ★Safari対策: postMessage 取りこぼし保険のポーリング。
-      //   installing→waiting 遷移を最大30秒監視し、waiting 確定で
-      //   自動適用 or 通知表示。更新なし確定時は下バーを消す。
+      // ★ダウンロード開始時の初期化
+      _setOfflineModalStatus("ダウンロード中です...");
+      
+      // ★Safari対策: postMessage が届かなくても、ポーリング保険で
+      //   waiting 検出→自動適用
       try {
         const pollStart = Date.now();
         const pollTimer = setInterval(async () => {
@@ -986,36 +1058,28 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!reg) {
               if (Date.now() - pollStart > 30000) {
                 clearInterval(pollTimer);
-                _stopEstimatedDlProgress();
-                _hideSwDownloadBar();
               }
               return;
             }
             if (reg.waiting && navigator.serviceWorker.controller) {
               clearInterval(pollTimer);
-              _stopEstimatedDlProgress();
-              _updateSwDownloadBar(100, "");
-              _hideSwDownloadBar();
-              // ★ユーザー操作でのDLなら自動適用、バックグラウンド検出ならモーダル
+              // ★ユーザー操作でのDLなら自動適用
               if (userInitiatedDownload) {
-                autoApplyUpdate(reg);
-              } else {
-                showUpdateNotification(reg);
-                // ★モーダル表示時のみ「今すぐ更新」の案内文へ差し替える。
-                //   自動適用時は「自動で再起動します」の表示を上書きしない。
-                if (updateCheckStatus) {
-                  updateCheckStatus.textContent = "新しいバージョンの適用を待っています。「今すぐ更新」で適用できます。";
-                }
+                _setOfflineModalStatus("ダウンロード完了。自動で再起動します...");
+                _updateOfflineModalProgress(100);
+                setTimeout(() => {
+                  autoApplyUpdate(reg);
+                }, 1000);
               }
             } else if (!reg.installing && Date.now() - pollStart > 30000) {
               clearInterval(pollTimer);
-              // ★ポーリング終了（Safariでwaiting検出が取りこぼされた場合）:
-              //   ユーザー操作DLなら保険で自動適用、それ以外はバー掃除のみ
+              // ★ポーリング終了：ユーザー操作DLなら保険で自動適用
               if (userInitiatedDownload) {
-                autoApplyUpdate(reg);
-              } else {
-                _stopEstimatedDlProgress();
-                _hideSwDownloadBar();
+                _setOfflineModalStatus("ダウンロード完了。自動で再起動します...");
+                _updateOfflineModalProgress(100);
+                setTimeout(() => {
+                  autoApplyUpdate(reg);
+                }, 1000);
               }
             }
           } catch (e) { /* 無視 */ }
@@ -1023,62 +1087,37 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (e) { /* 無視 */ }
 
       if (registration.installing) {
-
-        if (updateCheckStatus) {
-          // ★Safariは中央下バーを出さないため、ステータス文で進捗を伝える
-          updateCheckStatus.textContent = isSafari
-            ? "最新版をダウンロード中…完了後に自動で再起動します"
-            : "新しいバージョンをダウンロード中です...";
-        }
-
+        _setOfflineModalStatus("ダウンロード中です...");
       } else if (registration.waiting && navigator.serviceWorker.controller) {
-
-        // -------------------------------------------
-        // 「後で」で延期していた更新がある場合、
-        // 更新通知を再表示する
-        // -------------------------------------------
-
-        showUpdateNotification(registration);
-
-        if (updateCheckStatus) {
-          updateCheckStatus.textContent = "新しいバージョンの適用を待っています。「今すぐ更新」で適用できます。";
-        }
-
+        // 既に準備完了している場合
+        _setOfflineModalStatus("ダウンロード完了。自動で再起動します...");
+        _updateOfflineModalProgress(100);
+        setTimeout(() => {
+          autoApplyUpdate(registration);
+        }, 1000);
       } else if (!navigator.serviceWorker.controller) {
-
-        // 初回ダウンロード（オフライン用データ取得）中
-        if (updateCheckStatus) {
-          updateCheckStatus.textContent = "オフライン用データを準備中です...";
-        }
-
+        _setOfflineModalStatus("ダウンロード中です...");
       } else {
-
-        if (updateCheckStatus) {
-          updateCheckStatus.textContent = `オンライン/オフラインとも v${APP_VERSION} で遊べます（オフライン用キャッシュ最新）`;
-        }
-
-        // ★更新なし確定→下バーを消す（0%放置の防止）
-        _stopEstimatedDlProgress();
-        _hideSwDownloadBar();
-        // ★フラグを戻す（以後のバックグラウンド検出で誤自動適用しない）
+        // 更新なし
+        _setOfflineModalStatus("既に最新版です。キャッシュは最新です。");
+        _updateOfflineModalProgress(100);
         userInitiatedDownload = false;
-
+        setTimeout(() => {
+          _hideOfflineDownloadModal();
+          checkUpdateBtn.disabled = false;
+        }, 2000);
       }
 
     } catch (e) {
 
       console.warn("Update check failed:", e);
-      if (updateCheckStatus) {
-        updateCheckStatus.textContent = "確認に失敗しました。ネットワーク接続を確認してください。";
-      }
-
-      // ★失敗時も下バーを消す
-      _stopEstimatedDlProgress();
-      _hideSwDownloadBar();
-
-    } finally {
-
-      checkUpdateBtn.disabled = false;
+      _setOfflineModalStatus("確認に失敗しました。ネットワーク接続を確認してください。");
+      userInitiatedDownload = false;
+      
+      setTimeout(() => {
+        _hideOfflineDownloadModal();
+        checkUpdateBtn.disabled = false;
+      }, 3000);
 
     }
   });
@@ -2768,6 +2807,9 @@ function ensureFullscreenButtons() {
 function initSettingsUI() {
 
   settingsBtn?.addEventListener("click", (e) => {
+    // ★オフラインダウンロード中は設定画面を開かない
+    if (_offlineModalActive) return;
+    
     playSE("select");
     hideAllScreens();
     if (settingsDiv) settingsDiv.style.display = "block";
@@ -3783,21 +3825,36 @@ export function showGameScreen() {
 function bindMenuEvents() {
 
   questMenuBtn?.addEventListener("click", () => {
+    // ★オフラインダウンロード中はメニュー操作を受け付けない
+    if (_offlineModalActive) return;
     playSE("select");
     updateHud(null, { isQuestMode: true });
     showQuestMenu();
   });
 
-  startMenuBtn?.addEventListener("click", () => { playSE("select"); showStartMenu(); });
-  freeModeBtn?.addEventListener("click", () => { playSE("select"); showFreeStartMenu(); });
+  startMenuBtn?.addEventListener("click", () => { 
+    if (_offlineModalActive) return;
+    playSE("select"); 
+    showStartMenu(); 
+  });
+  
+  freeModeBtn?.addEventListener("click", () => { 
+    if (_offlineModalActive) return;
+    playSE("select"); 
+    showFreeStartMenu(); 
+  });
 
   recordsMenuBtn?.addEventListener("click", () => {
+    // ★オフラインダウンロード中はメニュー操作を受け付けない
+    if (_offlineModalActive) return;
     playSE("select");
     hideAllScreens();
     showRecordsView(Game.getLastGameMode?.() ?? GameModes.NORMAL);
   });
 
   onlineRankingBtn?.addEventListener("click", () => {
+    // ★オフラインダウンロード中はメニュー操作を受け付けない
+    if (_offlineModalActive) return;
     playSE("select");
     hideAllScreens();
     openOnlineRanking();
@@ -4194,6 +4251,19 @@ function bindKeyEvents() {
 
     // ★スタッフロール中は全ショートカットを無効化（ESCによるスキップはdialogue.js側で処理）
     if (window._staffRollActive) return;
+
+    // ★オフラインダウンロードモーダル表示中は全キーショートカットを無効化
+    // ただしキャンセルボタンはエンター・スペースで操作可能
+    if (_offlineModalActive) {
+      e.preventDefault();
+      const cancelBtn = document.getElementById("offlineDlCancelBtn");
+      if (cancelBtn && !cancelBtn.disabled) {
+        if (e.key === "Enter" || e.key === " ") {
+          cancelBtn.click();
+        }
+      }
+      return;
+    }
 
     // ★v1.0.22: アップデート通知モーダル表示中は裏のショートカットを一切通さない
     //   （「更新画面の裏でキー操作が効いてしまう」問題の防止）
