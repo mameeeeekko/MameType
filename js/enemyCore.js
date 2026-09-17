@@ -3,7 +3,7 @@ import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,
 import { fitCanvasToContainerFill } from "./canvasUtil.js";
 import { stageRect } from "./stageScale.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { initAudio, playEnemyKillSound, stopBGM, playBGM, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
+import { initAudio, playEnemyKillSound, stopBGM, playBGM, ensureSound, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
     renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBreakEffect, playLoopSE, stopLoopSE,
     renderChainBreakEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
     renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, spawnItemSkillEffect,
@@ -2241,6 +2241,8 @@ export async function startEnemyMode(config = {}) {
     
     await initAudio();   // ← 音読み込み
     if (getSoundEnabled() && getSoundSettings().bgm) {
+        // ★v1.0.42: モード開始時にBGMを読み込む（起動時の一括デコード廃止のため）
+        await ensureSound(resolvedBgm);
         playBGM(resolvedBgm, 1.0);
         gameState.startTime = getNow(); // BGM表示のために開始時間をセット
     } else {

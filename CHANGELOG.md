@@ -2,6 +2,34 @@
 
 ---
 
+## [1.0.42] - 2026-09-17
+
+### Changed
+- **オフライン用データのダウンロードを「完全手動・実測進捗」に刷新**
+  - 旧実装は `START_OFFLINE_CACHE` をSWへ投げるだけで、進捗・完了・失敗が伝わらず「押した瞬間に最新版です」と誤表示され、実際には1件も保存されていなかった
+  - 新実装: 設定ボタン押下時のみ、ページ側（`js/main.js` の `downloadOfflineData()`）が直接 `caches.open()` + `fetch` で Cache Storage（`mametype-app` / `mametype-assets`）へ書き込む
+  - 進捗は「取得 n ・ 既存 m ／ 全 N 件」の実測値をモーダルに表示。完了前に全URLを `caches.match()` で検証し、失敗があれば「再試行」ボタンを出す
+  - アセットは既存スキップ。失敗したURLだけを「再試行」で取り直す（保存済み分の再取得は不要）
+  - Service Worker に `GET_OFFLINE_MANIFEST` を追加（同一オリジンのURL一覧を返信）。install 時のブートキャッシュを廃止
+- **自動アップデート促しモーダルを全廃**
+  - `#update-notification` モーダルと `showUpdateNotification` / `showUpdateReady` / `showOfflineReady` / `showUpdateProgressPreparing` / `autoApplyUpdate` / 中央下の `#swDownloadIndicator` バーを削除
+  - 新バージョンの検知は設定画面の VERSION 欄の**テキスト表示のみ**。適用（再起動）はオフラインDLモーダル内の「更新を適用して再起動」ボタンを押したときだけ実行
+- **BGM / SE を「モード開始時読み込み」に変更（起動時の自動デコードを停止）**
+  - `effectManager.js` に `registerSoundAssets()` / `ensureSound()` を新設。`playBGM` / `playSE` / `fadeBGMTo` は未取得の音源をその場で読み込んでから再生する（`buffers[name]` が無くても黙って無音にならない）
+  - 各モード開始処理（gameCore / enemyCore / defenseCore）で `await ensureSound(bgm)` を追加し、BGM開始の遅れを最小化
+  - 起動時の画像・フォントの裏読み込み（`loadRemainingAssets`）は従来どおり維持（フォント最優先）
+- **アプリケーションバージョンを `1.0.42` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.42` に更新
+  - Service Worker のキャッシュ名を `mametype-v1.0.42` に更新
+
+### Fixed
+- **版を上げても手動DL済みのオフラインデータが消えないように修正**
+  - SW の activate は旧 `mametype-v*` キャッシュのみ削除し、固定名の `mametype-app` / `mametype-assets` は保持する
+- **オフライン起動が失敗する可能性を解消**
+  - `supabase.js`（`https://esm.sh` を静的import）を `js/main.js` から外し、新設の `online/loadSupabase.js` 経由で「実際に通信する瞬間」だけ動的importする。esm.sh が取得できない環境でもゲーム本体は起動する（オンラインランキング等のみ無効化）
+
+---
+
 ## [1.0.39] - 2026-09-15
 
 ### Changed

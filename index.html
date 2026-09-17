@@ -42,17 +42,6 @@
 </div>
 
 <!-- =====================================================
-  SWの裏ダウンロード進捗バー（中央下）
-  オフライン用データ / アップデートデータの取得中だけ表示する
-===================================================== -->
-<div id="swDownloadIndicator" class="remaining-load-indicator">
-  <span class="remaining-load-text">ダウンロード中…</span>
-  <div class="remaining-load-bar">
-    <div id="swDownloadBarFill" class="remaining-load-bar-fill"></div>
-  </div>
-</div>
-
-<!-- =====================================================
   オフラインデータダウンロード進捗モーダル
   設定から「オフライン用データをダウンロード」を押したときに表示
 ===================================================== -->
@@ -67,8 +56,12 @@
       <div id="offlineDlProgressText" class="offline-dl-progress-text">0%</div>
     </div>
     <div id="offlineDlStatus" class="offline-dl-status">ダウンロード中...</div>
+    <!-- ★v1.0.42: 進捗の詳細（取得件数・ファイル名） -->
+    <div id="offlineDlDetail" class="offline-dl-detail"></div>
+    <!-- ★v1.0.42: 操作ボタン（キャンセル／再試行／全データ再取得／OK／更新適用） -->
+    <div id="offlineDlButtons" class="offline-dl-buttons"></div>
     <div class="offline-dl-note">
-      <p>最新版です。オフラインでも遊べます。</p>
+      <p>ダウンロードが完了すると、インターネット無しでも遊べるようになります。</p>
     </div>
   </div>
 </div>
@@ -1301,111 +1294,6 @@
 <!-- 🔹モーダル専用コンテナ -->
 <!-- ===================================================== -->
 <div id="modal-container"></div>
-
-<!-- =====================================================
-  更新通知UI
-===================================================== -->
-<!-- =====================================================
-     MameType Update Notification
-     ===================================================== -->
-
-<div
-  id="update-notification"
-  class="update-notification"
-  style="display: none;"
->
-
-  <div class="update-dialog">
-
-    <div
-      id="update-title"
-      class="update-title"
-    >
-      MameType UPDATE
-    </div>
-
-
-    <div
-      id="update-message"
-      class="update-message"
-    >
-      新しいバージョンがあります。
-    </div>
-
-
-    <!-- -----------------------------------------------
-         Progress
-         ----------------------------------------------- -->
-
-    <div
-      id="update-progress-wrapper"
-      class="update-progress-wrapper"
-      style="display: none;"
-    >
-
-      <div class="update-progress-track">
-
-        <div
-          id="update-progress-bar"
-          class="update-progress-bar"
-          style="width: 0%;"
-        ></div>
-
-      </div>
-
-
-      <div
-        id="update-progress-text"
-        class="update-progress-text"
-      >
-        0%
-      </div>
-
-
-      <div
-        id="update-file-text"
-        class="update-file-text"
-      >
-        アップデートを準備しています...
-      </div>
-
-    </div>
-
-
-    <!-- -----------------------------------------------
-         Buttons
-         ----------------------------------------------- -->
-
-    <div class="update-buttons">
-
-      <button
-        id="update-now-btn"
-        class="update-button update-button-primary"
-        style="display: none;"
-      >
-        今すぐ更新
-      </button>
-
-
-      <button
-        id="update-later-btn"
-        class="update-button update-button-secondary"
-        style="display: none;"
-      >
-        後で
-      </button>
-
-    </div>
-
-
-    <div class="update-note">
-      アップデート後、自動的に再起動します。
-    </div>
-
-  </div>
-
-</div>
-
 
 <!-- =====================================================
   メインスクリプト

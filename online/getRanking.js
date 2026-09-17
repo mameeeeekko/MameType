@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js";
+import { loadSupabase } from "./loadSupabase.js";
 import { isOnlineEnabled } from "../online/playerProfile.js";
 import { RANKING_VERSION } from "../js/version.js";
 
@@ -10,6 +10,19 @@ export async function getRanking(
   from = 0,
   to = 99
 ) {
+  // ================================
+  // ★v1.0.42: オフライン時は取得しない
+  //   （Supabaseクライアントはネットワーク必須のため）
+  // ================================
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return [];
+  }
+
+  const supabase = await loadSupabase();
+  if (!supabase) {
+    return [];
+  }
+
   let query = supabase
     .from("scores")
     .select("*")

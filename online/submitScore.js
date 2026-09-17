@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js";
+import { loadSupabase } from "./loadSupabase.js";
 import {
   isOnlineEnabled,  getPlayerName,
   getPlayerId, // ★ インポート
@@ -25,6 +25,23 @@ export async function submitScore(scoreData) {
   ) {
     console.error("invalid scoreData:", scoreData);
     return { success: false, error: "invalid data" };
+  }
+
+  // ================================
+  // ★v1.0.42: オフライン時は送信せずに終了
+  //   （Supabaseクライアントの読み込みもネットワーク必須のため）
+  // ================================
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    console.log("[online] オフラインのためスコア送信をスキップ");
+    return { success: false, offline: true };
+  }
+
+  // ================================
+  // Supabaseクライアント取得（動的import・失敗時はオフライン扱い）
+  // ================================
+  const supabase = await loadSupabase();
+  if (!supabase) {
+    return { success: false, offline: true };
   }
 
   // ================================

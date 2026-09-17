@@ -1,4 +1,4 @@
-import { initAudio, loadSound } from "./effectManager.js";
+import { initAudio, loadSound, registerSoundAssets } from "./effectManager.js";
 
 export const images = {};
 
@@ -205,6 +205,13 @@ async function _loadAssetList(assetList, onProgress) {
   await Promise.all(promises);
 }
 
+// ======================================================================
+// ★v1.0.42: 音源は起動時に一括デコードせず、「鳴らす直前に読み込む」。
+//   そのため effectManager 側へ「name → src」の対応表を渡しておく。
+//   （SE/BGM の初回再生時に ensureSound() がこの表を使って取得する）
+// ======================================================================
+registerSoundAssets([...coreAssets, ...remainingAssets]);
+
 async function loadCoreAssets(onProgress) {
   // 音声の初期化（ブラウザポリシー対応）
   await initAudio();
@@ -224,7 +231,8 @@ async function loadCoreAssets(onProgress) {
 // ======================================================================
 
 const IMAGE_CONCURRENCY = 4; // 画像の同時読み込み数
-const SOUND_CONCURRENCY = 2; // 音声の同時読み込み数（デコードの競合を防ぐ）
+// ★v1.0.42: 音源はモード開始時に effectManager.ensureSound() が
+//   1件ずつ読み込むようになったため、起動時の同時読み込み数は未使用。
 
 // ---------------------------------------------------------------------
 // フォント（丸ゴ・Inter）サブセットの一括プリフェッチ
@@ -285,12 +293,8 @@ async function prefetchFont(url) {
 //   スタンダード = bgm_rainy（コアアセットで既読）
 //   タイムアタック = bgm_gameover / 長文 = bgm_yakanhikou
 //   防衛 = bgm_dive / エネミー = bgm_swim
-const DAILY_PRELOAD_BGM_NAMES = [
-  "bgm_gameover",
-  "bgm_yakanhikou",
-  "bgm_dive",
-  "bgm_swim",
-];
+// ★v1.0.42: 音源は起動時に読み込まなくなったため、この定数は未使用。
+//   （各モード開始時に effectManager.ensureSound() が読み込む）
 
 /**
  * 1件読み込み。音声は「yield付き」で読み込む。
@@ -371,41 +375,67 @@ async function _runQueueWithLimit(queue, maxConcurrent, gapMs, onOneLoaded) {
 }
 
 /**
- * 残りアセット全量をバックグラウンドで読み込む。
+ * 残りアセット（画像・フォント）をバックグラウンドで読み込む。
  * @param {Function} [onProgress] - (loaded, total) の進捗通知
+ *
+ * ★v1.0.42: 音源（BGM/SE）はここから外した。
+ *   起動時に全BGM/SEをfetch+decodeすると負荷が大きいため、
+ *   「実際に鳴らす直前」＝モード開始時に effectManager.ensureSound() が
+ *   1件ずつ読み込む方式へ変更した。
+ *   ※画像とフォントは従来どおり起動後に自動で読み込む。
+ *     フォント（約413件）を最優先するのは、タイピング表示の遅延防止のため。
  */
 async function loadRemainingAssets(onProgress) {
-  // 種類ごとに分割（優先順位: フォント → 画像 → [デイリーBGM → SE → その他BGM]）
-  // ※ フォントを最優先にするのは「タイピング表示の遅延防止」のため。
-  //    漢字を含むモード（スタンダード/タイムアタック/長文/防衛）は、
-  //    問題ごとに新サブセットを遅延取得すると表示が遅れるため、
-  //    全サブセットを先に HTTP キャッシュへ載せておく。
+  // 種類ごとに分割（優先順位: フォント → 画像）
   const fontUrls = await collectFontUrls();
   const fontQueue = fontUrls.map(url => ({ type: "font", name: "font", src: url }));
   const imageQueue = remainingAssets.filter(a => a.type === "img");
-  const bgmDailyQueue = remainingAssets.filter(a => DAILY_PRELOAD_BGM_NAMES.includes(a.name));
-  const seQueue = remainingAssets.filter(a => a.type === "sound" && !a.name.startsWith("bgm_"));
-  const bgmRestQueue = remainingAssets.filter(a => a.type === "sound" && a.name.startsWith("bgm_") && !DAILY_PRELOAD_BGM_NAMES.includes(a.name));
-  const soundQueue = [...bgmDailyQueue, ...seQueue, ...bgmRestQueue];
 
-  const total = fontQueue.length + imageQueue.length + soundQueue.length;
+  const total = fontQueue.length + imageQueue.length;
   let loaded = 0;
   const report = () => {
     loaded++;
     try { onProgress?.(loaded, total); } catch (e) { /* 無視 */ }
   };
 
-  // フォント・画像・音声はそれぞれ別の並列数で同時に進める
+  // フォント・画像はそれぞれ別の並列数で同時に進める
   // → フォント（タイピング表示に直結）を最優先で進めつつ、
-  //   メニュー用画像とデイリー曲も最初から読み込まれる
+  //   メニュー用画像も最初から読み込まれる
   // ※ 裏読み込み中に重くならないよう、件数ごとに少し間を空ける
   const fontPromise = _runQueueWithLimit(fontQueue, FONT_CONCURRENCY, FONT_GAP_MS, report);
   const imagePromise = _runQueueWithLimit(imageQueue, IMAGE_CONCURRENCY, 8, report);
-  const soundPromise = _runQueueWithLimit(soundQueue, SOUND_CONCURRENCY, 30, report);
-  await Promise.all([fontPromise, imagePromise, soundPromise]);
+  await Promise.all([fontPromise, imagePromise]);
 
   try { onProgress?.(total, total); } catch (e) { /* 無視 */ }
   console.log("All remaining assets loaded in background.");
 }
 
-export { loadCoreAssets, loadRemainingAssets };
+// ======================================================================
+// ★v1.0.42: オフライン用データ（手動ダウンロード）の対象URL一覧
+// ----------------------------------------------------------------------
+//  設定の「最新版をオフライン用にダウンロード」で Cache Storage へ
+//  書き込む画像・音声・フォントのURLを列挙する。
+//  （アプリ本体の html/css/js は main.js 側の一覧を使う）
+// ======================================================================
+async function collectOfflineAssetUrls() {
+  const urls = [];
+  const push = (src) => {
+    if (!src) return;
+    try { urls.push(new URL(src, location.href).href); } catch (e) { /* 不正URLは無視 */ }
+  };
+
+  for (const a of [...coreAssets, ...remainingAssets]) {
+    if (a.type !== "img" && a.type !== "sound") continue;
+    push(a.src);
+  }
+
+  // フォント（fonts.css が参照する woff2 サブセット）
+  push(FONT_CSS_URL);
+  for (const url of await collectFontUrls()) {
+    urls.push(url);
+  }
+
+  return [...new Set(urls)];
+}
+
+export { loadCoreAssets, loadRemainingAssets, collectFontUrls, collectOfflineAssetUrls };

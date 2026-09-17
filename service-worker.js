@@ -6,82 +6,34 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.41";
+const CACHE_NAME = "mametype-v1.0.42";
 
 // =====================================================
-// オフライン用データ（SWキャッシュ）の裏ダウンロードを
-// 段階的に行う（裏で重くならない対策）
-// ----------------------------------------------------------------------
-//  - install イベントで一括キャッシュすると、Windowsでは
-//    大量の同時fetch+デコードが走りメインスレッドを圧迫する。
-//  - 初回は起動に必要な最小セット（起動コア）だけを同期的に
-//    キャッシュし、残りは activate 後のアイドル時に数件ずつ
-//    少しずつキャッシュする（裏でも軽い）。
-//  - 残りは「低速キュー」として activate 時にバックグラウンドで
-//    1件ずつ取得する。取得失敗は握りつぶし（fetch時に都度取得）。
+// オフライン用キャッシュ（固定名）
+// -----------------------------------------------------
+//  ★v1.0.42: オフライン用データのダウンロードは「設定ボタンからの
+//   手動実行」だけにする。Service Worker 側で install / activate 後に
+//   自動取得しない（勝手な大量取得・思わぬ通信を避けるため）。
+//  ・mametype-app:    アプリ本体（html / css / js / icon）
+//  ・mametype-assets: 画像・音声・フォント
+//  ・ページ側（js/main.js の downloadOfflineData）が直接書き込む。
+//    SW の fetch はオフライン時に caches.match() で全キャッシュを
+//    検索するため、ここへ入れた内容がそのままオフライン起動に使われる。
+//  ・activate で固定名キャッシュは削除しない（版が上がっても
+//    手動DL済みデータが消えないようにする）。
 // =====================================================
+const OFFLINE_APP_CACHE = "mametype-app";
+const OFFLINE_ASSET_CACHE = "mametype-assets";
 
+// =====================================================
+// オフライン対象アセット一覧
 // -----------------------------------------------------
-// 起動に必要な最小セット（install で同期キャッシュ）
-//  → ブート〜メニュー表示に必要なものだけ
-// -----------------------------------------------------
-
-const BOOT_CORE_ASSETS = [
-  "./",
-  "./index.html",
-  "./style.css",
-  "./manifest.json",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./assets/fonts/fonts.css",
-
-  // ---------------------------------------------------
-  // メニュー画像 / サウンドアイコン
-  // ---------------------------------------------------
-
-  "./assets/pic/title_menu.png",
-  "./assets/pic/quest_menu.png",
-  "./assets/pic/sound1.png",
-  "./assets/pic/soundmute.png",
-
-  // ---------------------------------------------------
-  // 起動直後のメニュー描画・起動シーケンスに必要なJS
-  // ---------------------------------------------------
-
-  "./js/main.js",
-  "./js/version.js",
-  "./js/storage.js",
-  "./js/stageScale.js",
-  "./js/fullscreenUtil.js",
-  "./js/saveDataNotice.js",
-  "./js/assetsLoader.js",
-  "./js/effectManager.js",
-  "./js/gameCore.js",
-  "./js/renderer.js",
-  "./js/gameModes.js",
-  "./js/difficulties.js",
-  "./js/keybinds.js",
-  "./js/dialogue.js",
-  "./js/dialogue.css",
-  "./js/dialogueData.js",
-  "./js/analytics.js",
-];
-
-// -----------------------------------------------------
-// 裏ダウンロードの同時取得数・間隔
-//  → 1件ずつ・少し間を空けて取得することで、
-//    Windows でも裏ダウンロード中の重さを抑える
-// -----------------------------------------------------
-
-const DEFERRED_CONCURRENCY = 1;
-// ★v1.0.23: 300ms → 1200ms に緩和。
-//   頻繁な取得+キャッシュ書き込みは Windows（プロキシ/セキュリティソフト環境）で
-//   ネットワーク・ディスクI/Oを圧迫し、プレイ中の表示遅れ・カクつきの原因になる。
-const DEFERRED_INTERVAL_MS = 1200;
-
-// ★v1.0.23: ゲーム中フラグ（ページから GAME_ACTIVE メッセージで切替）。
-//   true の間は裏ダウンロードを完全に停止する。
-let gameActive = false;
+//  ★v1.0.42: この一覧は「手動ダウンロード用のURLリスト」として使う。
+//   ページ側から GET_OFFLINE_MANIFEST を受けたら、同一オリジンの
+//   URLだけを OFFLINE_MANIFEST として返信する。
+//   クロスオリジン（esm.sh 等）は Cache Storage へ入れられないため
+//   対象外にする。
+// =====================================================
 
 const CORE_ASSETS = [
   "./",
@@ -182,12 +134,9 @@ const CORE_ASSETS = [
   "./dev/devTools.js",
 
   // ---------------------------------------------------
-  // 外部CDN（Supabaseクライアント）
-  // supabase.js が起動時に静的importしているため、
-  // 完全オフライン起動にはこのキャッシュが必須
+  // ★v1.0.42: クロスオリジンは Cache Storage へ入れられないため
+  //   対象外にした（手動DL側でもフィルタする）。
   // ---------------------------------------------------
-
-  "https://esm.sh/@supabase/supabase-js@2.49.1?bundle",
 ];
 
 // =====================================================
@@ -387,14 +336,12 @@ const ALL_ASSETS_TO_CACHE = [
   ])
 ];
 
-// 起動コア以外（activate 後にバックグラウンドで少しずつ取得する）
-//  install 時は起動コアだけをキャッシュして素早く有効化し、
-//  残りは interval を空けて 1 件ずつ取得する。
-//  （一括キャッシュは CacheStorage の排他ロックを長時間占有し、
-//     Windows のタイピング遅延・起動失敗の原因になるため）
-const NON_BOOT_ASSETS_TO_CACHE = ALL_ASSETS_TO_CACHE.filter(
-  url => !BOOT_CORE_ASSETS.includes(url)
-);
+// =====================================================
+// ★v1.0.42: オフラインデータの取得は「ページ側主導（手動）」。
+//   ALL_ASSETS_TO_CACHE は GET_OFFLINE_MANIFEST 応答用の
+//   フォールバック一覧。ページ側は main.js / assetsLoader.js
+//   で独自にURL一覧を構築し、この一覧は補助的に使う。
+// ====================================================
 
 // =====================================================
 // クライアントへ進捗を送信
@@ -416,262 +363,27 @@ async function notifyClients(message) {
   });
 }
 
-/**
- * activate 後のバックグラウンド事前キャッシュ。
- * 起動コア以外のアセットを「1件ずつ・間隔を空けて」取得して
- * オフライン対応を完成させる。進捗は UPDATE_PROGRESS で通知する。
- * キャッシュ書き込みは CacheStorage の排他ロックを短時間しか
- * 占めないため、ページ側の要求（タイピング音 fetch など）が
- * ロック待ちで遅延しなくなる。
- */
-async function preCacheRemainingInBackground() {
-
-  // オフライン中は取得できないので何もしない
-  if (navigator.onLine === false) {
-    return;
-  }
-
-  const cache = await caches.open(CACHE_NAME).catch(() => null);
-  if (!cache) return;
-
-  const total = NON_BOOT_ASSETS_TO_CACHE.length;
-  if (total <= 0) return;
-
-  let completed = 0;
-
-  const notify = (status) => {
-    const percent = Math.floor((completed / total) * 100);
-    try {
-      notifyClients({
-        type: "UPDATE_PROGRESS",
-        status,
-        current: completed,
-        total,
-        percent,
-      });
-    } catch (e) { /* 無視 */ }
-  };
-
-  // ---------------------------------------------------------------
-  // ★v1.0.23: ゲーム中は裏ダウンロードを完全に停止する。
-  //   プレイ中のネットワーク帯域・ディスクI/Oの取り合いで
-  //   「打鍵表示の遅れ」「防衛モードのもっさり」が起きるため。
-  //   ページが GAME_ACTIVE(active:false) を送ってくるまで待機する。
-  // ---------------------------------------------------------------
-  const waitForGameIdle = async () => {
-    while (gameActive) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  };
-
-  notify("start");
-
-  for (const asset of NON_BOOT_ASSETS_TO_CACHE) {
-
-    // ゲームが始まったら再開を待つ
-    await waitForGameIdle();
-
-    try {
-      const request = new Request(asset);
-      const response = await fetch(request);
-      if (response && response.ok) {
-        await cache.put(request, response.clone());
-      }
-      completed++;
-    } catch (e) {
-      // 1件の失敗で中断しない（次の起動時に再試行）
-      completed++;
-      console.error("Service Worker: background cache failed:", asset, e);
-    }
-
-    notify("progress");
-
-    // 間隔を空けて、キャッシュロックの長時間占有を避ける
-    await new Promise(resolve => setTimeout(resolve, DEFERRED_INTERVAL_MS));
-  }
-
-  completed = total;
-  notify("complete");
-  console.log("Service Worker: Background cache complete.");
-
-  // ---------------------------------------------------------------
-  // フォントサブセット（fonts.css が参照する woff2 群）も事前キャッシュ。
-  //  self-host フォントは unicode-range サブセット（woff2 約200ファイル）に
-  //  分かれており、オフライン起動時にキャッシュがないと日本語表示が
-  //  フォールバックフォントになる・表示が遅れる。
-  //  （オンライン中はページ側 assetsLoader が HTTP キャッシュへ事前取得済み。
-  //    ここはオフライン対応のための補完）
-  // ---------------------------------------------------------------
-  try {
-    const fontCssRequest = new Request("./assets/fonts/fonts.css");
-    const fontCssResponse = await fetch(fontCssRequest);
-    if (fontCssResponse && fontCssResponse.ok) {
-      await cache.put(fontCssRequest, fontCssResponse.clone());
-      const fontCss = await fontCssResponse.text();
-      const fontUrls = [...new Set(
-        [...fontCss.matchAll(/url\((['"]?)([^'")]+\.woff2)\1\)/g)].map(m => m[2])
-      )];
-      for (const href of fontUrls) {
-        // ゲームが始まったら再開を待つ
-        await waitForGameIdle();
-        try {
-          // 相対URLは fonts.css の場所（/assets/fonts/）基準で解決する
-          const cssUrl = new URL("./assets/fonts/fonts.css", self.location.href);
-          const url = new URL(href, cssUrl).href;
-          const res = await fetch(new Request(url));
-          if (res && res.ok) {
-            await cache.put(new Request(url), res.clone());
-          }
-        } catch (e) {
-          // 1件の失敗は握りつぶし（次回起動時に再試行）
-        }
-        // 間隔を空けて、キャッシュロックの長時間占有を避ける
-        await new Promise(resolve => setTimeout(resolve, DEFERRED_INTERVAL_MS));
-      }
-      console.log(`Service Worker: Font cache complete. (${fontUrls.length} files)`);
-    }
-  } catch (e) {
-    console.warn("Service Worker: font precache failed:", e);
-  }
-}
-
 // =====================================================
 // インストール
 // =====================================================
 
 self.addEventListener("install", event => {
 
+  // ★v1.0.42: install 時のブートキャッシュを廃止。
+  //   オフライン環境で install がタイムアウト・失敗し
+  //   「ハードリフレッシュでしか起動できない」問題の根本修正。
+  //   オフライン用データはユーザーが明示的に
+  //   「最新版をオフライン用にダウンロード」を押したときに
+  //   ページ側（js/main.js の downloadOfflineData）が
+  //   Cache Storage へ直接書き込む。
+
   console.log(
-    "Service Worker: Install",
+    "Service Worker: Install (no boot cache)",
     CACHE_NAME
   );
 
-  event.waitUntil(
-
-    caches.open(CACHE_NAME)
-
-      .then(async cache => {
-
-        const total = BOOT_CORE_ASSETS.length;
-
-        let completed = 0;
-
-        console.log(
-          `Service Worker: Updating ${total} assets`
-        );
-
-        // ---------------------------------------------
-        // 進捗を開始
-        // ---------------------------------------------
-
-        notifyClients({
-          type: "UPDATE_PROGRESS",
-          status: "start",
-          current: 0,
-          total: total,
-          percent: 0
-        }).catch(() => {});
-
-        // ---------------------------------------------
-        // 1ファイルずつ取得
-        // ---------------------------------------------
-
-        for (const asset of BOOT_CORE_ASSETS) {
-
-          try {
-
-            const request = new Request(
-              asset,
-              {
-                cache: "no-cache"
-              }
-            );
-
-            const response = await fetch(request);
-
-            if (!response.ok) {
-              throw new Error(
-                `HTTP ${response.status}: ${asset}`
-              );
-            }
-
-            await cache.put(
-              request,
-              response.clone()
-            );
-
-            completed++;
-
-            const percent = Math.floor(
-              (completed / total) * 100
-            );
-
-            console.log(
-              `Service Worker: ${completed}/${total}`,
-              asset
-            );
-
-            // -----------------------------------------
-            // 進捗送信
-            // -----------------------------------------
-
-            notifyClients({
-              type: "UPDATE_PROGRESS",
-              status: "progress",
-              current: completed,
-              total: total,
-              percent: percent,
-              file: asset
-            }).catch(() => {});
-
-          } catch (error) {
-
-            console.error(
-              "Service Worker: Failed to cache:",
-              asset,
-              error
-            );
-
-            // -----------------------------------------
-            // 1ファイル失敗しても全体を止めない
-            // -----------------------------------------
-
-            notifyClients({
-              type: "UPDATE_PROGRESS",
-              status: "file-error",
-              current: completed,
-              total: total,
-              percent: Math.floor(
-                (completed / total) * 100
-              ),
-              file: asset
-            }).catch(() => {});
-          }
-        }
-
-        // ---------------------------------------------
-        // 完了
-        // ---------------------------------------------
-
-        notifyClients({
-          type: "UPDATE_PROGRESS",
-          status: "complete-boot",
-          current: total,
-          total: total,
-          percent: 100
-        }).catch(() => {});
-
-        console.log(
-          "Service Worker: Asset update complete."
-        );
-
-      })
-  );
-
-  // -----------------------------------------------
-  // ここでは skipWaiting しない
-  // ユーザーが「今すぐ更新」を押したときに実行
-  // -----------------------------------------------
+  // skipWaiting はしない（ユーザーが「更新を適用して再起動」を
+  // 押すまで既存のSWを制御し続ける）。
 
 });
 
@@ -696,7 +408,14 @@ self.addEventListener("activate", event => {
         const cacheNames = await caches.keys();
         await Promise.all(
           cacheNames
-            .filter(name => name !== CACHE_NAME)
+            // ★v1.0.42: 旧バージョンの mametype-v* キャッシュのみ削除。
+            //   固定名の mametype-app / mametype-assets は
+            //   手動DL済みデータが消えないように保持する。
+            .filter(name =>
+              name !== CACHE_NAME &&
+              name !== OFFLINE_APP_CACHE &&
+              name !== OFFLINE_ASSET_CACHE
+            )
             .map(name => {
               console.log(
                 "Service Worker: Deleting old cache:",
@@ -799,24 +518,10 @@ self.addEventListener("fetch", event => {
 self.addEventListener("message", async event => {
 
   // ---------------------------------------------------------------
-  // ★v1.0.23: ページからのゲーム状態通知。
-  //   ゲーム中は裏ダウンロード（preCacheRemainingInBackground）を
-  //   停止させるために使う。
+  // ★v1.0.42: GAME_ACTIVE（ゲーム中フラグ）は廃止。
+  //   裏ダウンロード（preCacheRemainingInBackground）が無くなったため、
+  //   ページからの GAME_ACTIVE メッセージは単純に無視される。
   // ---------------------------------------------------------------
-  if (
-    event.data &&
-    event.data.type === "GAME_ACTIVE"
-  ) {
-
-    gameActive = !!event.data.active;
-
-    console.log(
-      "Service Worker: GAME_ACTIVE =",
-      gameActive
-    );
-
-    return;
-  }
 
   if (
     event.data &&
@@ -848,20 +553,35 @@ self.addEventListener("message", async event => {
   }
 
   // =====================================================
-  // ★v1.0.40: 設定画面から「オフライン用データをダウンロード」
-  // を押したときの手動開始ハンドラ
+  // ★v1.0.42: ページから「オフライン用データをダウンロード」
+  //   押されたときの問い合わせ。手動DLはページ側で実行するため、
+  //   ここでは「キャッシュすべきURLの一覧」だけを返信する。
   // =====================================================
   if (
     event.data &&
-    event.data.type === "START_OFFLINE_CACHE"
+    event.data.type === "GET_OFFLINE_MANIFEST"
   ) {
 
-    console.log(
-      "Service Worker: START_OFFLINE_CACHE received (manual download)"
-    );
+    // ページ側からの問い合わせ。手動DLはページ側で実行するため、
+    // ここでは「キャッシュすべきURLの一覧」だけを返信する。
+    // （同期応答なので waitUntil は不要。notifyClients は全クライアントへ）
+    (async () => {
+      try {
+        // 同じオリジンのURLのみを返す（クロスオリジンは
+        // Cache Storage へ入れられないため対象外）
+        const urls = ALL_ASSETS_TO_CACHE.filter(u => {
+          try { return new URL(u, self.location.href).origin === self.location.origin; }
+          catch (e) { return false; }
+        }).map(u => new URL(u, self.location.href).href);
 
-    // バックグラウンドで非同期実行（await しない）
-    preCacheRemainingInBackground();
+        notifyClients({
+          type: "OFFLINE_MANIFEST",
+          appCache: OFFLINE_APP_CACHE,
+          assetCache: OFFLINE_ASSET_CACHE,
+          urls
+        });
+      } catch (e) { /* 無視 */ }
+    })();
 
   }
 

@@ -33,7 +33,7 @@ import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEn
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
 import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed, showDisclaimer } from "./dialogue.js";
-import { loadCoreAssets, loadRemainingAssets, images } from "./assetsLoader.js";
+import { loadCoreAssets, loadRemainingAssets, images, collectOfflineAssetUrls } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds.js";
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
@@ -49,7 +49,11 @@ import {
 } from "./difficulties.js";
 import { playBGM, playSE, stopBGM, stopAllLoopSE, fadeBGMTo, fadeOutBGM, BGM_CONFIG } from "./effectManager.js";
 import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
-import { supabase } from "../online/supabase.js";
+// ★v1.0.42: supabase は静的importしない（オフライン起動対策）。
+//   supabase.js は https://esm.sh を静的importしており、ネットワークが
+//   無いとモジュール解決に失敗してアプリ全体が起動できなくなるため、
+//   オンライン認証を行う瞬間だけ動的importする（online/loadSupabase.js）。
+import { loadSupabase } from "../online/loadSupabase.js";
 import { startDefenseMode } from "./defenseCore.js";
 import { showSaveDataNoticeOnce } from "./saveDataNotice.js";
 
@@ -315,58 +319,6 @@ function startRemainingLoadProgress() {
 }
 
 // =====================================================
-// SWの裏ダウンロード進捗バー（中央下）
-// オフライン用データ / アップデートデータの取得中だけ表示する。
-// position: fixed なので 1600×900 ステージ座標基準で用意された
-// remaining-load-indicator と同じ見た目を再利用する。
-// =====================================================
-let _swDlHideTimer = null;
-
-function _showSwDownloadBar(message) {
-  // ★Safariでは中央下バーを出さず、設定のステータス文だけで進捗を伝える
-  //   （Safariはバーが0%で固まる問題があるため、根本的に表示しない）
-  if (isSafari) return;
-  const el = document.getElementById("swDownloadIndicator");
-  if (!el) return;
-  clearTimeout(_swDlHideTimer);
-  el.dataset.base = message || "ダウンロード中…";
-  const text = el.querySelector(".remaining-load-text");
-  if (text) text.textContent = el.dataset.base;
-  const fill = document.getElementById("swDownloadBarFill");
-  // ★既に表示中なら幅を0%に戻さない（途中でバーが0に戻る問題対策）
-  const wasVisible = el.classList.contains("show");
-  if (fill && !wasVisible) fill.style.width = "0%";
-  el.classList.add("show");
-}
-
-function _updateSwDownloadBar(percent, detail) {
-  // ★Safariでは中央下バーを出さないため、更新もしない
-  if (isSafari) return;
-  const el = document.getElementById("swDownloadIndicator");
-  if (!el) return;
-  const safe = Math.max(0, Math.min(100, Math.floor(Number(percent) || 0)));
-  const fill = document.getElementById("swDownloadBarFill");
-  if (fill) fill.style.width = safe + "%";
-  // ★最後に表示した%を記録（推定進捗の再開起点に使用）
-  _lastShownDlPct = safe;
-  const text = el.querySelector(".remaining-load-text");
-  if (text) {
-    const base = el.dataset.base || "ダウンロード中…";
-    text.textContent = detail
-      ? `${base} ${safe}%　（${detail}）`
-      : `${base} ${safe}%`;
-  }
-}
-
-function _hideSwDownloadBar() {
-  clearTimeout(_swDlHideTimer);
-  _swDlHideTimer = setTimeout(() => {
-    const el = document.getElementById("swDownloadIndicator");
-    if (el) el.classList.remove("show");
-  }, 500);
-}
-
-// =====================================================
 // ★オフライン用キャッシュ版の記録・取得
 //   「オンライン（実行中）vX」と「オフラインで動く版 vY」を
 //   分けて表示するための localStorage 管理。
@@ -389,100 +341,645 @@ function _getCacheVersion() {
 }
 
 // =====================================================
-// ★推定進捗（実測の postMessage が届かない間にバーを進める）
-//   新SWのinstall中は postMessage がページへ届かない場合がある
-//   （controllingでないため）。実測が来ない間も1秒毎+1%（最大90%）で
-//   バーを進めて「動いている」ことを見せる。実測が届いたら上書き。
-//   ※Safariでは中央下バー自体を出さないため、この推定進捗は使わない。
+// ★バージョン表示（設定画面の VERSION 欄）
+// -----------------------------------------------------
+//  ★v1.0.42: アップデートを促すモーダルは自動表示しない方針に変更。
+//    バージョンの状況は「設定を開いたときにこの文章で伝える」だけにする。
 // =====================================================
-let _estimatedDlTimer = null;
-let _estimatedDlPct = 0;
-// ★バーに最後に表示した%（2フェーズDLの連続性を保つために使用）
-let _lastShownDlPct = 0;
+let _onlineLatestVersion = "";
 
-function _startEstimatedDlProgress(startPct) {
-  // ★Safariは中央下バーを出さないため、推定進捗タイマー自体を動かさない
-  if (isSafari) return;
-  _stopEstimatedDlProgress();
-  // ★既に表示中の%から継続する（start再受信で0%に戻らないように）
-  _estimatedDlPct = Math.max(
-    0,
-    Math.min(90, Number(startPct) || 0)
-  );
-  _estimatedDlTimer = setInterval(() => {
-    _estimatedDlPct = Math.min(_estimatedDlPct + 1, 90);
-    _updateSwDownloadBar(_estimatedDlPct, "");
-  }, 1000);
+function _setVersionStatus(text) {
+  const el = document.getElementById("updateCheckStatus");
+  if (el) el.textContent = text;
 }
 
-function _stopEstimatedDlProgress() {
-  if (_estimatedDlTimer) {
-    clearInterval(_estimatedDlTimer);
-    _estimatedDlTimer = null;
+function _refreshVersionStatus() {
+  const cached = _getCacheVersion();
+  const parts = [`オンライン（実行中）: v${APP_VERSION}`];
+
+  if (cached && cached === APP_VERSION) {
+    parts.push(`オフライン用（手動DL済み）: v${cached}`);
+  } else if (cached) {
+    parts.push(`オフライン用（手動DL済み）: v${cached}（「最新版をオフライン用にダウンロード」で更新できます）`);
+  } else {
+    parts.push("オフライン用: 未ダウンロード（「最新版をオフライン用にダウンロード」を実行してください）");
   }
-}
 
+  if (_onlineLatestVersion && _onlineLatestVersion !== APP_VERSION) {
+    parts.push(`新しいバージョン v${_onlineLatestVersion} があります`);
+  }
+
+  if (currentServiceWorkerRegistration && currentServiceWorkerRegistration.waiting) {
+    parts.push("更新の適用待ち（「更新を適用して再起動」で反映できます）");
+  }
+
+  _setVersionStatus(parts.join(" ／ "));
+}
 // ============================================================
-// オフラインデータダウンロード進捗モーダル
-// 設定画面から「オフライン用データをダウンロード」を押したときに表示
+// オフライン用データの手動ダウンロード
+// ------------------------------------------------------------
+//  ★v1.0.42: Service Worker 側の裏処理を廃止し、ページ側から直接
+//   Cache Storage へ書き込む方式に変更した。
+//
+//  ・なぜ変えたか
+//    旧実装は postMessage でSWに依頼するだけだったため、
+//    進捗も完了も失敗もページに伝わらず、さらに
+//    「押した瞬間に“最新版です”と表示される（実際は1件も保存していない）」
+//    という誤表示が起きていた。
+//  ・新実装の要点
+//    ① 対象URLをリスト化してから開始する（対象件数を最初に確定）
+//    ② 進捗は「取得件数 / 総件数」の実測値を表示する
+//    ③ 完了後は全URLをキャッシュへ照会して検証してから完了を表示する
+//    ④ 自動では走らない（設定のボタンを押したときだけ実行）
+//
+//  ※キャッシュ名は service-worker.js の OFFLINE_APP_CACHE /
+//    OFFLINE_ASSET_CACHE と必ず揃えること。
+//  ※サービスワーカーの fetch はオフライン時に caches.match() で
+//    全キャッシュを検索するため、ここで書き込んだ内容がそのまま
+//    オフライン起動・オフライン再生に使われる。
 // ============================================================
+const OFFLINE_APP_CACHE = "mametype-app";       // アプリ本体（html / css / js）
+const OFFLINE_ASSET_CACHE = "mametype-assets";  // 画像・音声・フォント
+const OFFLINE_DL_CONCURRENCY = 4;               // 同時取得数
+
+// アプリ本体（オフライン起動に必要なファイル。追加時はここにも追記する）
+const OFFLINE_APP_FILES = [
+  "./",
+  "./index.html",
+  "./style.css",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png",
+
+  // コアJS
+  "./js/main.js",
+  "./js/saveDataNotice.js",
+  "./js/fullscreenUtil.js",
+  "./js/stageScale.js",
+  "./js/gameCore.js",
+  "./js/enemyCore.js",
+  "./js/defenseCore.js",
+  "./js/inputCore.js",
+  "./js/renderer.js",
+  "./js/assetsLoader.js",
+  "./js/dialogue.js",
+  "./js/dialogue.css",
+  "./js/dialogueData.js",
+  "./js/hud.js",
+  "./js/playerStats.js",
+  "./js/storage.js",
+  "./js/gameModes.js",
+  "./js/difficulties.js",
+  "./js/target.js",
+  "./js/romaUtils.js",
+  "./js/typingLogic.js",
+  "./js/version.js",
+  "./js/analytics.js",
+
+  // クエスト / スキルツリー
+  "./js/canvasUtil.js",
+  "./js/performance.js",
+  "./js/keybinds.js",
+  "./js/questMap.js",
+  "./js/questMapUI.js",
+  "./js/questProgress.js",
+  "./js/questPlayerStats.js",
+  "./js/questResult.js",
+  "./js/questSkills.js",
+  "./js/skillTree.js",
+  "./js/skillTreeUI.js",
+  "./js/skillTreeResult.js",
+
+  // 敵 / 描画 / エフェクト
+  "./js/enemy.js",
+  "./js/enemySpawner.js",
+  "./js/enemyRenderer.js",
+  "./js/enemyResult.js",
+  "./js/enemyModeConfig.js",
+  "./js/effectManager.js",
+  "./js/defenseRenderer.js",
+  "./js/defenseResult.js",
+  "./js/shapeDefinitions.js",
+  "./js/starEvaluator.js",
+  "./js/recordsView.js",
+  "./js/resultView.js",
+
+  // オンライン機能（オフライン起動時もモジュールとして読み込まれる）
+  "./online/loadSupabase.js",
+  "./online/supabase.js",
+  "./online/playerProfile.js",
+  "./online/submitScore.js",
+  "./online/getRanking.js",
+  "./online/onlineRankingRenderer.js",
+
+  // 開発ツール
+  "./dev/devOverride.js",
+  "./dev/devTools.js",
+];
 let _offlineModalActive = false;
 let _offlineModalBlockKeybinds = true;
+
+// ダウンロード処理の状態
+let _offlineDlRunning = false;
+let _offlineDlCancelled = false;
+let _offlineDlAbort = null;
+let _offlineDlFailed = [];
+let _offlineDlStat = { fetched: 0, reused: 0, total: 0 };
 
 function _showOfflineDownloadModal() {
   const modal = document.getElementById("offlineDownloadModal");
   if (!modal) return;
-  
+
   _offlineModalActive = true;
   _offlineModalBlockKeybinds = true;
   modal.classList.remove("hidden");
-
-  // プログレスバーをリセット
-  _updateOfflineModalProgress(0);
 }
 
 function _hideOfflineDownloadModal() {
   const modal = document.getElementById("offlineDownloadModal");
   if (!modal) return;
-  
+
   modal.classList.add("hidden");
   _offlineModalActive = false;
   _offlineModalBlockKeybinds = false;
 }
 
-function _updateOfflineModalProgress(percent, fileInfo) {
+function _updateOfflineModalProgress(percent, detail) {
+  const safe = Math.max(0, Math.min(100, Math.floor(Number(percent) || 0)));
+
   const progressFill = document.getElementById("offlineDlProgressFill");
   const progressText = document.getElementById("offlineDlProgressText");
-  const fileInfoEl = document.getElementById("offlineDlFileInfo");
-  
-  if (progressFill) {
-    progressFill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
-  }
-  if (progressText) {
-    progressText.textContent = `${Math.floor(percent)}%`;
-  }
+  const detailEl = document.getElementById("offlineDlDetail");
+
+  if (progressFill) progressFill.style.width = `${safe}%`;
+  if (progressText) progressText.textContent = `${safe}%`;
+  if (detailEl) detailEl.textContent = detail || "";
 }
 
 function _setOfflineModalStatus(status) {
   const statusEl = document.getElementById("offlineDlStatus");
-  if (statusEl) {
-    statusEl.textContent = status;
+  if (statusEl) statusEl.textContent = status;
+}
+
+/**
+ * モーダル下部のボタンを差し替える
+ * @param {Array<{label:string, onClick:Function, primary?:boolean, disabled?:boolean}>} defs
+ */
+function _setOfflineModalButtons(defs) {
+  const wrap = document.getElementById("offlineDlButtons");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  (defs || []).forEach(def => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "offline-dl-action-btn" + (def.primary ? " primary" : "");
+    btn.textContent = def.label;
+    btn.disabled = !!def.disabled;
+    btn.addEventListener("click", () => {
+      try { def.onClick?.(); } catch (e) { /* ボタン処理の失敗で固まらないようにする */ }
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+/** URLのファイル名だけを取り出す（進捗表示用） */
+function _shortName(url) {
+  try {
+    const raw = decodeURIComponent(String(url).split("/").pop() || url);
+    return raw.length > 26 ? `${raw.slice(0, 24)}…` : raw;
+  } catch (e) {
+    return "";
   }
 }
 
-function _handleOfflineDownloadCancel() {
-  userInitiatedDownload = false;
-  _hideOfflineDownloadModal();
-  _offlineModalBlockKeybinds = false;
+/** 進捗（実測値）をモーダルへ反映する */
+function _reportOfflineProgress(detail) {
+  const done = _offlineDlStat.fetched + _offlineDlStat.reused;
+  const total = _offlineDlStat.total || 0;
+  const percent = total > 0 ? Math.floor((done / total) * 100) : 0;
+
+  _updateOfflineModalProgress(
+    percent,
+    `取得 ${_offlineDlStat.fetched} ・ 既存 ${_offlineDlStat.reused} ／ 全 ${total} 件${detail ? `　${detail}` : ""}`
+  );
+}
+
+/** URL文字列の配列を絶対URL化して重複除去する */
+function _uniqueUrls(urls) {
+  const out = [];
+  const seen = new Set();
+
+  for (const u of urls || []) {
+    const href = typeof u === "string" ? u : (u && u.href) || "";
+    if (!href || seen.has(href)) continue;
+    seen.add(href);
+    out.push(href);
+  }
+
+  return out;
+}
+/**
+ * Service Worker へ問い合わせて「キャッシュすべきURLの一覧」を取得する。
+ * 旧バージョンのSW（このメッセージを知らない）場合は null を返す。
+ */
+function _requestOfflineManifest() {
+  return new Promise(resolve => {
+    if (!("serviceWorker" in navigator)) { resolve(null); return; }
+
+    const sw = navigator.serviceWorker;
+    const target =
+      sw.controller ||
+      (currentServiceWorkerRegistration && currentServiceWorkerRegistration.active);
+
+    if (!target) { resolve(null); return; }
+
+    let settled = false;
+
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { sw.removeEventListener("message", onMessage); } catch (e) { /* 無視 */ }
+      resolve(value);
+    };
+
+    const onMessage = (event) => {
+      const data = event.data;
+      if (!data || data.type !== "OFFLINE_MANIFEST") return;
+      finish(data);
+    };
+
+    const timer = setTimeout(() => finish(null), 6000);
+
+    try {
+      sw.addEventListener("message", onMessage);
+      target.postMessage({ type: "GET_OFFLINE_MANIFEST" });
+    } catch (e) {
+      finish(null);
+    }
+  });
+}
+
+/**
+ * アプリ本体（html / css / js）のURL一覧。
+ * 固定リストに加えて、実際に読み込まれた同一オリジンのJS/CSSを合算する
+ * （リストへの追記漏れがあってもオフライン起動が壊れないようにするため）。
+ */
+function _collectAppUrls() {
+  const urls = [];
+
+  for (const p of OFFLINE_APP_FILES) {
+    try { urls.push(new URL(p, location.href).href); } catch (e) { /* 不正URLは無視 */ }
+  }
+
+  try {
+    for (const entry of performance.getEntriesByType("resource")) {
+      let u;
+      try { u = new URL(entry.name); } catch (e) { continue; }
+      if (u.origin !== location.origin) continue;
+      if (!/\.(?:js|mjs|css|html|json)$/i.test(u.pathname)) continue;
+      urls.push(u.href);
+    }
+  } catch (e) { /* 無視 */ }
+
+  return urls;
+}
+
+/**
+ * URLを並列でキャッシュへ書き込む
+ * @param {Cache} cache 書き込み先
+ * @param {string[]} urls 対象URL（絶対URL）
+ * @param {boolean} skipExisting キャッシュ済みのものをスキップするか
+ * @param {Function} [onOne] 1件完了ごとのコールバック (url, status)
+ */
+async function _pullUrlsToCache(cache, urls, skipExisting, onOne) {
+  if (!urls.length) return;
+
+  let index = 0;
+  const workerCount = Math.max(1, Math.min(OFFLINE_DL_CONCURRENCY, urls.length));
+
+  const worker = async () => {
+    while (!_offlineDlCancelled) {
+      const i = index++;
+      if (i >= urls.length) return;
+
+      const url = urls[i];
+      let status = "fetched";
+
+      try {
+        const request = new Request(url);
+
+        if (skipExisting && await cache.match(request, { ignoreVary: true })) {
+          status = "reused";
+        } else {
+          // fetchの既定のキャッシュモード（HTTPキャッシュを再利用）で取得する
+          const res = await fetch(
+            request,
+            _offlineDlAbort ? { signal: _offlineDlAbort.signal } : undefined
+          );
+          if (!res || !res.ok) {
+            throw new Error(`HTTP ${res ? res.status : "no response"}: ${url}`);
+          }
+          await cache.put(request, res.clone());
+        }
+      } catch (e) {
+        if (_offlineDlCancelled) return; // キャンセルによる中断は失敗に数えない
+        status = "failed";
+        _offlineDlFailed.push(url);
+        console.warn("[offline] 取得に失敗:", url, e);
+      }
+
+      if (status === "fetched") _offlineDlStat.fetched++;
+      else if (status === "reused") _offlineDlStat.reused++;
+
+      try { onOne?.(url, status); } catch (e) { /* 無視 */ }
+    }
+  };
+
+  const workers = [];
+  for (let w = 0; w < workerCount; w++) workers.push(worker());
+  await Promise.all(workers);
+}
+
+/** 全URLがキャッシュに入っているか照会し、欠落しているURLを返す */
+async function _findMissingUrls(urls) {
+  const opened = [];
+
+  try {
+    opened.push(await caches.open(OFFLINE_APP_CACHE));
+    opened.push(await caches.open(OFFLINE_ASSET_CACHE));
+  } catch (e) {
+    return urls.slice(); // キャッシュを開けない＝全滅扱い
+  }
+
+  const missing = [];
+
+  for (const url of urls) {
+    if (_offlineDlCancelled) break;
+
+    const request = new Request(url);
+    let found = false;
+
+    for (const cache of opened) {
+      if (await cache.match(request, { ignoreVary: true })) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) missing.push(url);
+  }
+
+  return missing;
+}
+/** ダウンロード中のキャンセル操作 */
+function _cancelOfflineDownload() {
+  _offlineDlCancelled = true;
+  _setOfflineModalStatus("キャンセルしています…");
+  try { _offlineDlAbort?.abort(); } catch (e) { /* 無視 */ }
+}
+
+/**
+ * ダウンロード処理の後始末（ボタンと状態を戻す）
+ * @param {"done"|"cancelled"} reason
+ */
+function _finishOfflineDownload(reason) {
+  _offlineDlRunning = false;
+  _offlineDlCancelled = false;
+
   const checkUpdateBtn = document.getElementById("checkUpdateBtn");
-  if (checkUpdateBtn) {
-    checkUpdateBtn.disabled = false;
+  if (checkUpdateBtn) checkUpdateBtn.disabled = false;
+
+  if (reason === "cancelled") {
+    _setOfflineModalStatus("ダウンロードを中断しました。");
+    _setOfflineModalButtons([
+      { label: "閉じる", onClick: () => _hideOfflineDownloadModal(), primary: true },
+    ]);
+    _refreshVersionStatus();
+    return;
   }
-  if (updateCheckStatus) {
-    updateCheckStatus.textContent = "ダウンロードをキャンセルしました。";
+
+  // -----------------------------------------------
+  // 完了（全件キャッシュ済みであることを検証済み）
+  // -----------------------------------------------
+  const counts = _offlineDlStat;
+
+  // ★本当に保存できたときだけ「オフライン用の版」を記録する
+  _markCacheVersion(APP_VERSION);
+
+  _updateOfflineModalProgress(
+    100,
+    `取得 ${counts.fetched} ・ 既存 ${counts.reused} ／ 全 ${counts.total} 件`
+  );
+  _setOfflineModalStatus("ダウンロードが完了しました。オフラインでも遊べます。");
+
+  const buttons = [
+    { label: "OK", onClick: () => _hideOfflineDownloadModal(), primary: true },
+  ];
+
+  // 新バージョンの適用待ちなら、そのまま適用（再起動）できるようにする
+  if (currentServiceWorkerRegistration && currentServiceWorkerRegistration.waiting) {
+    buttons.unshift({
+      label: "更新を適用して再起動",
+      onClick: () => {
+        _hideOfflineDownloadModal();
+        _applyWaitingUpdate();
+      },
+    });
+  }
+
+  _setOfflineModalButtons(buttons);
+  _refreshVersionStatus();
+}
+/**
+ * オフライン用データを手動ダウンロードする
+ * @param {{force?:boolean}} [options] force=true で全データを取り直す
+ */
+async function downloadOfflineData(options = {}) {
+  const force = !!options.force;
+
+  if (_offlineDlRunning) return;
+
+  if (!("caches" in window)) {
+    _setVersionStatus("この環境ではオフライン用データを保存できません（Cache Storage 非対応）。");
+    return;
+  }
+
+  const checkUpdateBtn = document.getElementById("checkUpdateBtn");
+
+  _offlineDlRunning = true;
+  _offlineDlCancelled = false;
+  _offlineDlFailed = [];
+  _offlineDlStat = { fetched: 0, reused: 0, total: 0 };
+  try {
+    _offlineDlAbort = ("AbortController" in window) ? new AbortController() : null;
+  } catch (e) {
+    _offlineDlAbort = null;
+  }
+
+  if (checkUpdateBtn) checkUpdateBtn.disabled = true;
+
+  _showOfflineDownloadModal();
+  _setOfflineModalStatus("ダウンロードの準備中…");
+  _updateOfflineModalProgress(0, "");
+  _setOfflineModalButtons([{ label: "キャンセル", onClick: _cancelOfflineDownload }]);
+
+  try {
+    if (!navigator.onLine) {
+      throw new Error("オフラインのためダウンロードできません。ネットワークに接続してください。");
+    }
+
+    // ------------------------------------------------------------
+    // ① 対象URLを確定する（件数を最初に確定＝進捗が正しく出せる）
+    // ------------------------------------------------------------
+    const manifest = await _requestOfflineManifest();
+    const manifestUrls = (manifest && Array.isArray(manifest.urls)) ? manifest.urls : [];
+
+    const appUrls = _uniqueUrls(_collectAppUrls().concat(manifestUrls)).filter(href => {
+      try {
+        const u = new URL(href);
+        return u.origin === location.origin && !u.pathname.includes("/assets/");
+      } catch (e) { return false; }
+    });
+
+    const assetUrls = _uniqueUrls(await collectOfflineAssetUrls()).filter(href => {
+      try { return new URL(href).origin === location.origin; } catch (e) { return false; }
+    });
+
+    const allUrls = _uniqueUrls(appUrls.concat(assetUrls));
+    if (!allUrls.length) throw new Error("ダウンロード対象が見つかりませんでした。");
+
+    _offlineDlStat.total = allUrls.length;
+    _reportOfflineProgress("");
+
+    const appCache = await caches.open(OFFLINE_APP_CACHE);
+    const assetCache = await caches.open(OFFLINE_ASSET_CACHE);
+// ------------------------------------------------------------
+    // ② アプリ本体（数MB）は毎回取得して最新に揃える
+    // ------------------------------------------------------------
+    _setOfflineModalStatus(`アプリ本体をダウンロード中…（全${allUrls.length}件）`);
+    await _pullUrlsToCache(appCache, appUrls, false, url => {
+      _reportOfflineProgress(`本体: ${_shortName(url)}`);
+    });
+
+    if (_offlineDlCancelled) { _finishOfflineDownload("cancelled"); return; }
+
+    // ------------------------------------------------------------
+    // ③ 画像・音声・フォントは「未取得のものだけ」取得する
+    //    （force 指定時はキャッシュ済みでも取り直す）
+    // ------------------------------------------------------------
+    _setOfflineModalStatus(`アセットをダウンロード中…（全${allUrls.length}件）`);
+    await _pullUrlsToCache(assetCache, assetUrls, !force, url => {
+      _reportOfflineProgress(`アセット: ${_shortName(url)}`);
+    });
+
+    if (_offlineDlCancelled) { _finishOfflineDownload("cancelled"); return; }
+
+    // ------------------------------------------------------------
+    // ④ 検証: 本当に全件キャッシュへ入ったかを確認する
+    // ------------------------------------------------------------
+    _setOfflineModalStatus("保存内容を確認しています…");
+    _updateOfflineModalProgress(100, "");
+    const missing = await _findMissingUrls(allUrls);
+
+    if (_offlineDlCancelled) { _finishOfflineDownload("cancelled"); return; }
+
+    if (missing.length) {
+      // 保存できなかったものがある場合は、完了にせず再試行できるようにする
+      _offlineDlFailed = missing;
+      _offlineDlRunning = false;
+      if (checkUpdateBtn) checkUpdateBtn.disabled = false;
+
+      _setOfflineModalStatus(
+        `一部のデータを保存できませんでした（${missing.length}件）。再試行してください。`
+      );
+      _updateOfflineModalProgress(
+        _offlineDlStat.total > 0
+          ? Math.floor(((_offlineDlStat.fetched + _offlineDlStat.reused) / _offlineDlStat.total) * 100)
+          : 0,
+        `取得 ${_offlineDlStat.fetched} ・ 既存 ${_offlineDlStat.reused} ・ 未保存 ${missing.length}`
+      );
+      _setOfflineModalButtons([
+        { label: "再試行", onClick: () => downloadOfflineData(), primary: true },
+        { label: "閉じる", onClick: () => _hideOfflineDownloadModal() },
+      ]);
+      _refreshVersionStatus();
+      return;
+    }
+
+    _finishOfflineDownload("done");
+
+  } catch (e) {
+    console.warn("[offline] ダウンロードに失敗:", e);
+
+    _offlineDlRunning = false;
+    if (checkUpdateBtn) checkUpdateBtn.disabled = false;
+
+    _setOfflineModalStatus(
+      (e && e.message) ? e.message : "ダウンロードに失敗しました。ネットワーク接続を確認してください。"
+    );
+    _setOfflineModalButtons([
+      { label: "再試行", onClick: () => downloadOfflineData(), primary: true },
+      { label: "閉じる", onClick: () => _hideOfflineDownloadModal() },
+    ]);
+    _refreshVersionStatus();
   }
 }
+// =====================================================
+// 待機中の Service Worker へ更新適用（再起動）を指示する
+// -----------------------------------------------------
+//  ★自動では実行しない。ユーザーが「更新を適用して再起動」を
+//  押したときだけ動く（勝手な再起動を避けるため）。
+// =====================================================
+let _applyReloading = false;
 
+function _applyWaitingUpdate() {
+  if (_applyReloading || isApplyingUpdate) return;
+
+  const reg = currentServiceWorkerRegistration;
+
+  if (!reg || !reg.waiting) {
+    _setVersionStatus("適用できる更新が見つかりませんでした。ページを再読み込みしてください。");
+    return;
+  }
+
+  isApplyingUpdate = true;
+  _applyReloading = false;
+  _setVersionStatus("アップデートを適用しています…自動で再起動します");
+
+  if (updateControllerChangeHandler) {
+    try {
+      navigator.serviceWorker.removeEventListener("controllerchange", updateControllerChangeHandler);
+    } catch (e) { /* 無視 */ }
+  }
+
+  updateControllerChangeHandler = () => {
+    if (_applyReloading) return;
+    _applyReloading = true;
+    // ★オフライン用キャッシュ版として今回の版を記録
+    _markCacheVersion(APP_VERSION);
+    console.log("Service Worker: Controller changed. Reloading...");
+    setTimeout(() => window.location.reload(), 300);
+  };
+
+  try {
+    navigator.serviceWorker.addEventListener("controllerchange", updateControllerChangeHandler);
+  } catch (e) { /* 無視 */ }
+
+  try {
+    reg.waiting.postMessage({ type: "SKIP_WAITING" });
+  } catch (e) { /* 無視 */ }
+
+  // 保険: controllerchange が届かなくても再読み込みする
+  setTimeout(() => {
+    if (_applyReloading) return;
+    _applyReloading = true;
+    _markCacheVersion(APP_VERSION);
+    window.location.reload();
+  }, 8000);
+}
 // ============================================================
 // メニュー描画のキャッシュ無効化フック（循環参照回避のためwindow経由）
 // questProgress.js の markCleared / markTrueEndingSeen 等から呼ばれる
@@ -839,6 +1336,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // ★サーバー側でIDとコードのペアを検証する
+      //   ★v1.0.42: supabase は動的importで取得（オフライン時は null）
+      const supabase = await loadSupabase();
+      if (!supabase) {
+          alert("オンラインに接続できません。ネットワーク接続を確認してください。");
+          return;
+      }
+
       const { data: isValid, error } = await supabase.rpc('verify_player_credentials', {
           p_id: newPlayerId.trim(),
           r_code: newRecoveryCode.trim()
@@ -914,7 +1418,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
 
-
   // =====================================================
   // クエストデータ処理
   // =====================================================
@@ -954,12 +1457,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // -----------------------------
-  // アップデート確認ボタン（VERSION）
+  // オフライン用データのダウンロード（VERSION）
   // -----------------------------
   // -----------------------------------------------
-  // ★起動時の軽量バージョンチェック（案A: 自動DLなし）
+  // ★起動時の軽量バージョンチェック（自動DLなし）
   //    version.js を no-store で1回だけ取得し、差分があれば
-  //    「新しいバージョンがあります」のみ案内する。
+  //    設定画面の文章でのみ案内する（モーダルは表示しない）。
   //    ゲーム起動・描画ループには介入しない。
   // -----------------------------------------------
   try {
@@ -967,175 +1470,38 @@ document.addEventListener("DOMContentLoaded", () => {
       .then(res => res.ok ? res.text() : "")
       .then(text => {
         const m = text && text.match(/APP_VERSION\s*=\s*["']([^"']+)["']/);
-        if (m && m[1] && m[1] !== APP_VERSION) {
-          const el = document.getElementById("updateCheckStatus");
-          if (el) {
-            el.textContent = `新しいバージョンがあります（v${m[1]}）。「アップデートを確認」を押してください。`;
-          }
+        if (m && m[1]) {
+          _onlineLatestVersion = m[1];
+          _refreshVersionStatus();
         }
       })
       .catch(() => { /* ネットワーク失敗時は無視 */ });
   } catch (e) { /* 無視 */ }
 
   const checkUpdateBtn = document.getElementById("checkUpdateBtn");
-  const updateCheckStatus = document.getElementById("updateCheckStatus");
 
-  if (updateCheckStatus) {
-    const cached = _getCacheVersion();
-    if (cached && cached === APP_VERSION) {
-      updateCheckStatus.textContent = `オンライン/オフラインとも v${APP_VERSION} で遊べます`;
-    } else if (cached) {
-      updateCheckStatus.textContent = `オンライン（実行中）: v${APP_VERSION} ／ オフライン用キャッシュ: v${cached}（「最新版をオフライン用にダウンロード」で更新できます）`;
-    } else {
-      updateCheckStatus.textContent = `オンライン（実行中）: v${APP_VERSION} ／ オフライン用キャッシュ: 未保存（最初に「最新版をオフライン用にダウンロード」を実行してください）`;
-    }
-  }
+  // 現在のバージョン状況を表示（モーダルは出さない）
+  _refreshVersionStatus();
 
-  checkUpdateBtn?.addEventListener("click", async () => {
-
-    // ★適用中は再入場させない
-    if (isApplyingUpdate) {
-      if (updateCheckStatus) {
-        updateCheckStatus.textContent = "アップデートを適用中です。そのままお待ちください...";
-      }
-      return;
-    }
-
-    if (!("serviceWorker" in navigator)) {
-      if (updateCheckStatus) {
-        updateCheckStatus.textContent = "この環境ではアップデート確認に対応していません。";
-      }
-      return;
-    }
-
-    checkUpdateBtn.disabled = true;
-    
-    // ★モーダルを表示してダウンロード開始
-    userInitiatedDownload = true;
-    _showOfflineDownloadModal();
-    _setOfflineModalStatus("ダウンロード中...");
-    
-    try {
-
-      const registration =
-        currentServiceWorkerRegistration ||
-        await navigator.serviceWorker.register("./service-worker.js");
-
-      await registration.update();
-
-      // ★オフラインキャッシュの手動ダウンロードを開始
-      if (registration.active) {
-        registration.active.postMessage({
-          type: "START_OFFLINE_CACHE"
-        });
-      } else if (registration.installing) {
-        registration.installing.postMessage({
-          type: "START_OFFLINE_CACHE"
-        });
-      }
-
-      // ★ダウンロード開始時の初期化
-      _setOfflineModalStatus("ダウンロード中...");
-      
-      // ★Safari対策: postMessage が届かなくても、ポーリング保険で
-      //   waiting 検出→自動適用
-      try {
-        const pollStart = Date.now();
-        const pollTimer = setInterval(async () => {
-          try {
-            const reg = currentServiceWorkerRegistration ||
-              await navigator.serviceWorker.getRegistration();
-            if (!reg) {
-              if (Date.now() - pollStart > 30000) {
-                clearInterval(pollTimer);
-              }
-              return;
-            }
-            if (reg.waiting && navigator.serviceWorker.controller) {
-              clearInterval(pollTimer);
-              // ★ユーザー操作でのDLなら自動適用
-              if (userInitiatedDownload) {
-                _setOfflineModalStatus("最新版です。再起動します...");
-                _updateOfflineModalProgress(100);
-                setTimeout(() => {
-                  autoApplyUpdate(reg);
-                }, 1000);
-              }
-            } else if (!reg.installing && Date.now() - pollStart > 30000) {
-              clearInterval(pollTimer);
-              // ★ポーリング終了：ユーザー操作DLなら保険で自動適用
-              if (userInitiatedDownload) {
-                _setOfflineModalStatus("最新版です。再起動します...");
-                _updateOfflineModalProgress(100);
-                setTimeout(() => {
-                  autoApplyUpdate(reg);
-                }, 1000);
-              }
-            }
-          } catch (e) { /* 無視 */ }
-        }, 1000);
-      } catch (e) { /* 無視 */ }
-
-      if (registration.installing) {
-        _setOfflineModalStatus("ダウンロード中...");
-      } else if (registration.waiting && navigator.serviceWorker.controller) {
-        // 既に準備完了している場合
-        _setOfflineModalStatus("最新版です。再起動します...");
-        _updateOfflineModalProgress(100);
-        setTimeout(() => {
-          autoApplyUpdate(registration);
-        }, 1000);
-      } else if (!navigator.serviceWorker.controller) {
-        _setOfflineModalStatus("ダウンロード中...");
-      } else {
-        // 更新なし
-        _setOfflineModalStatus("最新版です。オフラインでも遊べます。");
-        _updateOfflineModalProgress(100);
-        userInitiatedDownload = false;
-        setTimeout(() => {
-          _hideOfflineDownloadModal();
-          checkUpdateBtn.disabled = false;
-        }, 2000);
-      }
-
-    } catch (e) {
-
-      console.warn("Update check failed:", e);
-      _setOfflineModalStatus("確認に失敗しました。ネットワーク接続を確認してください。");
-      userInitiatedDownload = false;
-      
-      setTimeout(() => {
-        _hideOfflineDownloadModal();
-        checkUpdateBtn.disabled = false;
-      }, 3000);
-
-    }
+  // ボタン: オフライン用データをまとめて保存
+  //   ★自動では走らない。このボタンを押したときだけダウンロードする
+  checkUpdateBtn?.addEventListener("click", () => {
+    downloadOfflineData();
   });
-
 });
 
 // =====================================================
-// Service Worker 更新通知処理
+// Service Worker 登録・更新検知
+// -----------------------------------------------------
+//  ★v1.0.42: アップデートは「設定から明示的に実行したとき」だけ適用する。
+//    ページを開いただけで促すモーダルは表示しない
+//    （バージョンの状況は設定画面の文章でのみ伝える）。
 // =====================================================
 
 let currentServiceWorkerRegistration = null;
 let updateControllerChangeHandler = null;
-let updateRefreshing = false;
-let updateProgressReceived = false;
-let isFirstInstall = false;
-let updateFileErrorCount = 0;
-// ★適用中ガード: 「今すぐ更新」押下〜リロード完了まで true。
-//   この間の「アップデートを確認」押下・準備中モーダルの再表示を抑止する
+// ★適用中ガード: 「更新を適用して再起動」〜リロード完了まで true
 let isApplyingUpdate = false;
-// ★ユーザーが「最新版をオフライン用にダウンロード」を押して開始した
-//   （＝適用・再起動への同意を得た）ことを示すフラグ。
-//   true の間はダウンロード完了後にモーダルを出さず自動適用する。
-let userInitiatedDownload = false;
-
-
-// =====================================================
-// Service Worker登録
-// =====================================================
 
 if ("serviceWorker" in navigator) {
 
@@ -1145,1425 +1511,77 @@ if ("serviceWorker" in navigator) {
 
       currentServiceWorkerRegistration = registration;
 
-      console.log(
-        "Service Worker registered with scope:",
-        registration.scope
-      );
+      console.log("Service Worker registered with scope:", registration.scope);
 
       // -----------------------------------------------
       // 新しいService Workerが見つかった
       // -----------------------------------------------
-
       registration.onupdatefound = () => {
 
-        const installingWorker =
-          registration.installing;
+        const installingWorker = registration.installing;
 
         if (!installingWorker) {
-          // installing の取得に失敗した場合でも、waiting に
-          // 更新済みワーカーが待機していれば通知を出す（取りこぼし保険）
-          if (registration.waiting && navigator.serviceWorker.controller) {
-            showUpdateNotification(registration);
-          }
+          // 取りこぼし保険: すでに待機中のワーカーがいれば設定表示を更新
+          if (registration.waiting) _refreshVersionStatus();
           return;
         }
 
-        console.log(
-          "Service Worker: New worker detected."
-        );
-
         installingWorker.onstatechange = () => {
 
-          console.log(
-            "Service Worker state:",
-            installingWorker.state
-          );
+          console.log("Service Worker state:", installingWorker.state);
 
-          // -------------------------------------------
-          // 新しいSWのインストール開始
-          // -------------------------------------------
-
-          if (
-            installingWorker.state === "installing"
-          ) {
-
-            // -------------------------------------------
-            // 初回インストール（オフライン用データの初回
-            // ダウンロード）か、アップデートかを判定
-            // -------------------------------------------
-
-            isFirstInstall = !navigator.serviceWorker.controller;
-
-            showUpdateProgressPreparing();
-
-          }
-
-          // -------------------------------------------
-          // インストール完了
-          // -------------------------------------------
-
-          if (
-            installingWorker.state === "installed" &&
-            navigator.serviceWorker.controller
-          ) {
-
-            console.log(
-              "Service Worker: New version is ready."
-            );
-
-            showUpdateNotification(
-              registration
-            );
-          }
-
-          // -------------------------------------------
-          // 初回インストール検知の保険
-          // （installing状態の取りこぼし対策）
-          // -------------------------------------------
-
-          if (
-            installingWorker.state === "installed" &&
-            !navigator.serviceWorker.controller
-          ) {
-
-            isFirstInstall = true;
-
-          }
+          // ★自動モーダルは出さない。設定のVERSION欄の文章だけ更新する
+          try { _refreshVersionStatus(); } catch (e) { /* 無視 */ }
 
         };
-
       };
+
+      try { _refreshVersionStatus(); } catch (e) { /* 無視 */ }
 
       // -----------------------------------------------
       // ※ 自動更新チェックは行わない
       //    低スペックPC / Windows への負荷を避けるため、
-      //    「アップデートを確認」ボタンでのみ手動チェックする
+      //    設定の「最新版をオフライン用にダウンロード」でのみ確認する
       // -----------------------------------------------
 
     })
-
     .catch(error => {
 
-      console.error(
-        "Service Worker registration failed:",
-        error
-      );
+      console.error("Service Worker registration failed:", error);
 
     });
-
 
   // ===================================================
   // Service Workerからのメッセージ
   // ===================================================
-
-  navigator.serviceWorker.addEventListener(
-    "message",
-    event => {
-
-      const data = event.data;
-
-      if (!data || !data.type) {
-        return;
-      }
-
-      // -----------------------------------------------
-      // アップデート進捗
-      // -----------------------------------------------
-
-      if (
-        data.type === "UPDATE_PROGRESS"
-      ) {
-
-        handleUpdateProgress(data);
-      }
-
-      // ★v1.0.23: SW からの自動再起動用制御メッセージ
-      if (
-        data.type === "UPDATE_ACTIVATING" ||
-        data.type === "UPDATE_CONTROLLING"
-      ) {
-
-        // ★UPDATE_CONTROLLING は SW の activate + clients.claim() が完了した通知。
-        //   この時点で navigator.serviceWorker.controller は既に新 SW に切り替わっており、
-        //   controllerchange イベントは発火しないケースがある（ハードリセット直後など）。
-        //   controllerchange を待たず、即リロードする。
-        if (data.type === "UPDATE_CONTROLLING") {
-          if (!updateRefreshing) {
-            updateRefreshing = true;
-            _markCacheVersion(APP_VERSION);
-            console.log(
-              "Service Worker: UPDATE_CONTROLLING received. Reloading..."
-            );
-            window.location.reload();
-          }
-          return;
-        }
-
-        // UPDATE_ACTIVATING の場合は従来通り controllerchange を待つ
-        if (!updateControllerChangeHandler) {
-
-          updateControllerChangeHandler = () => {
-
-            if (updateRefreshing) {
-              return;
-            }
-
-            updateRefreshing = true;
-
-            // ★オフライン用キャッシュ版として今回の版を記録
-            _markCacheVersion(APP_VERSION);
-
-            console.log(
-              "Service Worker: Controller changed. Reloading..."
-            );
-
-            window.location.reload();
-
-          };
-
-          navigator.serviceWorker.addEventListener(
-            "controllerchange",
-            updateControllerChangeHandler
-          );
-
-        }
-
-        if (!updateRefreshing) {
-
-          // ★タイムアウトを延長（ハードリセット直後は SW の activate に
-          //   時間がかかる場合があるため、8秒待ってから強制リロードする）
-          setTimeout(() => {
-            if (!updateRefreshing) {
-              updateRefreshing = true;
-              console.warn(
-                "Service Worker: controllerchange timeout. Force reloading..."
-              );
-              window.location.reload();
-            }
-          }, 8000);
-
-        }
-      }
-
-    }
-  );
-
-}
-
-
-// =====================================================
-// 更新準備中画面
-// =====================================================
-
-function showUpdateProgressPreparing() {
-
-  // ★ユーザーがボタンを押していない場合は表示しない
-  if (!userInitiatedDownload) {
-    return;
-  }
-
-  // ★適用中は再初期化しない（二重モーダル・ボタン消失の防止）
-  if (isApplyingUpdate) {
-    return;
-  }
-
-  // ★準備中は全画面モーダルで塞がない（Safariで操作不能になる問題対策）。
-  //   進捗は中央下バーのみで表示し、モーダルは waiting/installed 確定後
-  //   （「今すぐ更新／後で」が押せる状態）で初めて表示する。
-  // ★Safari向け: 中央下バーを出さず、設定ステータス文のみで進捗を伝える
-  //   （ダウンロード中バーが0%で固まる問題回避）
-  if (isSafari) {
-    const st = document.getElementById("updateCheckStatus");
-    if (st) {
-      st.textContent = "最新版をダウンロード中…";
-    }
-  } else {
-    // ★2フェーズDL対応: 既にバー表示中なら0%に戻さず現在の%から継続
-    const wasBarVisible = (() => {
-      const el = document.getElementById("swDownloadIndicator");
-      return !!(el && el.classList.contains("show"));
-    })();
-    _showSwDownloadBar("オフライン用ダウンロード中");
-    if (!wasBarVisible) {
-      _updateSwDownloadBar(0, "");
-    }
-    // ★Safari対策: postMessage が届かなくてもバーが動いて見えるよう推定進捗を開始
-    //   （既に表示中なら現在の%から継続）
-    if (!_estimatedDlTimer) {
-      _startEstimatedDlProgress(wasBarVisible ? _lastShownDlPct : 0);
-    }
-  }
-
-  const notification =
-    document.getElementById(
-      "update-notification"
-    );
-
-  const title =
-    document.getElementById(
-      "update-title"
-    );
-
-  const message =
-    document.getElementById(
-      "update-message"
-    );
-
-  const progressWrapper =
-    document.getElementById(
-      "update-progress-wrapper"
-    );
-
-  const progressBar =
-    document.getElementById(
-      "update-progress-bar"
-    );
-
-  const progressText =
-    document.getElementById(
-      "update-progress-text"
-    );
-
-  const fileText =
-    document.getElementById(
-      "update-file-text"
-    );
-
-  const updateButton =
-    document.getElementById(
-      "update-now-btn"
-    );
-
-  const laterButton =
-    document.getElementById(
-      "update-later-btn"
-    );
-
-  const updateNote =
-    document.querySelector(
-      ".update-note"
-    );
-
-
-  if (!notification) {
-    return;
-  }
-
-  // ★初回インストール時のみモーダルで塞ぐ（オフライン用データ取得は
-  //   待ってもらう必要があるため）。アップデート準備中は中央下バーのみで、
-  //   モーダルは waiting 確定後に showUpdateNotification で表示する。
-  if (!isFirstInstall) {
-    return;
-  }
-
-  // -----------------------------------------------
-  // 表示 - モーダルを表示して進捗を確認できるようにする
-  // -----------------------------------------------
-
-  notification.style.display = "flex";
-  requestAnimationFrame(() => {
-    notification.classList.add("show");
-  });
-
-  if (isFirstInstall) {
-
-    // -------------------------------------------
-    // 初回アクセス時は「アップデート」ではなく
-    // 「オフライン用データのダウンロード」なので
-    // 専用の文言を出す
-    // -------------------------------------------
-
-    if (title) {
-      title.textContent = "MameType OFFLINE";
-    }
-
-    if (message) {
-      message.textContent =
-        "ゲームデータをダウンロードしています...";
-    }
-
-    if (fileText) {
-      fileText.textContent =
-        "ダウンロードを準備しています...";
-    }
-
-  } else {
-
-    if (title) {
-      title.textContent = "MameType UPDATE";
-    }
-
-    if (message) {
-      message.textContent =
-        "新しいバージョンを準備しています...";
-    }
-
-    if (fileText) {
-      fileText.textContent =
-        "アップデートを準備しています...";
-    }
-
-  }
-
-  if (progressWrapper) {
-    progressWrapper.style.display = "block";
-  }
-
-  if (progressBar) {
-    progressBar.style.width = "0%";
-  }
-
-  if (progressText) {
-    progressText.textContent = "0%";
-  }
-
-  if (updateNote) {
-    updateNote.style.display = "none";
-  }
-
-  // -----------------------------------------------
-  // 準備中は更新ボタンを無効化
-  // -----------------------------------------------
-
-  if (updateButton) {
-    updateButton.style.display = "none";
-  }
-
-  if (laterButton) {
-    laterButton.style.display = "none";
-  }
-
-}
-
-
-// =====================================================
-// 更新進捗処理
-// =====================================================
-
-function handleUpdateProgress(data) {
-
-  // ★ユーザー起動のダウンロード中は、オフラインダウンロードモーダル側も更新
-  if (userInitiatedDownload) {
-    _updateOfflineModalProgress(
-      data.percent || 0,
-      data.file || ""
-    );
-  }
-
-  const notification =
-    document.getElementById(
-      "update-notification"
-    );
-
-  if (!notification) {
-    return;
-  }
-
-
-  // -----------------------------------------------
-  // 更新開始
-  // -----------------------------------------------
-
-  if (data.status === "start") {
-
-    updateProgressReceived = true;
-    updateFileErrorCount = 0;
-
-    // ★モーダル側も0%で即時更新（Safariで中央下バーのみ進む問題対策）
-    //   Safariでは中央下バーを出さないため、updateProgressUIは初回DL（モーダル）時のみ意味を持つ
-    updateProgressUI(0, 0, 0, "");
-
-    // ★Safari向け: 中央下バーを出さず、設定ステータス文のみで進捗を伝える
-    if (!isSafari) {
-      _showSwDownloadBar("オフライン用ダウンロード中");
-      // ★2フェーズDL対応: フェーズ②の start 再受信でも0%に戻さない。
-      //   バーが既に表示中なら現在の%から推定を継続する。
-      if (!_estimatedDlTimer) {
-        const wasVisible = (() => {
-          const el = document.getElementById("swDownloadIndicator");
-          return !!(el && el.classList.contains("show"));
-        })();
-        _updateSwDownloadBar(wasVisible ? _lastShownDlPct : 0, "");
-        _startEstimatedDlProgress(wasVisible ? _lastShownDlPct : 0);
-      }
-    } else {
-      // Safari: 中央下バーを出さず、設定ステータス文のみ更新
-      //   （初回DL時はモーダル表示中なのでステータス文は裏で更新される）
-      try {
-        const st = document.getElementById("updateCheckStatus");
-        if (st) {
-          st.textContent = "最新版をダウンロード中…";
-        }
-      } catch (e) { /* 無視 */ }
-    }
-
-    return;
-  }
-
-
-  // -----------------------------------------------
-  // 更新中
-  // -----------------------------------------------
-
-  if (data.status === "progress") {
-
-    updateProgressReceived = true;
-
-    // ★実測が届いたら推定を停止し、実測%を中央下バーにも反映
-    //   （Windowsでは実測、Safariでは推定タイマーがバーを進める）
-    //   Safariでは中央下バーを出さないため推定タイマー停止・バーのみスキップ。
-    //   モーダル側の updateProgressUI は初回DL経由時のみ表示されるため維持。
-    if (!isSafari) {
-      _stopEstimatedDlProgress();
-      _updateSwDownloadBar(data.percent || 0, "");
-    } else {
-      // Safari: 中央下バーを出さず、設定ステータス文のみ更新（進行中も同文言）
-      try {
-        const st = document.getElementById("updateCheckStatus");
-        if (st) {
-          st.textContent = "最新版をダウンロード中…";
-        }
-      } catch (e) { /* 無視 */ }
-    }
-
-    updateProgressUI(
-      data.percent || 0,
-      data.current || 0,
-      data.total || 0,
-      data.file || ""
-    );
-
-    // ★ユーザー起動時はオフラインモーダルのステータスも更新
-    if (userInitiatedDownload) {
-      _setOfflineModalStatus("ダウンロード中...");
-    }
-
-    return;
-  }
-
-
-  // -----------------------------------------------
-  // ファイルエラー
-  // -----------------------------------------------
-
-  if (data.status === "file-error") {
-
-    updateProgressReceived = true;
-    updateFileErrorCount++;
-
-    // ★推定と実測が競合しないよう停止してから実測%を反映
-    //   Safariでは中央下バーを出さないため、バーのみスキップ。
-    if (!isSafari) {
-      _stopEstimatedDlProgress();
-      _updateSwDownloadBar(
-        data.percent || 0,
-        "一部スキップ"
-      );
-    }
-
-    return;
-  }
-
-
-  // -----------------------------------------------
-  // 全ファイル完了
-  // -----------------------------------------------
-
-  // ★フェーズ①（起動コア）完了: フェーズ②（残り全アセットのDL）が
-  //   直後に始まるため、ここではバーを消さず表示を継続する。
-  //   （complete-boot でバーを隠すと、フェーズ②の start 再受信時に
-  //     再表示され幅が0%にリセットされる＝「100%→いきなり0%」の原因）
-  if (data.status === "complete-boot") {
-
-    updateProgressReceived = true;
-
-    if (userInitiatedDownload || isFirstInstall) {
-      // ★バー・推定を止めずフェーズ②へ引き継ぐ（表示は連続）
+  navigator.serviceWorker.addEventListener("message", event => {
+
+    const data = event.data;
+    if (!data || !data.type) return;
+
+    // ★更新適用（activate / controlling）の通知。
+    //   ユーザーが「更新を適用して再起動」を押したときだけ再読み込みする
+    //   （勝手に再起動しないよう isApplyingUpdate を確認する）
+    if (data.type === "UPDATE_ACTIVATING" || data.type === "UPDATE_CONTROLLING") {
+
+      if (!isApplyingUpdate) return;
+      if (_applyReloading) return;
+
+      _applyReloading = true;
+      _markCacheVersion(APP_VERSION);
+      console.log("Service Worker: update applied. Reloading...");
+      window.location.reload();
       return;
     }
 
-    // バックグラウンド検出時は従来どおり完了扱いで通知へ
-    //   Safariでは中央下バーを出さないため、バー・推定タイマー系はスキップ
-    if (!isSafari) {
-      _stopEstimatedDlProgress();
-      _updateSwDownloadBar(100, "");
-      setTimeout(() => {
-        _hideSwDownloadBar();
-        showUpdateReady();
-      }, 600);
-    } else {
-      // Safari: 推定タイマーのみ止めておく（バーは表示していない）
-      _stopEstimatedDlProgress();
-      setTimeout(() => {
-        showUpdateReady();
-      }, 600);
-    }
-
-    return;
-  }
-
-  // ★全ファイル完了（フェーズ②含む）
-  if (data.status === "complete") {
-
-    updateProgressReceived = true;
-
-    // ★実測進捗で完了したので推定タイマーを停止
-    //   Safariでは中央下バーを出さないため、バー更新・非表示化はスキップ
-    if (!isSafari) {
-      _stopEstimatedDlProgress();
-      _updateSwDownloadBar(
-        100,
-        ""
-      );
-    } else {
-      _stopEstimatedDlProgress();
-    }
-
-    // ★初回DL完了時はオフライン用キャッシュ版を記録
-    if (isFirstInstall) {
-      _markCacheVersion(APP_VERSION);
-    }
-
-    setTimeout(() => {
-
-      // -------------------------------------------
-      // 初回インストール時は「オフラインで遊べるように
-      // なった」通知を出す。アップデート時は従来通り
-      // （バーを消してからモーダルへ切り替える）
-      // -------------------------------------------
-
-      if (!isSafari) {
-        _hideSwDownloadBar();
-      }
-
-      if (isFirstInstall) {
-        showOfflineReady();
-      } else if (userInitiatedDownload) {
-        // ★ユーザー操作DL: モーダルは出さず、waiting検出（ポーリング）が
-        //   自動適用を開始する。ここでは完了表示のみ更新する。
-        //   Safariでは中央下バーを出さないため、ステータス文のみ更新。
-        try {
-          const st = document.getElementById("updateCheckStatus");
-          if (st) {
-            // ★Safari: ダウンロード完了後は「自動で再起動します」を表示
-            if (isSafari) {
-              st.textContent = "ダウンロード完了。自動で再起動します…";
-            } else {
-              st.textContent = "ダウンロード完了。オフライン用キャッシュを更新中…自動で再起動します";
-            }
-          }
-        } catch (e) { /* 無視 */ }
-        if (!isSafari) {
-          _showSwDownloadBar("オフライン用キャッシュを更新中");
-          _updateSwDownloadBar(100, "");
-        }
-      } else {
-        showUpdateReady();
-      }
-
-    }, 600);
-
-  }
-
-}
-
-
-// =====================================================
-// プログレスUI更新
-// =====================================================
-
-function updateProgressUI(
-  percent,
-  current,
-  total,
-  file
-) {
-
-  const progressBar =
-    document.getElementById(
-      "update-progress-bar"
-    );
-
-  const progressText =
-    document.getElementById(
-      "update-progress-text"
-    );
-
-  const fileText =
-    document.getElementById(
-      "update-file-text"
-    );
-
-
-  const safePercent =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        Number(percent) || 0
-      )
-    );
-
-
-  if (progressBar) {
-
-    progressBar.style.width =
-      `${safePercent}%`;
-
-  }
-
-
-  if (progressText) {
-
-    progressText.textContent =
-      `${safePercent}%`;
-
-  }
-
-
-  if (fileText) {
-
-    if (total > 0) {
-
-      fileText.textContent =
-        `${current} / ${total} files`;
-
-    } else {
-
-      fileText.textContent =
-        file || "";
-
-    }
-
-  }
-
-}
-
-
-// =====================================================
-// 更新準備完了
-// =====================================================
-
-function showUpdateReady() {
-
-  const title =
-    document.getElementById(
-      "update-title"
-    );
-
-  const message =
-    document.getElementById(
-      "update-message"
-    );
-
-  const updateButton =
-    document.getElementById(
-      "update-now-btn"
-    );
-
-  const laterButton =
-    document.getElementById(
-      "update-later-btn"
-    );
-
-  const fileText =
-    document.getElementById(
-      "update-file-text"
-    );
-
-  const updateNote =
-    document.querySelector(
-      ".update-note"
-    );
-
-  // ダウンロード100%表示
-  updateProgressUI(100, 0, 0, "");
-
-
-  if (title) {
-
-    title.textContent =
-      "MameType UPDATE";
-
-  }
-
-
-  if (message) {
-
-    message.textContent =
-      "新しいバージョンの準備が完了しました。";
-
-  }
-
-
-  if (fileText) {
-
-    fileText.textContent =
-      "「今すぐ更新」を押すと適用されます。";
-
-  }
-
-
-  if (updateButton) {
-
-    updateButton.style.display =
-      "inline-flex";
-
-    updateButton.disabled = false;
-
-  }
-
-
-  if (laterButton) {
-
-    laterButton.style.display =
-      "inline-flex";
-
-  }
-
-
-  if (updateNote) {
-
-    updateNote.style.display = "block";
-    updateNote.textContent =
-      "アップデート後、自動的に再起動します。";
-
-  }
-
-}
-
-
-// =====================================================
-// オフライン準備完了（初回ダウンロード時）
-// =====================================================
-
-function showOfflineReady() {
-
-  // 進捗バーは中央下のインジケータで表示済みなので、モーダル側のバーは常に隠す
-  const progressWrapper = document.getElementById("update-progress-wrapper");
-  if (progressWrapper) progressWrapper.style.display = "none";
-  // ★Safariでは中央下バーを出していないため、非表示化はスキップ
-  if (!isSafari) {
-    _hideSwDownloadBar();
-  }
-
-  const notification =
-    document.getElementById(
-      "update-notification"
-    );
-
-  // ダウンロード中はモーダルを隠していたため、ここで表示する
-  if (notification) {
-    notification.style.display = "flex";
-    requestAnimationFrame(() => {
-      notification.classList.add("show");
-    });
-  }
-
-  const title =
-    document.getElementById(
-      "update-title"
-    );
-
-  const message =
-    document.getElementById(
-      "update-message"
-    );
-
-  const updateButton =
-    document.getElementById(
-      "update-now-btn"
-    );
-
-  const laterButton =
-    document.getElementById(
-      "update-later-btn"
-    );
-
-  const fileText =
-    document.getElementById(
-      "update-file-text"
-    );
-
-  const note =
-    document.querySelector(
-      ".update-note"
-    );
-
-
-  if (title) {
-    title.textContent = "MameType OFFLINE";
-  }
-
-  if (message) {
-
-    message.textContent =
-      updateFileErrorCount > 0
-        ? "ダウンロードが完了しました。"
-        : "ダウンロードが完了しました！";
-
-  }
-
-  if (fileText) {
-
-    fileText.textContent =
-      updateFileErrorCount > 0
-        ? `一部のファイルをスキップしました（${updateFileErrorCount}件）。オンライン時に再度アクセスすると自動的に再取得されます。`
-        : "オフラインでも遊べるようになりました 🎮";
-
-  }
-
-  if (note) {
-    note.textContent =
-      "次回から、インターネットに接続しなくても遊べます。";
-  }
-
-  // -----------------------------------------------
-  // 「OK」ボタンだけ表示して閉じられるようにする
-  // （初回インストールでは再起動は不要）
-  // -----------------------------------------------
-
-  if (updateButton) {
-
-    updateButton.textContent = "OK";
-    updateButton.style.display = "inline-flex";
-    updateButton.disabled = false;
-
-    updateButton.onclick = () => {
-
-      if (!notification) {
-        return;
-      }
-
-      notification.classList.remove("show");
-
-      setTimeout(() => {
-        notification.style.display = "none";
-      }, 250);
-
-    };
-
-  }
-
-  if (laterButton) {
-    laterButton.style.display = "none";
-  }
-
-}
-
-
-// =====================================================
-// 更新通知
-// =====================================================
-
-// ★自動適用（ユーザーがDLボタンで開始した更新用・モーダルなし）
-//   SKIP_WAITING→controllerchange→自動リロード。5秒再送＋10秒保険で
-//   確実に再起動する。モーダル（今すぐ更新/後で）は出さない。
-function autoApplyUpdate(regOrNull) {
-
-  if (isApplyingUpdate) return; // 二重適用防止
-  isApplyingUpdate = true;
-  userInitiatedDownload = false;
-
-  // モーダルは出さない。設定ステータス文＋中央下バーで進行を表示
-  //   ※Safariは中央下バー非表示のため、設定ステータス文のみ
-  try {
-    const st = document.getElementById("updateCheckStatus");
-    if (st) {
-      if (isSafari) {
-        st.textContent = "ダウンロード完了。自動で再起動します…";
-      } else {
-        st.textContent = `ダウンロード完了。オフライン用キャッシュを更新中…自動で再起動します（v${APP_VERSION}）`;
-      }
-    }
-  } catch (e) { /* 無視 */ }
-
-  _stopEstimatedDlProgress();
-  // ★Safariでは中央下バーを出さないため、スキップ
-  if (!isSafari) {
-    _showSwDownloadBar("オフライン用キャッシュを更新中");
-    _updateSwDownloadBar(100, "");
-  }
-
-  // -----------------------------------------------
-  // controllerchangeを先に登録
-  // -----------------------------------------------
-  if (updateControllerChangeHandler) {
-    try {
-      navigator.serviceWorker.removeEventListener("controllerchange", updateControllerChangeHandler);
-    } catch (e) { /* 無視 */ }
-  }
-
-  let _applyReloading = false;
-
-  updateControllerChangeHandler = () => {
-    if (_applyReloading) return;
-    _applyReloading = true;
-
-    // ★オフライン用キャッシュ版として今回の版を記録
-    _markCacheVersion(APP_VERSION);
-
-    console.log("Service Worker: Controller changed. Reloading...");
-
-    setTimeout(() => window.location.reload(), 300);
-  };
-
-  try {
-    navigator.serviceWorker.addEventListener("controllerchange", updateControllerChangeHandler);
-  } catch (e) { /* 無視 */ }
-
-  // -----------------------------------------------
-  // 待機中SWへSKIP_WAITING
-  // -----------------------------------------------
-  const applyUpdate = async () => {
-
-    // ★登録を取り直してから waiting を参照（クロージャ陳腐化防止）
-    let liveReg = regOrNull || currentServiceWorkerRegistration;
-    try {
-      const fresh = await navigator.serviceWorker.getRegistration();
-      if (fresh) {
-        liveReg = fresh;
-        currentServiceWorkerRegistration = fresh;
-      }
-    } catch (e) { /* 無視 */ }
-
-    if (liveReg && liveReg.waiting) {
-
-      liveReg.waiting.postMessage({
-        type: "SKIP_WAITING"
-      });
-
-    } else {
-
-      console.warn("Service Worker: No waiting worker found. Retrying update...");
-
-      try {
-        await (liveReg
-          ? liveReg.update()
-          : navigator.serviceWorker.register("./service-worker.js").then(r => r.update()));
-      } catch (error) {
-        console.error("Service Worker update failed:", error);
-      }
-
-      let waiting = liveReg ? liveReg.waiting : null;
-      if (!waiting) {
-        try {
-          const r2 = await navigator.serviceWorker.getRegistration();
-          waiting = r2 ? r2.waiting : null;
-        } catch (e) { /* 無視 */ }
-      }
-
-      if (waiting) {
-        waiting.postMessage({ type: "SKIP_WAITING" });
-      } else {
-        // ★適用すべき更新が無い場合も必ず再読み込みする
-        console.warn("Service Worker: No update available. Reloading...");
-        setTimeout(() => window.location.reload(), 800);
-      }
-    }
-  };
-
-  applyUpdate();
-
-  // -----------------------------------------------
-  // 保険: controllerchange が遅延しても段階的に再起動する
-  // -----------------------------------------------
-  setTimeout(async () => {
-    if (_applyReloading) return;
-    // 第一段: waiting がいれば再送する（登録も取り直す）
-    try {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg) currentServiceWorkerRegistration = reg;
-      const w = (reg && reg.waiting) || (regOrNull && regOrNull.waiting);
-      if (w && !_applyReloading) {
-        console.warn("Service Worker: retry SKIP_WAITING...");
-        w.postMessage({ type: "SKIP_WAITING" });
-      }
-    } catch (e) { /* 無視 */ }
-  }, 5000);
-
-  setTimeout(() => {
-    if (!_applyReloading) {
-      _applyReloading = true;
-      _markCacheVersion(APP_VERSION);
-      console.warn("Service Worker: controllerchange timeout. Force reloading...");
-      setTimeout(() => window.location.reload(), 300);
-    }
-  }, 10000);
-}
-
-function showUpdateNotification(
-  registration
-) {
-
-  // ★ユーザーがDLボタンで開始した更新はモーダル不要。
-  //   自動適用（再起動）へ直行する。
-  if (userInitiatedDownload) {
-    autoApplyUpdate(registration);
-    return;
-  }
-
-  // 進捗バーは中央下のインジケータで表示済みなので、モーダル側のバーは常に隠す
-  const progressWrapper = document.getElementById("update-progress-wrapper");
-  if (progressWrapper) progressWrapper.style.display = "none";
-  // ★Safariでは中央下バーを出していないため、非表示化はスキップ
-  if (!isSafari) {
-    _hideSwDownloadBar();
-  }
-
-  const notification =
-    document.getElementById(
-      "update-notification"
-    );
-
-  const updateButton =
-    document.getElementById(
-      "update-now-btn"
-    );
-
-  const laterButton =
-    document.getElementById(
-      "update-later-btn"
-    );
-
-  const title =
-    document.getElementById(
-      "update-title"
-    );
-
-  const message =
-    document.getElementById(
-      "update-message"
-    );
-
-
-  if (!notification) {
-    return;
-  }
-
-
-  // -----------------------------------------------
-  // 更新準備完了
-  // -----------------------------------------------
-
-  if (title) {
-
-    title.textContent =
-      "MameType UPDATE";
-
-  }
-
-
-  if (message) {
-
-    message.textContent =
-      "新しいバージョンがあります。";
-
-  }
-
-
-  // -----------------------------------------------
-  // 同一セッション中に「初回ダウンロード→アップデート」
-  // と続いた場合に備えて、ボタン文言と注記を戻す
-  // -----------------------------------------------
-
-  if (updateButton) {
-    updateButton.textContent = "今すぐ更新";
-  }
-
-  if (laterButton) {
-    laterButton.textContent = "後で";
-  }
-
-  const updateNote =
-    document.querySelector(
-      ".update-note"
-    );
-
-  if (updateNote) {
-    updateNote.textContent =
-      "アップデート後、自動的に再起動します。";
-  }
-
-
-  notification.style.display =
-    "flex";
-
-
-  requestAnimationFrame(() => {
-
-    notification.classList.add("show");
-
   });
 
-
-  // -----------------------------------------------
-  // 更新ボタン
-  // -----------------------------------------------
-
-  if (updateButton) {
-
-    updateButton.style.display =
-      "inline-flex";
-
-    updateButton.disabled = false;
-
-
-    updateButton.onclick = () => {
-
-      // ★適用中ガードを立てる（この間の確認ボタン押下を抑止）
-      isApplyingUpdate = true;
-
-      updateButton.disabled = true;
-
-      if (laterButton) {
-        laterButton.style.display = "none";
-      }
-
-
-      const progressWrapper =
-        document.getElementById(
-          "update-progress-wrapper"
-        );
-
-      const progressBar =
-        document.getElementById(
-          "update-progress-bar"
-        );
-
-      const progressText =
-        document.getElementById(
-          "update-progress-text"
-        );
-
-      const fileText =
-        document.getElementById(
-          "update-file-text"
-        );
-
-      const message =
-        document.getElementById(
-          "update-message"
-        );
-
-
-      // 更新適用中にプログレスバー・進捗％・ファイル数を表示
-      if (progressWrapper) {
-        progressWrapper.style.display = "block";
-      }
-
-      if (message) {
-        message.textContent =
-          "アップデートを適用しています...";
-      }
-
-      const TOTAL_FILES = 1;
-      let currentFile = 0;
-
-      const updateProgressUI = (pct, fileIdx) => {
-        if (progressBar) progressBar.style.width = pct + "%";
-        if (progressText) progressText.textContent = pct + "%";
-        if (fileText) fileText.textContent = `${fileIdx}/${TOTAL_FILES} files`;
-      };
-
-      updateProgressUI(0, 0);
-
-      // ★適用進捗は時間経過で必ず100%まで単調増加させる（Safariで
-      //   controllerchange が遅延しても90%止まりに見せない）。
-      //   controllerchange が来たら即100%→リロード（下のハンドラ）。
-      let pct = 0;
-      const progressTimer = setInterval(() => {
-        pct = Math.min(pct + 2, 100);
-        updateProgressUI(pct, currentFile);
-      }, 100);
-
-      // ★設定側にも適用中であることを明示（Cmd+R不要と伝える）
-      try {
-        const st = document.getElementById("updateCheckStatus");
-        if (st) st.textContent = "アップデートを適用中です。自動で再起動します...";
-      } catch (e) { /* 無視 */ }
-
-
-      // -------------------------------------------
-      // controllerchangeを先に登録
-      // -------------------------------------------
-
-      if (
-        updateControllerChangeHandler
-      ) {
-
-        navigator.serviceWorker.removeEventListener(
-          "controllerchange",
-          updateControllerChangeHandler
-        );
-
-      }
-
-
-      let refreshing = false;
-
-
-      updateControllerChangeHandler = () => {
-
-        if (refreshing) {
-          return;
-        }
-
-        refreshing = true;
-
-        clearInterval(progressTimer);
-        updateProgressUI(100, TOTAL_FILES);
-
-        // ★オフライン用キャッシュ版として今回の版を記録
-        _markCacheVersion(APP_VERSION);
-
-        console.log(
-          "Service Worker: Controller changed. Reloading..."
-        );
-
-        setTimeout(() => window.location.reload(), 300);
-
-      };
-
-
-      navigator.serviceWorker.addEventListener(
-        "controllerchange",
-        updateControllerChangeHandler
-      );
-
-
-      // -------------------------------------------
-      // 待機中SWへSKIP_WAITING
-      // -------------------------------------------
-
-      const applyUpdate = async () => {
-
-        // ★登録を取り直してから waiting を参照（クロージャ陳腐化防止）。
-        //   古い registration を掴んだままだと waiting=null のままになる。
-        let liveReg = registration;
-        try {
-          const fresh = await navigator.serviceWorker.getRegistration();
-          if (fresh) {
-            liveReg = fresh;
-            currentServiceWorkerRegistration = fresh;
-          }
-        } catch (e) { /* 無視 */ }
-
-        if (liveReg.waiting) {
-
-          liveReg.waiting.postMessage({
-            type: "SKIP_WAITING"
-          });
-
-        } else {
-
-          console.warn(
-            "Service Worker: No waiting worker found."
-          );
-
-          // 念のため更新を確認し、待機SWが出たら適用する
-          try {
-            await liveReg.update();
-          } catch (error) {
-            console.error("Service Worker update failed:", error);
-          }
-
-          let waiting = liveReg.waiting;
-          if (!waiting) {
-            // 取りこぼし保険: 登録情報を取り直して確認
-            try {
-              const reg = await navigator.serviceWorker.getRegistration();
-              waiting = reg ? reg.waiting : null;
-            } catch (e) { /* 無視 */ }
-          }
-
-          if (waiting) {
-            waiting.postMessage({ type: "SKIP_WAITING" });
-          } else {
-            // ★適用すべき更新が無い場合も「自動で再起動します」に合わせて
-            //   必ずページを再読み込みする（モーダルで止まりっぱなしを防ぐ）
-            console.warn(
-              "Service Worker: No update available. Reloading..."
-            );
-            setTimeout(() => window.location.reload(), 800);
-          }
-        }
-      };
-
-      applyUpdate();
-
-      // -------------------------------------------
-      // 保険: controllerchange が遅延しても段階的に再起動する
-      // （Safari対策: 5秒→waiting再確認→10秒で強制リロード）
-      // -------------------------------------------
-      setTimeout(async () => {
-        if (refreshing) return;
-        // 第一段: waiting がいれば再送する（登録も取り直す）
-        try {
-          const reg = await navigator.serviceWorker.getRegistration();
-          if (reg) currentServiceWorkerRegistration = reg;
-          const w = (reg && reg.waiting) || liveReg.waiting || registration.waiting;
-          if (w && !refreshing) {
-            console.warn("Service Worker: retry SKIP_WAITING...");
-            w.postMessage({ type: "SKIP_WAITING" });
-          }
-        } catch (e) { /* 無視 */ }
-      }, 5000);
-      setTimeout(() => {
-        if (!refreshing) {
-          refreshing = true;
-          clearInterval(progressTimer);
-          updateProgressUI(100, TOTAL_FILES);
-          console.warn(
-            "Service Worker: controllerchange timeout. Force reloading..."
-          );
-          // ★オフライン用キャッシュ版として今回の版を記録
-          _markCacheVersion(APP_VERSION);
-          setTimeout(() => window.location.reload(), 300);
-        }
-      }, 10000);
-
-    };
-
-  }
-
-
-  // -----------------------------------------------
-  // 後で
-  // -----------------------------------------------
-
-  if (laterButton) {
-
-    laterButton.style.display =
-      "inline-flex";
-
-    laterButton.disabled = false;
-
-
-    laterButton.onclick = () => {
-
-      console.log(
-        "Service Worker update postponed."
-      );
-
-      notification.classList.remove("show");
-
-
-      setTimeout(() => {
-
-        notification.style.display =
-          "none";
-
-      }, 250);
-
-    };
-
-  }
+  // オンライン復帰時にバージョン表示を更新（モーダルは出さない）
+  window.addEventListener("online", () => {
+    try { _refreshVersionStatus(); } catch (e) { /* 無視 */ }
+  });
 
 }
-
-// ================================
-// 🔹クエストスロットUI描画
 // ================================
 function renderQuestSlots() {
 
@@ -3956,8 +2974,6 @@ export async function startTrueEndingSequence(onCompleteCallback) {
 // =============================================================================================================
 
 
-
-
 function bindModeSwitchEvents() {
 
   switchToFreeBtn?.addEventListener("click", () => {
@@ -3977,7 +2993,6 @@ function bindModeStartEvents() {
 
   questStartBtnFromBeginning = questStartBtnFromBeginning.replaceWith(questStartBtnFromBeginning.cloneNode(true)) || questStartBtnFromBeginning;
   questStartBtnFromBeginning = document.getElementById("questStartBtnFromBeginning");
-
 
 
   questStartBtn?.addEventListener("click", () => {
@@ -4261,30 +3276,12 @@ function bindKeyEvents() {
     if (window._staffRollActive) return;
 
     // ★オフラインダウンロードモーダル表示中は全キーショートカットを無効化
+    //   Escのみ、ダウンロード中ならキャンセル・完了後は閉じる操作に使える
     if (_offlineModalActive) {
       e.preventDefault();
-      return;
-    }
-
-    // ★v1.0.22: アップデート通知モーダル表示中は裏のショートカットを一切通さない
-    //   （「更新画面の裏でキー操作が効いてしまう」問題の防止）
-    //   Escape / b のみ「後で」扱いで閉じられる
-    //   ★準備中（ボタンなし＝ダウンロード中）は塞がないため、
-    //     「今すぐ更新／後で」ボタンがある完了状態のみキーを横取りする
-    const updateModal = document.getElementById("update-notification");
-    const updateNowBtn = document.getElementById("update-now-btn");
-    const updateModalBlocking =
-      updateModal &&
-      updateModal.style.display !== "none" &&
-      updateModal.style.display !== "" &&
-      updateModal.classList.contains("show") &&
-      updateNowBtn &&
-      updateNowBtn.style.display !== "none" &&
-      updateNowBtn.style.display !== "";
-    if (updateModalBlocking) {
-      e.preventDefault();
-      if (e.key === "Escape" || e.key.toLowerCase() === "b") {
-        document.getElementById("update-later-btn")?.click();
+      if (e.key === "Escape") {
+        if (_offlineDlRunning) _cancelOfflineDownload();
+        else _hideOfflineDownloadModal();
       }
       return;
     }

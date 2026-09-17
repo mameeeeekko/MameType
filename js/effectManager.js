@@ -240,6 +240,66 @@ export async function loadSound(asset) {
 }
 
 // ===========================================
+// ★v1.0.42: オンデマンド読み込み（モード開始時読み込み）
+// ---------------------------------------------------------------------------
+//  起動時に全BGM/SEをデコードすると負荷が大きいため、
+//  「実際に鳴らす直前にその音源だけ取得する」方式に変更した。
+//  ここでは assetsLoader.js から渡された音源定義を保持し、
+//  未取得の音源を必要な瞬間に読み込むための入口を提供する。
+// ===========================================
+
+// assetsLoader から登録される音源定義（name → asset）
+const soundAssets = {};
+// 読み込み中のPromise（同じ音源を二重に取得しないため）
+const soundLoading = {};
+
+/**
+ * 音源定義の一覧を登録する（assetsLoader.js から起動時に1回呼ばれる）
+ * @param {Array<{type:string,name:string,src:string}>} list
+ */
+export function registerSoundAssets(list) {
+    if (!Array.isArray(list)) return;
+    for (const a of list) {
+        if (!a || a.type !== "sound" || !a.name || !a.src) continue;
+        soundAssets[a.name] = a;
+        // BGM表示（タイトル/作曲者）は再生前でも出せるように先に用意しておく
+        if (!soundMeta[a.name]) {
+            soundMeta[a.name] = {
+                title: a.title || "-",
+                composer: a.composer || "-",
+                volume: a.volume ?? 1.0,
+            };
+        }
+    }
+}
+
+/**
+ * 音源が未取得ならその場で取得する（取得済み・取得中なら何もしない）
+ * @param {string} name 音源名（例: "bgm_rainy"）
+ * @returns {Promise<boolean>} 取得できたら true
+ */
+export function ensureSound(name) {
+    if (!name) return Promise.resolve(false);
+    if (buffers[name]) return Promise.resolve(true);
+    if (soundLoading[name]) return soundLoading[name];
+
+    const asset = soundAssets[name];
+    if (!asset) return Promise.resolve(false);
+
+    soundLoading[name] = loadSound(asset)
+        .then(() => !!buffers[name])
+        .catch(() => false)
+        .finally(() => { delete soundLoading[name]; });
+
+    return soundLoading[name];
+}
+
+/** その音源が既にデコード済みかどうか */
+export function isSoundReady(name) {
+    return !!buffers[name];
+}
+
+// ===========================================
 // 初期化（ユーザー操作後）
 // ===========================================
 
@@ -545,6 +605,14 @@ export function playSE(
     // ★ SE設定がOFFなら再生しない（全SE一括制御）
     if (!isSeOn()) return;
 
+    // ★v1.0.42: モード開始時読み込み対応。
+    //   未取得のSEはここで読み込みを開始する
+    //   （初回の1回だけ無音になるが、次回以降は鳴る）
+    if (!buffers[name]) {
+        ensureSound(name);
+        return;
+    }
+
     const ctx = getAudioContext();
     if (!ctx) return; // 音なしモード
 
@@ -783,6 +851,12 @@ export function playLoopSE(name, volume = 1.0) {
     // ★ SE設定がOFFならループSEも再生しない（全SE一括制御）
     if (!isSeOn()) return;
 
+    // ★v1.0.42: 未取得のループSEもここで読み込みを開始する
+    if (!buffers[name]) {
+        ensureSound(name);
+        return;
+    }
+
     const ctx = getAudioContext();
     if (!ctx) return; // 音なしモード
     const buffer = buffers[name];
@@ -819,10 +893,33 @@ export function stopAllLoopSE() {
 // BGM
 // ===========================================
 
+// ★v1.0.42: BGMの遅延再生（モード開始時読み込み対応）
+//   音源が未取得の場合、取得完了後に同じ再生要求をやり直す。
+//   stopBGM / 新しいBGM要求が入った場合は古い予約を無効化する。
+let pendingBgmRequest = null;
+let bgmRequestSeq = 0;
+
+function _deferBgmPlay(name, run) {
+    const id = ++bgmRequestSeq;
+    pendingBgmRequest = { id, name };
+    ensureSound(name).then(() => {
+        // 新しい要求や stopBGM で上書きされていたら何もしない
+        if (!pendingBgmRequest || pendingBgmRequest.id !== id) return;
+        pendingBgmRequest = null;
+        try { run(); } catch (e) { /* 再生失敗は握りつぶす */ }
+    });
+}
+
 export function playBGM(name="bgm1", volume=1.0){
 
     // ★ BGM設定がOFFなら再生しない（全BGM一括制御）
     if (!isBgmOn()) return;
+
+    // ★v1.0.42: 未取得のBGMは読み込み完了後に再生する
+    if (!buffers[name]) {
+        _deferBgmPlay(name, () => playBGM(name, volume));
+        return;
+    }
 
     const ctx = getAudioContext();
     if (!ctx) return; // 音なしモード
@@ -861,6 +958,9 @@ export function playBGM(name="bgm1", volume=1.0){
 }
 
 export function stopBGM(){
+
+    // ★v1.0.42: 遅延再生の予約を無効化（停止後に鳴り出さないように）
+    pendingBgmRequest = null;
 
     // ★ 保留中のフェード/再生予約タイマーを無効化
     bgmRequestId++;
@@ -941,6 +1041,12 @@ export function fadeBGMTo(newName, fadeInMs = FADE_CONFIG.FADE_IN_DURATION, fade
 
     // 既に同じBGMが再生中で、かつフェードアウト中でない場合は何もしない
     if (bgmSource && currentBgmName === newName && !bgmFadeOutActive) {
+        return;
+    }
+
+    // ★v1.0.42: 未取得のBGMはロード完了後にフェードインをやり直す
+    if (!buffers[newName]) {
+        _deferBgmPlay(newName, () => fadeBGMTo(newName, fadeInMs, fadeOutMs, targetVolume));
         return;
     }
 

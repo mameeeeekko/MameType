@@ -7616,31 +7616,6 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 .offline-dl-cancel-btn {
-  margin-top: 16px;
-  padding: 8px 20px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #ff7b7b;
-  border: 1px solid rgba(255, 107, 107, 0.4);
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: var(--font-ui);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.offline-dl-cancel-btn:hover:not(:disabled) {
-  background: rgba(255, 107, 107, 0.15);
-  color: #ff9e9e;
-}
-
-.offline-dl-cancel-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-
-
-.offline-dl-cancel-btn {
   margin-top: 20px;
   padding: 10px 20px;
   background-color: #333;
@@ -7664,419 +7639,68 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 /* =====================================================
-   更新通知UI
+   ★v1.0.42: オフラインDLモーダルの詳細表示・操作ボタン
    ===================================================== */
 
-/* =====================================================
-   MameType Update Notification
-   ===================================================== */
-
-.update-notification {
-  position: fixed;
-  inset: 0;
-
-  z-index: 999999;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  background:
-    rgba(0, 0, 0, 0.72);
-
-  opacity: 0;
-
-  transition:
-    opacity 0.25s ease;
-
-  pointer-events: none;
-}
-
-
-/* -----------------------------------------------------
-   表示状態
-   ----------------------------------------------------- */
-
-.update-notification.show {
-  opacity: 1;
-
-  pointer-events: auto;
-}
-
-
-/* -----------------------------------------------------
-   Dialog
-   ----------------------------------------------------- */
-
-.update-dialog {
-
-  width: min(440px, calc(var(--dvw) * 100 - 40px));
-
-  box-sizing: border-box;
-
-  padding: 30px 28px 24px;
-
-  border:
-    1px solid
-    rgba(120, 220, 255, 0.45);
-
-  border-radius: 14px;
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(20, 30, 42, 0.98),
-      rgba(8, 14, 22, 0.98)
-    );
-
-  box-shadow:
-    0 0 35px
-    rgba(0, 0, 0, 0.65),
-
-    0 0 25px
-    rgba(80, 190, 255, 0.12);
-
-  color: #fff;
-
-  text-align: center;
-
-  transform:
-    translateY(10px)
-    scale(0.98);
-
-  transition:
-    transform 0.25s ease;
-}
-
-
-.update-notification.show
-.update-dialog {
-
-  transform:
-    translateY(0)
-    scale(1);
-
-}
-
-
-/* -----------------------------------------------------
-   Title
-   ----------------------------------------------------- */
-
-.update-title {
-
-  margin-bottom: 16px;
-
-  font-size: 21px;
-
-  font-weight: 700;
-
-  letter-spacing: 0.12em;
-
-}
-
-
-/* -----------------------------------------------------
-   Message
-   ----------------------------------------------------- */
-
-.update-message {
-
-  margin-bottom: 22px;
-
-  font-size: 14px;
-
-  line-height: 1.7;
-
-  color:
-    rgba(255, 255, 255, 0.88);
-
-}
-
-
-/* -----------------------------------------------------
-   Progress wrapper
-   ----------------------------------------------------- */
-
-.update-progress-wrapper {
-
-  margin:
-    18px 0 24px;
-
-}
-
-
-/* -----------------------------------------------------
-   Progress track
-   ----------------------------------------------------- */
-
-.update-progress-track {
-
-  width: 100%;
-
-  height: 10px;
-
-  overflow: hidden;
-
-  border-radius: 999px;
-
-  background:
-    rgba(255, 255, 255, 0.10);
-
-}
-
-
-/* -----------------------------------------------------
-   Progress bar
-   ----------------------------------------------------- */
-
-.update-progress-bar {
-
-  height: 100%;
-
-  width: 0%;
-
-  border-radius: 999px;
-
-  background:
-    linear-gradient(
-      90deg,
-      #42d9ff,
-      #7df5c8
-    );
-
-  box-shadow:
-    0 0 12px
-    rgba(66, 217, 255, 0.45);
-
-  transition:
-    width 0.15s ease;
-
-}
-
-
-/* -----------------------------------------------------
-   Percentage
-   ----------------------------------------------------- */
-
-.update-progress-text {
-
-  margin-top: 9px;
-
-  font-size: 20px;
-
-  font-weight: 700;
-
-  letter-spacing: 0.05em;
-
-}
-
-
-/* -----------------------------------------------------
-   File count
-   ----------------------------------------------------- */
-
-.update-file-text {
-
-  margin-top: 6px;
-
-  min-height: 20px;
-
-  font-size: 12px;
-
-  color:
-    rgba(255, 255, 255, 0.60);
-
-  word-break: break-all;
-
-}
-
-
-/* -----------------------------------------------------
-   Buttons
-   ----------------------------------------------------- */
-
-.update-buttons {
-
-  display: flex;
-
-  justify-content: center;
-
-  gap: 10px;
-
-  margin-top: 8px;
-
-}
-
-
-.update-button {
-
-  display: inline-flex;
-
-  justify-content: center;
-
-  align-items: center;
-
-  min-width: 130px;
-
-  padding:
-    11px 20px;
-
-  border-radius: 7px;
-
-  border:
-    1px solid
-    rgba(255, 255, 255, 0.20);
-
-  font-size: 13px;
-
-  font-weight: 700;
-
-  cursor: pointer;
-
-  text-align: center;
-
-  transition:
-    transform 0.15s ease,
-    opacity 0.15s ease,
-    background 0.15s ease;
-
-}
-
-
-.update-button:hover {
-
-  transform:
-    translateY(-1px);
-
-}
-
-
-.update-button:active {
-
-  transform:
-    translateY(0);
-
-}
-
-
-.update-button:disabled {
-
-  opacity: 0.5;
-
-  cursor: default;
-
-  transform: none;
-
-}
-
-
-/* -----------------------------------------------------
-   Primary
-   ----------------------------------------------------- */
-
-.update-button-primary {
-
-  background:
-    rgba(66, 190, 230, 0.18);
-
-  border-color:
-    rgba(66, 217, 255, 0.55);
-
-  color: #fff;
-
-}
-
-
-.update-button-primary:hover {
-
-  background:
-    rgba(66, 190, 230, 0.30);
-
-}
-
-
-/* -----------------------------------------------------
-   Secondary
-   ----------------------------------------------------- */
-
-.update-button-secondary {
-
-  background:
-    rgba(255, 255, 255, 0.06);
-
-  color:
-    rgba(255, 255, 255, 0.72);
-
-}
-
-
-.update-button-secondary:hover {
-
-  background:
-    rgba(255, 255, 255, 0.11);
-
-}
-
-
-/* -----------------------------------------------------
-   Note
-   ----------------------------------------------------- */
-
-.update-note {
-
-  margin-top: 18px;
-
-  font-size: 10px;
-
+.offline-dl-detail {
+  color: #8a9bb0;
+  font-size: 11px;
+  margin: 8px auto 0;
   line-height: 1.5;
+  font-family: var(--font-ui);
+  max-width: 300px;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
 
-  color:
-    rgba(255, 255, 255, 0.38);
+.offline-dl-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 16px auto 0;
+}
 
+.offline-dl-buttons:empty {
+  display: none;
+}
+
+.offline-dl-action-btn {
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c5d9f0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.offline-dl-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.offline-dl-action-btn.primary {
+  background: linear-gradient(90deg, #58a6ff, #3fb950);
+  color: #0b1220;
+  border-color: transparent;
+  font-weight: bold;
+}
+
+.offline-dl-action-btn.primary:hover:not(:disabled) {
+  filter: brightness(1.12);
+  background: linear-gradient(90deg, #58a6ff, #3fb950);
+}
+
+.offline-dl-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 
-/* -----------------------------------------------------
-   Mobile
-   ----------------------------------------------------- */
 
-@container (max-width: 480px) {
-
-  .update-dialog {
-
-    width:
-      calc(100vw - 28px);
-
-    padding:
-      24px 20px 20px;
-
-  }
-
-
-  .update-title {
-
-    font-size: 18px;
-
-  }
-
-
-  .update-buttons {
-
-    flex-direction: column;
-
-  }
-
-
-  .update-button {
-
-    width: 100%;
-
-  }
-
-}
-  
 
 /* defense combo tier wrapper */
 
@@ -8596,8 +8220,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
    body直下に置くため 1600×900 ステージ座標が基準になる。
    pointer-events: none でクリックを一切阻害しない。
    ===================================================== */
-#remainingLoadIndicator,
-#swDownloadIndicator {
+#remainingLoadIndicator {
   position: fixed;
   bottom: 18px;
   left: 50%;
@@ -8628,8 +8251,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   pointer-events: none;
   user-select: none;
 }
-#remainingLoadIndicator.show,
-#swDownloadIndicator.show {
+#remainingLoadIndicator.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
   visibility: visible;

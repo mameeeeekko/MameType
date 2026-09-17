@@ -8,7 +8,7 @@ import { gameState, setGameActive, getPaused, setPaused, getNow, getERank, getSo
 import { GameModes } from "./gameModes.js";
 import { getCurrentDifficulty } from "./difficulties.js"; // ★クエスト防衛戦の難易度取得用
 import { STAGES, getStageConfig } from "./enemyModeConfig.js";
-import { playSE, stopBGM, playBGM, clearAllEffects, playErrorSound, playDialogueSound } from "./effectManager.js";
+import { playSE, stopBGM, playBGM, ensureSound, clearAllEffects, playErrorSound, playDialogueSound } from "./effectManager.js";
 import { showDefenseResult } from "./defenseResult.js";
 import { showEnemyEndIntro } from "./questResult.js";
 import { TARGETS } from "./target.js";
@@ -334,6 +334,8 @@ export function startDefenseMode(config = {}) {
     GameModes.DEFENSE_MODE.bgm;
 
   if (getSoundEnabled() && getSoundSettings().bgm) {
+    // ★v1.0.42: モード開始時にBGMを読み込む（起動時の一括デコード廃止のため）
+    ensureSound(defenseBgm);
     playBGM(defenseBgm, 1.0);
     gameState.startTime = getNow(); // BGM表示タイマーをリセット
   } else {

@@ -16,7 +16,7 @@ import {
   initTimeBar, setTimeLeft, setSolvedCount, renderBgmInfo
 } from './renderer.js';
 import { closeDialogue } from './dialogue.js';
-import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, playTestSound as playTestSoundEffect } from "./effectManager.js";
+import { playTypeSound, playMissSound, initAudio, flashMiss, stopBGM, playBGM, ensureSound, setMasterVolume, setBgmVolume, setSeVolume, setTypeVolume, setMissVolume, playTestSound as playTestSoundEffect } from "./effectManager.js";
 import { GameModes} from "./gameModes.js";
 import { updatePlayerStats, getPlayerStats} from "./playerStats.js";
 import { updateHud, showHud } from "./hud.js";
@@ -433,6 +433,10 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   if (getSoundEnabled() && getSoundSettings().bgm) {
     // モード設定からBGM IDを取得。なければデフォルトを再生
     const bgmId = config.mode?.bgm || "bgm_rainy";
+    // ★v1.0.42: モード開始時にBGMを読み込む
+    //   （起動時に全BGMをデコードしなくなったため、ここで先に取得する。
+    //     オフライン時はSWキャッシュ、オンライン時はHTTPキャッシュから取得される）
+    await ensureSound(bgmId);
     playBGM(bgmId, 1.0);
   } else {
     stopBGM(); // ★ BGM設定がOFFでも、マップBGM等が鳴り続けないように停止
