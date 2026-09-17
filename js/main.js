@@ -400,11 +400,11 @@ function _renderVersionStatus(cached) {
   const parts = [`${runningLabel}: v${APP_VERSION}`];
 
   if (cached && cached === APP_VERSION) {
-    parts.push(`オフライン用（手動DL済み）: v${cached}`);
+    parts.push(`オフライン用（DL済み）: v${cached}`);
   } else if (cached) {
-    parts.push(`オフライン用（手動DL済み）: v${cached}（「最新版をオフライン用にダウンロード」で更新できます）`);
+    parts.push(`オフライン用（DL済み）: v${cached}（更新できます）`);
   } else {
-    parts.push("オフライン用: 未ダウンロード（「最新版をオフライン用にダウンロード」を実行してください）");
+    parts.push("オフライン用: 未ダウンロード（オフライン用にダウンロードを実行してください）");
   }
 
   if (_onlineLatestVersion && _onlineLatestVersion !== APP_VERSION) {
@@ -412,7 +412,7 @@ function _renderVersionStatus(cached) {
   }
 
   if (currentServiceWorkerRegistration && currentServiceWorkerRegistration.waiting) {
-    parts.push("更新の適用待ち（「更新を適用して再起動」で反映できます）");
+    parts.push("更新の適用待ち（再起動で反映できます）");
   }
 
   _setVersionStatus(parts.join(" ／ "));
@@ -619,7 +619,8 @@ function _reportOfflineProgress(detail) {
 
   _updateOfflineModalProgress(
     percent,
-    `取得 ${_offlineDlStat.fetched} ・ 既存 ${_offlineDlStat.reused} ／ 全 ${total} 件${detail ? `　${detail}` : ""}`
+    // `取得 ${_offlineDlStat.fetched} ・ 既存 ${_offlineDlStat.reused} ／ 全 ${total} 件${detail ? `　${detail}` : ""}`
+    `${done} ／ ${total} 件${detail ? `　${detail}` : ""}`
   );
 }
 
@@ -822,13 +823,14 @@ function _finishOfflineDownload(reason) {
   // 完了（全件キャッシュ済みであることを検証済み）
   // -----------------------------------------------
   const counts = _offlineDlStat;
-
+  const done = counts.fetched + counts.reused;
   // ★本当に保存できたときだけ「オフライン用の版」を記録する
   _markCacheVersion(APP_VERSION);
 
   _updateOfflineModalProgress(
     100,
-    `取得 ${counts.fetched} ・ 既存 ${counts.reused} ／ 全 ${counts.total} 件`
+    //`取得 ${counts.fetched} ・ 既存 ${counts.reused} ／ 全 ${counts.total} 件`
+    `${done} ／ ${counts.total} 件`
   );
   _setOfflineModalStatus("ダウンロードが完了しました。オフラインでも遊べます。");
 

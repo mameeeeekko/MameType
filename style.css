@@ -7705,15 +7705,15 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 .offline-dl-action-btn.primary {
-  background: linear-gradient(90deg, #58a6ff, #3fb950);
-  color: #0b1220;
+  /* background: linear-gradient(90deg, #58a6ff, #3fb950); */
+  color: #c5d9f0;
   border-color: transparent;
   font-weight: bold;
 }
 
 .offline-dl-action-btn.primary:hover:not(:disabled) {
   filter: brightness(1.12);
-  background: linear-gradient(90deg, #58a6ff, #3fb950);
+  /* background: linear-gradient(90deg, #58a6ff, #3fb950); */
 }
 
 .offline-dl-action-btn:disabled {
