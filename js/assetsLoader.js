@@ -30,6 +30,8 @@ const coreAssets = [
   // UI
   { type: "img", name: "title_menu", src: "./assets/pic/title_menu.png" },
   { type: "img", name: "quest_menu", src: "./assets/pic/quest_menu.png" },
+  { type: "img", name: "sound1", src: "./assets/pic/sound1.png" },
+  { type: "img", name: "soundmute", src: "./assets/pic/soundmute.png" },
   // SE
   { type: "sound", name: "select", src: "./assets/sound/se/select.mp3", composer: "", title: "", volume: 1.0 },
   { type: "sound", name: "questmenu", src: "./assets/sound/se/questmenu.mp3", composer: "", title: "", volume: 1.0 },
@@ -355,6 +357,12 @@ async function _runQueueWithLimit(queue, maxConcurrent, gapMs, onOneLoaded) {
   for (let w = 0; w < workerCount; w++) {
     workers.push((async () => {
       while (true) {
+        // ゲームプレイ中（エネミー・防衛・通常ゲーム実行中）は
+        // 描画・操作を最優先するため、裏読み込みを一時待機する
+        while (typeof window.isGameplayActive === "function" && window.isGameplayActive()) {
+          await new Promise(r => setTimeout(r, 200));
+        }
+
         const idx = index++;
         if (idx >= queue.length) break;
         const a = queue[idx];
@@ -398,11 +406,17 @@ async function loadRemainingAssets(onProgress) {
     try { onProgress?.(loaded, total); } catch (e) { /* 無視 */ }
   };
 
+  // オフライン環境では Service Worker の大量 IPC / キャッシュ照会がメインスレッドを
+  // 圧迫しないよう、フォントの並列数を抑えて間隔を広げる
+  const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+  const effectiveFontConcurrency = isOffline ? 2 : FONT_CONCURRENCY;
+  const effectiveFontGap = isOffline ? 12 : FONT_GAP_MS;
+
   // フォント・画像はそれぞれ別の並列数で同時に進める
   // → フォント（タイピング表示に直結）を最優先で進めつつ、
   //   メニュー用画像も最初から読み込まれる
   // ※ 裏読み込み中に重くならないよう、件数ごとに少し間を空ける
-  const fontPromise = _runQueueWithLimit(fontQueue, FONT_CONCURRENCY, FONT_GAP_MS, report);
+  const fontPromise = _runQueueWithLimit(fontQueue, effectiveFontConcurrency, effectiveFontGap, report);
   const imagePromise = _runQueueWithLimit(imageQueue, IMAGE_CONCURRENCY, 8, report);
   await Promise.all([fontPromise, imagePromise]);
 

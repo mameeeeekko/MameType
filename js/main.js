@@ -70,6 +70,20 @@ try {
   isSafari = /^((?!chrome|android|crios|edg).)*safari/i.test(ua);
 } catch (e) { /* 判定失敗時は無視 */ }
 
+// =====================================================
+// 🎮 ゲームプレイ状態の判定（裏読み込みのスロットリング用）
+// =====================================================
+export function isGameplayActive() {
+  const ids = ["game", "enemyModeContainer", "defenseModeContainer"];
+  return ids.some(id => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    const d = el.style.display;
+    return d !== "" && d !== "none";
+  });
+}
+window.isGameplayActive = isGameplayActive;
+
 // ================================
 // 🔹デイリーモードの固定設定
 // ================================
@@ -353,9 +367,37 @@ function _setVersionStatus(text) {
   if (el) el.textContent = text;
 }
 
-function _refreshVersionStatus() {
+/**
+ * オフライン用キャッシュが実際に保存されているかを判定する。
+ * localStorage に記録があればそれを返し、無ければ Cache Storage（mametype-app）を照会する。
+ * キャッシュ内に index.html が実在すれば、localStorage が欠落していても自動復元する。
+ */
+async function _detectOfflineCacheVersion() {
   const cached = _getCacheVersion();
-  const parts = [`オンライン（実行中）: v${APP_VERSION}`];
+  if (cached) return cached;
+
+  if ("caches" in window) {
+    try {
+      const hasApp = await caches.has(OFFLINE_APP_CACHE);
+      if (hasApp) {
+        const appCache = await caches.open(OFFLINE_APP_CACHE);
+        const match = await appCache.match(new Request(new URL("./index.html", location.href).href), { ignoreVary: true })
+                   || await appCache.match(new Request(new URL("./", location.href).href), { ignoreVary: true });
+        if (match) {
+          // キャッシュが実在するので localStorage にも復元
+          _markCacheVersion(APP_VERSION);
+          return APP_VERSION;
+        }
+      }
+    } catch (e) { /* 無視 */ }
+  }
+  return "";
+}
+
+function _renderVersionStatus(cached) {
+  const isOnline = typeof navigator === "undefined" || navigator.onLine !== false;
+  const runningLabel = isOnline ? "オンライン（実行中）" : "オフライン（実行中）";
+  const parts = [`${runningLabel}: v${APP_VERSION}`];
 
   if (cached && cached === APP_VERSION) {
     parts.push(`オフライン用（手動DL済み）: v${cached}`);
@@ -374,6 +416,21 @@ function _refreshVersionStatus() {
   }
 
   _setVersionStatus(parts.join(" ／ "));
+}
+
+function _refreshVersionStatus() {
+  // まず同期的に即時描画
+  const cachedSync = _getCacheVersion();
+  _renderVersionStatus(cachedSync);
+
+  // localStorage に無い場合、Cache Storage の実在を非同期で確認して更新・復元
+  if (!cachedSync) {
+    _detectOfflineCacheVersion().then(cachedAsync => {
+      if (cachedAsync) {
+        _renderVersionStatus(cachedAsync);
+      }
+    });
+  }
 }
 // ============================================================
 // オフライン用データの手動ダウンロード
@@ -844,7 +901,22 @@ async function downloadOfflineData(options = {}) {
       } catch (e) { return false; }
     });
 
-    const assetUrls = _uniqueUrls(await collectOfflineAssetUrls()).filter(href => {
+    const manifestAssetUrls = manifestUrls.filter(href => {
+      try {
+        const u = new URL(href);
+        return u.origin === location.origin && u.pathname.includes("/assets/");
+      } catch (e) { return false; }
+    });
+
+    const collectedAssetUrls = await collectOfflineAssetUrls();
+    const fallbackAssetUrls = [
+      new URL("./assets/pic/sound1.png", location.href).href,
+      new URL("./assets/pic/soundmute.png", location.href).href,
+    ];
+
+    const assetUrls = _uniqueUrls(
+      manifestAssetUrls.concat(collectedAssetUrls).concat(fallbackAssetUrls)
+    ).filter(href => {
       try { return new URL(href).origin === location.origin; } catch (e) { return false; }
     });
 
@@ -1841,6 +1913,7 @@ function initSettingsUI() {
     if (settingsDiv) settingsDiv.style.display = "block";
     applySoundSettingsToUI();
     applyKeybindsToUI();
+    _refreshVersionStatus();
 
     // Player IDを表示
     if (playerIdDisplay) {
