@@ -863,6 +863,8 @@ export function openQuestMenuModal(type = "difficulty") {
     if (old) {
         const oldStarList = old.querySelector(".star-upgrade-list");
         if (oldStarList) savedStarListScroll = oldStarList.scrollTop;
+        // ★旧モーダルをremoveする際はmouseleaveが発火しないため、ホバー中のツールチップを明示的に消す
+        hideQuestTooltip();
         old.remove();
     }
 
@@ -878,6 +880,8 @@ export function openQuestMenuModal(type = "difficulty") {
 
     function closeModal() {
         document.removeEventListener("keydown", onKeyDown);
+        // ★モーダルをremoveする際はmouseleaveが発火しないため、ホバー中のツールチップを明示的に消す
+        hideQuestTooltip();
         overlay.remove();
         // ★ モーダルを閉じた際にサイドメニューの現在の難易度表示を更新
         updateQuestDifficultySideLabel();
@@ -1845,6 +1849,8 @@ export function openQuestMenuModal(type = "difficulty") {
 }
 
 export function closeQuestModal() {
+    // ★モーダルをremoveする際はmouseleaveが発火しないため、ホバー中のツールチップを明示的に消す
+    hideQuestTooltip();
     const modal = document.getElementById("questModal");
     if (modal) modal.remove();
 }

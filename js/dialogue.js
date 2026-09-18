@@ -172,8 +172,8 @@ export function showClearRewardPopup(htmlContent, onClose) {
 
     overlay.innerHTML = `
         <div style="max-width: 640px; width: 100%; background: #0f1113; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; box-shadow: 0 18px 40px rgba(0,0,0,0.45); padding: 24px; color: #f7f7f7; text-align: center;">
-            <div style="margin-bottom: 18px; font-size: 1.1rem; line-height: 1.6;">クリア特典</div>
-            <div style="margin-bottom: 22px;">${htmlContent}</div>
+            <div style="margin-bottom: 28px; font-size: 1.1rem; line-height: 1.6;">クリア特典</div>
+            <div style="margin-bottom: 24px; line-height: 1.8; text-align: center;">${htmlContent}</div>
             <div style="display: flex; justify-content: center;
                         gap: 14px; flex-wrap: wrap;">
                 <button id="clearRewardOk" style="min-width: 120px; padding: 12px 18px; border: none; border-radius: 10px; background: #2f8aff; color: #fff; font-weight: 700; cursor: pointer;">閉じる</button>
