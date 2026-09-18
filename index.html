@@ -87,11 +87,7 @@
     <div class="menu-inner">
       <div id="menuHeader">
         <h1 id="gameTitle">Mame Type</h1>
-        <span id="versionWrapper">
-          <span id="versionLabel"></span>
-          <span id="versionSep">/</span>
-          <span id="offlineVersionLabel"></span>
-        </span>
+        <div id="versionLabel"></div>
         <!-- フルスクリーン切替ボタンは body 直下の #globalUiBar（全メニュー共通）へ移動 -->
       </div>
 
@@ -105,6 +101,11 @@
       </div>
     </div>
 
+  <!-- サウンドON/OFF トグル -->
+  <label id="soundLabel">
+    <input type="checkbox" id="soundToggle">
+    <img id="soundIcon" src="./assets/pic/sound1.png" alt="効果音ON">
+  </label>
 </div>
 
 <!-- =====================================================
@@ -117,7 +118,6 @@
     <button id="questStartBtn">CONTINUE</button>
     <button id="questSaveBtn">SAVE／LOAD</button>
     <button id="questStartBtnFromBeginning">NEW GAME</button>
-    <button id="questClearRewardBtn" style="display:none;">CLEAR REWARD (R)</button>
     <button id="questStartMenuBackBtn">BACK</button>
   </div>
 
@@ -132,25 +132,6 @@
     <h2>SAVE / LOAD</h2>
 
     <div id="questSlots"></div>
-  </div>
-</div>
-<!-- クリア報酬モーダル -->
-<div id="clearRewardModal" class="save-modal hidden">
-  <div id="clearRewardMenu" class="save-modal-content">
-    <button id="clearRewardModalCloseBtn" class="save-modal-close-btn" title="閉じる">×</button>
-    <h2>CLEAR REWARD</h2>
-
-    <div id="clearRewardContent"></div>
-  </div>
-</div>
-<!-- キーバインド設定モーダル（クエストマップのサイドメニューから k キーまたはボタンで開く）
-     内容は setting の KEY セクションと同じ keybinds を表示・編集する（localStorage "keybinds" を共有） -->
-<div id="keybindConfigModal" class="save-modal hidden">
-  <div class="save-modal-content">
-    <button id="keybindConfigCloseBtn" class="save-modal-close-btn" title="閉じる">×</button>
-    <h2>KEY BIND</h2>
-    <div id="keybindConfigContent" class="keybind-row"></div>
-    <button id="keybindConfigSaveBtn" style="display:block; margin:10px auto;">Save Keybinds</button>
   </div>
 </div>
 <!-- =====================================================
@@ -331,30 +312,6 @@
       <div id="enemyParamEndless" class="pattern-detail" style="display: none;">
         <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">力尽きるまで戦い続けます</p>
       </div>
-      <!-- ★全クリア特典：フリーモード専用アクティブスキル設定（ENEMY用） -->
-      <div class="config-section-title" id="freeSkillSectionTitle" style="margin-top: 40px; display: none;">Active Skill</div>
-      <div id="freeSkillSection" class="config-subset-section" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none;">
-        <div class="config-row" style="margin-bottom: 8px;">
-          <label>使用スキル</label>
-          <span id="freeSkillNameValue" style="flex: 1 1 auto; text-align: right; font-size: 12px; color: #a3c8e4;">－</span>
-        </div>
-        <div class="config-row" style="margin-bottom: 0;">
-          <label>星強化</label>
-          <span id="freeSkillStarValue" style="flex: 1 1 auto; text-align: right; font-size: 12px; color: #ffd700;">Lv.0（CD -0%）</span>
-        </div>
-        <div class="config-row" style="margin-bottom: 8px;">
-          <button id="freeSkillSelectBtn" class="pattern-btn" style="flex: 1 1 0;">SKILL SELECT (V)</button>
-          <button id="freeSkillUpgradeBtn" class="pattern-btn" style="flex: 1 1 0;">STAR UPGRADE (U)</button>
-        </div>
-        <div class="config-row" style="margin-bottom: 0;">
-          <label>ストック上限</label>
-          <input type="range" id="freeSkillStockSlider" min="1" max="5" step="1" value="1"
-                 oninput="document.getElementById('freeSkillStockValue').innerText = this.value">
-          <span class="config-value" id="freeSkillStockValue">1</span>
-        </div>
-
-      </div>
-
       <button id="startEnemyFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
 
       <!-- 新しい設定項目: スポーン間隔 -->
@@ -418,29 +375,6 @@
           <option value="W1_WORLD_BOSS">ボス1</option>
         </select>
       </div>
-      <!-- ★全クリア特典：フリーモード専用アクティブスキル設定（QUEST BOSS用） -->
-      <div class="config-section-title" id="freeBossSkillSectionTitle" style="margin-top: 40px; display: none;">Active Skill</div>
-      <div id="freeBossSkillSection" class="config-subset-section" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none;">
-        <div class="config-row" style="margin-bottom: 8px;">
-          <label>使用スキル</label>
-          <span id="freeBossSkillNameValue" style="flex: 1 1 auto; text-align: right; font-size: 12px; color: #a3c8e4;">－</span>
-        </div>
-        <div class="config-row" style="margin-bottom: 0;">
-          <label>星強化</label>
-          <span id="freeBossSkillStarValue" style="flex: 1 1 auto; text-align: right; font-size: 12px; color: #ffd700;">Lv.0（CD -0%）</span>
-        </div>
-        <div class="config-row" style="margin-bottom: 8px;">
-          <button id="freeBossSkillSelectBtn" class="pattern-btn" style="flex: 1 1 0;">SKILL SELECT (V)</button>
-          <button id="freeBossSkillUpgradeBtn" class="pattern-btn" style="flex: 1 1 0;">STAR UPGRADE (U)</button>
-        </div>
-        <div class="config-row" style="margin-bottom: 0;">
-          <label>ストック上限</label>
-          <input type="range" id="freeBossSkillStockSlider" min="1" max="5" step="1" value="1"
-                 oninput="document.getElementById('freeBossSkillStockValue').innerText = this.value">
-          <span class="config-value" id="freeBossSkillStockValue">1</span>
-        </div>
-      </div>
-
       <button id="startBossFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
     </div>
 
@@ -1344,7 +1278,6 @@
     </div>
     <div class="dev-row">
       <button onclick="dev.toggleInfiniteSkill(this)">SKILL INF: OFF</button>
-      <button onclick="dev.unlockFreeActiveSkill(this)">FREE SKILL: OFF</button>
       <button id="devToggleAchvBtn">ACHV ALL: OFF</button>
     </div>
     <div class="dev-row">

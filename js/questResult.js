@@ -5,7 +5,7 @@ import { updateHud, showHud } from "./hud.js";
 import { getPlayerStats, updateAchievements, savePlayerStats, showAchievementPopup } from "./playerStats.js";
 import { closeDialogue, startDialogue, startTrueEndingSequence, showClearRewardPopup, showSaveConfirmPopup } from "./dialogue.js";
 import { backToQuestMap } from "./main.js";
-import { hasShownFirstFullClearReward, markFirstFullClearRewardShown, hasSeenTrueEnding } from "./questProgress.js";
+import { hasShownFirstFullClearReward, markFirstFullClearRewardShown } from "./questProgress.js";
 import { restartEnemyMode } from "./enemyCore.js";
 import { BGM_CONFIG } from "./effectManager.js";
 
@@ -383,8 +383,7 @@ export function showQuestResult(stats) { // Already exported, no change needed
                     startDialogue("epilogue_after_staffroll", () => {
                         // エピローグ後、初回全クリ後の特典を一度だけ表示する
                         if (!hasShownFirstFullClearReward()) {
-                            // ★特典文言は getClearRewardHtml() に集約（ポップアップとメニューの表示ズレ防止）
-                            const rewardHtml = getClearRewardHtml();
+                            const rewardHtml = `<div>全クリアおめでとうございます！<br>以下の特典が開放されました。<br>・新難易度【MASTER】（高難易度・高スコア倍率）<br>・新ワールド【ディープ・コア [EXTRA]】<br>・各ステージのノードイベントを自由に聞くことが可能<br>・ボスチャレンジモード（フリーモード内）<br>・クエストモードの星の振り直しが何回でも可能</div>`;
                             // まずセーブの確認（スロット保存）を行い、保存完了またはモーダル閉じた後に特典を表示する
                             showSaveConfirmPopup("セーブしますか？（スロットに保存）", () => {
                                 // ユーザーが「セーブする」を選んだ → セーブモーダルを開いてスロット選択を促す
@@ -657,11 +656,6 @@ function showLevelUpEffect(i = 0) {
     setTimeout(() => {
         badge.classList.remove("pop");
     }, 600);
-}
-
-/** 全クリア後に表示する特典内容のHTMLを返します。 */
-export function getClearRewardHtml() {
-    return `<div style="text-align: center;">全クリアおめでとうございます！<br>以下の特典が開放されました。<br><br><div style="text-align: left; margin-top: 8px;">・新難易度【MASTER】（高難易度・高スコア倍率）<br>・新ワールド【ディープ・コア [EXTRA]】<br>・各ステージのノードイベントを自由に聞くことが可能<br>・ボスチャレンジモード（フリーモード内）<br>・クエストモードの星の振り直しが何回でも可能<br>・フリーモードのエネミーモード／クエストボスでアクティブスキルを使用可能（各モードでスキル／ストック数／星強化を自由に設定可）</div></div>`;
 }
 
 function showFinalLevelUp(startLv, endLv) {

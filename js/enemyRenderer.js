@@ -2293,7 +2293,7 @@ function getEnemyModeCanvasEl() {
     return _enemyCanvasCache;
 }
 
-export function updateComboTierBar(stats, skillUiEnabled = false) {
+export function updateComboTierBar(stats, isQuestMode = false) {
 
     const tierWrapper = getComboTierWrapper();
 
@@ -2440,11 +2440,10 @@ export function updateComboTierBar(stats, skillUiEnabled = false) {
             }
 
             // ★コンボで獲得したクールタイム短縮倍率をポップアップ表示
-            // （アクティブスキルUI表示中のみ＝クエスト / フリーモードのスキル有効時）
-            if (skillUiEnabled) {
+            // （クエストモードかつアクティブスキルUI表示中のみ）
+            if (isQuestMode) {
                 triggerCooldownSpeedPopup(
-                    COMBO_TIERS[currentTier].cooldownSpeed,
-                    stats
+                    COMBO_TIERS[currentTier].cooldownSpeed
                 );
             }
         }
@@ -2466,8 +2465,8 @@ export function updateComboTierBar(stats, skillUiEnabled = false) {
         playComboTierUpSound(lastTier, true);
 
         // ★オーバードライブ到達時もクールタイム短縮倍率をポップアップ表示
-        if (skillUiEnabled) {
-            triggerCooldownSpeedPopup(OVERDRIVE_SPEED, stats);
+        if (isQuestMode) {
+            triggerCooldownSpeedPopup(OVERDRIVE_SPEED);
         }
     }
 
@@ -2927,12 +2926,11 @@ function drawSmallDots(ctx, x, y, count, anim, now) {
 // ===============================
 let cooldownSpeedPopup = null;
 
-function triggerCooldownSpeedPopup(multiplier, stats = null) {
+function triggerCooldownSpeedPopup(multiplier) {
 
-    // ★アクティブスキルを使用できる戦闘（スキルUI表示中）でのみ表示する。
-    //   スキルが未選択の場合は enemyStats.activeSkillId が空になるため、ここで判定する。
-    const skillId = stats?.activeSkillId ?? getEquippedActiveSkills()?.[0];
-    if (!skillId) return;
+    // アクティブスキルを装備していない（スキルUI非表示）場合は出さない
+    const equipped = getEquippedActiveSkills();
+    if (!equipped || equipped.length === 0) return;
 
     cooldownSpeedPopup = {
         text: `x${Number(multiplier).toFixed(1)}`,
@@ -3036,8 +3034,8 @@ function drawCooldownSpeedPopup(ctx, canvas, deltaTime = 1 / 60) {
 }
 
 export function renderActiveSkillUI(ctx, state, canvas, deltaTime = 1 / 60) {
-    // ★フリーモードは専用設定のスキルを使用（クエストは従来どおり装備スキル）
-    const skillId = state.enemyStats?.activeSkillId ?? getEquippedActiveSkills()?.[0];
+    const equipped = getEquippedActiveSkills();
+    const skillId = equipped?.[0];
     const skill = ACTIVE_SKILLS?.[skillId];
     if (!skill) return;
 

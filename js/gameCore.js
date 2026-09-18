@@ -156,11 +156,7 @@ export function getLastSpecialModeInfo() {
 export const gameState = {
     currentMode: null,
     isQuestMode: false,
-    isFreeMode: false, // フリーモードかどうか
-    isEnding: false, //イントロ中にポーズを走らせないために使う
-    // ★全クリア特典：フリーモード専用アクティブスキル（クエストとは独立）
-    freeSkillEnabled: false, // フリーモードでスキル設定が有効かどうか
-    freeSkillId: null,       // フリーモードで使用するスキルID  
+    isEnding: false, //イントロ中にポーズを走らせないために使う  
     typed: "",
     inputedRomaji: "",
     pos: 0,
@@ -230,12 +226,6 @@ export function resetAllModes() {
   gameState.currentMode = null;
   gameState.currentQuestNode = null;
   gameState.isQuestMode = false;
-  // ※ gameState.isFreeMode はここでリセットしない
-  //   （ESC/ポーズB のメニュー遷移判定が fullResetGame 後の値に依存しているため。
-  //     次のモード開始時に各所で明示的に上書きされる）
-  // ★全クリア特典：フリーモード専用アクティブスキル設定もクリアする
-  gameState.freeSkillEnabled = false;
-  gameState.freeSkillId = null;
   gameState.currentChallenge = null;
 }
 

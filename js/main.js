@@ -28,10 +28,7 @@ import { handleKey } from './inputCore.js';
 import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, wasLastModeBossOnly } from "./enemyCore.js";
 import { renderQuestMapUI, openQuestMenuModal, closeQuestModal } from "./questMapUI.js";
 import { reloadQuestProgress, resetQuestAll, markTrueEndingSeen, hasSeenTrueEnding as hasSeenTrueEndingInAutoSave } from "./questProgress.js";
-import { hasBossChallengeUnlocked, hasFreeActiveSkillUnlocked } from "./questProgress.js";
-import { openFreeSkillSelectModal, openFreeStarUpgradeModal, handleFreeSkillModalKey, clampFreeSkillStarLevel, FREE_SKILL_STAR_MAX_LEVEL, getFreeSkillStarTimeFactor, getFreeSkillInfo } from "./freeSkillUI.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
-import { getClearRewardHtml } from "./questResult.js";
 import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId, getRecoveryCode, setRecoveryCode } from "../online/playerProfile.js";
 import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
@@ -102,18 +99,16 @@ let loadingScreen = null;
 let menuBackground, menuDiv, startMenuDiv, questMenuDiv, freeStartMenuDiv;
 let settingsDiv, gameDiv, resultDiv, recordsDiv;
 let questMapScreen, questSaveMenuDiv, skillTreeDiv;
-let clearRewardModalDiv;
 let hintDiv;
 let onlineRankingDiv;
 
 let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn, onlineRankingBtn, endingBtn;
 let startMenuBackBtn, freeStartMenuBackBtn, questStartMenuBackBtn;
 let saveToQuestMenuBackBtn, questSaveBtn;
-let questClearRewardBtn;
 
 let enemyModeBtn, freeEnemyModeBtn, questStartBtn, questStartBtnFromBeginning, freeDefenseModeBtn;
 let startBtn, timeAttackBtn, longTextBtn;
-let freeStartBtn, freeTimeAttackBtn, freeLongTextBtn, defenseModeBtn, freeBossBtn; // defenseModeBtn を追加
+let freeStartBtn, freeTimeAttackBtn, freeLongTextBtn, defenseModeBtn; // defenseModeBtn を追加
 
 let backBtn, resultBackBtn, recordsBackBtn, rankingBackBtn;
 let gameBackBtn;
@@ -141,22 +136,10 @@ let playerNameInput, savePlayerNameBtn, playerIdDisplay, copyPlayerIdBtn, import
 let onlineRankingToggle;
 
 let unlock, autoLock, pause, activeSkill, saveKeybindBtn;
-// ★ クエストマップのキー設定モーダル用DOM変数
-let keybindConfigModal, keybindConfigCloseBtn, keybindConfigSaveBtn, keybindConfigContent;
 let playerLvRange;
 let enemyIntervalSlider, enemyImmediateToggle;
 let currentFreeModeId = 'Standard'; // フリーモードの選択状態を保持する変数
 let currentEnemyPattern = 'time'; // エネミーモード内のパターン選択状態
-
-// ★全クリア特典：フリーモード（ENEMY）用アクティブスキル設定（クエストとは独立）
-let currentFreeSkillId = null;      // 選択中のスキルID（null = なし）
-let currentFreeSkillStockMax = 1;   // ストック上限（1〜5）
-let currentFreeSkillStarLevel = 0;  // フリー専用の星強化レベル（0〜10）
-
-// ★全クリア特典：フリーモード（QUEST BOSS）用アクティブスキル設定（ENEMYとは独立）
-let currentFreeBossSkillId = null;
-let currentFreeBossSkillStockMax = 1;
-let currentFreeBossSkillStarLevel = 0;
 
 function cacheDOM() {
   bootScreen = document.getElementById("bootScreen");
@@ -173,7 +156,6 @@ function cacheDOM() {
   recordsDiv = document.getElementById("records");
   questMapScreen = document.getElementById("questMapScreen");
   questSaveMenuDiv = document.getElementById("saveModal");
-  clearRewardModalDiv = document.getElementById("clearRewardModal");
   skillTreeDiv = document.getElementById("skillTree");
   hintDiv = document.getElementById("skillUnlockHint");
   onlineRankingDiv = document.getElementById("onlineRankingScreen");
@@ -188,7 +170,6 @@ function cacheDOM() {
   questStartMenuBackBtn = document.getElementById("questStartMenuBackBtn");
   saveToQuestMenuBackBtn = document.getElementById("saveToQuestMenuBackBtn");
   questSaveBtn = document.getElementById("questSaveBtn");
-  questClearRewardBtn = document.getElementById("questClearRewardBtn");
 
   enemyModeBtn = document.getElementById("enemyModeBtn");
   freeEnemyModeBtn = document.getElementById("freeEnemyModeBtn");
@@ -200,7 +181,6 @@ function cacheDOM() {
   defenseModeBtn = document.getElementById("defenseModeBtn"); // defenseModeBtn を取得
   freeStartBtn = document.getElementById("freeStartBtn");
   freeDefenseModeBtn = document.getElementById("freeDefenseModeBtn"); // freeDefenseModeBtn を取得
-  freeBossBtn = document.getElementById("freeBossBtn"); // ★QUEST BOSSボタン（全クリア特典）を取得
   freeTimeAttackBtn = document.getElementById("freeTimeAttackBtn");
   freeLongTextBtn = document.getElementById("freeLongTextBtn");
 
@@ -260,12 +240,6 @@ function cacheDOM() {
   pause = document.getElementById("key-pause");
   activeSkill = document.getElementById("key-skill");
   saveKeybindBtn = document.getElementById("saveKeybindBtn");
-
-  // ★ クエストマップのキー設定モーダルDOMキャッシュ
-  keybindConfigModal = document.getElementById("keybindConfigModal");
-  keybindConfigCloseBtn = document.getElementById("keybindConfigCloseBtn");
-  keybindConfigSaveBtn = document.getElementById("keybindConfigSaveBtn");
-  keybindConfigContent = document.getElementById("keybindConfigContent");
 
   playerLvRange = document.getElementById("playerLvRange");
   enemyIntervalSlider = document.getElementById("enemyIntervalSlider");
@@ -420,19 +394,6 @@ async function _detectOfflineCacheVersion() {
   return "";
 }
 
-function _updateOfflineVersionLabel(cached) {
-  const el = document.getElementById("offlineVersionLabel");
-  if (!el) return;
-
-  if (cached) {
-    el.textContent = `v${cached}`;
-    el.classList.remove("no-offline");
-  } else {
-    el.textContent = "−";
-    el.classList.add("no-offline");
-  }
-}
-
 function _renderVersionStatus(cached) {
   const isOnline = typeof navigator === "undefined" || navigator.onLine !== false;
   const runningLabel = isOnline ? "オンライン（実行中）" : "オフライン（実行中）";
@@ -455,7 +416,6 @@ function _renderVersionStatus(cached) {
   }
 
   _setVersionStatus(parts.join(" ／ "));
-  _updateOfflineVersionLabel(cached);
 }
 
 function _refreshVersionStatus() {
@@ -471,16 +431,6 @@ function _refreshVersionStatus() {
       }
     });
   }
-}
-
-/** タイトル下のバージョン表示を初期化 */
-function _initTitleVersionLabels() {
-  // 実行中バージョン
-  const versionLabel = document.getElementById("versionLabel");
-  if (versionLabel) versionLabel.textContent = `v${APP_VERSION}`;
-
-  // オフライン版バージョン（非同期で取得）
-  _refreshVersionStatus();
 }
 // ============================================================
 // オフライン用データの手動ダウンロード
@@ -1127,11 +1077,29 @@ try {
   if (typeof window !== "undefined") {
     window.__markDifficultySelectorsDirty = markDifficultySelectorsDirty;
     window.__resetFreeBossUnlockCache = resetFreeBossUnlockCache;
-    window.__resetFreeSkillUnlockCache = resetFreeSkillUnlockCache;
   }
 } catch (e) { /* 無視 */ }
 
+function hasBossChallengeUnlocked() {
+  // ★ 修正: オートセーブと全手動セーブスロットを確認する
 
+  // 1. 現在のオートセーブデータで真エンディングを見ているか
+  if (hasSeenTrueEndingInAutoSave()) {
+    return true;
+  }
+
+  // 2. 全ての手動セーブスロットをチェック
+  const slots = loadQuestSlots();
+  for (const slot of slots) {
+    // スロットデータがあり、その中の進行状況データ(progress)で真エンディングフラグがtrueか
+    if (slot?.progress?.hasSeenTrueEnding) {
+      return true;
+    }
+  }
+
+  // どこにもクリアデータがなければfalse
+  return false;
+}
 
 
 function showBootScreen() {
@@ -1305,8 +1273,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("keydown", handleBootKey);
   }
 
-  // タイトル下のバージョン表示初期化（実行中＋オフライン版）
-  _initTitleVersionLabels();
+  document.getElementById("versionLabel").textContent = `v${APP_VERSION}`;
 
   // アプリ全体のフルスクリーン ⇔ ウィンドウ切替（グローバルUIバーのボタン）
   bindFullscreenToggle(document.getElementById("globalFsToggle"));
@@ -2149,292 +2116,31 @@ function applyKeybindsToUI() {
 
   const keybinds = loadKeybinds();
 
-  // 設定画面のKEYセクションのselectを更新
+  // UIに反映
   unlock.value = keybinds.unlock;
   autoLock.value = keybinds.autoLock;
   pause.value = keybinds.pause;
   if (activeSkill) activeSkill.value = keybinds.activeSkill;
-
-  // クエストマップのキー設定モーダルが開いていればそこも更新
-  if (keybindConfigModal && !keybindConfigModal.classList.contains("hidden")) {
-    const mUnlock = document.getElementById("key-unlock-q");
-    const mAutoLock = document.getElementById("key-autolock-q");
-    const mPause = document.getElementById("key-pause-q");
-    const mSkill = document.getElementById("key-skill-q");
-    if (mUnlock) mUnlock.value = keybinds.unlock;
-    if (mAutoLock) mAutoLock.value = keybinds.autoLock;
-    if (mPause) mPause.value = keybinds.pause;
-    if (mSkill) mSkill.value = keybinds.activeSkill;
-  }
 }
 
-// キーバインド表示用ラベル（フォーム表示用）
-function getKeyLabel(v) {
-  if (!v) return "";
-  if (v === "ArrowUp") return "↑";
-  if (v === "ArrowDown") return "↓";
-  if (v === "ArrowLeft") return "←";
-  if (v === "ArrowRight") return "→";
-  if (v === "Control") return "CTRL";
-  if (v === "Delete") return "DEL";
-  if (v === "Backspace") return "BS";
-  if (v === "Tab") return "TAB";
-  if (v === "Enter") return "ENTER";
-  // それ以外は先頭文字大文字
-  return v.charAt(0).toUpperCase() + v.slice(1);
-}
+// キーバインド重複チェック
+function validateKeybinds(bind) {
 
-// クエストマップのキー設定モーダルを開く
-export function openKeybindConfigModal() {
-  if (!keybindConfigModal) return;
-  const keybinds = loadKeybinds();
+  const values = Object.values(bind);
 
-  // 動的にキーセレクトを生成（設定画面の KEY セクションと同じ4項目）
-  const items = [
-    { id: "key-unlock-q", label: "Unlock", key: keybinds.unlock },
-    { id: "key-autolock-q", label: "Auto Lock", key: keybinds.autoLock },
-    { id: "key-pause-q", label: "Pause", key: keybinds.pause },
-    { id: "key-skill-q", label: "Active Skill", key: keybinds.activeSkill }
-  ];
+  const unique = new Set(values);
 
-  const optionsHTML =
-    '<option value="Tab">TAB</option>' +
-    '<option value="Enter">ENTER</option>' +
-    '<option value="Backspace">BS</option>' +
-    '<option value="Delete">DEL</option>' +
-    '<option value="Control">CTRL</option>' +
-    '<option value="ArrowUp">↑</option>' +
-    '<option value="ArrowDown">↓</option>' +
-    '<option value="ArrowLeft">←</option>' +
-    '<option value="ArrowRight">→</option>';
-
-  let html = '';
-  items.forEach(item => {
-    let opts = optionsHTML;
-    opts = opts.replace('value="' + item.key + '"', 'value="' + item.key + '" selected');
-    html +=
-      '<div class="keybind-modal-item">' +
-        '<div class="keybind-modal-label">' + item.label + '</div>' +
-        '<div class="keybind-modal-controls">' +
-          '<select id="' + item.id + '" class="keybind-select">' + opts + '</select>' +
-        '</div>' +
-      '</div>';
-  });
-
-  keybindConfigContent.innerHTML = html;
-  keybindConfigModal.classList.remove("hidden");
-}
-
-// クエストマップのキー設定モーダルを閉じる
-function closeKeybindConfigModal() {
-  if (!keybindConfigModal) return;
-  keybindConfigModal.classList.add("hidden");
-}
-
-// クエストマップのキー設定モーダルから保存
-// 設定画面の KEY セクションの Save Keybinds と同じ挙動：
-// 重複チェック → 警告 → localStorage保存 → 成功メッセージ → モーダル更新
-function saveKeybindConfigFromModal() {
-  if (!keybindConfigModal) return;
-  const unlockEl = document.getElementById("key-unlock-q");
-  const autoLockEl = document.getElementById("key-autolock-q");
-  const pauseEl = document.getElementById("key-pause-q");
-  const skillEl = document.getElementById("key-skill-q");
-
-  if (!unlockEl || !autoLockEl || !pauseEl || !skillEl) return;
-
-  const bind = {
-    unlock: unlockEl.value,
-    autoLock: autoLockEl.value,
-    pause: pauseEl.value,
-    activeSkill: skillEl.value
-  };
-
-  // ★重複チェック（設定画面と同じ）
-  if (!validateKeybinds(bind)) {
-    showSaveMessage("⚠ キーが重複しています", "error");
-    return;
-  }
-
-  saveKeybinds(bind);
-
-  // ★保存完了メッセージ（設定画面と同じ）
-  showSaveMessage("キーバインドを保存しました");
-
-  // モーダル選択肢を保存された値で再生成して反映（閉じない）
-  openKeybindConfigModal();
-}
-
-// クエストマップのキー設定モーダル表示中のキー処理
-// 表示中は他のキーへ流さないため true を返す。b / Enter / Escape で閉じる。
-function handleQuestKeybindConfigModalKey(e) {
-  if (!keybindConfigModal || keybindConfigModal.classList.contains("hidden")) {
+  // 重複がある = sizeが小さくなる
+  if (unique.size !== values.length) {
     return false;
   }
-  const key = (e.key || "").toLowerCase();
-  if (key === "b" || key === "escape" || key === "enter") {
-    e.preventDefault();
-    closeKeybindConfigModal();
-    // Enter は保存に見立てるが、必須入力がないので閉じるだけで十分
-  }
-  // 任意のキー（b/Esc/Enter以外）は無視し、メニュー等に漏らさない
+
   return true;
 }
 
 // =====================================================
 // フリーモード設定の保存・読み込み
 // =====================================================
-// =====================================================
-// ★全クリア特典：フリーモードのアクティブスキル設定（ENEMY / QUEST BOSS）
-//   クエストモードの装備・星強化データとは完全に独立して扱う。
-// =====================================================
-const FREE_SKILL_STOCK_MAX = 5; // ストック上限の最大値
-
-/** ストック上限を 1〜5 に丸める */
-function clampFreeSkillStockMax(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 1;
-  return Math.max(1, Math.min(FREE_SKILL_STOCK_MAX, Math.floor(n)));
-}
-
-/** ★全クリア特典：フリーモードのスキル機能が解放済みか（表示判定キャッシュ付き） */
-function isFreeSkillFeatureUnlocked() {
-  if (typeof showFreeStartMenu._skillUnlocked !== "boolean") {
-    showFreeStartMenu._skillUnlocked = hasFreeActiveSkillUnlocked();
-  }
-  return showFreeStartMenu._skillUnlocked;
-}
-
-/** 解放状況のキャッシュを破棄し、設定パネルの表示も更新する */
-function resetFreeSkillUnlockCache() {
-  try {
-    if (typeof showFreeStartMenu === "function") {
-      showFreeStartMenu._skillUnlocked = undefined;
-    }
-  } catch (e) { /* 無視 */ }
-  try {
-    updateFreeSkillConfigUI("enemy");
-    updateFreeSkillConfigUI("boss");
-  } catch (e) { /* 無視 */ }
-}
-
-/** 対象（enemy / boss）のスキル設定を取得 */
-function getFreeSkillSetting(target = "enemy") {
-  return target === "boss"
-    ? { skillId: currentFreeBossSkillId, stockMax: currentFreeBossSkillStockMax, starLevel: currentFreeBossSkillStarLevel }
-    : { skillId: currentFreeSkillId, stockMax: currentFreeSkillStockMax, starLevel: currentFreeSkillStarLevel };
-}
-
-/** 対象（enemy / boss）のスキル設定を更新（クランプ込み） */
-function setFreeSkillSetting(target, patch = {}) {
-  const isBoss = target === "boss";
-
-  if ("skillId" in patch) {
-    const id = patch.skillId || null;
-    if (isBoss) currentFreeBossSkillId = id; else currentFreeSkillId = id;
-  }
-  if ("stockMax" in patch) {
-    const v = clampFreeSkillStockMax(patch.stockMax);
-    if (isBoss) currentFreeBossSkillStockMax = v; else currentFreeSkillStockMax = v;
-  }
-  if ("starLevel" in patch) {
-    const v = clampFreeSkillStarLevel(patch.starLevel);
-    if (isBoss) currentFreeBossSkillStarLevel = v; else currentFreeSkillStarLevel = v;
-  }
-}
-
-/** 設定パネル表示用のスキル名ラベル（短縮後のCD付き） */
-function formatFreeSkillLabel(skillId, starLevel = 0) {
-  const skill = getFreeSkillInfo(skillId);
-  if (!skill) return "－（なし）";
-  const factor = getFreeSkillStarTimeFactor(starLevel);
-  const cd = typeof skill.cooldown === "number" ? `（CD ${(skill.cooldown * factor).toFixed(1)}sec）` : "";
-  return `${skill.name}${cd}`;
-}
-
-/** フリーモード設定パネル（ENEMY / QUEST BOSS）のスキル欄を更新 */
-function updateFreeSkillConfigUI(target = "enemy") {
-  const isBoss = target === "boss";
-  const unlocked = isFreeSkillFeatureUnlocked();
-
-  const section = document.getElementById(isBoss ? "freeBossSkillSection" : "freeSkillSection");
-  const titleEl = document.getElementById(isBoss ? "freeBossSkillSectionTitle" : "freeSkillSectionTitle");
-  const nameEl = document.getElementById(isBoss ? "freeBossSkillNameValue" : "freeSkillNameValue");
-  const starEl = document.getElementById(isBoss ? "freeBossSkillStarValue" : "freeSkillStarValue");
-  const stockSlider = document.getElementById(isBoss ? "freeBossSkillStockSlider" : "freeSkillStockSlider");
-  const stockValueEl = document.getElementById(isBoss ? "freeBossSkillStockValue" : "freeSkillStockValue");
-
-  if (section) section.style.display = unlocked ? "block" : "none";
-  if (titleEl) titleEl.style.display = unlocked ? "flex" : "none";
-  if (!unlocked) return;
-
-  const setting = getFreeSkillSetting(target);
-  const stockMax = clampFreeSkillStockMax(setting.stockMax);
-  const reduction = Math.round((1 - getFreeSkillStarTimeFactor(setting.starLevel)) * 100);
-
-  if (nameEl) nameEl.textContent = formatFreeSkillLabel(setting.skillId, setting.starLevel);
-  if (starEl) starEl.textContent = `Lv.${setting.starLevel}/${FREE_SKILL_STAR_MAX_LEVEL}（CD -${reduction}%）`;
-  if (stockSlider) stockSlider.value = String(stockMax);
-  if (stockValueEl) stockValueEl.textContent = String(stockMax);
-}
-
-/** startEnemyMode に渡すフリーモード用スキル設定（未解放・未選択なら null） */
-function buildFreeSkillConfig(target = "enemy") {
-  if (!isFreeSkillFeatureUnlocked()) return null;
-  const setting = getFreeSkillSetting(target);
-  if (!getFreeSkillInfo(setting.skillId)) return null;
-  return {
-    skillId: setting.skillId,
-    stockMax: clampFreeSkillStockMax(setting.stockMax),
-    starLevel: clampFreeSkillStarLevel(setting.starLevel),
-  };
-}
-
-/** スキル選択モーダルを開く */
-function openFreeSkillSelect(target = "enemy") {
-  const isBoss = target === "boss";
-  openFreeSkillSelectModal({
-    title: isBoss ? "SKILL SELECT (QUEST BOSS)" : "SKILL SELECT (ENEMY)",
-    currentSkillId: getFreeSkillSetting(target).skillId,
-    onSelect: (skillId) => {
-      setFreeSkillSetting(target, { skillId });
-      saveFreeModeConfig();
-      updateFreeSkillConfigUI(target);
-    },
-  });
-}
-
-/** 星強化モーダルを開く */
-function openFreeStarUpgrade(target = "enemy") {
-  const isBoss = target === "boss";
-  openFreeStarUpgradeModal({
-    skillId: getFreeSkillSetting(target).skillId,
-    level: getFreeSkillSetting(target).starLevel,
-    onChange: (level) => {
-      setFreeSkillSetting(target, { starLevel: level });
-      saveFreeModeConfig();
-      updateFreeSkillConfigUI(target);
-    },
-  });
-}
-
-/** 表示中の設定パネルから対象（enemy / boss）を判定（キーボード操作用） */
-function getVisibleFreeSkillTarget() {
-  const bossSection = document.getElementById("configBoss");
-  return (bossSection && bossSection.style.display !== "none") ? "boss" : "enemy";
-}
-
-/** フリーモードのENEMY/BOSS設定パネルが表示中かどうか（スキル設定キー用） */
-function isFreeSkillPanelVisible() {
-  if (!isFreeSkillFeatureUnlocked()) return false;
-  const enemyPanel = document.getElementById("configEnemy");
-  const bossPanel = document.getElementById("configBoss");
-  return (
-    (enemyPanel && enemyPanel.style.display !== "none") ||
-    (bossPanel && bossPanel.style.display !== "none")
-  );
-}
-
 function saveFreeModeConfig() {
   const config = {
     lastModeId: currentFreeModeId,
@@ -2465,11 +2171,7 @@ function saveFreeModeConfig() {
       immediateOnClear: document.getElementById("enemyImmediateToggle")?.checked || false,
       tier: document.getElementById("freeEnemyTier")?.value || "1",
       typeSet: document.getElementById("freeEnemyTypeSet")?.value || "ENEMY_TIER_BALANCED",
-      lv: parseInt(document.getElementById("playerLvRange")?.value) || 1,
-      // ★全クリア特典：フリーモード固有のアクティブスキル設定（クエストとは独立）
-      skillId: currentFreeSkillId || null,
-      skillStockMax: clampFreeSkillStockMax(currentFreeSkillStockMax),
-      skillStarLevel: clampFreeSkillStarLevel(currentFreeSkillStarLevel)
+      lv: parseInt(document.getElementById("playerLvRange")?.value) || 1
     },
     defense: { // Defense Mode settings for Free Mode
       totalCharsToType: parseInt(document.getElementById("defenseCharsSlider")?.value) || 300,
@@ -2483,11 +2185,7 @@ function saveFreeModeConfig() {
     boss: {
       selectedStage: document.getElementById("bossStageSelect")?.value || "W1_WORLD_BOSS",
       difficulty: getCurrentDifficulty("free-boss").id, // ボスモードの難易度を追加
-      level: parseInt(document.getElementById("bossPlayerLvRange")?.value) || 1, // ボスモードのプレイヤーレベルを追加
-      // ★全クリア特典：QUEST BOSS 固有のアクティブスキル設定（ENEMYとは独立）
-      skillId: currentFreeBossSkillId || null,
-      skillStockMax: clampFreeSkillStockMax(currentFreeBossSkillStockMax),
-      skillStarLevel: clampFreeSkillStarLevel(currentFreeBossSkillStarLevel)
+      level: parseInt(document.getElementById("bossPlayerLvRange")?.value) || 1 // ボスモードのプレイヤーレベルを追加
     }
   };
   localStorage.setItem("free_mode_config_v1", JSON.stringify(config));
@@ -2581,10 +2279,6 @@ function loadFreeModeConfig() {
           updateConfigSliderLabel("playerLvRange", el.value); 
         }
       }
-      // ★全クリア特典：ENEMY固有のアクティブスキル設定を復元（クエストとは独立）
-      if (config.enemy.skillId !== undefined) setFreeSkillSetting("enemy", { skillId: config.enemy.skillId });
-      if (config.enemy.skillStockMax !== undefined) setFreeSkillSetting("enemy", { stockMax: config.enemy.skillStockMax });
-      if (config.enemy.skillStarLevel !== undefined) setFreeSkillSetting("enemy", { starLevel: config.enemy.skillStarLevel });
       // パターンの復元
       switchEnemyPattern(currentEnemyPattern);
 
@@ -2606,10 +2300,6 @@ function loadFreeModeConfig() {
         updateConfigSliderLabel("bossPlayerLvRange", el.value);
       }
     }
-    // ★全クリア特典：QUEST BOSS固有のアクティブスキル設定を復元（ENEMYとは独立）
-    if (config.boss?.skillId !== undefined) setFreeSkillSetting("boss", { skillId: config.boss.skillId });
-    if (config.boss?.skillStockMax !== undefined) setFreeSkillSetting("boss", { stockMax: config.boss.skillStockMax });
-    if (config.boss?.skillStarLevel !== undefined) setFreeSkillSetting("boss", { starLevel: config.boss.skillStarLevel });
     // Defense Mode settings for Free Mode
     if (config.defense) {
       const charsEl = document.getElementById("defenseCharsSlider");
@@ -2638,10 +2328,6 @@ function loadFreeModeConfig() {
       }
       switchFreeModeConfig(currentFreeModeId); // Ensure UI updates if Defense was last selected
     }
-
-    // ★全クリア特典：フリーモードのスキル設定欄（ENEMY / QUEST BOSS）を復元値で更新
-    updateFreeSkillConfigUI("enemy");
-    updateFreeSkillConfigUI("boss");
   } catch (e) {
     console.warn("Failed to load free mode config", e);
   }
@@ -2749,9 +2435,7 @@ function startFreeEnemyMode() {
     stage: "FREE", // フリーモードのベースステージ
     level: selectedLv,
     customConditions: customConditions,
-    enemyTable: enemyTable, // Tierと属性セットから生成したテーブルをトップレベルで渡す
-    // ★全クリア特典：ENEMY用のアクティブスキル設定（クエストとは独立）
-    freeSkill: buildFreeSkillConfig("enemy")
+    enemyTable: enemyTable // Tierと属性セットから生成したテーブルをトップレベルで渡す
   });
 }
 
@@ -2789,9 +2473,7 @@ function startFreeDefenseMode() {
 // =====================================================
 function initFreeModeConfigUI() {
   const configEnemy = document.getElementById("configEnemy");
-  // ★パターン切替は「時間制限/討伐数/エンドレス」の3ボタンのみ。
-  //   スキル設定ボタン（STAR/SKILL系）には切替を結線しない
-  const patternBtns = configEnemy?.querySelectorAll(".pattern-selector .pattern-btn") || [];
+  const patternBtns = configEnemy?.querySelectorAll(".pattern-btn") || [];
   const patternDetails = configEnemy?.querySelectorAll(".pattern-detail") || [];
 
   // エネミーモード内のパターン切り替え（時間制限/討伐数/エンドレス）
@@ -2981,29 +2663,8 @@ function initFreeModeConfigUI() {
       bossOnly: true, // ボス戦のみ実行するフラグ
       level: level, // プレイヤーレベル
       difficulty: getCurrentDifficulty("free-boss").id,
-      // ★全クリア特典：QUEST BOSS用のアクティブスキル設定（ENEMYとは独立）
-      freeSkill: buildFreeSkillConfig("boss"),
     });
   });
-
-  // ★全クリア特典：フリーモード（ENEMY / QUEST BOSS）のスキル設定UI
-  const freeSkillSliders = [
-    { id: "freeSkillStockSlider", target: "enemy" },
-    { id: "freeBossSkillStockSlider", target: "boss" },
-  ];
-  freeSkillSliders.forEach(({ id, target }) => {
-    const el = document.getElementById(id);
-    el?.addEventListener("input", () => {
-      setFreeSkillSetting(target, { stockMax: el.value });
-      saveFreeModeConfig();
-      updateFreeSkillConfigUI(target);
-    });
-  });
-
-  document.getElementById("freeSkillSelectBtn")?.addEventListener("click", () => openFreeSkillSelect("enemy"));
-  document.getElementById("freeSkillUpgradeBtn")?.addEventListener("click", () => openFreeStarUpgrade("enemy"));
-  document.getElementById("freeBossSkillSelectBtn")?.addEventListener("click", () => openFreeSkillSelect("boss"));
-  document.getElementById("freeBossSkillUpgradeBtn")?.addEventListener("click", () => openFreeStarUpgrade("boss"));
 
   // --- 防衛モードの単語長範囲スライダーの同期 ---
   const minSlider = document.getElementById("defenseMinWordLengthSlider");
@@ -3170,20 +2831,6 @@ function showMainMenu() {
   const hud = document.getElementById("playerHud");
   if (hud) hud.style.display = "block";
 }
-
-function openClearRewardModal() {
-  if (!clearRewardModalDiv || !document.getElementById("clearRewardContent")) return;
-
-  document.getElementById("clearRewardContent").innerHTML = getClearRewardHtml();
-  clearRewardModalDiv.classList.remove("hidden");
-}
-
-function closeClearRewardModal() {
-  if (!clearRewardModalDiv) return;
-  clearRewardModalDiv.classList.add("hidden");
-}
-
-
 function showQuestMenu() {
   hideAllScreens();
   closeDialogue(); // ★会話モーダルを閉じる
@@ -3200,11 +2847,6 @@ function showQuestMenu() {
 
   // セーブデータがない場合は「Continue」ボタンを非表示にする
   if (questStartBtn) questStartBtn.style.display = hasSave ? "block" : "none";
-
-  // CLEAR REWARD ボタンは「全クリア後（QUEST BOSS 表示条件と同じ）」 경우에만表示
-  if (questClearRewardBtn) {
-    questClearRewardBtn.style.display = hasBossChallengeUnlocked() ? "inline-block" : "none";
-  }
 
   renderQuestSlots(); // ★これ追加
   showMenuBackground("quest_menu"); //クエストメニュー画面
@@ -3233,11 +2875,6 @@ function showFreeStartMenu() {
     }
     freeBossBtn.style.display = showFreeStartMenu._bossUnlocked ? "inline-block" : "none";
   }
-
-  // ★全クリア特典：フリーモードのスキル設定欄（ENEMY / QUEST BOSS）の表示と内容を更新
-  // ※ 解放判定（hasFreeActiveSkillUnlocked）も同様にキャッシュしてメニュー往復を軽くする
-  updateFreeSkillConfigUI("enemy");
-  updateFreeSkillConfigUI("boss");
 
   // 難易度セレクターは初回のみ構築し、MASTER解放など変化があったときだけ再構築する
   // （メニュー往復のたびに4スコープ分の innerHTML + createElement を繰り返さない）
@@ -3285,13 +2922,6 @@ export function showGameScreen() {
 // ================================
 // 🔹イベントバインディングまとめ
 // ================================
-
-// キーバインド重複チェック（Settings KEY / クエストマップKey Bindモーダル共用）
-function validateKeybinds(bind) {
-  const values = Object.values(bind);
-  const unique = new Set(values);
-  return unique.size === values.length;
-}
 
 function bindMenuEvents() {
 
@@ -3348,30 +2978,6 @@ function bindMenuEvents() {
     playSE("select");
     questSaveMenuDiv.classList.add("hidden");
   });
-
-  questClearRewardBtn?.addEventListener("click", () => {
-    playSE("questmenu");
-    openClearRewardModal();
-  });
-
-  const clearRewardModalCloseBtn = document.getElementById("clearRewardModalCloseBtn");
-  clearRewardModalCloseBtn?.addEventListener("click", () => {
-    playSE("select");
-    closeClearRewardModal();
-  });
-
-  // ★クエストマップのキー設定モーダルの閉じる/保存ボタン
-  const keybindConfigCloseBtn = document.getElementById("keybindConfigCloseBtn");
-  keybindConfigCloseBtn?.addEventListener("click", () => {
-    playSE("select");
-    closeKeybindConfigModal();
-  });
-  const keybindConfigSaveBtn = document.getElementById("keybindConfigSaveBtn");
-  keybindConfigSaveBtn?.addEventListener("click", () => {
-    playSE("select");
-    saveKeybindConfigFromModal();
-  });
-
 }
 
 function bindGameMenuEvents() {
@@ -3744,8 +3350,6 @@ function bindKeyEvents() {
     // ★スタッフロール中は全ショートカットを無効化（ESCによるスキップはdialogue.js側で処理）
     if (window._staffRollActive) return;
 
-    if (handleQuestSaveClearModalKey(e)) return;
-
     // ★オフラインダウンロードモーダル表示中は全キーショートカットを無効化
     //   Escのみ、ダウンロード中ならキャンセル・完了後は閉じる操作に使える
     if (_offlineModalActive) {
@@ -3760,14 +3364,6 @@ function bindKeyEvents() {
     // ★勲章・詳細ステータス系モーダル表示中は、キー入力をモーダル操作（閉じる/タブ切替）に限定する。
     //   （それ以外のキーが handleGameKey / handleMenuKey 等に漏れて別メニューが開くのを防ぐ）
     if (!e.ctrlKey && !e.metaKey && handleStatsModalKey(e)) return;
-
-    // ★フリーモードのスキル設定モーダル（SKILL SELECT / STAR UPGRADE）表示中は
-    //   閉じる操作のみ受け付け、メニューのキー操作（BACK等）へ漏らさない
-    if (!e.ctrlKey && !e.metaKey && handleFreeSkillModalKey(e)) return;
-
-    // ★クエストマップのキー設定モーダル（Key Bind Config）表示中は
-    //   すべてのキー入力をブロックし、b/Esc/Enter で閉じる
-    if (!e.ctrlKey && !e.metaKey && handleQuestKeybindConfigModalKey(e)) return;
 
     // 管理者用DEVツール（Shift+Oで開閉）
     if (e.shiftKey && e.key.toLowerCase() === "o") {
@@ -3835,52 +3431,6 @@ function handleStatsModalKey(e) {
   // それ以外のキーは全て無効（他メニューが開くのを防ぐ）
   return true;
 }
-// ★クエストのセーブ／ロード・クリア報酬モーダル表示中は、他のショートカットキーを無効化
-function handleQuestSaveClearModalKey(e) {
-  const questModals = [
-    { id: "clearRewardModal" },
-    { id: "saveModal" },
-    { id: "clearRewardPopup" },
-    { id: "saveConfirmPopup" },
-  ];
-
-  const active = questModals.find(({ id }) => {
-    const el = document.getElementById(id);
-    return el && window.getComputedStyle(el).display !== "none";
-  });
-
-  if (!active) return false;
-
-  const key = e.key.toLowerCase();
-
-  // 閉じる操作のみ許可
-  if (key === "escape" || key === "b") {
-    if (active.id === "clearRewardModal") {
-      closeClearRewardModal();
-      return true;
-    }
-    if (active.id === "saveModal") {
-      saveToQuestMenuBackBtn?.click();
-      return true;
-    }
-    if (active.id === "clearRewardPopup") {
-      e.preventDefault();
-      const popup = document.getElementById("clearRewardPopup");
-      if (popup) popup.remove();
-      return true;
-    }
-    if (active.id === "saveConfirmPopup") {
-      e.preventDefault();
-      const popup = document.getElementById("saveConfirmPopup");
-      if (popup) popup.remove();
-      return true;
-    }
-  }
-
-  e.preventDefault();
-  return true;
-}
-
 
 function handleResultKey(e) {
   if (resultDiv.style.display === "none") return false;
@@ -3951,23 +3501,15 @@ function handlePauseKey(e) {
         return true;
       }
       if (gameState.enemyMode) {
-        // ★フリーモードのボス戦（QUEST BOSS）は直前のモードを維持して再開する。
-        //   （従来は startFreeEnemyMode() が呼ばれ、ENEMYモードで再開されてしまっていた）
-        //   ※ restartEnemyMode() は lastEnemyConfig を使うため、フリースキル設定も維持される
-        if (gameState.isFreeMode && !wasLastModeBossOnly()) startFreeEnemyMode();
+        if (gameState.isFreeMode) startFreeEnemyMode();
         else restartEnemyMode();
       }
       else Game.restartLastGame();
-            break;
+      break;
 
     case "b":
       setPaused(false);
       document.querySelector(".pause-overlay").style.display = "none";
-
-      // ★ フラグはリセット/遷移前に取得する（fullResetGame/backToMenu で
-      //   currentIsFreeMode 参照やクリアが発生しても、下段ルーティングの判定は安全になる）
-      const wasQuest = gameState.isQuestMode || !!gameState.currentQuestNode;
-      const wasFree = gameState.isFreeMode;
 
       // ★ スキルモード中断
       if (gameState.currentChallenge?.isSkillMode) {
@@ -3983,8 +3525,11 @@ function handlePauseKey(e) {
 
       // ★ 防衛モード
       if (gameState.currentMode?.id === GameModes.DEFENSE_MODE.id) {
-                // 中断は失敗扱い
-        gameState.enemyStats.failed = true;
+        // 中断は失敗扱い
+        gameState.enemyStats.failed = true; 
+
+        const wasQuest = gameState.isQuestMode || !!gameState.currentQuestNode;
+        const wasFree = gameState.isFreeMode;
 
         restartDefenseMode(true); // `true` を渡して中断処理を強制
         Game.fullResetGame();
@@ -4006,17 +3551,17 @@ function handlePauseKey(e) {
         return true;
       }
 
-                              if (gameState.enemyMode) {
+      if (gameState.enemyMode) {
         endEnemyMode(true); // ★中断: 記録を残さない
         gameState.typed = "";
         Game.fullResetGame();
-      }
-  
+      }  
 
       // ★ 通常モード
+      const isQuest = gameState.isQuestMode || !!gameState.currentQuestNode;
       Game.backToMenu();
-      if (wasQuest) showQuestMap();
-      else if (wasFree) showFreeStartMenu();
+      if (isQuest) showQuestMap();
+      else if (gameState.isFreeMode) showFreeStartMenu();
       else showStartMenu();
 
       break;
@@ -4093,37 +3638,31 @@ async function handleGameKey(e) {
     // ★③-2 防衛モード (クエスト中かどうかも判定)
     if (gameState.currentMode?.id === GameModes.DEFENSE_MODE.id) {
       // フリー/デイリーの防衛モードを中断
-      // ★フラグはリセット前に取得する（fullResetGame でクリアされても遷移に影響しないように）
-      const wasFree = gameState.isFreeMode;
       await restartDefenseMode(true); // 中断処理
       Game.fullResetGame();
       gameState.typed = "";
-      if (wasFree) showFreeStartMenu();
+      if (gameState.isFreeMode) showFreeStartMenu();
       else showStartMenu();
       return true;
     }
     // ★③ エネミーモード
     if (gameState.enemyMode) {
       const isQuest = gameState.isQuestMode;
-      // ★フラグはリセット前に取得する（fullResetGame でクリアされても遷移に影響しないように）
-      const wasFree = gameState.isFreeMode;
       gameState.enemyStats.failed = true;
       endEnemyMode(true); // ★ESC中断: 記録を残さない
       Game.fullResetGame();
       gameState.typed = "";
       if (isQuest) showQuestMap();
-      else if (wasFree) showFreeStartMenu();
+      else if (gameState.isFreeMode) showFreeStartMenu();
       else showStartMenu();
       return true;
     }
 
     // ★④ 通常
-    // ★フラグは遷移前に取得する
     const isQuestNormal = gameState.isQuestMode;
-    const wasFree = gameState.isFreeMode;
     Game.backToMenu();
     if (isQuestNormal) showQuestMap();
-    else if (wasFree) showFreeStartMenu();
+    else if (gameState.isFreeMode) showFreeStartMenu();
     else showStartMenu();
     return true;
   }
@@ -4396,12 +3935,6 @@ function handleMenuKey(e) {
       case "e": freeEnemyModeBtn?.click(); break; // Enemy
       case "d": freeDefenseModeBtn?.click(); break; // Defense
       case "q": freeBossBtn?.click(); break; // Quest Boss
-      case "v": // ★全クリア特典：フリーモードのスキル選択（ENEMY/BOSSパネル表示中のみ）
-        if (isFreeSkillPanelVisible()) openFreeSkillSelect(getVisibleFreeSkillTarget());
-        break;
-      case "u": // ★全クリア特典：フリーモードの星強化（同上）
-        if (isFreeSkillPanelVisible()) openFreeStarUpgrade(getVisibleFreeSkillTarget());
-        break;
       case "b": freeStartMenuBackBtn?.click(); break;
       case "n": switchToNormalBtn?.click(); break;
       case "a": // Achievements
@@ -4420,22 +3953,13 @@ function handleMenuKey(e) {
       case "c": // Continue
         questStartBtn?.click();
         break;
-      case "r": // Clear Reward
-        questClearRewardBtn?.click();
-        break;
       case "s": // Save/Load
         questSaveBtn?.click();
         break;
       case "n": // New Game
         questStartBtnFromBeginning?.click();
         break;
-      case "b":
-        if (clearRewardModalDiv && !clearRewardModalDiv.classList.contains("hidden")) {
-          closeClearRewardModal();
-        } else {
-          questStartMenuBackBtn?.click();
-        }
-        break;
+      case "b": questStartMenuBackBtn?.click(); break;
       case "a": // Achievements
         document.getElementById("hudAchievementsBtn")?.click();
         break;
@@ -4473,11 +3997,8 @@ function handleMenuKey(e) {
         case "s": // save/load
           btn = sideMenu.querySelector("button:nth-child(7)");
           break;
-        case "k": // key bindings
-          btn = sideMenu.querySelector("button:nth-child(8)");
-          break;
         case "b": // Back
-          btn = sideMenu.querySelector("button:nth-child(9)");
+          btn = sideMenu.querySelector("button:nth-child(8)");
           break;
         case "a": // Achievements
           document.getElementById("hudAchievementsBtn")?.click();

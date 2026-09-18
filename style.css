@@ -213,7 +213,6 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 #records                  { z-index: 10550; } /* 記録画面 */
 .modal, .stats-modal, .quest-stats-modal, .ach-modal-content, #settings { z-index: 10600; } /* 汎用モーダル (ステータス, 勲章, 設定) */
 #globalUiBar              { z-index: 10700; } /* グローバルUIバー: メニュー左上の共通切替ボタン群 */
-.free-skill-modal         { z-index: 10850; } /* フリーモード: スキル選択/星強化モーダル（設定パネル10550・汎用10600・globalUiBar 10700より上） */
 
 /* --- 最前面系 (カウントダウン、ローディングなど) --- */
 #countdown                { z-index: 11000; } /* ゲーム開始: カウントダウン */
@@ -527,39 +526,14 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 /* バージョン表示 */
-#versionWrapper {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-top: 1px solid rgba(88, 166, 255, 0.3);
-  padding-top: 4px;
-  white-space: nowrap;
-}
-
 #versionLabel {
   font-size: 12px;
   color: #58a6ff;
+  text-align: left;
   letter-spacing: 2px;
-}
-
-#versionSep {
-  font-size: 12px;
-  color: rgba(88, 166, 255, 0.4);
-  letter-spacing: 2px;
-}
-
-#offlineVersionLabel {
-  font-size: 12px;
-  color: #58a6ff;
-  letter-spacing: 2px;
-  transition: color 0.3s ease;
-}
-
-/* オフライン版がない場合のスタイリッシュな表記 */
-#offlineVersionLabel.no-offline {
-  color: #4a5568;
-  font-weight: 300;
-  letter-spacing: 1px;
+  border-top: 1px solid rgba(88, 166, 255, 0.3);
+  display: inline-block;
+  white-space: nowrap;
 }
 
 #menu button, #startMenu button, #freeStartMenu button, #questMenu button {
@@ -1971,6 +1945,40 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
             0 0 4px rgba(255,220,120,0.24),
             0 0 8px rgba(255,210,80,0.12);
     }
+}
+
+/* =====================================================
+   サウンドアイコン（メインメニュー右下）
+   ===================================================== */
+#soundLabel {
+  position: absolute;
+  right: 28px;
+  bottom: 24px;
+  cursor: pointer;
+  z-index: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s ease, background 0.2s ease;
+  user-select: none;
+}
+#soundLabel:hover {
+  transform: scale(1.08);
+  background: rgba(0, 0, 0, 0.65);
+}
+#soundToggle {
+  display: none;
+}
+#soundIcon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  vertical-align: middle;
+  opacity: 0.9;
 }
 
 
@@ -6833,29 +6841,6 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 .save-modal-close-btn:hover {
   color: #ff9800;
-}
-
-/* =====================================================
-   キーバインド設定モーダル（クエストマップ）
-   ===================================================== */
-.keybind-modal-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.keybind-modal-label {
-  font-size: 14px;
-  color: #c0c0c0;
-  text-align: left;
-}
-
-.keybind-modal-controls select {
-  font-size: 14px;
-  padding: 2px 4px;
-  min-width: 100px;
 }
 
 /* =====================================================
