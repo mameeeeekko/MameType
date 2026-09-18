@@ -5,7 +5,7 @@ import { savePlayerStats } from "../js/storage.js";
 import { gameState } from "../js/gameCore.js";
 import { forceSetLevel, getPlayerStats as getQuestPlayerStats, addTotalStarsEarned, getTotalStarsEarned, setTotalStarsEarned } from "../js/questPlayerStats.js";
 import { QUEST_MAP } from "../js/questMap.js";
-import { getStarData, setStar, getTotalStars, getTotalMaxStars } from "../js/questProgress.js";
+import { getStarData, setStar, getTotalStars, getTotalMaxStars, markFreeActiveSkillUnlocked } from "../js/questProgress.js";
 import { killEnemy } from "../js/enemyCore.js";
 import { updateHud } from "../js/hud.js";
 import { resetPlayerAndRecoveryId, getPlayerId } from "../online/playerProfile.js";
@@ -284,6 +284,17 @@ export const dev = {
         }
 
         log("Skill All toggle:", devOverride.unlockAllSkills);
+    },
+
+    // ★全クリア特典：フリーモードのアクティブスキル機能を解放する（DEV用）
+    unlockFreeActiveSkill(btn) {
+        markFreeActiveSkillUnlocked();
+
+        if (btn && btn instanceof HTMLElement) {
+            btn.textContent = "FREE SKILL: ON";
+        }
+
+        log("Free Active Skill: ON");
     },
 
     logState() {

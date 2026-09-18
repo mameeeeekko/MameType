@@ -386,7 +386,10 @@ function gameLoop(timestamp) {
     const currentPhaseIndex = stats.currentPhaseIndex || 0;
     const currentPhase = isMultiPhase ? stage.phases[currentPhaseIndex] : stage;
 
-    const deltaTime = (now - (gameState._lastFrameTime || now)) / 1000; //sec
+    // ★1フレームの経過時間をクランプ（タブ復帰・重い初回フレーム等のスパイクで
+    //   スキルCD・フリーズ・無敵タイマーが一瞬で進むのを防ぐ。通常フレームは≤0.1秒のため無影響）
+    const rawDelta = (now - (gameState._lastFrameTime || now)) / 1000; //sec
+    const deltaTime = Math.min(Math.max(rawDelta, 0), 0.25);
 
     gameState._lastFrameTime = now;
 
@@ -402,6 +405,13 @@ function gameLoop(timestamp) {
       gameState.mode === GameModes.ENEMY_MODE &&
       !gameState.currentQuestNode &&
       !gameState.isFreeMode; // フリーモードのボス戦でもUIを表示するため、isFreeModeでないことを条件に追加
+
+    // ★アクティブスキルのチャージ／UIが有効かどうか
+    //   ・従来どおり、純粋なエネミーモード以外（クエスト戦など）では有効
+    //   ・フリーモード（ENEMY / QUEST BOSS）は、全クリア特典のスキル設定が有効なときのみ有効
+    const skillUiEnabled =
+      !isPureEnemyMode &&
+      (gameState.isFreeMode !== true || gameState.freeSkillEnabled === true);
 
     // プレイヤー無敵タイマーの減算
     if (gameState.player && gameState.player.invincibleTimer > 0) {
@@ -424,7 +434,7 @@ function gameLoop(timestamp) {
     // ===============================
     // Active Skill Charge Update
     // ===============================j
-    if (!isPureEnemyMode && !stats.isTransitioning) { // クエストモードかつフェーズ移行中ではない場合のみチャージ
+    if (skillUiEnabled && !stats.isTransitioning) { // スキル有効かつフェーズ移行中ではない場合のみチャージ
 
         if (gameState.activeSkillStock == null) {
             gameState.activeSkillStock = 0;
@@ -478,8 +488,7 @@ function gameLoop(timestamp) {
                 // まだ満タンじゃないなら次チャージ
                 if (gameState.activeSkillStock < maxStock) {
 
-                    const equipped = getEquippedActiveSkills();
-                    const skillId = equipped?.[0];
+                    const skillId = gameState.freeSkillId ?? getEquippedActiveSkills()?.[0];
                     const skill = ACTIVE_SKILLS?.[skillId];
 
                     gameState.activeSkillCooldown = (skill?.cooldown || 20);
@@ -498,7 +507,7 @@ function gameLoop(timestamp) {
     // Combo update
     updateComboTierBar(
         gameState.enemyStats,
-        gameState.isQuestMode === true // ★クエストモード時のみクールタイム短縮ポップアップを有効化
+        skillUiEnabled // ★スキル有効時のみクールタイム短縮ポップアップを有効化
     );
 
     // UIセーフエリアを定期的に再計算（コンボバーの高さ変化に追従）
@@ -691,8 +700,8 @@ function gameLoop(timestamp) {
         timerStarted ? enemyStartTime : null 
     );
 
-        // Render Active Skill UI only in Quest Mode
-    if (gameState.isQuestMode) {
+        // Render Active Skill UI（クエストモード / フリーモードのスキル有効時）
+    if (skillUiEnabled) {
         renderActiveSkillUI(ctx, gameState, canvas, deltaTime);
     }
 
@@ -1825,6 +1834,8 @@ export async function startEnemyMode(config = {}) {
         // ★ボス再起動用: bossOnlyモードを維持するためbossOnlyとbossPhaseIndexを保存
         bossOnly: config.bossOnly ?? false,
         bossPhaseIndex: config.bossPhaseIndex ?? null,
+        // ★フリーモードのアクティブスキル設定（RESTART / PLAY AGAIN でも維持する）
+        freeSkill: config.freeSkill ?? null,
     };
     console.log("[startEnemyMode] config.bossOnly:", config.bossOnly, "lastEnemyConfig.bossOnly:", lastEnemyConfig.bossOnly);
 
@@ -2039,11 +2050,26 @@ export async function startEnemyMode(config = {}) {
     // ===============================
     // Active Skill Stock上限設定
     // ===============================
-    player.activeSkillStockMax =
-        playerStats.activeSkillStockMax ?? 1;
+    // ★全クリア特典：フリーモード（ENEMY / QUEST BOSS）は専用設定を使用（クエストとは独立）
+    const freeSkillConfig = config.isFreeMode ? (config.freeSkill || null) : null;
+    // ★スキルIDは設定から直接取得する（ACTIVE_SKILLS の定義オブジェクトは skillId プロパティを持たない）
+    const freeSkillId = freeSkillConfig?.skillId ?? null;
+    const freeSkillDef = freeSkillId
+        ? (ACTIVE_SKILLS?.[freeSkillId] ?? null)
+        : null;
+    const freeSkillStockMax = Math.max(1, Math.min(5, Math.floor(Number(freeSkillConfig?.stockMax) || 1)));
+    const freeSkillStarLevel = Math.max(0, Math.min(10, Math.floor(Number(freeSkillConfig?.starLevel) || 0)));
 
-    gameState.activeSkillStockMax =
-        playerStats.activeSkillStockMax ?? 1;
+    // フリーモードでスキルが選択されているときだけフリー専用設定を適用する
+    const useFreeSkill = !!freeSkillDef;
+
+    player.activeSkillStockMax = useFreeSkill
+        ? freeSkillStockMax
+        : (playerStats.activeSkillStockMax ?? 1);
+
+    gameState.activeSkillStockMax = useFreeSkill
+        ? freeSkillStockMax
+        : (playerStats.activeSkillStockMax ?? 1);
 
     // ★ここで統計を初期化
     const diff = currentEnemyDifficulty;
@@ -2125,13 +2151,23 @@ export async function startEnemyMode(config = {}) {
     // アクティブスキル戦闘開始リセット
     // ===============================
     const equippedSkills = getEquippedActiveSkills();
-    const activeSkillId = equippedSkills?.[0];
+    // ★フリーモードは専用設定のスキルを優先（クエストは従来どおり装備スキル）
+    const activeSkillId = useFreeSkill ? freeSkillId : equippedSkills?.[0];
     const activeSkill = ACTIVE_SKILLS?.[activeSkillId];
+
+    // ★後続処理（チャージ／発動／UI描画）でモード別に解決できるよう gameState に保持する
+    gameState.freeSkillEnabled = useFreeSkill;
+    gameState.freeSkillId = useFreeSkill ? freeSkillId : null;
+    gameState.enemyStats.activeSkillId = activeSkillId ?? null;
 
     gameState.activeSkillStock = 0;
 
-    // ★星強化によるクールダウン短縮倍率を設定
-    if (activeSkillId) {
+    // ★クールダウン短縮倍率を設定
+    if (useFreeSkill) {
+        // フリー専用の星強化（コストなし・クエストのスキル別強化とは無関係）
+        gameState.enemyStats.starCooldownMultiplier =
+            1 / Math.max(0.05, 1 - freeSkillStarLevel * 0.05);
+    } else if (activeSkillId) {
         gameState.enemyStats.starCooldownMultiplier =
             getStarUpgradeCooldownMultiplier(activeSkillId);
     } else {
@@ -2415,6 +2451,10 @@ export function wasLastModeBossOnly() {
 export async function endEnemyMode(isAbort = false) {
 
     gameState.enemyMode = false;
+    // ★全クリア特典：フリーモード専用アクティブスキル設定を戦闘終了時にクリアする
+    //   （クエストの装備スキルがフリーモードへ漏れない＆モードをまたいだ誤認を防ぐ）
+    gameState.freeSkillEnabled = false;
+    gameState.freeSkillId = null;
     // 戦闘終了時に「一度だけ復活」フラグをリセットする
     gameState._reviveUsed = false;
 
@@ -2866,16 +2906,18 @@ function resetEnemyInput(enemy){
 // ===============================
 function tryUseActiveSkill() {
 
-    if (!gameState.currentQuestNode) {
+    // ★クエスト戦、またはフリーモード（ENEMY / QUEST BOSS）でスキル設定が有効なときのみ発動可能
+    const usingFreeSkill =
+        gameState.isFreeMode === true && gameState.freeSkillEnabled === true;
+
+    if (!gameState.currentQuestNode && !usingFreeSkill) {
         return;
     }
 
     console.log("TRY STOCK:", gameState.activeSkillStock);
 
-    const equipped = getEquippedActiveSkills();
-    if (!equipped?.length) return;
-
-    const skillId = equipped[0];
+    // ★フリーモードは専用設定のスキルを使用（クエストは従来どおり装備スキル）
+    const skillId = gameState.freeSkillId ?? getEquippedActiveSkills()?.[0];
     const skill = ACTIVE_SKILLS?.[skillId];
     if (!skill) return;
 
@@ -2925,8 +2967,11 @@ function tryUseActiveSkill() {
 
     // ===============================
     // 使用回数記録
+    // ★全クリア特典：フリーモードの使用はクエスト統計に加算しない（完全独立）
     // ===============================
-    addQuestActiveSkillUse(skillId);
+    if (!usingFreeSkill) {
+        addQuestActiveSkillUse(skillId);
+    }
 
     // ===============================
     // ストック消費
