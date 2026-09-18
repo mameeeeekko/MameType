@@ -3359,7 +3359,6 @@ function bindMenuEvents() {
     playSE("select");
     closeClearRewardModal();
   });
-<<<<<<< HEAD
 
   // ★クエストマップのキー設定モーダルの閉じる/保存ボタン
   const keybindConfigCloseBtn = document.getElementById("keybindConfigCloseBtn");
@@ -3373,8 +3372,6 @@ function bindMenuEvents() {
     saveKeybindConfigFromModal();
   });
 
-=======
->>>>>>> 50bb76fbd3e4d13db2dacd0e584f31b0bab09e63
 }
 
 function bindGameMenuEvents() {
@@ -3768,13 +3765,10 @@ function bindKeyEvents() {
     //   閉じる操作のみ受け付け、メニューのキー操作（BACK等）へ漏らさない
     if (!e.ctrlKey && !e.metaKey && handleFreeSkillModalKey(e)) return;
 
-<<<<<<< HEAD
     // ★クエストマップのキー設定モーダル（Key Bind Config）表示中は
     //   すべてのキー入力をブロックし、b/Esc/Enter で閉じる
     if (!e.ctrlKey && !e.metaKey && handleQuestKeybindConfigModalKey(e)) return;
 
-=======
->>>>>>> 50bb76fbd3e4d13db2dacd0e584f31b0bab09e63
     // 管理者用DEVツール（Shift+Oで開閉）
     if (e.shiftKey && e.key.toLowerCase() === "o") {
       const panel = document.getElementById("devPanel");
