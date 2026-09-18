@@ -15,6 +15,8 @@ const DEFAULT_PROGRESS = {
     hasShownFirstFullClearReward: false,
     // ボスチャレンジモードのアンロック
     hasBossChallengeUnlocked: false,
+    // ★全クリア特典：フリーモード（ENEMY／QUEST BOSS）のアクティブスキル機能のアンロック
+    hasFreeActiveSkillUnlocked: false,
 };
 
 let progress = load(); // 初期ロード
@@ -96,6 +98,7 @@ export function reloadQuestProgress() {
     hasSeenTrueEnding: data.hasSeenTrueEnding || false,
     hasShownFirstFullClearReward: data.hasShownFirstFullClearReward || false,
     hasBossChallengeUnlocked: data.hasBossChallengeUnlocked || false,
+    hasFreeActiveSkillUnlocked: data.hasFreeActiveSkillUnlocked || false,
   };
   if (progress.hasSeenTrueEnding) {
     if (!progress.unlockedWorlds.includes("WORLD_EX")) {
@@ -222,6 +225,8 @@ export function markTrueEndingSeen() {
         if (!progress.unlocked.includes("WEX_TEST_1")) {
             progress.unlocked.push("WEX_TEST_1");
         }
+        // ★全クリア特典：フリーモードのアクティブスキル機能を解放
+        progress.hasFreeActiveSkillUnlocked = true;
     }
     // ★全クリア特典：星の振り直しを無制限にする
     setRebuildUnlimited();
@@ -234,6 +239,9 @@ export function markTrueEndingSeen() {
         }
         if (typeof window !== "undefined" && typeof window.__resetFreeBossUnlockCache === "function") {
             window.__resetFreeBossUnlockCache();
+        }
+        if (typeof window !== "undefined" && typeof window.__resetFreeSkillUnlockCache === "function") {
+            window.__resetFreeSkillUnlockCache();
         }
     } catch (e) { /* 無視 */ }
 }
@@ -270,6 +278,31 @@ export function markBossChallengeUnlocked() {
 
 export function hasBossChallengeUnlocked() {
     return !!progress.hasBossChallengeUnlocked || !!progress.hasSeenTrueEnding;
+}
+
+/**
+ * ★全クリア特典：フリーモードのアクティブスキル機能を解放します。
+ * （フリーモードのENEMY／QUEST BOSSでスキル選択・ストック上限・星強化が可能になる）
+ */
+export function markFreeActiveSkillUnlocked() {
+    if (progress) {
+        progress.hasFreeActiveSkillUnlocked = true;
+    }
+    save();
+    // FREEメニューのスキル設定セクション表示キャッシュを破棄（次回表示時に再判定）
+    try {
+        if (typeof window !== "undefined" && typeof window.__resetFreeSkillUnlockCache === "function") {
+            window.__resetFreeSkillUnlockCache();
+        }
+    } catch (e) { /* 無視 */ }
+}
+
+/**
+ * ★全クリア特典：フリーモードのアクティブスキル機能が解放済みかどうか。
+ * @returns {boolean}
+ */
+export function hasFreeActiveSkillUnlocked() {
+    return !!progress.hasFreeActiveSkillUnlocked || !!progress.hasSeenTrueEnding;
 }
 
 function save(){
