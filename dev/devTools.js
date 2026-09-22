@@ -5,7 +5,7 @@ import { savePlayerStats } from "../js/storage.js";
 import { gameState } from "../js/gameCore.js";
 import { forceSetLevel, getPlayerStats as getQuestPlayerStats, addTotalStarsEarned, getTotalStarsEarned, setTotalStarsEarned } from "../js/questPlayerStats.js";
 import { QUEST_MAP } from "../js/questMap.js";
-import { getStarData, setStar, getTotalStars, getTotalMaxStars, markFreeActiveSkillUnlocked } from "../js/questProgress.js";
+import { getStarData, setStar, getTotalStars, getTotalMaxStars, markFreeActiveSkillUnlocked, markExtraCleared, reloadQuestProgress } from "../js/questProgress.js";
 import { killEnemy } from "../js/enemyCore.js";
 import { updateHud } from "../js/hud.js";
 import { resetPlayerAndRecoveryId, getPlayerId } from "../online/playerProfile.js";
@@ -781,6 +781,25 @@ export const dev = {
         } else {
             log(`Achievement "${achievementId}" already unlocked.`);
         }
+    },
+
+    /**
+     * EXTRAワールドを全クリア扱いにします（検証用）。
+     * MUSIC（トップメニュー）／フリーモードのBGM選択／セーブスロットの EXTRA CLEAR バッジが解放されます。
+     * @param {boolean} [value=true] - false を渡すと解除します
+     */
+    setExtraCleared(value = true) {
+        if (value) {
+            markExtraCleared(); // 保存＋オートセーブ＋メニュー側キャッシュ破棄まで実行
+        } else {
+            const data = JSON.parse(localStorage.getItem("questProgress") || "{}");
+            data.hasExtraCleared = false;
+            localStorage.setItem("questProgress", JSON.stringify(data));
+            reloadQuestProgress();
+        }
+        // HUD（メニューの表示状態）を更新しておく
+        updateHud(null, { isQuestMode: false });
+        log(`hasExtraCleared = ${value}. メニューを開き直すと反映されます。`);
     },
 
     /**

@@ -17,11 +17,31 @@ export async function openOnlineRanking() {
     screen.style.display = "block"; // 念のため
   }
 
+  // ★ ランキング表示中はプレイヤーHUDを隠す
+  const hud = document.getElementById("playerHud");
+  if (hud) hud.style.display = "none";
+
   currentMode = "normal";
   currentOffset = 0;
 
   await renderRanking(true);
   bindRankingEvents();
+}
+
+/**
+ * オンラインランキング画面を閉じる。
+ * ×（#rankingBackBtn）やメニュー復帰時に呼び出し、HUDを元に戻す。
+ */
+export function closeOnlineRanking() {
+  const screen = document.getElementById("onlineRankingScreen");
+  if (screen) {
+    screen.classList.add("hidden");
+    screen.style.display = "none";
+  }
+
+  // ★ プレイヤーHUDを元に戻す
+  const hud = document.getElementById("playerHud");
+  if (hud) hud.style.display = "block";
 }
 
 async function renderRanking(reset = false) {

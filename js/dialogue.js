@@ -1,8 +1,8 @@
 // dialogue.js
 
-import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed, getMaxClearedStageNumber } from './questProgress.js'; // ★ MODIFIED: Import new functions
+import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed, getMaxClearedStageNumber, hasExtraCleared } from './questProgress.js'; // ★ MODIFIED: Import new functions
 import { gameState } from './gameCore.js';
-import { playBGM, fadeOutBGM, fadeBGMTo, BGM_CONFIG, playDialogueSound, playSystemDialogueSound, playSE } from './effectManager.js';
+import { playBGM, stopBGM, fadeOutBGM, fadeBGMTo, BGM_CONFIG, playDialogueSound, playSystemDialogueSound, playSE } from './effectManager.js';
 import { showHud } from './enemyCore.js';
 import { DIALOGUE_DATA, CHARACTERS, RANDOM_DIALOGUES } from './dialogueData.js';
 import { QUEST_MAP } from './questMap.js';
@@ -576,7 +576,8 @@ function renderChapterLog() {
 
     const clearedDialogueIds = Object.keys(DIALOGUE_DATA).filter(id => {
         // プロローグとエンディングは特別扱い
-        if (id === 'prologue' || id === 'true_ending_dialogue') {
+        // ★EXTRAクリア演出（extra_ending_dialogue）も「再生済み」のみ表示する
+        if (id === 'prologue' || id === 'true_ending_dialogue' || id === 'extra_ending_dialogue') {
             return hasDialogueBeenPlayed(id);
         }
         // それ以外の会話はクエストクリアを条件とする
@@ -641,6 +642,10 @@ function renderChapterLog() {
         } else if (dialogueId === 'true_ending_dialogue') {
             stageName = "エピローグ";
             eventType = "";
+        } else if (dialogueId === 'extra_ending_dialogue') {
+            // ★EXTRAワールド全クリア後のエンディング
+            stageName = "エクストラクリア後";
+            eventType = "";
         } else {
             const questId = dialogueId.replace(/_start$|_end$/, '');
             stageName = getStageName(questId);
@@ -676,6 +681,21 @@ function renderChapterLog() {
             startTrueEndingSequence(showLog); // エンディングを開始し、終了後にログ画面を再表示
         };
         logChaptersContainer.appendChild(endingBtn);
+    }
+
+    // ★EXTRAワールド全クリア後のエンディング再生ボタン
+    if (hasExtraCleared()) {
+        const extraEndingBtn = document.createElement('div');
+        extraEndingBtn.className = 'log-chapter ending-playback';
+        extraEndingBtn.innerHTML = `
+            <div class="log-chapter-title">EXTRA ENDING</div>
+            <div class="log-chapter-status">エクストラクリアのエンディングを再生します</div>
+        `;
+        extraEndingBtn.onclick = () => {
+            closeDialogue(); // ログモーダルを閉じる
+            startExtraEndingSequence(showLog); // 演出後、ログ画面を再表示
+        };
+        logChaptersContainer.appendChild(extraEndingBtn);
     }
 }
 
@@ -2248,6 +2268,114 @@ export async function startTrueEndingSequence(onCompleteCallback) {
     markTrueEndingSeen();
 
     if (blackout) blackout.remove();
+}
+
+// =====================================================
+// ★EXTRAクリア演出（暗転 → 台詞 → THE END）
+// -----------------------------------------------------
+// ・BGMは鳴らさない（無音の暗転演出）
+// ・クリック等の操作は不要（時間経過で自動進行）
+// ・話者名は表示せず、文章のみを暗転画面の中央に出す
+// ・全クリア（真エンディング）とは独立した演出
+// =====================================================
+
+/** 暗転中の台詞用オーバーレイを生成します。 */
+function createExtraEndingOverlay() {
+    const overlay = document.createElement('div');
+    overlay.className = 'extra-ending-overlay';
+
+    const text = document.createElement('p');
+    text.className = 'extra-ending-text';
+
+    overlay.appendChild(text);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+    return { overlay, text };
+}
+
+/**
+ * 暗転中のナビの台詞を1行表示します（フェードイン→保持→フェードアウト、自動進行）。
+ * @param {HTMLElement} textEl - 台詞を表示する要素
+ * @param {string} line - 表示する台詞
+ * @param {number} holdMs - 表示を保持する時間 (ms)
+ * @returns {Promise<void>}
+ */
+function showExtraEndingLine(textEl, line, holdMs) {
+    return new Promise(resolve => {
+        textEl.textContent = line;
+        textEl.classList.add('show');
+        setTimeout(() => {
+            textEl.classList.remove('show');
+            setTimeout(resolve, 700); // フェードアウト完了を待つ
+        }, holdMs);
+    });
+}
+
+/**
+ * EXTRAワールド全クリア時の演出を開始します。
+ * 暗転 → 台詞（少し間を挟む）→ そのまま暗転 → THE END
+ * @param {function} [onCompleteCallback] - 演出が完全に終了したときに呼ばれるコールバック
+ */
+export async function startExtraEndingSequence(onCompleteCallback) {
+    // HUDを非表示にする
+    showHud(false);
+
+    // ★ 演出が完全に終了するまで、全ショートカットキーを無効化する
+    window._staffRollActive = true;
+
+    // ★EXTRAクリア演出をログに記録する（クエストメニューのLOGから再視聴できる）
+    markDialoguePlayed('extra_ending_dialogue');
+
+    // この演出はBGMを鳴らさない（流れていたBGMも停止する）
+    stopBGM();
+    gameState.startTime = 0;
+    gameState.currentBgmInfo = null;
+
+    // 1. 画面を暗転させる
+    const blackout = await fadeToBlack();
+
+    // 2. 台詞（自動進行・文章のみ）
+    const { overlay, text } = createExtraEndingOverlay();
+    await new Promise(r => setTimeout(r, 800));
+
+    // 「ここまで遊んでくれて、ありがとう。」
+    await showExtraEndingLine(text, "ここまで遊んでくれて、ありがとう。", 2800);
+    await new Promise(r => setTimeout(r, 900)); // 少し間
+
+    // 「ところで、」
+    await showExtraEndingLine(text, "ところで、", 2200);
+    await new Promise(r => setTimeout(r, 1800)); // もう少し間
+
+    // 「タイピング、前より上手くなった？」
+    await showExtraEndingLine(text, "タイピング、前より上手くなった？", 3200);
+
+    // 3. そのまま暗転（台詞を消して、しばらく暗転を保持）
+    await new Promise(r => setTimeout(r, 1400));
+
+    // 4. THE END を表示
+    const theEnd = document.createElement('div');
+    theEnd.className = 'extra-ending-the-end';
+    theEnd.textContent = 'THE END';
+    overlay.appendChild(theEnd);
+    requestAnimationFrame(() => { theEnd.classList.add('show'); });
+
+    await new Promise(r => setTimeout(r, 2800));
+
+    // 5. フェードアウトして終了
+    theEnd.classList.remove('show');
+    overlay.style.opacity = '0';
+    await new Promise(r => setTimeout(r, 1600));
+
+    overlay.remove();
+    if (blackout) blackout.remove();
+
+    // ★ 演出が完全に終了してからショートカットキーを再有効化する
+    window._staffRollActive = false;
+    showHud(true); // ★ HUDを再表示
+
+    if (onCompleteCallback) onCompleteCallback();
 }
 
 // CSSを動的に読み込む

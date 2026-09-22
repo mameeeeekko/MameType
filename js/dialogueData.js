@@ -3271,8 +3271,7 @@ export const DIALOGUE_DATA = {
 
             { character: "SYSTEM", text: "……" },
             { character: "SYSTEM", text: "THANK YOU FOR PLAYING." },
-            { character: "SYSTEM", text: "……" },
-            { character: "SYSTEM", text: "THE END" },
+
         ]
     },
 
@@ -3285,6 +3284,21 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "今日は\n世界を救わなくても大丈夫です。" },
             { character: "ナビ", text: "少しだけ……" },
             { character: "ナビ", text: "遊びませんか？" },
+        ]
+    },
+
+    // ★EXTRAワールド全クリア後のエンディング（ログに残る）
+    // ・SYSTEM はアイコン／名前なしの文章表示のため「文章だけ」の演出に合わせている
+    // ・renderChapterLog 側で hasDialogueBeenPlayed のみを表示条件にしている
+    "extra_ending_dialogue": {
+        title: "EXTRA CLEAR",
+        messages: [
+            { character: "SYSTEM", text: "……おかえり。" },
+            { character: "SYSTEM", text: "ここまで遊んでくれて、ありがとう。" },
+            { character: "SYSTEM", text: "ところで、" },
+            { character: "SYSTEM", text: "タイピング、ちょっとは上手くなった？" },
+            { character: "SYSTEM", text: "……" },
+            { character: "SYSTEM", text: "THE END" },
         ]
     }
 };

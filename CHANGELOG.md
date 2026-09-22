@@ -2,6 +2,29 @@
 
 ---
 
+## [1.0.46] - 2026-09-21
+
+### Changed
+- **クエストモードの「SAVE / LOAD」「CLEAR REWARD」「KEY BINDINGS」をクエストモーダルUIに統一**
+  - `index.html`: 旧スタイル（`.save-modal` / `.save-modal-content` / `<h2>`）から、SKILL TREE・EQUIP SKILLS と同じ
+    `.quest-modal` → `.quest-modal-box` → `.quest-modal-title` + `.quest-modal-content` + `.quest-modal-close-btn` 構成へ変更
+  - JS が参照する ID（`saveModal` / `questSlots` / `saveToQuestMenuBackBtn` / `clearRewardModal` / `clearRewardContent` /
+    `clearRewardModalCloseBtn` / `keybindConfigModal` / `keybindConfigContent` / `keybindConfigCloseBtn` / `keybindConfigSaveBtn`）はすべて維持し、開閉も従来どおり `hidden` クラスで行う（JS 変更なし）
+  - `style.css`: `.quest-modal.hidden { display: none; }` を追加（`.quest-modal` は `display: flex` のため、これが無いと閉じられない）
+  - `#saveModal, #clearRewardModal, #keybindConfigModal { z-index: 10010; }` を 画面階層セクションに追加し、従来の重なり順を維持
+  - スロットカード／報酬パネル／キーバインド行を EQUIP SKILLS と同じカード配色（`rgba(13,17,23,.92)` ＋ `rgba(88,166,255,.3)` 罫線・角丸12px）に統一。LOAD/SAVE は `.quest-modal-btn` と同じ見た目に
+  - `#keybindConfigContent` は設定画面と共用の `.keybind-row` を外し、モーダル専用の `.keybind-modal-list` に変更（設定画面の KEY セクションは不変）
+  - モーダル幅は 3 画面共通で `min(640px, 92dvw)`。内容はボックス内スクロール（見切れ防止）
+- **クエスト系モーダル7画面のタイトル文字サイズを統一**
+  - `:root` に `--quest-modal-title-size: 26px` を新設し、`.quest-modal-title` はこの変数のみでサイズを決めるよう変更
+  - `.quest-modal-box.quest-modal-skill .quest-modal-title` の `font-size: 22px` 上書きを削除（余白8pxのみ維持）
+  - 対象: DIFFICULTY / SKILL TREE / SKILL(EQUIP SKILLS) / STAR UPGRADE / SAVE・LOAD / KEY BIND / CLEAR REWARD（フリーモードのスキル・星強化モーダルも同一クラスのため揃う）
+- **アプリケーションバージョンを `1.0.46` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.46` に更新
+  - Service Worker のキャッシュ名を `mametype-v1.0.46` に更新
+
+---
+
 ## [1.0.42] - 2026-09-17
 
 ### Changed

@@ -27,16 +27,18 @@ import { updateHud, initAchievementsUI, showHud } from "./hud.js"; export { show
 import { handleKey } from './inputCore.js';
 import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, wasLastModeBossOnly } from "./enemyCore.js";
 import { renderQuestMapUI, openQuestMenuModal, closeQuestModal } from "./questMapUI.js";
-import { reloadQuestProgress, resetQuestAll, markTrueEndingSeen, hasSeenTrueEnding as hasSeenTrueEndingInAutoSave } from "./questProgress.js";
-import { hasBossChallengeUnlocked, hasFreeActiveSkillUnlocked } from "./questProgress.js";
+import { reloadQuestProgress, resetQuestAll, hasSeenTrueEnding as hasSeenTrueEndingInAutoSave } from "./questProgress.js";
+import { hasBossChallengeUnlocked, hasFreeActiveSkillUnlocked, hasExtraCleared } from "./questProgress.js";
 import { openFreeSkillSelectModal, openFreeStarUpgradeModal, handleFreeSkillModalKey, clampFreeSkillStarLevel, FREE_SKILL_STAR_MAX_LEVEL, getFreeSkillStarTimeFactor, getFreeSkillInfo } from "./freeSkillUI.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
-import { getClearRewardHtml } from "./questResult.js";
+import { getClearRewardHtml, getExtraClearRewardHtml } from "./questResult.js";
+// ★EXTRA CLEAR 特典：ミュージックプレイヤー（トップメニューの MUSIC）
+import { initMusicPlayer, openMusicModal, closeMusicModal, handleMusicModalKey } from "./musicPlayer.js";
 import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId, getRecoveryCode, setRecoveryCode } from "../online/playerProfile.js";
-import { openOnlineRanking } from "../online/onlineRankingRenderer.js";
+import { openOnlineRanking, closeOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
 import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed, showDisclaimer } from "./dialogue.js";
-import { loadCoreAssets, loadRemainingAssets, images, collectOfflineAssetUrls } from "./assetsLoader.js";
+import { loadCoreAssets, loadRemainingAssets, images, collectOfflineAssetUrls, getBgmAssets } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds.js";
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
@@ -50,7 +52,7 @@ import {
   getDifficultyDescription,
   getAvailableDifficulties,
 } from "./difficulties.js";
-import { playBGM, playSE, stopBGM, stopAllLoopSE, fadeBGMTo, fadeOutBGM, BGM_CONFIG } from "./effectManager.js";
+import { playSE, stopBGM, stopAllLoopSE, fadeBGMTo, fadeOutBGM, BGM_CONFIG } from "./effectManager.js";
 import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
 // ★v1.0.42: supabase は静的importしない（オフライン起動対策）。
 //   supabase.js は https://esm.sh を静的importしており、ネットワークが
@@ -107,6 +109,8 @@ let hintDiv;
 let onlineRankingDiv;
 
 let startMenuBtn, questMenuBtn, freeModeBtn, recordsMenuBtn, onlineRankingBtn, endingBtn;
+// ★EXTRA CLEAR 特典：トップメニューの MUSIC ボタン
+let musicMenuBtn;
 let startMenuBackBtn, freeStartMenuBackBtn, questStartMenuBackBtn;
 let saveToQuestMenuBackBtn, questSaveBtn;
 let questClearRewardBtn;
@@ -183,6 +187,7 @@ function cacheDOM() {
   freeModeBtn = document.getElementById("freeModeBtn");
   recordsMenuBtn = document.getElementById("recordsMenuBtn");
   onlineRankingBtn = document.getElementById("onlineRankingBtn");
+  musicMenuBtn = document.getElementById("musicMenuBtn"); // ★EXTRA CLEAR 特典：MUSIC
   startMenuBackBtn = document.getElementById("startMenuBackBtn");
   freeStartMenuBackBtn = document.getElementById("freeStartMenuBackBtn");
   questStartMenuBackBtn = document.getElementById("questStartMenuBackBtn");
@@ -542,6 +547,8 @@ const OFFLINE_APP_FILES = [
   "./js/typingLogic.js",
   "./js/version.js",
   "./js/analytics.js",
+  // ★EXTRA CLEAR 特典：ミュージックプレイヤー
+  "./js/musicPlayer.js",
 
   // クエスト / スキルツリー
   "./js/canvasUtil.js",
@@ -1123,11 +1130,24 @@ function resetFreeBossUnlockCache() {
     }
   } catch (e) { /* 無視 */ }
 }
+function resetMusicUnlockCache() {
+  // ★現行の MUSIC ボタン／フリーードBGM選択行は表示時に毎回 hasExtraCleared() を再判定するため、
+  //   メモリ上の解放キャッシュは持たない（解放直後に開いた場合も正しく判定される）。
+  try {
+    if (typeof showMainMenu === "function") {
+      showMainMenu._musicUnlocked = undefined;
+    }
+    if (typeof showFreeStartMenu === "function") {
+      showFreeStartMenu._musicUnlocked = undefined;
+    }
+  } catch (e) { /* 無視 */ }
+}
 try {
   if (typeof window !== "undefined") {
     window.__markDifficultySelectorsDirty = markDifficultySelectorsDirty;
     window.__resetFreeBossUnlockCache = resetFreeBossUnlockCache;
     window.__resetFreeSkillUnlockCache = resetFreeSkillUnlockCache;
+    window.__resetMusicUnlockCache = resetMusicUnlockCache;
   }
 } catch (e) { /* 無視 */ }
 
@@ -1347,9 +1367,14 @@ document.addEventListener("DOMContentLoaded", () => {
   bindMenuBackEvents();
   // ★設定を読み込む（UI描画より先に）
   loadSettings();
+  // ★EXTRA CLEAR 特典：フリーモードBGM選択の選択肢を先に構築する
+  //   （loadFreeModeConfig で保存済みの選択値を復元するため、必ず先に呼ぶ）
+  populateFreeBgmSelect();
   loadFreeModeConfig();
   // populate boss select after free mode config is loaded
   populateBossSelect();
+  // ★EXTRA CLEAR 特典：ミュージックプレイヤーのボタン結線
+  initMusicPlayer();
 
   // ★UI初期化
   createDifficultySelector(
@@ -1733,6 +1758,7 @@ function renderQuestSlots() {
           <div class="slot-left">
             <span>SLOT ${i + 1}</span>
             ${(s.hasSeenTrueEnding ?? slot.progress?.hasSeenTrueEnding ?? false) ? '<span class="slot-cleared">CLEARED</span>' : ''}
+            ${(s.hasExtraCleared ?? slot.progress?.hasExtraCleared ?? false) ? '<span class="slot-extra-cleared">EXTRA CLEARED</span>' : ''}
           </div>
           <span class="slot-date">${date}</span>
         </div>
@@ -2439,6 +2465,8 @@ function saveFreeModeConfig() {
   const config = {
     lastModeId: currentFreeModeId,
     lastEnemyPattern: currentEnemyPattern,
+    // ★EXTRA CLEAR 特典：フリーモードのBGM選択（"" = モード既定）
+    bgm: document.getElementById("freeBgmSelect")?.value || null,
     standard: {
       difficulty: getCurrentDifficulty("free-standard").id,
       genres: Array.from(document.querySelectorAll('#standardGenreCheckboxes input[name="standard-genre"]:checked'))
@@ -2502,6 +2530,12 @@ function loadFreeModeConfig() {
 
     if (config.lastModeId) currentFreeModeId = config.lastModeId;
     if (config.lastEnemyPattern) currentEnemyPattern = config.lastEnemyPattern;
+
+    // ★EXTRA CLEAR 特典：フリーモードのBGM選択を復元（"" = モード既定）
+    const bgmSelect = document.getElementById("freeBgmSelect");
+    if (bgmSelect && config.bgm !== undefined) {
+      bgmSelect.value = config.bgm || "";
+    }
 
     if (config.standard?.difficulty) {
       setCurrentDifficulty(config.standard.difficulty, "free-standard");
@@ -2673,6 +2707,58 @@ function populateBossSelect() {
   select.addEventListener("change", () => saveFreeModeConfig());
 }
 
+// =====================================================
+// ★EXTRA CLEAR 特典：フリーモードのBGM選択
+// -----------------------------------------------------
+// ・assetsLoader.js の BGM 定義から選択肢を生成する（定義元を一本化）
+// ・"" を選ぶと各モード既定のBGMになる（従来どおりの挙動）
+// ・EXTRA全クリア前は行ごと非表示にする
+// =====================================================
+
+/** フリーモードのBGM選択に選択肢を構築します（起動時に1回だけ呼ぶ）。 */
+function populateFreeBgmSelect() {
+  const select = document.getElementById("freeBgmSelect");
+  if (!select) return;
+
+  select.innerHTML = "";
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
+  defaultOpt.textContent = "モード既定";
+  select.appendChild(defaultOpt);
+
+  getBgmAssets().forEach(track => {
+    const opt = document.createElement("option");
+    opt.value = track.name;
+    opt.textContent = `${track.title} / ${track.composer}`;
+    select.appendChild(opt);
+  });
+
+  select.addEventListener("change", () => {
+    saveFreeModeConfig();
+    // 設定を変えたことを分かりやすくする（メニューSE）
+    try { playSE("select"); } catch (e) { /* 無視 */ }
+  });
+}
+
+/**
+ * フリーモードのBGM選択を表示／非表示します（EXTRA全クリアで解放）。
+ */
+function updateFreeBgmRowVisibility() {
+  const row = document.getElementById("freeBgmRow");
+  if (!row) return;
+  row.style.display = hasExtraCleared() ? "flex" : "none";
+}
+
+/**
+ * フリーモードのBGM上書き値を返します（未選択・未解放なら null = モード既定）。
+ * @returns {string|null}
+ */
+function getFreeBgmOverride() {
+  if (!hasExtraCleared()) return null;
+  const value = document.getElementById("freeBgmSelect")?.value || "";
+  return value || null;
+}
+
 /**
  * フリーモードのエネミーモードを開始する (UI設定を反映)
  */
@@ -2751,7 +2837,9 @@ function startFreeEnemyMode() {
     customConditions: customConditions,
     enemyTable: enemyTable, // Tierと属性セットから生成したテーブルをトップレベルで渡す
     // ★全クリア特典：ENEMY用のアクティブスキル設定（クエストとは独立）
-    freeSkill: buildFreeSkillConfig("enemy")
+    freeSkill: buildFreeSkillConfig("enemy"),
+    // ★EXTRA CLEAR 特典：選択されたBGM（未選択なら各モード既定）
+    bgm: getFreeBgmOverride()
   });
 }
 
@@ -2775,6 +2863,8 @@ function startFreeDefenseMode() {
 
   startDefenseMode({
     isFreeMode: true,
+    // ★EXTRA CLEAR 特典：選択されたBGM（未選択なら防衛モード既定）
+    bgm: getFreeBgmOverride(),
     custom: {
       totalCharsToType,
       timeLimit, // 秒単位で渡す
@@ -2895,7 +2985,9 @@ function initFreeModeConfigUI() {
       mode: GameModes.NORMAL,
       isFreeMode: true,
       difficulty: getCurrentDifficulty("free-standard").id,
-      custom: { questionLimit: count, tags: tags }
+      custom: { questionLimit: count, tags: tags },
+      // ★EXTRA CLEAR 特典：選択されたBGM（未選択なら通常モード既定）
+      bgm: getFreeBgmOverride()
     });
   });
 
@@ -2917,7 +3009,9 @@ function initFreeModeConfigUI() {
       mode: GameModes.TIME_ATTACK,
       isFreeMode: true,
       difficulty: getCurrentDifficulty("free-timeattack").id,
-      custom: { limitSec: time, tags: tags }
+      custom: { limitSec: time, tags: tags },
+      // ★EXTRA CLEAR 特典：選択されたBGM（未選択ならタイムトライアル既定）
+      bgm: getFreeBgmOverride()
     });
   });
 
@@ -2943,7 +3037,9 @@ function initFreeModeConfigUI() {
       mode: GameModes.LONG_TEXT,
       isFreeMode: true,
       difficulty: null,
-      custom: { tags: tags }
+      custom: { tags: tags },
+      // ★EXTRA CLEAR 特典：選択されたBGM（未選択なら長文モード既定）
+      bgm: getFreeBgmOverride()
     });
   });
 
@@ -2983,6 +3079,8 @@ function initFreeModeConfigUI() {
       difficulty: getCurrentDifficulty("free-boss").id,
       // ★全クリア特典：QUEST BOSS用のアクティブスキル設定（ENEMYとは独立）
       freeSkill: buildFreeSkillConfig("boss"),
+      // ★EXTRA CLEAR 特典：選択されたBGM（未選択ならボスステージ既定）
+      bgm: getFreeBgmOverride(),
     });
   });
 
@@ -3154,6 +3252,9 @@ export function hideAllScreens() {
     freeModeConfig, chainUI, questStatsModalEl
   ]
     .forEach(div => { if (div) div.style.display = "none"; });
+  // ★EXTRA CLEAR 特典：ミュージックモーダルが開いたまま画面遷移しないように閉じる
+  //   （再生中の曲は各モード開始時のBGM切替／メニュー戻りで停止する）
+  try { closeMusicModal(); } catch (e) { /* 無視 */ }
   // showMenuBackground(false); // メニュー遷移時に背景画像が途切れないように維持
 }
 
@@ -3165,6 +3266,11 @@ function showMainMenu() {
   fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (menuDiv) menuDiv.style.display = "block";
 
+  // ★EXTRA CLEAR 特典：MUSIC ボタンは EXTRA全クリア後のみ表示する
+  if (musicMenuBtn) {
+    musicMenuBtn.style.display = hasExtraCleared() ? "inline-block" : "none";
+  }
+
   showMenuBackground("title_menu");
   updateHud(); // メインメニューが表示されたタイミングでHUDのデータを同期
   const hud = document.getElementById("playerHud");
@@ -3172,9 +3278,17 @@ function showMainMenu() {
 }
 
 function openClearRewardModal() {
-  if (!clearRewardModalDiv || !document.getElementById("clearRewardContent")) return;
+  const content = document.getElementById("clearRewardContent");
+  if (!clearRewardModalDiv || !content) return;
 
-  document.getElementById("clearRewardContent").innerHTML = getClearRewardHtml();
+  // ★EXTRA全クリア済みなら、全クリア特典に加えてEXTRAクリア特典も表示する
+  let html = getClearRewardHtml();
+  if (hasExtraCleared()) {
+    html += `<hr style="border:none;border-top:1px solid rgba(255,255,255,0.15);margin:16px 0;">`;
+    html += getExtraClearRewardHtml();
+  }
+
+  content.innerHTML = html;
   clearRewardModalDiv.classList.remove("hidden");
 }
 
@@ -3224,6 +3338,9 @@ function showFreeStartMenu() {
 
   const freeModeConfig = document.getElementById("freeModeConfig");
   if (freeModeConfig) freeModeConfig.style.display = "block";
+
+  // ★EXTRA CLEAR 特典：BGM選択行の表示を更新（解放前は非表示）
+  updateFreeBgmRowVisibility();
 
   // BOSS チャレンジボタンの表示制御
   // ※ loadQuestSlots() の JSON parse を毎回行うと重いので結果をキャッシュする
@@ -3331,6 +3448,14 @@ function bindMenuEvents() {
     openOnlineRanking();
   });
 
+  // ★EXTRA CLEAR 特典：ミュージックプレイヤー（収録曲を自由に再生）
+  musicMenuBtn?.addEventListener("click", () => {
+    // ★オフラインダウンロード中はメニュー操作を受け付けない
+    if (_offlineModalActive) return;
+    playSE("select");
+    openMusicModal();
+  });
+
   // 「戻る」ボタンは、すべてshowMainMenuを呼び出すように統一する
   startMenuBackBtn?.addEventListener("click", () => { playSE("select"); showMainMenu(); });
   freeStartMenuBackBtn?.addEventListener("click", () => { playSE("select"); showMainMenu(); });
@@ -3405,40 +3530,10 @@ function bindGameMenuEvents() {
   });
 }
 
-/**
- * 真エンディングシーケンスを開始します。
- */
-export async function startTrueEndingSequence(onCompleteCallback) {
-    // HUDを非表示にする
-    showHud(false);
-
-    // ★ ここからエンディングが完全に終了するまで、全ショートカットキーを無効化する。
-    window._staffRollActive = true;
-
-    // 1. CSSの読み込みを試みる
-    await loadStaffRollCSS();
-
-    // 2. 画面を暗転させる
-    const blackout = await fadeToBlack();
-    playBGM("bgm_hosikuzu"); // BGM再生開始
-    await new Promise(r => setTimeout(r, 2000));
-
-    // 3. メッセージを表示する（ゲームタイトル）
-    await showMessage("MameType", 2800, 'staff-roll-title');
-
-    // 4. スタッフロールのHTMLを表示する
-    await showStaffRoll(() => {
-        // BGMのフェードアウトは showStaffRoll() 内部（endRoll）で行われる
-        // ★ エンディングが完全に終了してからショートカットキーを再有効化する
-        window._staffRollActive = false;
-        if (onCompleteCallback) onCompleteCallback();
-        showHud(true); // ★ HUDを再表示
-    });
-    // 5. エンディングを見たことを記録する
-    markTrueEndingSeen();
-
-    if (blackout) blackout.remove();
-}
+// ※ 真エンディングシーケンス（startTrueEndingSequence）の実体は dialogue.js にあります。
+//   以前ここに未使用の重複定義がありましたが、loadStaffRollCSS / fadeToBlack /
+//   showStaffRoll など未定義の関数を参照していて呼ぶと必ず失敗する死んだコードだったため、
+//   キャッシュ不整合の原因を避ける意味も含めて削除しました。
 
 // =============================================================================================================
 
@@ -3707,13 +3802,16 @@ function bindMenuBackEvents() {
 
   // defenseResult.jsなど、他のモジュールからのメニュー復帰要求をハンドル
   document.addEventListener("back-to-main-menu", () => {
+    closeOnlineRanking?.();
     showMainMenu();
   });
 
   recordsBackBtn?.addEventListener("click", showMainMenu);
 
+  // ★オンラインランキングの×（右上）：画面を閉じてHUDを戻す
   rankingBackBtn?.addEventListener("click", () => {
     hideAllScreens();
+    closeOnlineRanking?.();
     showMainMenu();
   });
 }
@@ -3764,6 +3862,10 @@ function bindKeyEvents() {
     // ★フリーモードのスキル設定モーダル（SKILL SELECT / STAR UPGRADE）表示中は
     //   閉じる操作のみ受け付け、メニューのキー操作（BACK等）へ漏らさない
     if (!e.ctrlKey && !e.metaKey && handleFreeSkillModalKey(e)) return;
+
+    // ★EXTRA CLEAR 特典：ミュージックプレイヤー表示中は
+    //   閉じる操作のみ受け付け、メニューのキー操作（BACK等）へ漏らさない
+    if (!e.ctrlKey && !e.metaKey && handleMusicModalKey(e)) return;
 
     // ★クエストマップのキー設定モーダル（Key Bind Config）表示中は
     //   すべてのキー入力をブロックし、b/Esc/Enter で閉じる
@@ -4354,6 +4456,7 @@ function handleMenuKey(e) {
       case "f": freeModeBtn?.click(); break;
       case "r": recordsMenuBtn?.click(); break;
       case "o": onlineRankingBtn?.click(); break; // Online
+      case "m": musicMenuBtn?.click(); break; // Music（★EXTRA CLEAR 特典）
       case "s": settingsBtn?.click(); break;
       case "a": // Achievements
         document.getElementById("hudAchievementsBtn")?.click();

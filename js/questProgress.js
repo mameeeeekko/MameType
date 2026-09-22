@@ -9,6 +9,14 @@ const DEFAULT_PROGRESS = {
     unlockedWorlds: ["WORLD1"],
     selectedWorldId: "WORLD1",
     hasSeenTrueEnding: false,
+    // ★EXTRAワールド（ディープ・コア [EXTRA]）全クリア済みかどうか
+    //   WEX_BOSS（ExB）撃破で true になる。トップメニューの MUSIC と
+    //   フリーモードの BGM 選択、セーブスロットの EXTRA CLEAR バッジの解放条件。
+    hasExtraCleared: false,
+    // ★EXTRAクリア演出（暗転 → ナビの台詞 → THE END）を再生済みかどうか
+    hasShownExtraEnding: false,
+    // ★EXTRAクリア特典を表示済みかどうか
+    hasShownExtraClearReward: false,
     playedDialogues: {}, // 会話再生履歴
     playedChoices: {}, // { choiceId: [index1, index2] }
     // 初回全クリ特典を表示済みかどうか
@@ -96,6 +104,10 @@ export function reloadQuestProgress() {
     playedDialogues: data.playedDialogues ?? {},
     playedChoices: data.playedChoices ?? {},
     hasSeenTrueEnding: data.hasSeenTrueEnding || false,
+    // ★EXTRAクリア系（古いセーブデータには存在しないため false で補完＝後方互換）
+    hasExtraCleared: data.hasExtraCleared || false,
+    hasShownExtraEnding: data.hasShownExtraEnding || false,
+    hasShownExtraClearReward: data.hasShownExtraClearReward || false,
     hasShownFirstFullClearReward: data.hasShownFirstFullClearReward || false,
     hasBossChallengeUnlocked: data.hasBossChallengeUnlocked || false,
     hasFreeActiveSkillUnlocked: data.hasFreeActiveSkillUnlocked || false,
@@ -305,6 +317,65 @@ export function hasFreeActiveSkillUnlocked() {
     return !!progress.hasFreeActiveSkillUnlocked || !!progress.hasSeenTrueEnding;
 }
 
+// =====================================================
+// ★EXTRAワールド（ディープ・コア [EXTRA]）全クリア
+// =====================================================
+
+/**
+ * EXTRAワールド全クリア（WEX_BOSS 撃破）を記録します。
+ * これによりトップメニューの MUSIC、フリーモードの BGM 選択、
+ * セーブスロットの EXTRA CLEAR バッジが解放されます。
+ */
+export function markExtraCleared() {
+    if (progress) {
+        progress.hasExtraCleared = true;
+    }
+    // ※トップメニューの MUSIC／フリーモードのBGM選択行の表示は
+    //   メニュー表示時に hasExtraCleared() を直接見て判定するため、
+    //   ここでキャッシュを破棄する必要はない。
+    save();
+}
+
+/**
+ * EXTRAワールドを全クリア済みかどうか。
+ * @returns {boolean}
+ */
+export function hasExtraCleared() {
+    return !!progress.hasExtraCleared;
+}
+
+/** EXTRAクリア演出（暗転 → ナビの台詞 → THE END）を再生済みとして記録します。 */
+export function markExtraEndingShown() {
+    if (progress) {
+        progress.hasShownExtraEnding = true;
+    }
+    save();
+}
+
+/**
+ * EXTRAクリア演出を再生済みかどうか。
+ * @returns {boolean}
+ */
+export function hasShownExtraEnding() {
+    return !!progress.hasShownExtraEnding;
+}
+
+/** EXTRAクリア特典（ポップアップ）を表示済みとして記録します。 */
+export function markExtraClearRewardShown() {
+    if (progress) {
+        progress.hasShownExtraClearReward = true;
+    }
+    save();
+}
+
+/**
+ * EXTRAクリア特典を表示済みかどうか。
+ * @returns {boolean}
+ */
+export function hasShownExtraClearReward() {
+    return !!progress.hasShownExtraClearReward;
+}
+
 function save(){
     localStorage.setItem("questProgress", JSON.stringify(progress));
     // ★追加：オートセーブ連動
@@ -361,13 +432,16 @@ export function resetQuestAll() {
         unlockedWorlds: ["WORLD1"],
         selectedWorldId: "WORLD1",
         hasSeenTrueEnding: false,
+        hasExtraCleared: false,        // ★EXTRAクリア系も初期化
+        hasShownExtraEnding: false,
+        hasShownExtraClearReward: false,
         hasShownFirstFullClearReward: false,
         playedDialogues: {}, // ★ playedDialoguesを初期化
         playedChoices: {}, // ★ playedChoicesを初期化
     }));
 
     localStorage.setItem("quest_auto_save", JSON.stringify({
-        progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1", playedDialogues: {}, hasSeenTrueEnding: false },
+        progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1", playedDialogues: {}, hasSeenTrueEnding: false, hasExtraCleared: false },
         playerStats: freshStats,
         stars: {} // ★オートセーブに星データを含める
     }));
@@ -380,7 +454,12 @@ export function resetQuestProgressMemory() {
         unlocked: ["W1_Q1"],
         cleared: [],
         unlockedWorlds: ["WORLD1"],
-        selectedWorldId: "WORLD1"
+        selectedWorldId: "WORLD1",
+        hasSeenTrueEnding: false,      // ★EXTRAクリア系も初期化
+        hasExtraCleared: false,
+        hasShownExtraEnding: false,
+        hasShownExtraClearReward: false,
+        hasShownFirstFullClearReward: false
     };
 }
 

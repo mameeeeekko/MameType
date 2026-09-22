@@ -442,7 +442,8 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   await initAudio();
   if (getSoundEnabled() && getSoundSettings().bgm) {
     // モード設定からBGM IDを取得。なければデフォルトを再生
-    const bgmId = config.mode?.bgm || "bgm_rainy";
+    // ★EXTRA CLEAR 特典：フリーモードでBGMが選択されている場合はそれを優先する
+    const bgmId = config.bgm || config.mode?.bgm || "bgm_rainy";
     // ★v1.0.42: モード開始時にBGMを読み込む
     //   （起動時に全BGMをデコードしなくなったため、ここで先に取得する。
     //     オフライン時はSWキャッシュ、オンライン時はHTTPキャッシュから取得される）

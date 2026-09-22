@@ -3,9 +3,18 @@
 import { gameState, setGameActive, fullResetGame } from "./gameCore.js";
 import { updateHud, showHud } from "./hud.js";
 import { getPlayerStats, updateAchievements, savePlayerStats, showAchievementPopup } from "./playerStats.js";
-import { closeDialogue, startDialogue, startTrueEndingSequence, showClearRewardPopup, showSaveConfirmPopup } from "./dialogue.js";
+import { closeDialogue, startDialogue, startTrueEndingSequence, startExtraEndingSequence, showClearRewardPopup, showSaveConfirmPopup, showDialoguePlaybackChoicePopup } from "./dialogue.js";
 import { backToQuestMap } from "./main.js";
-import { hasShownFirstFullClearReward, markFirstFullClearRewardShown, hasSeenTrueEnding } from "./questProgress.js";
+import {
+    hasShownFirstFullClearReward,
+    markFirstFullClearRewardShown,
+    hasSeenTrueEnding,
+    // ★EXTRAワールド（ディープ・コア [EXTRA]）全クリア関連
+    hasShownExtraEnding,
+    markExtraEndingShown,
+    hasShownExtraClearReward,
+    markExtraClearRewardShown,
+} from "./questProgress.js";
 import { restartEnemyMode } from "./enemyCore.js";
 import { BGM_CONFIG } from "./effectManager.js";
 
@@ -368,6 +377,71 @@ export function showQuestResult(stats) { // Already exported, no change needed
         document.removeEventListener("keydown", container._keyHandler);
         container.style.display = "none";
 
+        // =====================================================
+        // ★EXTRAワールド全クリア（ExB撃破）後の演出
+        //   暗転 → 台詞 → THE END → セーブ確認 → 特典ポップアップ
+        //   ※2回目以降はエンディングを見るか選択できる
+        // =====================================================
+        if (gameState.isExtraEnding) {
+            // ★★★ グローバルなクリアフラグを立てる ★★★
+            const stats = getPlayerStats();
+            stats.hasExtraCleared = true;
+            savePlayerStats(stats);
+            // ★★★ ここまで ★★★
+
+            gameState.isExtraEnding = false;
+
+            // EXTRAクリア後の共通終了処理（実績反映 → クエストマップへ戻る）
+            const finishExtraClear = () => {
+                try {
+                    const s = getPlayerStats();
+                    updateHud(s, { isQuestMode: true });
+                } catch (e) {
+                    console.warn('updateHud failed', e);
+                }
+                // ★EXTRAクリア実績（深淵の覇者など）を即時反映させる
+                const s = getPlayerStats();
+                const newAchievements = updateAchievements(s, false, true);
+                if (newAchievements.length > 0) {
+                    showAchievementPopup(newAchievements);
+                }
+                savePlayerStats(s);
+
+                backToQuestMap();
+            };
+
+            // 演出後の共通後処理（初回特典 → 実績反映 → クエストマップへ戻る）
+            const afterEnding = () => {
+                if (!hasShownExtraClearReward()) {
+                    // ★特典文言は getExtraClearRewardHtml() に集約（ポップアップとメニューの表示ズレ防止）
+                    promptSaveThenShowReward(getExtraClearRewardHtml(), () => {
+                        markExtraClearRewardShown();
+                        finishExtraClear();
+                    });
+                } else {
+                    finishExtraClear();
+                }
+            };
+
+            if (!hasShownExtraEnding()) {
+                // 初回のみクリア演出（暗転 → 台詞 → THE END）を自動再生する
+                startExtraEndingSequence(() => {
+                    markExtraEndingShown();
+                    afterEnding();
+                });
+            } else {
+                // ★2回目以降は「エンディングを見るか」を選択できる（クエスト会話の再視聴と同じUI）
+                showDialoguePlaybackChoicePopup("エクストラクリアのエンディングを見ますか？", () => {
+                    // 再生する
+                    startExtraEndingSequence(afterEnding);
+                }, () => {
+                    // 再生しない → 演出をスキップしてそのまま戻る
+                    afterEnding();
+                });
+            }
+            return;
+        }
+
         if (gameState.isTrueEnding) {
             // ★★★ グローバルなクリアフラグを立てる ★★★
             const stats = getPlayerStats();
@@ -384,61 +458,16 @@ export function showQuestResult(stats) { // Already exported, no change needed
                         // エピローグ後、初回全クリ後の特典を一度だけ表示する
                         if (!hasShownFirstFullClearReward()) {
                             // ★特典文言は getClearRewardHtml() に集約（ポップアップとメニューの表示ズレ防止）
-                            const rewardHtml = getClearRewardHtml();
-                            // まずセーブの確認（スロット保存）を行い、保存完了またはモーダル閉じた後に特典を表示する
-                            showSaveConfirmPopup("セーブしますか？（スロットに保存）", () => {
-                                // ユーザーが「セーブする」を選んだ → セーブモーダルを開いてスロット選択を促す
-                                const saveBtn = document.getElementById('questSaveBtn');
-                                const saveModalBack = document.getElementById('saveToQuestMenuBackBtn');
-
-                                const cleanup = () => {
-                                    document.removeEventListener('questSlotSaved', onSlotSaved);
-                                    saveModalBack?.removeEventListener('click', onBackClicked);
-                                };
-
-                                const proceedToReward = () => {
-                                    cleanup();
-                                    showClearRewardPopup(rewardHtml, () => {
-                                        markFirstFullClearRewardShown();
-                                        try {
-                                            const stats = getPlayerStats();
-                                            updateHud(stats, { isQuestMode: true });
-                                        } catch (e) {
-                                            console.warn('updateHud failed', e);
-                                        }
-                                        backToQuestMap();
-                                    });
-                                };
-
-                                const onSlotSaved = (e) => {
-                                    // セーブが完了したらモーダルを閉じて続行
-                                    try { document.getElementById('saveModal').classList.add('hidden'); } catch (e) {}
-                                    proceedToReward();
-                                };
-
-                                const onBackClicked = () => {
-                                    // ユーザーがモーダルを閉じた（セーブしなかった）場合も続行
-                                    proceedToReward();
-                                };
-
-                                document.addEventListener('questSlotSaved', onSlotSaved);
-                                saveModalBack?.addEventListener('click', onBackClicked);
-
-                                // open save modal (renderQuestSlots is invoked by the click handler)
-                                try { saveBtn?.click(); } catch (e) { console.warn('open save modal failed', e); proceedToReward(); }
-
-                            }, () => {
-                                // セーブしない場合はそのまま特典表示へ
-                                showClearRewardPopup(rewardHtml, () => {
-                                    markFirstFullClearRewardShown();
-                                    try {
-                                        const stats = getPlayerStats();
-                                        updateHud(stats, { isQuestMode: true });
-                                    } catch (e) {
-                                        console.warn('updateHud failed', e);
-                                    }
-                                    backToQuestMap();
-                                });
+                            // ※セーブ確認 →（必要ならスロット保存）→ 特典ポップアップは共通処理に集約
+                            promptSaveThenShowReward(getClearRewardHtml(), () => {
+                                markFirstFullClearRewardShown();
+                                try {
+                                    const stats = getPlayerStats();
+                                    updateHud(stats, { isQuestMode: true });
+                                } catch (e) {
+                                    console.warn('updateHud failed', e);
+                                }
+                                backToQuestMap();
                             });
                         } else {
                             backToQuestMap();
@@ -662,6 +691,60 @@ function showLevelUpEffect(i = 0) {
 /** 全クリア後に表示する特典内容のHTMLを返します。 */
 export function getClearRewardHtml() {
     return `<div style="text-align: center;">全クリアおめでとうございます！<br>以下の特典が開放されました。<br><br><div style="text-align: left; margin-top: 8px;">・新難易度【MASTER】（高難易度・高スコア倍率）<br>・新ワールド【ディープ・コア [EXTRA]】<br>・各ステージのノードイベントを自由に聞くことが可能<br>・ボスチャレンジモード（フリーモード内）<br>・クエストモードの星の振り直しが何回でも可能<br>・フリーモードのエネミーモード／クエストボスでアクティブスキルを使用可能（各モードでスキル／ストック数／星強化を自由に設定可）</div></div>`;
+}
+
+/** EXTRAワールド全クリア後に表示する特典内容のHTMLを返します。 */
+export function getExtraClearRewardHtml() {
+    return `<div style="text-align: center;">EXTRA CLEAR おめでとうございます！<br>以下の特典が開放されました。<br><br><div style="text-align: left; margin-top: 8px;">・トップメニューに【MUSIC】（収録曲を自由に再生できます）<br>・フリーモードでBGMを自由に選択可能（各モードの開始前に選択できます）</div></div>`;
+}
+
+/**
+ * 「セーブしますか？」の確認 →（必要ならスロット保存）→ 特典ポップアップ表示 を実行します。
+ * 全クリア（真エンディング）と EXTRA CLEAR の両方で使う共通処理です。
+ * @param {string} rewardHtml - 特典ポップアップに表示するHTML
+ * @param {function} onDone - 特典ポップアップを閉じたあとに呼ばれるコールバック
+ */
+function promptSaveThenShowReward(rewardHtml, onDone) {
+    showSaveConfirmPopup("セーブしますか？（スロットに保存）", () => {
+        // ユーザーが「セーブする」を選んだ → セーブモーダルを開いてスロット選択を促す
+        const saveBtn = document.getElementById('questSaveBtn');
+        const saveModalBack = document.getElementById('saveToQuestMenuBackBtn');
+
+        const cleanup = () => {
+            document.removeEventListener('questSlotSaved', onSlotSaved);
+            saveModalBack?.removeEventListener('click', onBackClicked);
+        };
+
+        const proceedToReward = () => {
+            cleanup();
+            showClearRewardPopup(rewardHtml, () => {
+                if (onDone) onDone();
+            });
+        };
+
+        const onSlotSaved = () => {
+            // セーブが完了したらモーダルを閉じて続行
+            try { document.getElementById('saveModal').classList.add('hidden'); } catch (e) {}
+            proceedToReward();
+        };
+
+        const onBackClicked = () => {
+            // ユーザーがモーダルを閉じた（セーブしなかった）場合も続行
+            proceedToReward();
+        };
+
+        document.addEventListener('questSlotSaved', onSlotSaved);
+        saveModalBack?.addEventListener('click', onBackClicked);
+
+        // open save modal (renderQuestSlots is invoked by the click handler)
+        try { saveBtn?.click(); } catch (e) { console.warn('open save modal failed', e); proceedToReward(); }
+
+    }, () => {
+        // セーブしない場合はそのまま特典表示へ
+        showClearRewardPopup(rewardHtml, () => {
+            if (onDone) onDone();
+        });
+    });
 }
 
 function showFinalLevelUp(startLv, endLv) {

@@ -101,6 +101,8 @@
         <button id="freeModeBtn">FREE MODE</button>
         <button id="recordsMenuBtn">RECORDS</button>
         <button id="onlineRankingBtn">ONLINE RANKING</button>
+        <!-- ★EXTRA CLEAR 特典：ミュージックプレイヤー（EXTRA全クリアで表示） -->
+        <button id="musicMenuBtn" style="display:none;">MUSIC</button>
         <button id="settingsBtn">SETTING</button>
       </div>
     </div>
@@ -125,32 +127,81 @@
 <!-- =====================================================
   「クエスト」セーブメニュー
 ===================================================== -->
-<!-- セーブモーダル -->
-<div id="saveModal" class="save-modal hidden">
-  <div id="questSaveMenu" class="save-modal-content">
-    <button id="saveToQuestMenuBackBtn" class="save-modal-close-btn" title="閉じる">×</button>
-    <h2>SAVE / LOAD</h2>
+<!-- セーブモーダル（★クエストモーダルUI：SKILL TREE / EQUIP SKILLS と同スタイル）
+     ・開閉は従来どおり hidden クラス（.quest-modal.hidden で非表示）
+     ・JS が参照する ID（saveModal / questSlots / saveToQuestMenuBackBtn）は維持 -->
+<div id="saveModal" class="quest-modal hidden">
+  <div id="questSaveMenu" class="quest-modal-box quest-modal-save">
+    <button id="saveToQuestMenuBackBtn" class="quest-modal-close-btn" title="閉じる">×</button>
+    <div class="quest-modal-title">SAVE / LOAD</div>
 
-    <div id="questSlots"></div>
+    <div class="quest-modal-content">
+      <div id="questSlots" class="quest-slot-list"></div>
+    </div>
   </div>
 </div>
-<!-- クリア報酬モーダル -->
-<div id="clearRewardModal" class="save-modal hidden">
-  <div id="clearRewardMenu" class="save-modal-content">
-    <button id="clearRewardModalCloseBtn" class="save-modal-close-btn" title="閉じる">×</button>
-    <h2>CLEAR REWARD</h2>
+<!-- クリア報酬モーダル（★クエストモーダルUI） -->
+<div id="clearRewardModal" class="quest-modal hidden">
+  <div id="clearRewardMenu" class="quest-modal-box quest-modal-reward">
+    <button id="clearRewardModalCloseBtn" class="quest-modal-close-btn" title="閉じる">×</button>
+    <div class="quest-modal-title">CLEAR REWARD</div>
 
-    <div id="clearRewardContent"></div>
+    <div class="quest-modal-content">
+      <div id="clearRewardContent" class="quest-reward-panel"></div>
+    </div>
   </div>
 </div>
-<!-- キーバインド設定モーダル（クエストマップのサイドメニューから k キーまたはボタンで開く）
-     内容は setting の KEY セクションと同じ keybinds を表示・編集する（localStorage "keybinds" を共有） -->
-<div id="keybindConfigModal" class="save-modal hidden">
-  <div class="save-modal-content">
-    <button id="keybindConfigCloseBtn" class="save-modal-close-btn" title="閉じる">×</button>
-    <h2>KEY BIND</h2>
-    <div id="keybindConfigContent" class="keybind-row"></div>
-    <button id="keybindConfigSaveBtn" style="display:block; margin:10px auto;">Save Keybinds</button>
+<!-- =====================================================
+  ミュージックプレイヤー（★EXTRA CLEAR 特典）
+  トップメニューの MUSIC ボタンから開く。収録曲を自由に再生できる。
+  UIは設定画面（fieldset + 行レイアウト）に合わせている。
+===================================================== -->
+<div id="musicModal" class="save-modal hidden">
+  <div id="musicMenuBox" class="save-modal-content music-modal-content">
+    <button id="musicModalCloseBtn" class="save-modal-close-btn" title="閉じる">×</button>
+    <h2>MUSIC</h2>
+
+    <!-- 再生中の曲と進捗バー（ドラッグでシーク可能） -->
+    <fieldset class="music-fieldset">
+      <legend>NOW PLAYING</legend>
+      <div class="music-nowplaying">
+        <div id="musicNowTitle" class="music-now-title">曲を選択してください</div>
+        <div id="musicProgressBar" class="music-progress">
+          <div id="musicProgressFill" class="music-progress-fill"></div>
+          <div id="musicProgressKnob" class="music-progress-knob"></div>
+        </div>
+        <div class="music-progress-time-row">
+          <span id="musicProgressTime" class="music-progress-time">0:00 / 0:00</span>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 曲リスト（縦スクロールのみ・横スクロールなし） -->
+    <fieldset class="music-fieldset">
+      <legend>TRACKS</legend>
+      <div class="music-modal-note">曲名をクリックで再生／停止（BGM設定・音量が適用されます）</div>
+      <div id="musicList" class="music-list"></div>
+    </fieldset>
+
+    <div class="music-modal-actions">
+      <button id="musicStopBtn" disabled>STOP</button>
+    </div>
+  </div>
+</div>
+<!-- キーバインド設定モーダル（クエストマップのサイドメニューから k キーまたはボタンで開く。★クエストモーダルUI）
+     内容は setting の KEY セクションと同じ keybinds を表示・編集する（localStorage "keybinds" を共有）
+     ※ #keybindConfigContent は設定画面と共用の .keybind-row を外し、モーダル専用の .keybind-modal-list にした -->
+<div id="keybindConfigModal" class="quest-modal hidden">
+  <div class="quest-modal-box quest-modal-keybind">
+    <button id="keybindConfigCloseBtn" class="quest-modal-close-btn" title="閉じる">×</button>
+    <div class="quest-modal-title">KEY BIND</div>
+
+    <div class="quest-modal-content">
+      <div id="keybindConfigContent" class="keybind-modal-list"></div>
+      <div class="quest-modal-actions">
+        <button id="keybindConfigSaveBtn" class="quest-modal-btn">Save Keybinds</button>
+      </div>
+    </div>
   </div>
 </div>
 <!-- =====================================================
@@ -188,6 +239,15 @@
 
   <!-- フリーモード詳細設定コンテナ -->
   <div id="freeModeConfig" class="free-config-container" style="display: none;">
+
+    <!-- ★EXTRA CLEAR 特典：BGM選択（EXTRA全クリアで表示。全モード共通の設定） -->
+    <div class="config-row" id="freeBgmRow" style="display: none;">
+      <label>BGM</label>
+      <select id="freeBgmSelect">
+        <option value="">モード既定</option>
+      </select>
+    </div>
+
     
     <div id="configStandard" class="mode-config-group">
       <div class="config-section-title">Standard Config</div>
@@ -513,6 +573,8 @@
   設定画面
 ===================================================== -->
 <div id="settings" style="display:none; margin-top:20px;">
+  <!-- ★他の戻るボタンと統一：右上×（IDは維持しJS結線を壊さない） -->
+  <button id="settingsBackBtn" class="save-modal-close-btn" title="閉じる">×</button>
   <h2>SETTING</h2>
 
   <div class="settings-grid">
@@ -706,13 +768,15 @@
     </div>
   </div>
 
-  <button id="settingsBackBtn">Back to Menu</button>
+
 
 </div>
 <!-- =====================================================
   記録画面
 ===================================================== -->
   <div id="records" style="display:none; margin-top:20px;">
+    <!-- ★他の戻るボタンと統一：右上×（IDは維持しJS結線を壊さない） -->
+    <button id="recordsBackBtn" class="save-modal-close-btn" title="閉じる">×</button>
     <div id="records-container">
 
       <div id="records-top">
@@ -763,7 +827,6 @@
 
         <div id="records-buttons">
           <button id="resetRecordsBtn">RESET</button>
-          <button id="recordsBackBtn">BACK</button>
         </div>
       </div>
 
@@ -776,6 +839,8 @@
   ONLINE RANKING
 ===================================================== -->
 <div id="onlineRankingScreen" class="ranking-screen hidden">
+  <!-- ★他の戻るボタンと統一：右上×（IDは維持しJS結線を壊さない） -->
+  <button id="rankingBackBtn" class="ranking-close-btn" title="閉じる">×</button>
   <h2>ONLINE RANKING</h2>
 
   <div id="onlineRankingModeButtons" class="ranking-tabs">
@@ -791,7 +856,6 @@
 
   <div id="rankingList"></div>
 
-  <button id="rankingBackBtn">BACK</button>
 </div>
 
 

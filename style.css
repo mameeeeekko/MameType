@@ -32,6 +32,14 @@ style.css
              'Yu Gothic UI', 'Meiryo', system-ui, sans-serif;
   /* 数字・等幅表示用 */
   --font-mono: 'Noto Sans Mono', 'Consolas', 'Courier New', monospace;
+
+  /* =====================================================
+     クエスト系モーダルのタイトル文字サイズ
+     DIFFICULTY / SKILL TREE / SKILL(EQUIP) / STAR UPGRADE /
+     SAVE・LOAD / KEY BIND / CLEAR REWARD の全画面で統一する。
+     ※個別に font-size を書かず、必ずこの変数を使用すること。
+     ===================================================== */
+  --quest-modal-title-size: 26px;
 }
 
 html {
@@ -204,7 +212,10 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 /* --- 上位モーダル (クエスト、設定など) --- */
 .quest-modal              { z-index: 10000; } /* クエストマップ: モーダル背景 */
 .quest-modal-box          { z-index: 10001; } /* クエストマップ: モーダル本体 */
-.save-modal               { z-index: 10010; } /* クエスト: セーブモーダル */
+.save-modal               { z-index: 10010; } /* クエスト: セーブモーダル（MUSIC 等で使用） */
+/* ★SAVE/LOAD・CLEAR REWARD・KEY BIND は .quest-modal の見た目で実装しているが、
+   従来の重なり順（.save-modal と同じ 10010）を維持する */
+#saveModal, #clearRewardModal, #keybindConfigModal { z-index: 10010; }
 .end-intro, #endIntro     { z-index: 10400; }  /* 結果画面: 表示前イントロ */
 .stage-intro              { z-index: 10400; } /* クエスト開始イントロ */
 #playerHud                { z-index: 10500; } /* プレイヤーHUD */
@@ -1994,7 +2005,6 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   border: 1px solid rgba(88, 166, 255, 0.4); /* Blue border from stats-window */
   border-radius: 14px; /* Rounded corners from stats-window */
   box-shadow: 0 8px 32px rgba(0,0,0,0.6); /* Shadow from stats-window */
-  position: relative;
 
   font-family: var(--font-ja);
 }
@@ -2026,10 +2036,22 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   box-shadow: 0 0 8px rgba(88, 166, 255, 0.35);
 }
 
+/* SETTING の×（右上）は、内部スクロールしても見失わないよう
+   sticky で上端に張り付ける。float + margin-bottom の打ち消しで
+   通常時のレイアウト（右上の絶対配置相当）を維持している。 */
+#settings #settingsBackBtn {
+  position: sticky;
+  top: 0;
+  float: right;
+  margin-bottom: -28px; /* 高さ(28px)分を相殺してレイアウトを維持 */
+  z-index: 20;
+}
+
 #settings h2 {
   margin-top: 0;
   margin-bottom: 5px; /* 狭く */
-  font-size: 1.3rem;
+  clear: both; /* ★sticky配置の×（float）の回り込みを防ぐ */
+  font-size: clamp(1.6rem, 4vw, 2rem); /* ★RECORDS/MUSIC/オンラインと統一 */
   font-weight: 900;
   font-style: bold;
   color: #85a8d3; /* Blueish header from stats-header */
@@ -2187,6 +2209,19 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   font-weight: 700;
 }
 
+/* ★EXTRA CLEAR バッジ（EXTRAワールド全クリア。CLEARED バッジの横に表示） */
+.slot-extra-cleared {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: linear-gradient(90deg,#a855f7,#6d28d9);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+}
+
 .slot-left {
   display: flex;
   align-items: center;
@@ -2204,17 +2239,19 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   background: rgba(239, 68, 68, 0.3);
 }
 
-/* 戻るボタンだけ強調 */
+/* 戻るボタンだけ強調（旧：下部BACKボタン用。右上×に移行済みのため無効化） */
+/*
 #settingsBackBtn {
   margin-top: 8px;
-  width: auto; /* Auto width */
-  padding: 10px 30px; /* More padding */
-  background: #4b5563 !important; /* Darker gray */
-  color: #ffffff !important; /* White text */
-  border: 1px solid #6b7280 !important; /* Gray border */
-  border-radius: 8px !important; /* Rounded corners */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important; /* Shadow */
+  width: auto;
+  padding: 10px 30px;
+  background: #4b5563 !important;
+  color: #ffffff !important;
+  border: 1px solid #6b7280 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
 }
+*/
 
 /* 音量リセットボタンのスタイル */
 .reset-btn {
@@ -2433,6 +2470,16 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   padding: 20px;
 }
 
+/* RECORDS の×（右上）はコンテンツをスクロールしても
+   見失わないように fixed で画面右上へ固定する。
+   top/right は #records の padding(20px) + 8px で位置を揃えている。 */
+#records #recordsBackBtn {
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 20;
+}
+
 /* 全体幅 */
 #records-container {
   max-width: 1000px;
@@ -2454,7 +2501,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 #records-header h2 {
-  font-size: 2.2rem;
+  font-size: clamp(1.6rem, 4vw, 2rem); /* ★SETTING/MUSIC/オンラインと統一 */
   font-weight: 900;
   color: #668ebc; /* サイバーブルー */
   text-shadow: 0 0 10px rgba(95, 153, 219, 0.446); /* サイバーブルーのシャドウ */
@@ -2807,9 +2854,6 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 #onlineRankingScreen {
   text-align: center;
   color: #222;
-}
-
-#onlineRankingScreen {
   position: fixed;
   inset: 0;
   display: flex;
@@ -2913,8 +2957,41 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #111;
 }
 
-#loadMoreRanking,
-#rankingBackBtn {
+/* ONLINE RANKING のタイトル（サイズのみ RECORDS/SETTING/MUSIC と統一。色はライトテーマの黒のまま） */
+#onlineRankingScreen h2 {
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  font-weight: 900;
+  color: #222;
+  text-align: center;
+}
+
+/* ONLINE RANKING 右上の閉じるボタン（×）。
+   他モーダルの ×（.save-modal-close-btn／.quest-modal-close-btn）と統一。
+   #onlineRankingScreen は position: fixed なので絶対配置の基準になる。
+   ※オンライン画面はライトテーマのため文字色だけ濃色にしている。 */
+#onlineRankingScreen .ranking-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #333;
+}
+
+#onlineRankingScreen .ranking-close-btn:hover {
+  color: #ff9800;
+}
+
+/* 旧：下部BACKボタン用スタイル（#rankingBackBtn は右上×に移行済み） */
+#loadMoreRanking {
   margin-top: 16px;
   padding: 12px 20px;
   border: none;
@@ -5351,6 +5428,13 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   padding-top:20px;
 }
 
+/* ★非表示制御：.quest-modal は display:flex のため .hidden 単体では
+   隠れない。main.js / questResult.js が add/remove する hidden クラスを
+   .quest-modal でも有効にする（キー処理の display 判定とも整合）。 */
+.quest-modal.hidden{
+  display:none;
+}
+
 .quest-modal-box{
     width: min(1000px, calc(var(--dvw) * 92));
     max-height: calc(var(--dvh) * 90);
@@ -5363,7 +5447,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 .quest-modal-title{
-    font-size:26px;
+    /* ★サイズは :root の --quest-modal-title-size に統一（個別指定しない） */
+    font-size:var(--quest-modal-title-size);
     margin-bottom:12px;
 }
 
@@ -5698,9 +5783,9 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   padding: 14px 20px;
 }
 
-/* タイトル：一回り小さくして上部の縦を削る */
+/* タイトル：サイズは --quest-modal-title-size に統一（上書きしない）。
+   余白だけ従来どおり詰めて上部の縦を削る。 */
 .quest-modal-box.quest-modal-skill .quest-modal-title {
-  font-size: 22px;
   margin-bottom: 8px;
 }
 
@@ -6715,42 +6800,54 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 /* =====================================================
-   クエストモードsaveSlots
+   クエストモード SAVE/LOAD スロット
+   （★クエストモーダルUI：SKILL TREE / EQUIP SKILLS のカードと同トーン）
    ===================================================== */
 
+/* スロットを縦に積む（枠は .quest-modal-box.quest-modal-save） */
+.quest-slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .quest-slot-card {
-  background: linear-gradient(145deg, #333333, #222222);
-  border: 2px solid #444;
-  border-radius: 10px;
-  padding: 8px;
-  margin: 6px 0;
-  color: #fff;
-  text-align: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  background: rgba(13, 17, 23, 0.92);      /* EQUIP SKILLS のカードと同じ配色 */
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 0;
+  color: #e6edf3;
+  text-align: left;
+  box-shadow: none;
 }
 
 .slot-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 13px;
   font-weight: bold;
-  margin-bottom: 5px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
 }
 
 .slot-date {
-  font-size: 0.75em;
-  color: #aaa;
+  font-size: 11px;
+  font-weight: normal;
+  color: #8b949e;
 }
 
 .slot-body {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 }
 
 .save-slot-row {
   display: block;
-  font-size: 0.85em;
-  margin: 3px 0;
+  font-size: 12px;
+  color: #c9d1d9;
+  margin: 2px 0;
 }
 
 .slot-actions {
@@ -6758,28 +6855,78 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   gap: 8px;
 }
 
+/* LOAD / SAVE ボタン：.quest-modal-btn と同じ見た目に統一 */
 .slot-actions button {
   flex: 1;
-  padding: 4px 5px;
+  padding: 6px 10px;
+  font-size: 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  background: #444444;
-  color: #fff;
+  transition: 0.2s;
+  background: #1e1e1e;
+  color: #ccc;
 }
 
 .slot-actions button:hover {
-  background: #666666;
+  background: #2a2a2a;
+  color: #fff;
 }
 
 .slot-empty {
   text-align: center;
-  padding: 18px 0;
-  color: #444;
-  font-size: 1.5em;
+  padding: 10px 0;
+  color: #5b6672;
+  font-size: 1em;
   font-weight: 900;
   letter-spacing: 0.2em;
-  opacity: 0.6;
+  opacity: 0.8;
+}
+
+/* =====================================================
+   SAVE/LOAD・CLEAR REWARD・KEY BIND モーダル
+   （★クエストモーダルUI：SKILL TREE / EQUIP SKILLS と同スタイル）
+   ・overlay / box / title / × / content は quest-modal の共通クラスを使用
+   ・ここでは 3 モーダル固有の「幅・縦スクロール・カード」だけを定義する
+   ・見た目を合わせるため font-size は書かず、余白と配色のみ指定する
+   ===================================================== */
+
+/* ボックス幅：STAR UPGRADE(720px) より控えめな同一サイズに揃える */
+.quest-modal-box.quest-modal-save,
+.quest-modal-box.quest-modal-reward,
+.quest-modal-box.quest-modal-keybind {
+  width: min(640px, calc(var(--dvw) * 92));
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 内容はボックス内でスクロール（縦はみ出し防止／階層は不変） */
+.quest-modal-box.quest-modal-save .quest-modal-content,
+.quest-modal-box.quest-modal-reward .quest-modal-content,
+.quest-modal-box.quest-modal-keybind .quest-modal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* CLEAR REWARD：報酬テキストをカード化
+   ※本文は JS が #clearRewardContent へ innerHTML で流し込む（カード用クラスを付与） */
+.quest-reward-panel {
+  padding: 14px 16px;
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.9;
+  color: #e6edf3;
+}
+
+/* KEY BIND：保存ボタンを中央寄せ */
+.quest-modal-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
 }
 
 .save-modal {
@@ -6813,7 +6960,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   box-shadow: 0 10px 30px rgba(0,0,0,0.6);
 }
 
-/* セーブ/ロードモーダル右上の閉じるボタン（×） */
+/* セーブ/ロードモーダル右上の閉じるボタン（×）。
+   quest-modal の ×（.quest-modal-close-btn）と同一見た目で統一。 */
 .save-modal-close-btn {
   position: absolute;
   top: 8px;
@@ -6836,26 +6984,274 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 /* =====================================================
-   キーバインド設定モーダル（クエストマップ）
+   ミュージックプレイヤー（★EXTRA CLEAR 特典）
+   UIは設定画面（fieldset + 行レイアウト）に合わせている。
+   横スクロールは出さない（折り返しで対処）
    ===================================================== */
-.keybind-modal-item {
+.music-modal-content {
+  width: 560px;
+  overflow-x: hidden;
+  /* ★#settings 相当のボックス（.save-modal-content のグレーは上書きする） */
+  background: rgba(13, 17, 23, 0.95);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  border-radius: 14px;
+  padding: 20px 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.music-modal-content h2 {
+  margin: 0 0 12px;
+  color: #85a8d3;
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  font-weight: 900;
+  letter-spacing: -1px;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+}
+
+/* 設定画面の fieldset と同じ見た目（#settings fieldset は別スコープのため新設） */
+.music-fieldset {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 8px;
+}
+
+.music-fieldset legend {
+  padding: 0 6px;
+  color: #f0f6fc;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.music-modal-note {
+  margin-bottom: 10px;
+  color: #b9b9b9;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* --- NOW PLAYING（進捗バー） --- */
+.music-nowplaying {
+  min-width: 0;
+}
+
+.music-now-title {
+  margin-bottom: 10px;
+  color: #f0f6fc;
+  font-size: 15px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.music-progress {
+  position: relative;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: none; /* ドラッグがスクロールと競合しないように */
+}
+
+.music-progress.disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.music-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #2f81f7, #58a6ff);
+  border-radius: inherit;
+  transition: width 0.12s linear;
+}
+
+/* ドラッグ中はプレビューに即座に追従させる */
+.music-progress.dragging .music-progress-fill {
+  transition: none;
+  background: linear-gradient(90deg, #58a6ff, #9ecbff);
+}
+
+.music-progress-knob {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.music-progress:hover .music-progress-knob,
+.music-progress.dragging .music-progress-knob {
+  opacity: 1;
+}
+
+.music-progress.disabled:hover .music-progress-knob {
+  opacity: 0;
+}
+
+.music-progress-time-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.music-progress-time {
+  color: #b9b9b9;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- TRACKS（曲リスト） --- */
+#musicList {
+  max-height: calc(var(--dvh) * 42);
+  overflow-y: auto;
+  overflow-x: hidden; /* 横スクロールは出さない */
+}
+
+.music-row {
+  display: grid;
+  grid-template-columns: 1fr auto; /* テキスト可変幅 / アイコン固定 */
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(88, 166, 255, 0.12);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.music-row:last-child {
+  border-bottom: none;
+}
+
+.music-row:hover {
+  background: rgba(88, 166, 255, 0.08);
+}
+
+.music-row.playing {
+  background: rgba(88, 166, 255, 0.18);
+}
+
+.music-row.playing .music-row-title {
+  color: #9ecbff;
+}
+
+.music-row-text {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: 2px;
+  min-width: 0; /* 長い曲名でも行を押し広げない */
+}
+
+.music-row-title {
+  color: #f0f6fc;
+  font-size: 14px;
+  font-weight: 700;
+  word-break: break-word; /* 横スクロールの代わりに折り返す */
+}
+
+.music-row-composer {
+  color: #a9a9a9;
+  font-size: 11px;
+  word-break: break-word;
+}
+
+.music-row-icon {
+  width: 22px;
+  color: #58a6ff;
+  font-size: 12px;
+  text-align: center;
+}
+
+.music-modal-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.music-modal-actions button {
+  min-width: 140px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #444444;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.music-modal-actions button:hover:not(:disabled) {
+  background: #666666;
+}
+
+.music-modal-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* =====================================================
+   キーバインド設定モーダル（クエストマップ）
+   ★クエストモーダルUI（SKILL TREE / EQUIP SKILLS）と同スタイル
+   ※項目は main.js が .keybind-modal-item を生成して
+     #keybindConfigContent(.keybind-modal-list) へ流し込む
+   ===================================================== */
+
+/* 項目の縦積みリスト（設定画面の .keybind-row とは別物） */
+.keybind-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 1項目＝ラベル左／セレクト右の行型カード */
+.keybind-modal-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(13, 17, 23, 0.92);      /* EQUIP SKILLS のカードと同じ配色 */
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 8px;
 }
 
 .keybind-modal-label {
-  font-size: 14px;
-  color: #c0c0c0;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #e6edf3;
   text-align: left;
 }
 
 .keybind-modal-controls select {
-  font-size: 14px;
-  padding: 2px 4px;
-  min-width: 100px;
+  font-size: 13px;
+  padding: 4px 6px;
+  min-width: 110px;
+  background: #0d1117;
+  color: #fff;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+
+/* 保存ボタン（.quest-modal-btn を継承）。モーダル内の文字サイズに合わせる */
+#keybindConfigSaveBtn {
+  padding: 8px 18px;
+  font-size: 13px;
 }
 
 /* =====================================================
@@ -7531,6 +7927,56 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   letter-spacing: 12px;
   color: #fff;
   text-shadow: 0 0 24px rgba(255, 255, 255, 0.35);
+}
+
+/* =====================================================
+   ★EXTRAクリア演出（暗転 → 台詞 → THE END）
+   ===================================================== */
+.extra-ending-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 28500; /* 暗転(.true-ending-blackout)より手前 */
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+  pointer-events: none;
+}
+
+.extra-ending-text {
+  margin: 0;
+  color: #fff;
+  font-size: 26px;
+  font-family: var(--font-ja);
+  line-height: 1.9;
+  letter-spacing: 1.5px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.7s ease-out;
+}
+
+.extra-ending-text.show {
+  opacity: 1;
+}
+
+.extra-ending-the-end {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 72px;
+  font-weight: bold;
+  letter-spacing: 8px;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  transition: opacity 1.4s ease-out;
+}
+
+.extra-ending-the-end.show {
+  opacity: 1;
 }
 
 /* =====================================================

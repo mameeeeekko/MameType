@@ -25,7 +25,7 @@ import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats,
     getStarUpgradeCooldownMultiplier, addTotalStarsEarned  } from "./questPlayerStats.js";
 import { getCurrentDifficulty, getDifficulty } from "./difficulties.js";
 import { getPlayerStats, updatePlayerStats } from "./playerStats.js";
-import { markCleared, setStar, getStar, hasDialogueBeenPlayed, hasSeenTrueEnding } from "./questProgress.js";
+import { markCleared, setStar, getStar, hasDialogueBeenPlayed, hasSeenTrueEnding, markExtraCleared } from "./questProgress.js";
 import { STAR_EVALUATORS } from "./starEvaluator.js";
 import { submitScore } from "../online/submitScore.js"; 
 import { RANKING_VERSION } from "../js/version.js";
@@ -1156,6 +1156,9 @@ function transitionToNextPhase(now) {
     resolvedBgm = nextPhase.bgm || gameState.currentQuestNode?.bgm || resolvedBgm;
     resolvedBgImage = nextPhase.bgImage || gameState.currentQuestNode?.bgImage || resolvedBgImage;
 
+    // ★EXTRA CLEAR 特典：フリーモードでBGMが選択されている場合はフェーズ移行後も維持する
+    if (lastEnemyConfig?.isFreeMode && lastEnemyConfig.bgm) resolvedBgm = lastEnemyConfig.bgm;
+
     // ★ 背景画像も更新
     stats.activeBgImage = resolvedBgImage;
 
@@ -1836,6 +1839,8 @@ export async function startEnemyMode(config = {}) {
         bossPhaseIndex: config.bossPhaseIndex ?? null,
         // ★フリーモードのアクティブスキル設定（RESTART / PLAY AGAIN でも維持する）
         freeSkill: config.freeSkill ?? null,
+        // ★EXTRA CLEAR 特典：フリーモードのBGM選択（RESTART / PLAY AGAIN / フェーズ移行でも維持する）
+        bgm: config.bgm ?? null,
     };
     console.log("[startEnemyMode] config.bossOnly:", config.bossOnly, "lastEnemyConfig.bossOnly:", lastEnemyConfig.bossOnly);
 
@@ -2215,6 +2220,10 @@ export async function startEnemyMode(config = {}) {
             resolvedBgImage = currentPhase.bgImage;
         }
     }
+
+    // ★EXTRA CLEAR 特典：フリーモードでBGMが選択されている場合は最優先で使用する
+    //   （クエストモードのBGM解決には影響させない）
+    if (config.isFreeMode && config.bgm) resolvedBgm = config.bgm;
     
     gameState.enemyStats.activeBgm = resolvedBgm;
     // ★ gameStateに背景画像を保存
@@ -2641,6 +2650,14 @@ export async function endEnemyMode(isAbort = false) {
             if (node.stage === "LAST_BOSS") {
                 gameState.isTrueEnding = true;
                 console.log("TRUE ENDING FLAG SET");
+            }
+
+            // ★ EXTRAワールド最終ボス（ExB）撃破後、EXTRAクリア演出フラグを立てる
+            //   （クリア演出はリザルト画面のBACKで開始される）
+            if (node.id === "WEX_BOSS") {
+                markExtraCleared();
+                gameState.isExtraEnding = true;
+                console.log("EXTRA CLEAR FLAG SET");
             }
 
             // ★ステージ報酬（slot + stock）

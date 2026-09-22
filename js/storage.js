@@ -710,6 +710,8 @@ export function saveQuestSlot(slotIndex) {
       cleared: progress.cleared?.length ?? 0,
       // ★ 全クリア＝真エンディング到達（スロット固有。グローバル実績は参照しない）
       hasSeenTrueEnding: !!progress.hasSeenTrueEnding,
+      // ★ EXTRA全クリア＝WEX_BOSS撃破（スロット固有。EXTRA CLEARバッジの表示に使う）
+      hasExtraCleared: !!progress.hasExtraCleared,
       currentStars: calcSlotStars(stars), // スロット固有の獲得★
       maxStars: calcSlotMaxStars(progress), // スロット固有の最大★
       playTime: stats.questRecord?.totalPlayTime ?? 0 // プレイ時間（秒）

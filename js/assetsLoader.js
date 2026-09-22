@@ -214,6 +214,23 @@ async function _loadAssetList(assetList, onProgress) {
 // ======================================================================
 registerSoundAssets([...coreAssets, ...remainingAssets]);
 
+// ======================================================================
+// ★EXTRA CLEAR 特典：BGM一覧の取得
+// ----------------------------------------------------------------------
+//  ミュージックプレイヤー（トップメニュー）とフリーモードのBGM選択で使う。
+//  BGMを追加するときは、このファイルの coreAssets / remainingAssets に
+//  1行追記するだけで両方のUIに自動反映される（定義元を一本化するため）。
+// ======================================================================
+export function getBgmAssets() {
+  return [...coreAssets, ...remainingAssets]
+    .filter(a => a.type === "sound" && typeof a.name === "string" && a.name.startsWith("bgm_"))
+    .map(a => ({
+      name: a.name,
+      title: a.title || a.name,
+      composer: a.composer || "-",
+    }));
+}
+
 async function loadCoreAssets(onProgress) {
   // 音声の初期化（ブラウザポリシー対応）
   await initAudio();

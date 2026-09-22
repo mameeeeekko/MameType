@@ -38,6 +38,9 @@ let buffers = {};
 let bgmSource = null;
 let bgmSourceGain = null; // 現在再生中のBGMの個別ゲイン（フェードアウト用）
 let currentBgmName = null; // 現在再生中のBGM名（フェード切り替え判定用）
+// ★EXTRA CLEAR 特典：ミュージックプレイヤー用の再生位置情報
+let bgmStartedAt = 0;   // 再生（またはシーク）を開始した AudioContext 時刻
+let bgmStartOffset = 0; // 再生開始位置（秒。シーク対応用）
 
 // ★ BGMフェード管理（古いタイマーの暴発防止）
 let bgmRequestId = 0;        // BGM操作の世代管理（新しい操作で古いタイマーを無効化）
@@ -955,6 +958,9 @@ export function playBGM(name="bgm1", volume=1.0){
     bgmSource = source;
     bgmSourceGain = gain;
     bgmFadeOutActive = false;
+    // ★EXTRA CLEAR 特典：進捗バー／シーク用に開始時刻・開始位置を記録する
+    bgmStartedAt = ctx.currentTime;
+    bgmStartOffset = 0;
 }
 
 export function stopBGM(){
@@ -981,6 +987,82 @@ export function stopBGM(){
     }
 
     currentBgmName = null;
+    // ★EXTRA CLEAR 特典：再生位置情報もリセット
+    bgmStartedAt = 0;
+    bgmStartOffset = 0;
+}
+
+// =====================================================
+// ★EXTRA CLEAR 特典：再生位置の取得とシーク
+// -----------------------------------------------------
+//  ・ミュージックプレイヤー（トップメニューのMUSIC）の進捗バー用
+//  ・BGMはループ再生のため、getBgmPlaybackInfo() は「ループ内の位置」を返す
+//  ・seekBGM() は AudioBufferSourceNode の仕様上、ループ途中を直接ジャンプ
+//    できないため、同じゲインで Source を作り直して指定位置から再生する
+// =====================================================
+
+/**
+ * 現在再生中のBGMの再生位置情報を返します。
+ * @returns {{name: string, duration: number, elapsed: number}|null} 再生していない場合は null
+ */
+export function getBgmPlaybackInfo() {
+    if (!bgmSource || !currentBgmName || bgmStartedAt <= 0) return null;
+
+    const ctx = getAudioContext();
+    if (!ctx) return null;
+
+    const buffer = buffers[currentBgmName];
+    const duration = buffer?.duration ?? 0;
+    if (!duration || duration <= 0) return null;
+
+    const raw = bgmStartOffset + (ctx.currentTime - bgmStartedAt);
+    const elapsed = ((raw % duration) + duration) % duration;
+    return { name: currentBgmName, duration, elapsed };
+}
+
+/**
+ * 再生中のBGMを指定位置へシークします（ループ再生は維持）。
+ * @param {number} offsetSec - 先頭からの位置（秒）
+ * @returns {boolean} シークできたかどうか
+ */
+export function seekBGM(offsetSec = 0) {
+    // フェードアウト中は音量を自動制御中のためシークしない
+    if (bgmFadeOutActive) return false;
+    if (!bgmSource || !currentBgmName || !bgmSourceGain) return false;
+
+    const ctx = getAudioContext();
+    if (!ctx) return false;
+
+    const buffer = buffers[currentBgmName];
+    const duration = buffer?.duration ?? 0;
+    if (!buffer || duration <= 0) return false;
+
+    // 範囲内にクランプ（負値・超過はループ位置として正規化）
+    let offset = Number(offsetSec);
+    if (!Number.isFinite(offset)) return false;
+    offset = ((offset % duration) + duration) % duration;
+
+    const gain = bgmSourceGain;
+
+    // 旧Sourceのみ停止（ゲイン・曲名・音量設定は維持する）
+    try { bgmSource.stop(); } catch (e) { /* 無視 */ }
+    try { bgmSource.disconnect(); } catch (e) { /* 無視 */ }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(gain);
+
+    if (ctx.state !== "running") {
+        ctx.resume();
+    }
+
+    source.start(0, offset);
+
+    bgmSource = source;
+    bgmStartedAt = ctx.currentTime;
+    bgmStartOffset = offset;
+    return true;
 }
 
 /**
@@ -2847,6 +2929,12 @@ export function renderFreezeAura(
     // ===============
     // 残り時間表示
     // ===============
+    // ★ここより上の「中央の薄い氷色」で globalAlpha を alpha*0.12（≒0.02〜0.07）まで
+    //   落としているため、秒数表示の前に必ず 1 へ戻す。
+    //   （戻し忘れるとBOX・文字がほぼ透明になり「秒数が出ない」ように見える）
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0; // リング用のグロー(12)がBOX・文字に付かないよう消す
+
     const remainSec = Math.max(1, Math.ceil(enemy.freezeTimer));
     const timeText = remainSec + "s";
 

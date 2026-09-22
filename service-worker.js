@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.44";
+const CACHE_NAME = "mametype-v1.0.46";
 
 // =====================================================
 // オフライン用キャッシュ（固定名）
@@ -80,6 +80,8 @@ const CORE_ASSETS = [
   "./js/typingLogic.js",
   "./js/version.js",
   "./js/analytics.js",
+  // ★EXTRA CLEAR 特典：ミュージックプレイヤー
+  "./js/musicPlayer.js",
 
   // ---------------------------------------------------
   // クエスト / スキルツリー関連JS
