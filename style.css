@@ -2036,21 +2036,41 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   box-shadow: 0 0 8px rgba(88, 166, 255, 0.35);
 }
 
-/* SETTING の×（右上）は、内部スクロールしても見失わないよう
-   sticky で上端に張り付ける。float + margin-bottom の打ち消しで
-   通常時のレイアウト（右上の絶対配置相当）を維持している。 */
+/* SETTING の×は常にモーダル枠の右上に固定する。
+   #settings は transform を持つため、子の position:fixed の基準は
+   モーダル枠（#settings の padding box）になり、内部スクロールでも
+   位置が動かない。
+   また #settings button（背景・枠・角丸・影・余白・文字サイズ）を
+   ここで打ち消し、装飾なしのシンプルな×だけを表示する。 */
 #settings #settingsBackBtn {
-  position: sticky;
-  top: 0;
-  float: right;
-  margin-bottom: -28px; /* 高さ(28px)分を相殺してレイアウトを維持 */
+  position: fixed;
+  top: 8px;
+  right: 8px;
   z-index: 20;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: none;
+}
+
+/* 装飾なしのまま、色のフィードバックだけ残す */
+#settings #settingsBackBtn:hover {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: #ff9800;
 }
 
 #settings h2 {
   margin-top: 0;
   margin-bottom: 5px; /* 狭く */
-  clear: both; /* ★sticky配置の×（float）の回り込みを防ぐ */
+  /* clear: both; は右上×が position:fixed（float なし）になったため不要 */
   font-size: clamp(1.6rem, 4vw, 2rem); /* ★RECORDS/MUSIC/オンラインと統一 */
   font-weight: 900;
   font-style: bold;
@@ -2472,12 +2492,16 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 /* RECORDS の×（右上）はコンテンツをスクロールしても
    見失わないように fixed で画面右上へ固定する。
-   top/right は #records の padding(20px) + 8px で位置を揃えている。 */
+   top/right は #records の padding(20px) + 8px で位置を揃えている。
+   ※装飾はなくし、シンプルな×のみ。余白は 0 にして top/right を
+     そのまま効かせる（SETTING の×と同じ見た目）。 */
 #records #recordsBackBtn {
   position: fixed;
   top: 28px;
   right: 28px;
   z-index: 20;
+  margin: 0;
+  padding: 0;
 }
 
 /* 全体幅 */
@@ -2735,18 +2759,20 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   margin-top: 12px;
 }
 
-/* 戻るボタンだけ強調 */
+/* 旧：戻るボタンだけ強調（グレーの角丸ボタン）。
+   装飾なしのシンプルな×（SETTING と統一）に変更したため無効化。
+   位置と余白は上の「RECORDS の×（右上）」ブロックで指定している。
 #records #recordsBackBtn {
   margin-top: 8px;
-  flex: none; /* flexコンテナ内で幅が引き伸ばされるのを防ぐ */
-  width: auto; /* Auto width */
-  padding: 6px 16px !important; /* Paddingをさらに小さく調整 */
-  background: #4b5563; /* Darker gray */
-  color: #ffffff; /* White text */
-  border: 1px solid #6b7280; /* Gray border */
-  border-radius: 8px; /* Rounded corners */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Shadow */
-  font-size: 12px; /* フォントサイズをさらに小さく */
+  flex: none;
+  width: auto;
+  padding: 6px 16px !important;
+  background: #4b5563;
+  color: #ffffff;
+  border: 1px solid #6b7280;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  font-size: 12px;
   transition: 0.15s;
   cursor: pointer;
   font-weight: 700;
@@ -2756,6 +2782,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   background: #5a6573;
   border-color: #7c8694;
 }
+*/
 
 #records-buttons button {
   flex: 1;

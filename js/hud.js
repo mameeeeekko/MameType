@@ -1,7 +1,7 @@
 import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEMENTS, getAchievementProgress } from "./playerStats.js";
 import { savePlayerStats } from "./storage.js";
 import { getPlayerStatsForEnemy, getStarUpgradeLevel, getStarUpgradeTimeFactor, STAR_UPGRADE_MAX_LEVEL } from "./questPlayerStats.js";
-import { getClearedStageCount, getTotalStars, getAvailableMaxStars, hasSeenTrueEnding } from "./questProgress.js";
+import { getClearedStageCount, getTotalStars, getAvailableMaxStars, hasSeenTrueEnding, hasExtraCleared } from "./questProgress.js";
 import { PASSIVE_SKILLS, ACTIVE_SKILLS, getSkillById } from "./questSkills.js";
 import { QUEST_MAP } from "./questMap.js";
 import { SKILL_TREE } from "./skillTree.js";
@@ -310,6 +310,9 @@ function setupStatsModal(options = {}) {
   });
 }
 
+// ★全クリア（C）／EXTRA全クリア（Ex）バッジの共通スタイル（C と同じUI・同じ色）
+const CLEAR_BADGE_STYLE = "display: inline-block; background-color: #fadb14; color: #1c1c1c; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: bold; margin-left: 4px; vertical-align: middle;";
+
 function updateQuestHud() {
   const s = getPlayerStatsForEnemy("quest") || {};
 
@@ -359,8 +362,10 @@ function updateQuestHud() {
   : 0;
 
   if (clearEl) {
-    const crownBadge = hasSeenTrueEnding() ? '<span style="display: inline-block; background-color: #fadb14; color: #1c1c1c; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: bold; margin-left: 4px; vertical-align: middle;">C</span>' : '';
-    clearEl.innerHTML = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%) 　 ${crownBadge}`;
+    // ★全クリアマーク「C」の右隣に、EXTRA全クリアマーク「Ex」を同じ見た目（CLEAR_BADGE_STYLE）で表示する
+    const clearBadge = hasSeenTrueEnding() ? `<span style="${CLEAR_BADGE_STYLE}">C</span>` : '';
+    const extraBadge = hasExtraCleared()  ? `<span style="${CLEAR_BADGE_STYLE}">Ex</span>` : '';
+    clearEl.innerHTML = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%) 　 ${clearBadge}${extraBadge}`;
   }
 }
 

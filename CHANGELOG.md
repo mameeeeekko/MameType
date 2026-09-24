@@ -2,6 +2,21 @@
 
 ---
 
+## [1.0.47] - 2026-09-24
+
+### Added
+- **クエストモードHUDの CLEAR 行に「EXTRA全クリアマーク（Ex）」を追加**
+  - `js/hud.js` の `updateQuestHud()` で、既存の全クリアマーク「C」（`hasSeenTrueEnding()`）の**右隣**に、EXTRA全クリア時（`hasExtraCleared()`）のみ「Ex」バッジを表示
+  - 見た目は「C」と完全に同一（`CLEAR_BADGE_STYLE` を C / Ex で共有）。背景 `#fadb14` ／ 文字色 `#1c1c1c` ／ 角丸 4px ／ `padding: 1px 5px` ／ `font-size: 10px` ／ bold ／ `margin-left: 4px` ／ `vertical-align: middle`
+  - 表示先は `index.html` の `#hudClear`（クエストHUD）。`index.html` / `style.css` は変更なし（従来どおりインラインスタイル方式）
+
+### Changed
+- **アプリケーションバージョンを `1.0.47` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.47` に更新
+  - Service Worker のキャッシュ名を `mametype-v1.0.47` に更新
+
+---
+
 ## [1.0.46] - 2026-09-21
 
 ### Changed
