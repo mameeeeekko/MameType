@@ -30,6 +30,25 @@ export function isBossEnemy(enemy) {
     );
 }
 
+/**
+ * 通常敵にだけTier倍率を適用するための判定。
+ * 固定砲台・ボス・ビットは個別の攻撃設定や専用バランスを維持する。
+ */
+function getTierDamageMultiplierForEnemy(enemy, state) {
+    if (
+        !enemy ||
+        enemy.isFixed ||
+        enemy.isBit ||
+        enemy.isBitBoss ||
+        isBossEnemy(enemy)
+    ) {
+        return 1;
+    }
+
+    const multiplier = Number(state?.tierDamageMultiplier);
+    return Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1;
+}
+
 // =====================================================
 // 敵タイプ生成ルール
 /*
@@ -78,9 +97,9 @@ const SHAPE_PROPS = {
 };
 
 const SIZE_PROPS = {
-    LARGE:  { name: "Large",  size: 28, damage: 60, minLen: 8, maxLen: 15, scoreMultiplier: 2.0, killSound: 5, killedEffect: "enemy2" },
-    NORMAL: { name: "Normal", size: 20, damage: 30, minLen: 5,  maxLen: 10, scoreMultiplier: 1.2, killSound: 1, killedEffect: "enemy1" },
-    SMALL:  { name: "Small",  size: 12, damage: 15, minLen: 2,  maxLen: 4,  scoreMultiplier: 0.8, killSound: 1, killedEffect: "enemy1" },
+    LARGE:  { name: "Large",  size: 28, damage: 70, minLen: 8, maxLen: 15, scoreMultiplier: 2.0, killSound: 5, killedEffect: "enemy2" },
+    NORMAL: { name: "Normal", size: 20, damage: 40, minLen: 5,  maxLen: 10, scoreMultiplier: 1.2, killSound: 1, killedEffect: "enemy1" },
+    SMALL:  { name: "Small",  size: 12, damage: 20, minLen: 2,  maxLen: 4,  scoreMultiplier: 0.8, killSound: 1, killedEffect: "enemy1" },
 };
 
 const PATTERN_PROPS = {
@@ -382,7 +401,12 @@ export class Enemy {
                 spawnHitWave(player.x, player.y);
             }
 
-            const damage = calcDamage(this.type, player, difficulty); // 変更なし（正しい）
+            const damage = calcDamage(
+                this.type,
+                player,
+                difficulty,
+                getTierDamageMultiplierForEnemy(this, state)
+            );
 
             // 無敵タイマーがあればダメージ無効
             if (player.invincibleTimer > 0) {
@@ -692,7 +716,14 @@ export class Enemy {
         const baseDamage = Math.floor(behavior.damage * (1 - completionRatio));
 
         // ダメージ計算（防御反映）
-        const damage = calcDamage({ damage: baseDamage }, player, difficulty);
+        // 通常敵の行動攻撃には現在のTier倍率を適用する。
+        // 固定砲台／ボス／ビットはgetTierDamageMultiplierForEnemy()で倍率1になる。
+        const damage = calcDamage(
+            { damage: baseDamage },
+            player,
+            difficulty,
+            getTierDamageMultiplierForEnemy(this, state)
+        );
 
         // エフェクト演出
         const options = {
@@ -724,7 +755,12 @@ export class Enemy {
         const blocked = (player.invincibleTimer || 0) > 0;
         const damage = blocked
             ? 0
-            : calcDamage({ damage: baseDamage }, player, difficulty);
+            : calcDamage(
+                { damage: baseDamage },
+                player,
+                difficulty,
+                getTierDamageMultiplierForEnemy(this, state)
+            );
 
         // 固定砲台の laser は防御ワードを生成しない。
         // 基礎防御力では軽減できるが、防御スキルの無敵時間のみを完全防御とする。
@@ -871,6 +907,11 @@ export class Enemy {
         const speed = behavior.bullet.speed;
         const count = behavior.bullet.count || 1;
         const origin = this.getAttackOrigin();
+        const tierDamageMultiplier = getTierDamageMultiplierForEnemy(this, state);
+        const bulletConfig = {
+            ...behavior.bullet,
+            tierDamageMultiplier
+        };
 
         const reserved = new Set();
 
@@ -898,7 +939,7 @@ export class Enemy {
                 origin.y,
                 vx,
                 vy,
-                behavior.bullet
+                bulletConfig
             );
 
             state.enemyBullets.push(bullet);
@@ -1008,8 +1049,14 @@ export class BulletEnemy extends Enemy{
 
         if( dist < player.radius + this.type.size){
 
-            // 弾によるダメージは防御を反映するため calcDamage を使う
-            const damage = calcDamage(this.type, player, difficulty); // ★ .enemy を削除
+            // 弾によるダメージは防御を反映してTier倍率も適用する。
+            // 通常敵の弾はfireBullet()で倍率を付与し、固定砲台／ボスの弾は倍率1のまま。
+            const damage = calcDamage(
+                this.type,
+                player,
+                difficulty,
+                this.type.tierDamageMultiplier
+            ); // ★ .enemy を削除
 
             if (player.invincibleTimer > 0) {
                 if (this.type.isTurretBullet) {
@@ -1106,9 +1153,14 @@ export class BulletEnemy extends Enemy{
 // =================================
 // ダメージ計算
 // =================================
-function calcDamage(enemyType, player, difficulty) {
+function calcDamage(enemyType, player, difficulty, tierDamageMultiplier = 1) {
 
     const baseDamage = enemyType.damage;
+    const tierMultiplier = Number(tierDamageMultiplier);
+    const safeTierMultiplier =
+        Number.isFinite(tierMultiplier) && tierMultiplier > 0
+            ? tierMultiplier
+            : 1;
 
     // 防御による減衰（diminishing returns）方式
     // defFactor = 1 - DEF/(DEF + K)  => 実際の被ダメージ割合
@@ -1132,7 +1184,9 @@ function calcDamage(enemyType, player, difficulty) {
     const defenseFactor = 1 - defense / (defense + K);
     const clampedDefenseFactor = Math.max(0.2, defenseFactor); // 最低20%のダメージを保証
 
-    let damage = Math.floor(baseDamage * clampedDefenseFactor * diffMultiplier);
+    let damage = Math.floor(
+        baseDamage * safeTierMultiplier * clampedDefenseFactor * diffMultiplier
+    );
 
     // ★最低ダメージ保証
     const MIN_DAMAGE = 1;

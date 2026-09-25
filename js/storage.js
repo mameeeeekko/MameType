@@ -472,7 +472,9 @@ export function clearPlayerStats() {
 }
 
 // ================================
-// Full Backup（統合バックアップ）
+// Legacy JSON Full Backup（旧形式）
+// 通常Export/Importは js/saveFile.js の exportSaveFile / importSaveFile を使う。
+// この関数は設定画面には表示せず、開発・旧バックアップとの互換性のため残す。
 // ================================
 export function exportAllData(stats = null) {
   const backup = {
@@ -850,7 +852,9 @@ export function startQuestFromBeginning(defaultStats = null) {
 }
 
 // ================================
-// Quest Backup
+// Legacy JSON Quest Backup（旧形式）
+// 暗号統合フォーマットとは相互変換しない。通常は js/saveFile.js を使う。
+// 設定画面には表示せず、開発・旧形式互換用としてソース上だけに保持する。
 // ================================
 export function exportQuestData() {
   const backup = {

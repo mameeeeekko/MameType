@@ -1558,7 +1558,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "ですが、残された記録まで消えたわけではありません。" },
             { character: "ナビ", text: "念のため、しばらく監視を続けます。" },
 
-            { character: "オペレーター", text: "……なんか、変じゃない？",
+            { character: "オペレーター", text: "……",
                 choiceId: "W2_Q31_start_3",
                 choices: [
                     { text: "……なんか、変じゃない？", response: { character: "ナビ", text: "……わたしも、そう感じています。" }},

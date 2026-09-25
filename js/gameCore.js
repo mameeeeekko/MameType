@@ -157,6 +157,8 @@ export const gameState = {
     currentMode: null,
     isQuestMode: false,
     isFreeMode: false, // フリーモードかどうか
+    // エネミーモードで現在のステージ／フェーズに適用するTier倍率
+    tierDamageMultiplier: 1,
     isEnding: false, //イントロ中にポーズを走らせないために使う
     // ★全クリア特典：フリーモード専用アクティブスキル（クエストとは独立）
     freeSkillEnabled: false, // フリーモードでスキル設定が有効かどうか
@@ -230,6 +232,8 @@ export function resetAllModes() {
   gameState.currentMode = null;
   gameState.currentQuestNode = null;
   gameState.isQuestMode = false;
+  // エネミーモード終了／別モード移行時に前ステージのTier倍率を持ち越さない
+  gameState.tierDamageMultiplier = 1;
   // ※ gameState.isFreeMode はここでリセットしない
   //   （ESC/ポーズB のメニュー遷移判定が fullResetGame 後の値に依存しているため。
   //     次のモード開始時に各所で明示的に上書きされる）

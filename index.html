@@ -734,37 +734,21 @@
         </div>
       </fieldset>
 
-      <!-- デイリーのバックアップ！ -->
+      <!-- 暗号化された通常セーブ（Daily / Quest / 共通設定の1ファイル） -->
       <fieldset>
-        <legend>DAILY DATA</legend>
+        <legend>BACKUP DATA</legend>
         <div class="data-btn-row">
-          <button id="exportPlayerStatsBtn">Export</button>
-          <button id="importPlayerStatsBtn">Import</button>
-          <button id="resetPlayerStatsBtn">Reset</button>
+          <button id="exportSaveFileBtn">Export</button>
+          <button id="importSaveFileBtn">Import</button>
+          <button id="resetSaveFileBtn" class="backup-reset-button">Reset</button>
         </div>
-        <input type="file" id="importPlayerStatsFile" accept=".json" style="display:none">
+        <input type="file" id="importSaveFileInput" accept=".mametype,.dat,application/octet-stream" style="display:none">
         <div class="setting-description">
-          デイリーモードのプレイデータ一式（プレイヤーステータス・記録・ランキングなど）をバックアップします。
+          デイリー・クエスト・共通設定を1個の暗号化ファイル（<strong>.mametype</strong>）にまとめます。
           <br>
-          PCの買い替えやブラウザのデータを消去する前に「Export」でJSONファイルを保存しておくと、
-          新しい環境で「Import」を選ぶことでデータを復元できます。
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>QUEST DATA</legend>
-        <div class="data-btn-row">
-          <button id="exportQuestBtn">Export</button>
-          <button id="importQuestBtn">Import</button>
-          <button id="resetQuestBtn">Reset</button>
-        </div>
-        <input type="file" id="importQuestFile" accept=".json" style="display:none">
-        <div class="setting-description">
-          クエストモードのセーブデータ（進行状況・プレイヤー情報・アンロック済みステージなど）をバックアップします。
+          ファイルはテキストエディターでは内容を直接編集できません。別ブラウザー間のデータ移行にも使用できます。
           <br>
-          別の環境へ引き継ぐ際は「Export」で保存し、「Import」で復元してください。
-          <br>
-          <strong style="color: #ffc107;">「Reset」を押すとクエストモードのデータがすべて消えるため注意してください。</strong>
+          <strong class="backup-reset-warning">Reset</strong>はデイリー・クエスト・共通設定をすべて初期化します。Player ID・復元コード・プロフィール・端末固有の状態・オフラインデータは残ります。
         </div>
       </fieldset>
 

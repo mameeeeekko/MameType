@@ -19,7 +19,7 @@ import { handleGlobalSoundToggle } from "./main.js";
 import { gameState, setGameActive, renderState, setLastWasEnemyMode, getSoundSettings, getSoundEnabled, resetGameState, setPaused, getPaused, getNow, getERank } from "./gameCore.js";
 import { GameModes, QUEST_MAP } from "./gameModes.js";
 import { addRankingEntry } from "./storage.js";
-import { ENEMY_MODE_CONFIG, STAGES } from "./enemyModeConfig.js";
+import { ENEMY_MODE_CONFIG, STAGES, getTierDamageMultiplier, getTierFromEnemyTable } from "./enemyModeConfig.js";
 import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats,
     applySkillNodeEffect, hasReceivedStageReward, markStageRewardReceived,
     getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed, addQuestActiveSkillUse, addQuestStageAttempt, getActiveSkillStockMax,
@@ -38,6 +38,36 @@ import { trackGameStart, mapModeIdToAnalytics } from "./analytics.js";
 
 import { closeDialogue, startDialogue, DIALOGUE_DATA, showDialoguePlaybackChoicePopup } from "./dialogue.js";
 let currentStage = "STAGE1";
+
+/**
+ * STAGE1〜STAGE100 のIDからTierキーを取得する。
+ * localStorageから復元された旧ステージデータ用。
+ */
+function getTierFromStageId(stageId) {
+    const match = /^STAGE(\d+)$/.exec(String(stageId || ""));
+    if (!match) return null;
+
+    const stageNumber = Number.parseInt(match[1], 10);
+    if (!Number.isFinite(stageNumber) || stageNumber < 1) return null;
+    return `T${Math.min(10, Math.ceil(stageNumber / 10))}`;
+}
+
+/**
+ * 現在のフェーズを優先してTierキーを解決する。
+ * getTierEnemies()由来のテーブルはWeakMapで解決し、
+ * 旧キャッシュや手動テーブルは明示値／STAGE番号にフォールバックする。
+ */
+function resolveCurrentTierKey(stage, currentPhase) {
+    return currentPhase?.tier
+        ?? currentPhase?.spawn?.tier
+        ?? getTierFromEnemyTable(currentPhase?.enemyTable)
+        ?? stage?.tier
+        ?? stage?.spawn?.tier
+        ?? getTierFromEnemyTable(stage?.enemyTable)
+        ?? getTierFromStageId(currentStage)
+        ?? "T1";
+}
+
 let loopId = null;
 let currentEnemyDifficulty = null;
 let forceNextEnemyFrame = false; // ★キー入力直後のフレーム間引きを防止するフラグ
@@ -387,6 +417,12 @@ function gameLoop(timestamp) {
     const isMultiPhase = Array.isArray(stage.phases) && stage.phases.length > 0;
     const currentPhaseIndex = stats.currentPhaseIndex || 0;
     const currentPhase = isMultiPhase ? stage.phases[currentPhaseIndex] : stage;
+
+    // 現在のフェーズ／ステージのTier倍率を、全ダメージ処理へ渡す。
+    // 固定砲台・ボス・ビットはenemy.js側で倍率1に固定する。
+    gameState.tierDamageMultiplier = getTierDamageMultiplier(
+        resolveCurrentTierKey(stage, currentPhase)
+    );
 
     // ★1フレームの経過時間をクランプ（タブ復帰・重い初回フレーム等のスパイクで
     //   スキルCD・フリーズ・無敵タイマーが一瞬で進むのを防ぐ。通常フレームは≤0.1秒のため無影響）
@@ -1992,6 +2028,8 @@ export async function startEnemyMode(config = {}) {
     }
     
     gameState.stage = stage;
+    // ゲーム開始直後の状態。毎フレーム、resolveCurrentTierKey()で上書きする。
+    gameState.tierDamageMultiplier = 1;
 
     function getStageSafe(id) {
         const base = STAGES[id];

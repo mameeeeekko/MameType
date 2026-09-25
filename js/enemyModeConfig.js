@@ -501,6 +501,10 @@ const FIXED_TURRET_TIER_ENTRIES = {
     T10: [{ type: "FIXED_TURRET_LASER_T10", weight: 5 }, { type: "FIXED_TURRET_BULLET_T10", weight: 5 }],
 };
 
+// getTierEnemies() の戻り値に、配列自身を壊さずTierを紐付ける。
+// staticなフェーズ定義が敵テーブルだけを持つ場合も到这里でTierを解決できる。
+const ENEMY_TABLE_TIER = new WeakMap();
+
 function addFixedTurretEntriesToTable(table) {
     if (!table || String(table.description || "").includes("のみ")) return;
 
@@ -535,8 +539,56 @@ export function getTierEnemies(tierKey, table = ENEMY_TIER_BALANCED) {
     // 公開テーブルは初期化時に更新済みだが、外部から渡された表にも対応する。
     addFixedTurretEntriesToTable(table);
 
-    const result = table[tierKey] || table.T1 || [];
-    return Array.isArray(result) ? [...result] : [];
+    const resultKey = table[tierKey] ? tierKey : "T1";
+    const result = table[resultKey] || [];
+    const entries = Array.isArray(result) ? [...result] : [];
+    ENEMY_TABLE_TIER.set(entries, resultKey);
+    return entries;
+}
+
+/**
+ * 敵テーブルから、getTierEnemies() に紐付けたTierを取得する。
+ * localStorageから復元された配列にはWeakMapの情報が残らないため、
+ * その場合はステージ番号／spawn.tier のフォールバックを利用する。
+ */
+export function getTierFromEnemyTable(enemyTable) {
+    if (!enemyTable || typeof enemyTable !== "object") return null;
+    return ENEMY_TABLE_TIER.get(enemyTable) || null;
+}
+
+// W1のT1後半だけはSmall偏重を 완화するため、Normal敵を一部加える。
+// T2〜T4は既存のTierテーブルをそのまま利用する。
+const W1_T1_LATE_EXTRA_ENTRIES = [
+    { type: "GRAY_CIRCLE_NORMAL", weight: 20 },
+    { type: "GRAY_SQUARE_NORMAL", weight: 20 }
+];
+
+function addW1T1LateComposition(enemyTable, stageNum) {
+    if (
+        !Array.isArray(enemyTable) ||
+        !Number.isFinite(Number(stageNum)) ||
+        Number(stageNum) < 5 ||
+        Number(stageNum) > 10
+    ) {
+        return false;
+    }
+
+    const existingTypes = new Set(enemyTable.map(entry => entry?.type));
+    const missing = W1_T1_LATE_EXTRA_ENTRIES.filter(entry =>
+        !existingTypes.has(entry.type)
+    );
+    if (missing.length === 0) return false;
+
+    enemyTable.push(...missing.map(entry => ({ ...entry })));
+    return true;
+}
+
+function getStageEnemyTable(tierKey, table, stageNum) {
+    const enemyTable = getTierEnemies(tierKey, table);
+    if (tierKey === "T1") {
+        addW1T1LateComposition(enemyTable, stageNum);
+    }
+    return enemyTable;
 }
 
 /**
@@ -576,6 +628,37 @@ const ITEM_TIER_TABLE = {
     T5: [{ type: "HEAL_LARGE", weight: 15 }, { type: "KILL_LARGE", weight: 15 }, { type: "FREEZE_LARGE", weight: 15 }, { type: "COOLDOWN_MEDIUM", weight: 13 },{ type: "HEAL_MEDIUM", weight: 12 }, { type: "KILL_MEDIUM", weight: 13 }, { type: "FREEZE_MEDIUM", weight: 12 },{ type: "KILL_ALL", weight: 5}]
 };
 
+// Tierごとの通常敵基本ダメージ倍率。
+// T1を基準値(1.00)として、Tierが1つ上がるごとに指定値を適用する。
+export const TIER_DAMAGE_MULTIPLIERS = Object.freeze({
+    T1: 1.00,
+    T2: 1.80,
+    T3: 2.20,
+    T4: 2.70,
+    T5: 2.90,
+    T6: 3.20,
+    T7: 3.50,
+    T8: 3.70,
+    T9: 4.00,
+    T10: 4.50
+});
+
+function normalizeTierNumber(tier) {
+    const match = String(tier ?? "").match(/\d+/);
+    const parsed = match ? Number.parseInt(match[0], 10) : 1;
+    if (!Number.isFinite(parsed)) return 1;
+    return Math.min(10, Math.max(1, Math.floor(parsed)));
+}
+
+/**
+ * Tier値から通常敵の基本ダメージ倍率を取得する。
+ * 不正値・未設定値はT1の倍率へフォールバックする。
+ */
+export function getTierDamageMultiplier(tier) {
+    const tierNumber = normalizeTierNumber(tier);
+    return TIER_DAMAGE_MULTIPLIERS[`T${tierNumber}`] ?? TIER_DAMAGE_MULTIPLIERS.T1;
+}
+
 function getTierKey(stageNum) {
     return `T${Math.min(10, Math.ceil(stageNum / 10))}`;
 }
@@ -583,6 +666,112 @@ function getTierKey(stageNum) {
 function getItemTierKey(stageNum) {
     // ステージ30以降は最高ランクのアイテムテーブルを使用
     return `T${Math.min(5, Math.ceil(stageNum / 10))}`;
+}
+
+// T1〜T4の通常クエスト戦闘に適用する出現圧力。
+// Tierは変えずに、出現間隔・同時存在数・複数出現だけを段階的に上げる。
+const TIER_SPAWN_PRESSURE = {
+    T1: {
+        early: { interval: 3000, maxAlive: 5, multiCount: 2, multiInterval: 2 },
+        late: { interval: 3000, maxAlive: 5, multiCount: 2, multiInterval: 2 },
+        lateFrom: 5
+    },
+    T2: {
+        early: { interval: 3500, maxAlive: 6, multiCount: 2, multiInterval: 2 },
+        late: { interval: 3500, maxAlive: 6, multiCount: 2, multiInterval: 2 },
+        lateFrom: 6
+    },
+    T3: {
+        early: { interval: 3500, maxAlive: 6, multiCount: 2, multiInterval: 2 },
+        late: { interval: 3500, maxAlive: 6, multiCount: 2, multiInterval: 2 },
+        final: { interval: 3500, maxAlive: 7, multiCount: 2, multiInterval: 2 },
+        lateFrom: 6,
+        finalFrom: 9
+    },
+    T4: {
+        early: { interval: 3500, maxAlive: 7, multiCount: 2, multiInterval: 2 },
+        late: { interval: 3500, maxAlive: 7, multiCount: 2, multiInterval: 2 },
+        lateFrom: 6
+    }
+};
+
+function getTierSpawnPressure(stageNum) {
+    const stageNumber = Number(stageNum);
+    if (!Number.isFinite(stageNumber) || stageNumber < 1) return null;
+
+    const tierNumber = Math.ceil(stageNumber / 10);
+    // 今回はT1〜T4のみ。T5以降は別のバランス段階として扱う。
+    if (tierNumber < 1 || tierNumber > 4) return null;
+
+    const profile = TIER_SPAWN_PRESSURE[`T${tierNumber}`];
+    if (!profile) return null;
+
+    const offset = ((stageNumber - 1) % 10) + 1;
+    if (profile.final && offset >= profile.finalFrom) return profile.final;
+    if (offset >= profile.lateFrom) return profile.late;
+    return profile.early;
+}
+
+function isTierPressureExempt(stage, pattern = null) {
+    if (pattern !== null && pattern !== undefined) {
+        return [3, 4, 7, 8].includes(Number(pattern));
+    }
+
+    // 既存キャッシュでは番号ではなくミッション名から判定する。
+    if ([
+        "電撃戦",
+        "精密防衛",
+        "圧倒",
+        "精密射撃"
+    ].includes(stage?.missionName)) {
+        return true;
+    }
+
+    // 旧キャッシュでmissionNameが欠けていても、既存の特殊設定を検出する。
+    const detectedPattern = detectMultiSpawnPattern(stage);
+    if ([3, 4, 7, 8].includes(detectedPattern)) return true;
+
+    // 旧キャッシュで特殊パターンを判別できない場合の精密射撃フォールバック。
+    return stage?.endConditions?.failOnMissCount != null ||
+        stage?.clearConditions?.noMiss === true;
+}
+
+function applyTierSpawnPressure(config, stageNum, pattern = null) {
+    const pressure = getTierSpawnPressure(stageNum);
+    if (!config?.spawn || !pressure || isTierPressureExempt(config, pattern)) {
+        return false;
+    }
+
+    const spawn = config.spawn;
+    let changed = false;
+
+    const currentInterval = Number(spawn.interval);
+    if (!Number.isFinite(currentInterval) || currentInterval > pressure.interval) {
+        spawn.interval = pressure.interval;
+        changed = true;
+    }
+
+    // maxAliveがnullは無制限なので、意図して上書きしない。
+    const currentMaxAlive = Number(spawn.maxAlive);
+    if (spawn.maxAlive !== null && spawn.maxAlive !== undefined &&
+        (!Number.isFinite(currentMaxAlive) || currentMaxAlive < pressure.maxAlive)) {
+        spawn.maxAlive = pressure.maxAlive;
+        changed = true;
+    }
+
+    const currentMultiCount = Number(spawn.multiCount);
+    if (!Number.isFinite(currentMultiCount) || currentMultiCount < pressure.multiCount) {
+        spawn.multiCount = pressure.multiCount;
+        changed = true;
+    }
+
+    const currentMultiInterval = Number(spawn.multiInterval);
+    if (!Number.isFinite(currentMultiInterval) || currentMultiInterval > pressure.multiInterval) {
+        spawn.multiInterval = pressure.multiInterval;
+        changed = true;
+    }
+
+    return changed;
 }
 
 // =====================================================
@@ -626,17 +815,18 @@ function getItemTierKey(stageNum) {
  *            単語が枯渇した場合もその回の同時出現はそこで打ち切られる。
  *
  * 2. 難易度スケーリング (変数 i = ステージ番号):
- *    - 出現間隔: 3000ms (固定)
- *    - 撃破目標: 5 + floor(i / 4)
- *    - 制限時間: 30s + (i * 0.3s)
- *    - 同時存在数: 3 + floor(i / 25)  ※通常時最大6
- *    - マルチスポーン: multiCount 1 / multiInterval 1（パターン別に上書き。1.6 同時出現 参照）
+ *    - 基本出現間隔: 3500ms（T1〜T4はTIER_SPAWN_PRESSUREで上書き）
+ *    - 撃破目標: 12 + floor(i / 4)
+ *    - 制限時間: 30s + (i * 1s)
+ *    - 基本同時存在数: 4 + floor(i / 25) ※通常時最大8
+ *    - T1〜T4はPressureプロファイルで段階的に強化（T5以降は現状値）
+ *    - 特殊ミッションは既存のspawn設定を優先し、Pressureを適用しない
  *
  * 3. ステージ/環境設定:
  *    - 背景画像: 1-30:blue, 31-60:purple, 60-90:red
  *    - アイテム: ステージ12で解禁。
  *               出現率: 0.3 + (i * 0.005)
- *               Tier遷移: 10ステージごとにT1→T5へ上昇。
+ *               Tier遷移: 10ステージごとにT1→T10へ上昇。
  *
  * 4. エネミーTier定義:
  *    - 通常クエストステージでは10ステージごとに T1 ～ T10 へ自動遷移する。
@@ -703,7 +893,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
 
     // 難易度の緩やかな上昇計算
     const baseSpawnInterval = 4000; // 基本の出現間隔を4秒に固定
-    const killGoal = 10 + Math.floor(i / 4); // 討伐目標数
+    const killGoal = 12 + Math.floor(i / 4); // 討伐目標数
     const timeLimit = 30000 + (i * 1000); // 30秒〜130秒程度
     const maxAlive = Math.min(8, 4 + Math.floor(i / 25)); // 通常ミッションは最大8体までに制限
 
@@ -725,6 +915,10 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
     const currentEnemyVariationDescription = getTierDescription(selectedTable);
 
     let config = {
+        // 生成時は現在のTierを明示する（localStorageの旧データには
+        // ステージ番号からのフォールバックを使う）。
+        tier,
+
         // bgImage: i <= 33 ? "battle_blue" : i <= 66 ? "battle_green" : "battle_gray",
         // ↑ この行をコメントアウトまたは削除します。
         spawn: {
@@ -735,7 +929,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             multiCount: 1,      // ★同時出現数（既定は1体ずつ）
             multiInterval: 1    // ★同時出現タイミング（1 = 毎回 / 2 = 2回に1回まとめて multiCount 体）
         },
-        enemyTable: getTierEnemies(tier, selectedTable),
+        enemyTable: getStageEnemyTable(tier, selectedTable, i),
         missionName: currentMission.name,
         missionDescription: currentMission.desc,
         enemyVariationDescription: currentEnemyVariationDescription,
@@ -880,7 +1074,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             config.spawn.interval *= 0.8;
             // ★同時出現：2回に1回まとめて2体（ステージ50以降は毎回2体で高密度化）
             config.spawn.multiCount = 2;
-            config.spawn.multiInterval = i >= 50 ? 1 : 2;
+            config.spawn.multiInterval = 2;
+            //config.spawn.multiInterval = i >= 50 ? 1 : 2;
             config.endConditions = { hpZero: true, timerMs: timeLimit * 0.8 };
             config.clearConditions = { survive: true };
 
@@ -1055,6 +1250,10 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
         config.itemTable = ITEM_TIER_TABLE[itemTier];
     }
 
+    // T1〜T4の通常戦闘に出現圧力を加える。
+    // 特殊ミッションはapplyTierSpawnPressure()で既存バランスを優先して除外する。
+    applyTierSpawnPressure(config, i, pattern);
+
     return config;
 }
 
@@ -1167,6 +1366,45 @@ function backfillMultiSpawnSettings(stages) {
 }
 
 /**
+ * 既存クエストキャッシュへT1〜T4の出現圧力を後付けする。
+ * 生成済みキャッシュでも、段階的な出現圧力を反映する。
+ */
+function backfillTierSpawnPressure(stages) {
+    if (!stages || typeof stages !== "object") return false;
+
+    let changed = false;
+    for (const [key, stage] of Object.entries(stages)) {
+        const match = /^STAGE(\d+)$/.exec(key);
+        if (!match || !stage || typeof stage !== "object") continue;
+
+        const stageNum = Number(match[1]);
+        if (applyTierSpawnPressure(stage, stageNum)) {
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+/**
+ * 既存クエストキャッシュのW1・T1後半へNormal敵の混在を後付けする。
+ */
+function backfillW1T1LateComposition(stages) {
+    if (!stages || typeof stages !== "object") return false;
+
+    let changed = false;
+    for (const [key, stage] of Object.entries(stages)) {
+        const match = /^STAGE(\d+)$/.exec(key);
+        if (!match || !stage || typeof stage !== "object") continue;
+
+        const stageNum = Number(match[1]);
+        if (addW1T1LateComposition(stage.enemyTable, stageNum)) {
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+/**
  * 既存クエストキャッシュへ固定砲台を後付けする。
  * 同じ table を二度変更しないよう、既存の固定砲台IDを確認してから不足分だけ追加する。
  */
@@ -1220,11 +1458,13 @@ function initGeneratedStages() {
         try {
             const parsed = JSON.parse(cached);
 
-            // ★旧キャッシュ移行：同時出現パラメータと固定砲台を補完し、保存し直す
+            // ★旧キャッシュ移行：出現圧力・敵構成・同時出現・固定砲台を補完し、保存し直す
             // （進行データには影響しない。ステージ構成・敵内容もそのまま維持される）
             const multiSpawnChanged = backfillMultiSpawnSettings(parsed);
+            const tierPressureChanged = backfillTierSpawnPressure(parsed);
+            const compositionChanged = backfillW1T1LateComposition(parsed);
             const turretChanged = backfillFixedTurretEntries(parsed);
-            if (multiSpawnChanged || turretChanged) {
+            if (multiSpawnChanged || tierPressureChanged || compositionChanged || turretChanged) {
                 localStorage.setItem(QUEST_STAGES_STORAGE_KEY, JSON.stringify(parsed));
             }
 

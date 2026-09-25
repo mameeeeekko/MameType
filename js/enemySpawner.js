@@ -319,7 +319,7 @@ export function spawnEnemy(
 
         enemy.speed = type.speed; // 初期速度はそのまま
 
-        // ダメージは calcDamage で難易度補正されるため、ここでは基本ダメージを設定
+        // Tier・難易度補正はcalcDamageで反映されるため、ここでは基本ダメージを設定
         enemy.damage = type.damage;
 
     } else {

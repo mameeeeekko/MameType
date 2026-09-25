@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MameType Save Format v1 — Browser Tests</title>
+  <style>
+    body { font: 14px/1.6 system-ui, sans-serif; background: #0d1117; color: #e6edf3; margin: 24px; }
+    h1 { font-size: 20px; }
+    #summary { padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    #results { white-space: pre-wrap; font-family: ui-monospace, monospace; }
+    .pass { color: #3fb950; }
+    .fail { color: #f85149; }
+    .note { color: #8b949e; }
+  </style>
+</head>
+<body>
+  <h1>MameType Save Format v1 — Browser Tests</h1>
+  <p class="note">HTTPS または http://localhost で開いてください。Export / Import / Reset、認証、検証、localStorage rollbackを実行ボタンで確認します。</p>
+  <button id="run">Run tests</button>
+  <div id="summary">Not run</div>
+  <div id="results"></div>
+
+  <script type="module" src="./saveFileTest.js"></script>
+</body>
+</html>

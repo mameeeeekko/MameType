@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.50";
+const CACHE_NAME = "mametype-v1.0.51";
 
 // =====================================================
 // オフライン用キャッシュ（固定名）
@@ -73,6 +73,7 @@ const CORE_ASSETS = [
   "./js/hud.js",
   "./js/playerStats.js",
   "./js/storage.js",
+  "./js/saveFile.js",
   "./js/gameModes.js",
   "./js/difficulties.js",
   "./js/target.js",

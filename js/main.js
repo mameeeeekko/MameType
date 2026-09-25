@@ -6,23 +6,14 @@
 
 import { showRecordsView } from "./recordsView.js";
 import {
-  exportAllData,
-  importAllData,
-  clearPlayerStats,
-  clearRecords,
-  clearRanking,
-  resetQuestData,
   loadQuestSlots,
   saveQuestSlot,
   loadQuestSlot,
-  exportQuestData,
-  importQuestData,
 } from "./storage.js";
 import { startQuestSession, stopQuestSession, resetQuestSession, flushQuestSessionTime } from "./storage.js";
 import * as Game from "./gameCore.js";
 import { gameState, getLastSpecialModeInfo, getPaused, setPaused, backToMenu, getNow } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
-import { getPlayerStats } from "./playerStats.js"; 
 import { updateHud, initAchievementsUI, showHud } from "./hud.js"; export { showHud };
 import { handleKey } from './inputCore.js';
 import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, wasLastModeBossOnly } from "./enemyCore.js";
@@ -53,7 +44,7 @@ import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
 import { fitStage, getStageScale } from "./stageScale.js";
 import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
-import { clearQuestStageCache, TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
+import { TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
 import "../dev/devTools.js";
 import {
   getCurrentDifficulty,
@@ -70,14 +61,15 @@ import { handleDefenseKey, restartDefenseMode } from "./defenseCore.js";
 import { loadSupabase } from "../online/loadSupabase.js";
 import { startDefenseMode } from "./defenseCore.js";
 import { showSaveDataNoticeOnce } from "./saveDataNotice.js";
+import { exportSaveFile, importSaveFile, resetSaveData } from "./saveFile.js";
 
 // ================================
 // 🔹Safari判定（アップデート表示の分岐用）
 // ================================
 // ★Safariは中央下ダウンロードバーが0%で固まる問題があるため、
-//   バーを出さず設定のステータス文のみで進捗を伝える。
-//   UA判定: "safari" を含み、chrome/crios/edg/android を含まない場合に true
-//   （Chrome/Edge の UA にも "Safari" が含まれるため、否定先読みで除外する）。
+// ★ バーを出さず設定のステータス文のみで進捗を伝える。
+// ★ UA判定: "safari" を含み、chrome/crios/edg/android を含まない場合に true
+// ★ （Chrome/Edge の UA にも "Safari" が含まれるため、否定先読みで除外する）。
 let isSafari = false;
 try {
   const ua = navigator.userAgent || "";
@@ -146,8 +138,6 @@ let resetBgmVolumeBtn, resetSeVolumeBtn, resetTypeVolumeBtn, resetMissVolumeBtn;
 let mapBackBtn;
 
 let switchToFreeBtn, switchToNormalBtn;
-
-let resetQuestBtn;
 
 let playerNameInput, savePlayerNameBtn, playerIdDisplay, copyPlayerIdBtn, importPlayerIdBtn;
 
@@ -258,8 +248,6 @@ function cacheDOM() {
 
   switchToFreeBtn = document.getElementById("switchToFreeBtn");
   switchToNormalBtn = document.getElementById("switchToNormalBtn");
-
-  resetQuestBtn = document.getElementById("resetQuestBtn");
 
   playerNameInput = document.getElementById("playerNameInput");
   playerIdDisplay = document.getElementById("playerIdDisplay");
@@ -552,6 +540,7 @@ const OFFLINE_APP_FILES = [
   "./js/hud.js",
   "./js/playerStats.js",
   "./js/storage.js",
+  "./js/saveFile.js",
   "./js/gameModes.js",
   "./js/difficulties.js",
   "./js/target.js",
@@ -1508,96 +1497,104 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // -----------------------------
-  // プレイヤー統計 / ゲーム記録 ボタン
+  // 統合Backup: Export / Import / Reset
   // -----------------------------
-  const statsButtons = {
-    export: document.getElementById("exportPlayerStatsBtn"),
-    import: document.getElementById("importPlayerStatsBtn"),
-    reset:  document.getElementById("resetPlayerStatsBtn"),
-    importFile: document.getElementById("importPlayerStatsFile")
+  // 正式なフォーマット/version/migration/resetリファレンスは js/saveFile.js を参照。
+  const exportSaveFileBtn = document.getElementById("exportSaveFileBtn");
+  const importSaveFileBtn = document.getElementById("importSaveFileBtn");
+  const resetSaveFileBtn = document.getElementById("resetSaveFileBtn");
+  const importSaveFileInput = document.getElementById("importSaveFileInput");
+  if (!exportSaveFileBtn || !importSaveFileBtn || !resetSaveFileBtn || !importSaveFileInput) {
+    console.warn("MameType backup UI is missing.");
+  }
+
+  const setBackupButtonsDisabled = (disabled) => {
+    if (exportSaveFileBtn) exportSaveFileBtn.disabled = disabled;
+    if (importSaveFileBtn) importSaveFileBtn.disabled = disabled;
+    if (resetSaveFileBtn) resetSaveFileBtn.disabled = disabled;
   };
 
-  const exportQuestBtn = document.getElementById("exportQuestBtn");
-  const importQuestBtn = document.getElementById("importQuestBtn");
-  const importQuestFile = document.getElementById("importQuestFile");
-  // =====================================================
-  // デイリーデータ処理
-  // （プレイヤーステータス + 記録 + ランキング）
-  // =====================================================
-  statsButtons.export?.addEventListener("click", () => {
-    exportAllData(getPlayerStats());
-    alert("デイリーデータ全体をバックアップします。保存先を選択してください。");
+  exportSaveFileBtn?.addEventListener("click", async () => {
+    if (exportSaveFileBtn.disabled) return;
+    setBackupButtonsDisabled(true);
+    try {
+      // 開いているクエストの未確定時間を確定してから、同一時点のスナップショットを読む。
+      flushQuestSessionTime();
+      await exportSaveFile();
+      alert("BACKUP DATAを暗号化しました。");
+    } catch (error) {
+      console.error("MameType save export failed:", error);
+      const exportError = error instanceof Error ? error : new Error("不明なエラー");
+      alert(`Exportに失敗しました: ${exportError.message || "不明なエラー"}`);
+    } finally {
+      setBackupButtonsDisabled(false);
+    }
   });
 
-  statsButtons.import?.addEventListener("click", () => {
-    statsButtons.importFile.value = "";
-    statsButtons.importFile.click();
-  });
+  if (importSaveFileBtn && importSaveFileInput) {
+    importSaveFileBtn.addEventListener("click", () => {
+      importSaveFileInput.value = "";
+      importSaveFileInput.click();
+    });
+  }
 
-  statsButtons.importFile?.addEventListener("change", async () => {
-    const file = statsButtons.importFile.files[0];
+  importSaveFileInput?.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
     if (!file) return;
+    if (!confirm("現在のBACKUP DATAを、選択したファイルのデータで上書きします。よろしいですか？")) {
+      event.target.value = "";
+      return;
+    }
 
     try {
-      await importAllData(file);
-      alert("デイリーデータ全体を復元しました。\nページを再読み込みします。");
+      setBackupButtonsDisabled(true);
+      await importSaveFile(file);
+      // 保存成功後にだけ旧セッションを破棄し、import dataへ時間を加算しない。
+      resetQuestSession();
+      alert("BACKUP DATAを復元しました。\nページを再読み込みします。");
       location.reload();
-    } catch (e) {
-      alert("復元に失敗しました: " + e.message);
+    } catch (error) {
+      console.error("MameType save import failed:", error);
+      const importError = error instanceof Error ? error : new Error("不明なエラー");
+      alert(`Importに失敗しました: ${importError.message || "不明なエラー"}`);
+    } finally {
+      setBackupButtonsDisabled(false);
+      event.target.value = "";
     }
   });
 
-  statsButtons.reset?.addEventListener("click", () => {
-    if (!confirm(
-      "デイリーデータを本当にリセットしますか？\n" +
-      "プレイヤーステータス・記録・ランキングが全て削除されます。"
-    )) return;
+  resetSaveFileBtn?.addEventListener("click", () => {
+    if (resetSaveFileBtn.disabled) return;
+    const firstConfirmed = confirm(
+      "BACKUP DATAをすべて初期化します。\n\n" +
+      "デイリー・クエスト・共通設定が削除されます。元に戻せません。\n" +
+      "必要なら先にExportしてください。\n\n" +
+      "Player ID・復元コード・プロフィール・通知表示などの端末固有の状態・\n" +
+      "オフラインデータは残ります。\n" +
+      "続行しますか？",
+    );
+    if (!firstConfirmed) return;
 
-    clearPlayerStats();
-    clearRecords();
-    clearRanking();
+    const finalConfirmed = confirm(
+      "すべてのゲームデータと共通設定を削除します。\n" +
+      "この操作は取り消せません。\n\n" +
+      "本当にリセットしますか？",
+    );
+    if (!finalConfirmed) return;
 
-    alert("デイリーデータをリセットしました。\nページを再読み込みします。");
-    location.reload();
-  });
-
-
-  // =====================================================
-  // クエストデータ処理
-  // =====================================================
-  exportQuestBtn?.addEventListener("click", () => {
-    exportQuestData();
-  });
-
-  importQuestBtn?.addEventListener("click", () => {
-    importQuestFile.click();
-  });
-
-  importQuestFile?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+    setBackupButtonsDisabled(true);
     try {
-      await importQuestData(file);
-      alert("クエストデータを復元しました");
-
-      // 必要ならHUD更新
-      reloadQuestPlayerStats?.();
-      updateHud?.(null, { isQuestMode: true });
-
-    } catch (err) {
-      alert(err.message);
+      resetSaveData();
+      // 削除完了後にだけ旧セッションを破棄する。処理失敗時は計測状態を残さない。
+      resetQuestSession();
+      alert("BACKUP DATAをリセットしました。\nページを再読み込みします。");
+      location.reload();
+    } catch (error) {
+      console.error("MameType backup reset failed:", error);
+      const resetError = error instanceof Error ? error : new Error("不明なエラー");
+      alert(`Resetに失敗しました: ${resetError.message || "不明なエラー"}`);
+      setBackupButtonsDisabled(false);
     }
-
-    e.target.value = "";
-  });
-
-  resetQuestBtn?.addEventListener("click", () => {
-    if (!confirm("クエストモードを初期化します。セーブデータ等が全て消えますがよろしいですか？")) return;
-    resetQuestData();
-    clearQuestStageCache();
-    alert("クエストモードのデータをリセットしました。\nページを再読み込みします。");
-    location.reload();
   });
 
   // -----------------------------

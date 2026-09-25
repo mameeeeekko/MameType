@@ -526,28 +526,28 @@ export const PASSIVE_SKILLS = {
   max_hp_1: {
     name: "体力増強Ⅰ",
     icon: "hpup_1",
-    desc: "最大HPが10増加",
-    equipable: true,
-    apply: (p) => {
-      p.maxHp = (p.maxHp || 0) + 10;
-    }
-  },
-   max_hp_2: {
-    name: "体力増強Ⅱ",
-    icon: "hpup_2",
     desc: "最大HPが50増加",
     equipable: true,
     apply: (p) => {
       p.maxHp = (p.maxHp || 0) + 50;
     }
   },
-   max_hp_3: {
-    name: "体力増強Ⅲ",
-    icon: "hpup_3",
+   max_hp_2: {
+    name: "体力増強Ⅱ",
+    icon: "hpup_2",
     desc: "最大HPが100増加",
     equipable: true,
     apply: (p) => {
       p.maxHp = (p.maxHp || 0) + 100;
+    }
+  },
+   max_hp_3: {
+    name: "体力増強Ⅲ",
+    icon: "hpup_3",
+    desc: "最大HPが150増加",
+    equipable: true,
+    apply: (p) => {
+      p.maxHp = (p.maxHp || 0) + 150;
     }
   },
 

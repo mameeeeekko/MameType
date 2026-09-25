@@ -7,6 +7,9 @@ import { showSkillResultIntro } from "./skillTreeUI.js";
 import { getSkillById } from "./questSkills.js";
 import { getPlayerStats } from "./questPlayerStats.js";
 import { images } from "./assetsLoader.js";
+import { closeDialogue } from "./dialogue.js";
+
+
 
 
 export function handleSkillModeResult(nodeId) {

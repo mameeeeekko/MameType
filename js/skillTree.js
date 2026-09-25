@@ -415,19 +415,19 @@ export const NORMAL_UNLOCK_TABLE = {
 
     1: [
         [
-            { type:"time", value:120 },
+            { type:"time", value:90 },
             { type:"accuracy", value:93 }
         ],
         [
-            { type:"time", value:100 },
+            { type:"time", value:90 },
             { type:"miss", value:5 }
         ],
         [
-            { type:"time", value:130 },
+            { type:"time", value:90 },
             { type:"score", value:160 }
         ],
         [
-            { type:"time", value:90 }
+            { type:"time", value:80 }
         ]
     ],
 
@@ -770,12 +770,12 @@ function buildRequirements(depth, additional = []) {
             baseReqs.push({ type: "questClear", value: "W1_MiniBoss_1" });
             break;
         case SKILL_DEPTH.LATE:
-            baseReqs.push({ type: "playerLevel", value: 15 });
+            baseReqs.push({ type: "playerLevel", value: 20 });
             baseReqs.push({ type: "questClear", value: "W1_BOSS" });
             break;
         case SKILL_DEPTH.END:
-            baseReqs.push({ type: "playerLevel", value: 25 });
-            baseReqs.push({ type: "questClear", value: "W2_Q3" });
+            baseReqs.push({ type: "playerLevel", value: 30 });
+            baseReqs.push({ type: "questClear", value: "W2_DEFENSE_3" });
             break;
     }
     return [...baseReqs, ...additional];

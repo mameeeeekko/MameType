@@ -2,6 +2,31 @@
 
 ---
 
+## [1.0.51] - 2026-09-25
+
+### Added
+- **通常ユーザー向け統合セーブ機能を追加**
+  - デイリー／クエスト／共通設定を1個の `.mametype` ファイルへまとめるExportを追加。
+  - Importはファイル形式・バージョン・AES-GCM認証・JSON構造・型・値を検証してから、既存のlocalStorageキーへ戻す。
+  - 壊れたファイルや認証失敗時は、既存データを書き換えない。
+  - 設定画面を `BACKUP DATA` に整理し、Export / Import / Reset だけを表示する。
+  - ResetはBackup対象のlocalStorageキーだけを削除し、Player ID・復元コード・オフラインデータは保持する。
+  - 旧JSON Export/Import関数は設定画面から削除し、開発・旧形式互換用としてソース上だけに保持。
+- **保存フォーマットのリファレンスコメントを追加**
+  - 正式な仕様は `js/saveFile.js` の冒頭コメントを参照。
+  - `containerVersion` / `schemaVersion` / `keyVersion` / `appVersion` の用途、将来のmigration追加手順、保存対象キーを記録。
+- **ブラウザ内テストページを追加**
+  - `dev/saveFileTest.html` で往復、復号、Header/IV/ciphertext改ざん、構造検証、Reset、localStorage rollbackを確認する。
+- **アプリケーションバージョンを `1.0.51` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.51` に更新。
+  - Service Workerのキャッシュ名を `mametype-v1.0.51` に更新。
+
+### Security boundary
+- クライアント内固定鍵を使うAES-GCMは、JSONの容易な直接編集を抑止し改ざんを検出する目的である。
+- JavaScriptから鍵を抽出・解析する高度な利用者までは防げず、完全なチート防止ではない。
+
+---
+
 ## [1.0.50] - 2026-09-25
 
 ### Added
