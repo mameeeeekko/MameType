@@ -9,7 +9,8 @@ import { initAudio, playEnemyKillSound, stopBGM, playBGM, ensureSound, spawnEnem
     renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, spawnItemSkillEffect,
     renderItemSkillEffects, clearAllEffects, playErrorSound, playPhaseWarningSound,
     renderLaserEffects, renderPlayerDamageEffects, spawnLaserEffect, spawnHitWave,
-    renderPlayerNegateEffects} from "./effectManager.js";
+    renderPlayerNegateEffects,
+    renderTurretLaserEffects, renderTurretDamageEffects, renderTurretGuardEffects} from "./effectManager.js";
 import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
@@ -31,7 +32,7 @@ import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "../js/version.js";
 import { loadKeybinds, isBoundKey } from "./keybinds.js";
 import { devOverride, applyOverride } from "../dev/devOverride.js";
-import { activateSkill, ACTIVE_SKILLS } from "./questSkills.js";
+import { activateSkill, ACTIVE_SKILLS, isBossTarget, canSkillAffectTargets } from "./questSkills.js";
 import { shouldRunFrame, recordFrame } from "./performance.js";
 import { trackGameStart, mapModeIdToAnalytics } from "./analytics.js";
 
@@ -66,6 +67,7 @@ let enemyLoopActive = false;
 let lastEnemyConfig = null; //もう一回ように
 
 let spawnedCount = 0;
+let spawnEventCount = 0;   // ★出現イベント番号（同時出現のタイミング判定用）
 let lastSpawnTime = 0;     // ★最後に敵を出した時間
 let lastItemSpawnTime = 0;
 let enemyStartTime = null;    // タイマー用
@@ -550,7 +552,16 @@ function gameLoop(timestamp) {
         // スキルノックバック
         // ======================
 
-        if (enemy.knockbackDelay > 0) {
+        if (enemy.isFixed) {
+            // 固定砲台は外部からノックバック状態を与えられても位置を変えない。
+            delete enemy.knockbackDelay;
+            delete enemy.knockbackTime;
+            delete enemy.knockbackStartX;
+            delete enemy.knockbackStartY;
+            delete enemy.knockbackTargetX;
+            delete enemy.knockbackTargetY;
+            delete enemy.knockbackDuration;
+        } else if (enemy.knockbackDelay > 0) {
 
             enemy.knockbackDelay--;
 
@@ -726,6 +737,9 @@ function gameLoop(timestamp) {
     renderLaserEffects(ctx, deltaTime); // ★追加
     renderPlayerDamageEffects(ctx, deltaTime); // レーザーダメージ
     renderPlayerNegateEffects(ctx, deltaTime); // 敵の攻撃防いだエフェクト
+    renderTurretLaserEffects(ctx, deltaTime);
+    renderTurretDamageEffects(ctx, deltaTime);
+    renderTurretGuardEffects(ctx, deltaTime);
 
     renderShotEffects(ctx, deltaTime);
     renderHitParticles(ctx, deltaTime);
@@ -749,14 +763,16 @@ function gameLoop(timestamp) {
             // ★一定時間ごとに敵出現、または「即座に出現」がONで敵がいない場合
             if ((now - lastSpawnTime > (currentPhase.spawn.interval * diff.enemy.spawnRate)) || (immediate && isScreenEmpty)) {
 
+                const spawnCfg = currentPhase.spawn || {};
+
                 const spawnLimitOk =
-                    currentPhase.spawn.limit == null ||
-                    spawnedCount < currentPhase.spawn.limit;
+                    spawnCfg.limit == null ||
+                    spawnedCount < spawnCfg.limit;
 
                 // maxAlive未設定なら無制限 DEV対応
                 const maxAlive =
                     devOverride.spawn?.maxAlive ??
-                    currentPhase.spawn.maxAlive;
+                    spawnCfg.maxAlive;
 
                 const aliveLimitOk =
                     maxAlive == null ||
@@ -764,15 +780,35 @@ function gameLoop(timestamp) {
 
                 if (spawnLimitOk && aliveLimitOk) {
 
-                    const enemy = spawnEnemy(
-                        player,
-                        enemies,
-                        canvas,
-                        currentPhase,
-                        diff
-                    );
+                    // ★同時出現（マルチスポーン）
+                    //   multiCount    : 1回の出現で同時に出す敵の数（2なら2体同時）
+                    //   multiInterval : 何回に1回まとめて出すか（2なら2回に1回だけ multiCount 体同時 / 1なら毎回）
+                    const multiCount = Math.max(1, Math.floor(Number(spawnCfg.multiCount) || 1));
+                    const multiInterval = Math.max(1, Math.floor(Number(spawnCfg.multiInterval) || 1));
 
-                    if (enemy && enemy.word) {
+                    // 出現に失敗した回はタイミングを消費しないよう、成功してからカウントを確定する
+                    const nextEventIndex = spawnEventCount + 1;
+                    const isMultiRound = multiCount > 1 && (nextEventIndex % multiInterval === 0);
+                    const spawnTarget = isMultiRound ? multiCount : 1;
+
+                    let spawnedThisRound = 0;
+
+                    for (let k = 0; k < spawnTarget; k++) {
+
+                        // 1体ずつ上限を再判定（同時出現で limit / maxAlive を超えないようにする）
+                        if (spawnCfg.limit != null && spawnedCount >= spawnCfg.limit) break;
+                        if (maxAlive != null && enemies.length >= maxAlive) break;
+
+                        const enemy = spawnEnemy(
+                            player,
+                            enemies,
+                            canvas,
+                            currentPhase,
+                            diff
+                        );
+
+                        // 単語枯渇などで生成できなかった場合は、その回の同時出現を打ち切る
+                        if (!enemy || !enemy.word) break;
 
                         enemy.originalWord = enemy.word;
                         enemy.pos = 0;
@@ -780,26 +816,30 @@ function gameLoop(timestamp) {
                         enemy.typed = "";
                         enemy.baseRomaji = buildBaseRomaji(enemy.text,0);
 
-                        if (enemy) {
-
-                            // フリーモード時はすべての敵をノルマ対象(isObjective)として扱う
-                            if (gameState.isFreeMode) {
-                                enemy.isObjective = true;
-                            }
-
-                            enemies.push(enemy);
-
-                            if (enemy.isObjective) {
-                                gameState.enemyStats.objectiveSpawned++;
-                            }
-
-                            if (currentPhase.spawn?.limit != null) {
-                                gameState.enemyStats.remainingSpawn--;
-                            }
-
-                            spawnedCount++;
-                            lastSpawnTime = now;
+                        // フリーモード時はすべての敵をノルマ対象(isObjective)として扱う
+                        if (gameState.isFreeMode) {
+                            enemy.isObjective = true;
                         }
+
+                        enemies.push(enemy);
+
+                        if (enemy.isObjective) {
+                            gameState.enemyStats.objectiveSpawned++;
+                        }
+
+                        if (spawnCfg.limit != null) {
+                            gameState.enemyStats.remainingSpawn--;
+                        }
+
+                        spawnedCount++;
+                        spawnedThisRound++;
+                    }
+
+                    // 1体以上出現した時だけ、出現時刻の更新とアイテム判定を行う（従来挙動を維持）
+                    if (spawnedThisRound > 0) {
+
+                        spawnEventCount = nextEventIndex;
+                        lastSpawnTime = now;
 
                         // ======================================
                         // アイテムスポーン
@@ -1181,6 +1221,7 @@ function transitionToNextPhase(now) {
         
         // スポーン用カウントリセット
         spawnedCount = 0;
+        spawnEventCount = 0;   // ★同時出現タイミングもリセット
         lastSpawnTime = now;
         lastItemSpawnTime = now;
         
@@ -1563,21 +1604,23 @@ export function handleEnemyKey(e) {
 
             } else {
 
-            // ===== まだ生きてる（ノックバック済み） =====
-            spawnKnockbackEffect(enemy.x, enemy.y);
+                // ===== まだ生きてる（ノックバック済み） =====
+                if (!enemy.isFixed) {
+                    spawnKnockbackEffect(enemy.x, enemy.y);
+                }
 
-            enemy.baseRomaji = buildBaseRomaji(enemy.text);
-            enemy.pos = 0;
-            enemy.typed = "";
-            enemy.inputedRomaji = "";
-            // ロック維持したいならそのまま
-            //lockedEnemy = enemy;
+                enemy.baseRomaji = buildBaseRomaji(enemy.text);
+                enemy.pos = 0;
+                enemy.typed = "";
+                enemy.inputedRomaji = "";
+                // ロック維持したいならそのまま
+                //lockedEnemy = enemy;
 
-            // ロック解除したいなら↓
-            lockedEnemy = null;
+                // ロック解除したいなら↓
+                lockedEnemy = null;
 
-            // 候補リセット
-            resetCandidates();
+                // 候補リセット
+                resetCandidates();
             }
 
         //=================================================
@@ -1971,6 +2014,7 @@ export async function startEnemyMode(config = {}) {
     resetSpawnDotState();
 
     spawnedCount = 0;
+    spawnEventCount = 0;   // ★同時出現タイミングのリセット
 
     timerStarted = false;   // ★追加
     enemyStartTime = null;     // ★追加（安全対策）
@@ -2957,6 +3001,34 @@ function tryUseActiveSkill() {
 
             return;
         }
+    }
+
+    const aliveTargets =
+        (enemies || []).filter(e => e && !e.isDead && !e.isItem);
+
+    const bossAlive = aliveTargets.some(isBossTarget);
+    const hasEffectTargets =
+        canSkillAffectTargets(skill.type, enemies || []);
+
+    // ノックバックだけが固定砲台を含む全生存敵に対して無効になる。
+    const noEffectTargets =
+        skill.type === "knockback" && !hasEffectTargets;
+
+    if (!devOverride.skill?.infinite &&
+        ((bossAlive && !hasEffectTargets) || noEffectTargets)) {
+
+        console.log(
+            noEffectTargets
+                ? "NO KNOCKBACK TARGET"
+                : "NO EFFECT ON BOSS"
+        );
+        playErrorSound();
+        showGameMessage(
+            gameState,
+            "NO EFFECT"
+        );
+
+        return;
     }
 
     if (!devOverride.skill?.infinite && (gameState.activeSkillStock ?? 0) <= 0) {

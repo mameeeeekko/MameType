@@ -397,37 +397,37 @@ export const NORMAL_CHALLENGE_TABLE = {
 export const NORMAL_UNLOCK_TABLE = {
     0: [
         [
-            { type:"time", value:120 },
-            { type:"accuracy", value:85 }
+            { type:"time", value:80 },
+            { type:"accuracy", value:90 }
         ],
         [
-            { type:"time", value:100 },
-            { type:"miss", value:10 }
+            { type:"time", value:80 },
+            { type:"miss", value:8 }
         ],
         [
-            { type:"time", value:150 },
+            { type:"time", value:90 },
             { type:"score", value:140 }
         ],
         [
-            { type:"time", value:90 }
+            { type:"time", value:70 }
         ]
     ],
 
     1: [
         [
-            { type:"time", value:150 },
-            { type:"accuracy", value:90 }
+            { type:"time", value:120 },
+            { type:"accuracy", value:93 }
         ],
         [
-            { type:"time", value:130 },
+            { type:"time", value:100 },
             { type:"miss", value:5 }
         ],
         [
-            { type:"time", value:180 },
+            { type:"time", value:130 },
             { type:"score", value:160 }
         ],
         [
-            { type:"time", value:120 }
+            { type:"time", value:90 }
         ]
     ],
 
@@ -480,37 +480,37 @@ export const TIME_ATTACK_CHALLENGE_TABLE = {
 export const TIME_ATTACK_UNLOCK_TABLE = {
     0: [
         [
-            { type:"target", value:6 },
-            { type:"accuracy", value:85 }
+            { type:"target", value:8 },
+            { type:"accuracy", value:90 }
         ],
         [
-            { type:"target", value:6 },
-            { type:"miss", value:10 }
+            { type:"target", value:8 },
+            { type:"miss", value:8 }
         ],
         [
-            { type:"target", value:6 },
+            { type:"target", value:8 },
             { type:"score", value:140 }
         ],
         [
-            { type:"target", value:7 }
+            { type:"target", value:9 }
         ]
     ],
 
     1: [
         [
-            { type:"target", value:15 },
-            { type:"accuracy", value:90 }
+            { type:"target", value:17 },
+            { type:"accuracy", value:93 }
         ],
         [
-            { type:"target", value:15 },
+            { type:"target", value:17 },
             { type:"miss", value:5 }
         ],
         [
-            { type:"target", value:15 },
+            { type:"target", value:17 },
             { type:"score", value:160 }
         ],
         [
-            { type:"target", value:16 }
+            { type:"target", value:19 }
         ]
     ],
 
@@ -574,44 +574,62 @@ export const LONG_TEXT_CHALLENGE_TABLE = {
 export const LONG_TEXT_UNLOCK_TABLE = {
     0: [
         [
-            { type:"time", value:180 },
+            { type:"time", value:210 },
             { type:"accuracy", value:85 }
         ],
         [
-            { type:"time", value:180 },
-            { type:"miss", value:10 }
+            { type:"time", value:210 },
+            { type:"miss", value:20 }
         ],
         [
-            { type:"time", value:180 },
+            { type:"time", value:210 },
             { type:"score", value:130 }
+        ],
+        [
+            { type:"time", value:200 }
+        ]
+    ],
+
+    1: [
+        [
+            { type:"time", value:185 },
+            { type:"accuracy", value:90 }
+        ],
+        [
+            { type:"time", value:185 },
+            { type:"miss", value:15 }
+        ],
+        [
+            { type:"time", value:185 },
+            { type:"score", value:160 }
         ],
         [
             { type:"time", value:180 }
         ]
     ],
 
-    1: [
+    2: [
         [
             { type:"time", value:175 },
-            { type:"accuracy", value:90 }
+            { type:"accuracy", value:95 }
         ],
         [
             { type:"time", value:175 },
-            { type:"miss", value:5 }
+            { type:"miss", value:7 }
         ],
         [
             { type:"time", value:175 },
-            { type:"score", value:160 }
+            { type:"score", value:180 }
         ],
         [
             { type:"time", value:170 }
         ]
     ],
 
-    2: [
+    3: [
         [
             { type:"time", value:155 },
-            { type:"accuracy", value:95 }
+            { type:"accuracy", value:98 }
         ],
         [
             { type:"time", value:155 },
@@ -619,28 +637,10 @@ export const LONG_TEXT_UNLOCK_TABLE = {
         ],
         [
             { type:"time", value:155 },
-            { type:"score", value:180 }
-        ],
-        [
-            { type:"time", value:150 }
-        ]
-    ],
-
-    3: [
-        [
-            { type:"time", value:145 },
-            { type:"accuracy", value:98 }
-        ],
-        [
-            { type:"time", value:145 },
-            { type:"miss", value:1 }
-        ],
-        [
-            { type:"time", value:145 },
             { type:"score", value:200 }
         ],
         [
-            { type:"time", value:140 }
+            { type:"time", value:150 }
         ]
     ]
 };

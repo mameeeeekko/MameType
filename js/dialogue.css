@@ -62,6 +62,105 @@
     transition: color 0.2s, transform 0.2s;
 }
 
+/* =====================================================
+   会話速度設定
+   ===================================================== */
+.dialogue-speed-control {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    z-index: 12;
+}
+
+.dialogue-speed-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 5px 9px;
+    background: rgba(13, 17, 23, 0.9);
+    border: 1px solid rgba(88, 166, 255, 0.45);
+    border-radius: 7px;
+    color: #c9d1d9;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.dialogue-speed-button:hover,
+.dialogue-speed-button[aria-expanded="true"] {
+    background: rgba(88, 166, 255, 0.16);
+    border-color: #58a6ff;
+    color: #fff;
+}
+
+.dialogue-speed-icon {
+    color: #58a6ff;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.dialogue-speed-caret {
+    color: #8b949e;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.dialogue-speed-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 150px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: rgba(13, 17, 23, 0.98);
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.dialogue-speed-menu[hidden] {
+    display: none;
+}
+
+.dialogue-speed-option {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 7px 9px;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    color: #c9d1d9;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    text-align: left;
+    transition: background 0.15s, color 0.15s;
+}
+
+.dialogue-speed-option:hover,
+.dialogue-speed-option.active {
+    background: rgba(88, 166, 255, 0.18);
+    color: #fff;
+}
+
+.dialogue-speed-option.active::after {
+    content: "✓";
+    margin-left: auto;
+    color: #58a6ff;
+    font-weight: 700;
+}
+
+.dialogue-container.log-view-mode .dialogue-speed-control {
+    display: none;
+}
+
 /* Left: Chapter Log */
 .dialogue-log-panel {
     width: 250px;

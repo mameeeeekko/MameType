@@ -24,12 +24,15 @@ export const ENEMY_MODE_CONFIG = {
         interval: 4000,   // 出現間隔(ms)
         limit: null,      // 出現上限（null = 無限）
         maxAlive: null,   // 同時出現上限（null = 無限）
-        immediateOnClear: false // 敵が全滅した際に即座に次を出すか
+        immediateOnClear: false, // 敵が全滅した際に即座に次を出すか
+
+        // ★同時出現（マルチスポーン）
+        multiCount: 1,    // 1回の出現で同時に出す敵の数（2なら2匹同時 / 1 = 従来どおり1匹）
+        multiInterval: 1  // 何回に1回まとめて出すか（2なら「2回に1回」だけ multiCount 匹同時 / 1 = 毎回）
     },
     // ===============================
     // 終了条件
     // ===============================
-    // 終了条件
     endConditions: {
         hpZero: true,
         timerMs: null,
@@ -485,6 +488,41 @@ export const TIER_TABLES = {
     ENEMY_TIER_RED_ONLY
 };
 
+// 固定砲台の追加重み。T3から出現し、T8以降で頭打ちにする。
+// 属性「のみ」の表には混在させない。
+const FIXED_TURRET_TIER_ENTRIES = {
+    T3:  [{ type: "FIXED_TURRET_LASER_T3", weight: 5 }, { type: "FIXED_TURRET_BULLET_T3", weight: 5 }],
+    T4:  [{ type: "FIXED_TURRET_LASER_T4", weight: 5 }, { type: "FIXED_TURRET_BULLET_T4", weight: 5 }],
+    T5:  [{ type: "FIXED_TURRET_LASER_T5", weight: 5 }, { type: "FIXED_TURRET_BULLET_T5", weight: 5 }],
+    T6:  [{ type: "FIXED_TURRET_LASER_T6", weight: 5 }, { type: "FIXED_TURRET_BULLET_T6", weight: 5 }],
+    T7:  [{ type: "FIXED_TURRET_LASER_T7", weight: 5 }, { type: "FIXED_TURRET_BULLET_T7", weight: 5 }],
+    T8:  [{ type: "FIXED_TURRET_LASER_T8", weight: 5 }, { type: "FIXED_TURRET_BULLET_T8", weight: 5 }],
+    T9:  [{ type: "FIXED_TURRET_LASER_T9", weight: 5 }, { type: "FIXED_TURRET_BULLET_T9", weight: 5 }],
+    T10: [{ type: "FIXED_TURRET_LASER_T10", weight: 5 }, { type: "FIXED_TURRET_BULLET_T10", weight: 5 }],
+};
+
+function addFixedTurretEntriesToTable(table) {
+    if (!table || String(table.description || "").includes("のみ")) return;
+
+    for (const [tierKey, entries] of Object.entries(FIXED_TURRET_TIER_ENTRIES)) {
+        const target = table[tierKey];
+        if (!Array.isArray(target) || !entries?.length) continue;
+
+        const missing = entries.filter(entry =>
+            !target.some(current => current?.type === entry.type)
+        );
+        if (missing.length > 0) {
+            target.push(...missing.map(entry => ({ ...entry })));
+        }
+    }
+}
+
+// 公開Tier表自体にも固定砲台を反映し、getTierEnemies経由だけでなく
+// テーブルを直接参照するツールからもT3以降の固定砲台を確認できる。
+for (const table of Object.values(TIER_TABLES)) {
+    addFixedTurretEntriesToTable(table);
+}
+
 // 旧名互換用
 const ENEMY_TIER_TABLE = ENEMY_TIER_BALANCED;
 
@@ -492,7 +530,13 @@ const ENEMY_TIER_TABLE = ENEMY_TIER_BALANCED;
  * 指定した属性テーブルからTierの敵セットを取得
  */
 export function getTierEnemies(tierKey, table = ENEMY_TIER_BALANCED) {
-    return table[tierKey] || table.T1;
+    if (!table) return [];
+
+    // 公開テーブルは初期化時に更新済みだが、外部から渡された表にも対応する。
+    addFixedTurretEntriesToTable(table);
+
+    const result = table[tierKey] || table.T1 || [];
+    return Array.isArray(result) ? [...result] : [];
 }
 
 /**
@@ -566,11 +610,27 @@ function getItemTierKey(stageNum) {
  *    - 通常は ENEMY_TIER_BALANCED (標準) を使用。
  *    - 下1桁が 5 , 10のステージ (5, 10, 15, 20, 25...) では、属性混成テーブルからランダムに選択される。
  *
+ * 1.6 同時出現（マルチスポーン）:
+ *    - spawn.multiCount    : 1回の出現で同時に出す敵の数（既定 1 = 従来どおり1体ずつ）
+ *    - spawn.multiInterval : 何回に1回まとめて出すか（既定 1 = 毎回まとめて出す）
+ *      multiInterval: 2 なら「2回に1回」だけ multiCount 匹を同時出現させる。
+ *    - 出現例: multiCount:2, multiInterval:2 → 1回目1匹 / 2回目2匹 / 3回目1匹 / 4回目2匹 …
+ *              multiCount:3, multiInterval:3 → 3回に1回だけ3匹同時
+ *              multiCount:2, multiInterval:1 → 毎回2匹同時
+ *    - 採用パターン:
+ *        case3 電撃戦   : multiCount 2（i>=40 で3） / multiInterval 3（i>=40 で2）
+ *        case4 精密防衛 : multiCount 2 / multiInterval 2（i>=50 で1）
+ *        case7 圧倒     : multiCount 3 / multiInterval 2
+ *    - 注意: limit / maxAlive は1体ずつ判定して超過分は出現させずに打ち切る。
+ *            limit:1 / maxAlive:1 のボス戦などでは実質無効（常に1体）。
+ *            単語が枯渇した場合もその回の同時出現はそこで打ち切られる。
+ *
  * 2. 難易度スケーリング (変数 i = ステージ番号):
  *    - 出現間隔: 3000ms (固定)
  *    - 撃破目標: 5 + floor(i / 4)
  *    - 制限時間: 30s + (i * 0.3s)
- *    - 同時出現: 3 + floor(i / 25)  ※通常時最大6
+ *    - 同時存在数: 3 + floor(i / 25)  ※通常時最大6
+ *    - マルチスポーン: multiCount 1 / multiInterval 1（パターン別に上書き。1.6 同時出現 参照）
  *
  * 3. ステージ/環境設定:
  *    - 背景画像: 1-30:blue, 31-60:purple, 60-90:red
@@ -579,11 +639,26 @@ function getItemTierKey(stageNum) {
  *               Tier遷移: 10ステージごとにT1→T5へ上昇。
  *
  * 4. エネミーTier定義:
- *    - 10ステージごとに T1 ～ T10 へ自動遷移。
+ *    - 通常クエストステージでは10ステージごとに T1 ～ T10 へ自動遷移する。
+ *    - 自動生成ステージとの対応（STAGE1 ～ STAGE100）:
+ *        T1  : STAGE1  - STAGE10
+ *        T2  : STAGE11 - STAGE20
+ *        T3  : STAGE21 - STAGE30
+ *        T4  : STAGE31 - STAGE40
+ *        T5  : STAGE41 - STAGE50
+ *        T6  : STAGE51 - STAGE60
+ *        T7  : STAGE61 - STAGE70
+ *        T8  : STAGE71 - STAGE80
+ *        T9  : STAGE81 - STAGE90
+ *        T10 : STAGE91 - STAGE100
+ *    - ステージ番号が100を超える場合はT10に固定される。
  *    - T1-T2: 小型/標準 (Gray主体)
  *    - T3-T5: 中型/特殊属性 (Purple, Blueなど) 混入開始
  *    - T6-T8: 大型/リング/ストライプ等の高耐久・複雑なワード
  *    - T9-T10: 各属性の最上位個体 + 低確率で超大型
+ *    - ボス戦・特殊ステージは getTierEnemies("Tn", ...) の手動指定に従い、
+ *      上記のステージ番号とは独立してT1～T10を選択する場合がある。
+ *    - フリーモードも画面上で選択したTierを直接使用する。
  *
  * 5. スター評価:
  *    - パターンに応じて「KPM/クリア時間/正確性/残りHP/残り時間/総合」から動的に選出。
@@ -656,7 +731,9 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             interval: baseSpawnInterval,
             limit: null,
             maxAlive: maxAlive,
-            immediateOnClear: false
+            immediateOnClear: false,
+            multiCount: 1,      // ★同時出現数（既定は1体ずつ）
+            multiInterval: 1    // ★同時出現タイミング（1 = 毎回 / 2 = 2回に1回まとめて multiCount 体）
         },
         enemyTable: getTierEnemies(tier, selectedTable),
         missionName: currentMission.name,
@@ -778,6 +855,10 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             config.phaseConditions = { killCount: blitzKillGoal }; // ★ 討伐数到達でフェーズ完了（全滅不要＝逃しても詰まない）
             config.spawn.immediateOnClear = true;
 
+            // ★同時出現：3回に1回は2体まとめて出現（ステージ40以降は2回に1回3体）
+            config.spawn.multiCount = i >= 40 ? 3 : 2;
+            config.spawn.multiInterval = i >= 40 ? 2 : 3;
+
             // ★ berserk: 残りHPが少ないほど敵が加速（最大 +60%、ステージ進行で最大+100%まで強化）
             config.berserk = { maxBoost: 0.6 + Math.min(0.4, i * 0.005) };
 
@@ -797,6 +878,9 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
         case 4: // 【精密防衛】高密度サバイバル
             config.spawn.maxAlive += 2; // 増加量を抑制
             config.spawn.interval *= 0.8;
+            // ★同時出現：2回に1回まとめて2体（ステージ50以降は毎回2体で高密度化）
+            config.spawn.multiCount = 2;
+            config.spawn.multiInterval = i >= 50 ? 1 : 2;
             config.endConditions = { hpZero: true, timerMs: timeLimit * 0.8 };
             config.clearConditions = { survive: true };
 
@@ -881,6 +965,9 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             config.spawn.interval *= 0.6; // 出現頻度を抑える (0.7 -> 0.8)
             config.spawn.maxAlive = Math.min(14, maxAlive + 6); // 大幅増 → 画面に敵が溜まり続ける
             config.enemySpeedMultiplier = 0.6; // ★ 敵を低速化：到達が遅く、画面上に滞留して密度が上がる
+            // ★同時出現：2回に1回は3体まとめて出現（maxAlive 14 の範囲でループ側が自動制限）
+            config.spawn.multiCount = 3;
+            config.spawn.multiInterval = 2;
             config.spawn.limit = null; // 無限湧き
             config.endConditions = { hpZero: true, timerMs: overwhelmTime };
             config.clearConditions = { survive: true };
@@ -986,13 +1073,162 @@ function shuffleArray(array) {
     return arr;
 }
 
+/**
+ * クエストステージのキャッシュ移行：同時出現（マルチスポーン）パラメータの補完
+ *
+ * クエストステージは生成時の内容を LocalStorage に保存して固定するため、
+ * 同時出現パラメータの追加前に生成されたキャッシュには multiCount / multiInterval が
+ * 存在しない（＝出現処理側で 1 にフォールバックされ、同時出現が効かない）。
+ *
+ * ここでは以下だけを行う。
+ *   - ステージ内容から ケース3（電撃戦）/ ケース4（精密防衛）/ ケース7（圧倒）を判定
+ *   - ステージ番号（キャッシュキー "STAGE<n>"）から generateStage と同じ既定値を適用
+ *   - 上記以外のステージは 1 / 1（従来どおり1体ずつ）を補完
+ *
+ * 進行状況・敵構成・出現間隔・終了条件など、スポーン以外の設定には一切触れない。
+ */
+
+/**
+ * キャッシュされたステージがどの出現パターン（generateStage の switch case）に該当するか判定する。
+ * @param {Object} stage ステージ設定
+ * @returns {number|null} case番号（3 / 4 / 7）、判定できない場合は null
+ */
+function detectMultiSpawnPattern(stage) {
+    // 最も確実な判定：ミッション名
+    if (stage.missionName) {
+        if (stage.missionName === "電撃戦") return 3;
+        if (stage.missionName === "精密防衛") return 4;
+        if (stage.missionName === "圧倒") return 7;
+    }
+
+    // 旧キャッシュで missionName が無い場合の保険（generateStage が設定する固有フィールドで判定）
+    if (stage.berserk) return 3;
+    if (stage.enemySpeedMultiplier === 0.6) return 7;
+    if (stage.star?.type === "hpRemaining" && stage.clearConditions?.survive && stage.endConditions?.timerMs) return 4;
+
+    return null;
+}
+
+/**
+ * 旧キャッシュに欠けている同時出現パラメータを補完する。
+ * @param {Object} stages キャッシュされたクエストステージ（STAGE1〜STAGE100）
+ * @returns {boolean} 補完して保存し直した場合は true
+ */
+function backfillMultiSpawnSettings(stages) {
+    if (!stages || typeof stages !== "object") return false;
+
+    let changed = false;
+
+    for (const [key, stage] of Object.entries(stages)) {
+        if (!stage || typeof stage !== "object" || !stage.spawn || typeof stage.spawn !== "object") {
+            continue;
+        }
+
+        // ステージ番号（generateStage の i 相当）をキャッシュキーから取得
+        const numMatch = /^STAGE(\d+)$/.exec(key);
+        const stageNum = numMatch ? parseInt(numMatch[1], 10) : null;
+        const isLateStage = (threshold) => stageNum !== null && stageNum >= threshold;
+
+        // ケース3 / 4 / 7 以外は generateStage と同じ既定値（従来どおり1体ずつ）
+        let multiCount = 1;
+        let multiInterval = 1;
+
+        switch (detectMultiSpawnPattern(stage)) {
+            case 3: // 【電撃戦】3回に1回2体（ステージ40以降は2回に1回3体）
+                multiCount = isLateStage(40) ? 3 : 2;
+                multiInterval = isLateStage(40) ? 2 : 3;
+                break;
+            case 4: // 【精密防衛】2回に1回2体（ステージ50以降は毎回2体）
+                multiCount = 2;
+                multiInterval = isLateStage(50) ? 1 : 2;
+                break;
+            case 7: // 【圧倒】2回に1回3体
+                multiCount = 3;
+                multiInterval = 2;
+                break;
+            default:
+                // 既定値が設定済みなら何もしない（手動調整済み設定を壊さないため）
+                if (stage.spawn.multiCount !== undefined && stage.spawn.multiInterval !== undefined) {
+                    continue;
+                }
+                break;
+        }
+
+        if (stage.spawn.multiCount === multiCount && stage.spawn.multiInterval === multiInterval) {
+            continue;
+        }
+
+        stage.spawn.multiCount = multiCount;
+        stage.spawn.multiInterval = multiInterval;
+        changed = true;
+    }
+
+    return changed;
+}
+
+/**
+ * 既存クエストキャッシュへ固定砲台を後付けする。
+ * 同じ table を二度変更しないよう、既存の固定砲台IDを確認してから不足分だけ追加する。
+ */
+function backfillFixedTurretEntries(stages) {
+    if (!stages || typeof stages !== "object") return false;
+
+    let changed = false;
+    const addToTable = (table, tierKey) => {
+        if (!Array.isArray(table)) return;
+        if (tierKey === "T1" || tierKey === "T2") return;
+        const entries = FIXED_TURRET_TIER_ENTRIES[tierKey];
+        if (!entries?.length) return;
+
+        const missing = entries.filter(entry =>
+            !table.some(current => current?.type === entry.type)
+        );
+        if (missing.length === 0) return;
+
+        // ボス専用フェーズには通常砲台を混在させない。
+        if (table.some(entry => /BOSS|MID_BOSS|LAST_BOSS|EX_BOSS/.test(String(entry?.type || "")))) {
+            return;
+        }
+
+        table.push(...missing.map(entry => ({ ...entry })));
+        changed = true;
+    };
+
+    for (const [key, stage] of Object.entries(stages)) {
+        const match = /^STAGE(\d+)$/.exec(key);
+        if (!match || !stage || typeof stage !== "object") continue;
+
+        const stageNum = Number(match[1]);
+        if (!Number.isFinite(stageNum) || stageNum < 21) continue;
+        if (String(stage.enemyVariationDescription || "").includes("のみ")) continue;
+        const tierKey = `T${Math.min(10, Math.ceil(stageNum / 10))}`;
+
+        addToTable(stage.enemyTable, tierKey);
+        if (Array.isArray(stage.phases)) {
+            stage.phases.forEach(phase => addToTable(phase?.enemyTable, tierKey));
+        }
+    }
+
+    return changed;
+}
+
 function initGeneratedStages() {
     if (typeof localStorage === 'undefined') return {}; // 非ブラウザ環境用セーフティ
 
     const cached = localStorage.getItem(QUEST_STAGES_STORAGE_KEY);
     if (cached) {
         try {
-            return JSON.parse(cached);
+            const parsed = JSON.parse(cached);
+
+            // ★旧キャッシュ移行：同時出現パラメータと固定砲台を補完し、保存し直す
+            // （進行データには影響しない。ステージ構成・敵内容もそのまま維持される）
+            const multiSpawnChanged = backfillMultiSpawnSettings(parsed);
+            const turretChanged = backfillFixedTurretEntries(parsed);
+            if (multiSpawnChanged || turretChanged) {
+                localStorage.setItem(QUEST_STAGES_STORAGE_KEY, JSON.stringify(parsed));
+            }
+
+            return parsed;
         } catch (e) {
             console.warn("Quest stage cache corrupted. Regenerating...");
         }
@@ -1074,9 +1310,19 @@ STAGES = {
       interval: 3000,   // 出現間隔(ms)
       limit: 10,        // 総出現数上限
                            // null = 無限
-      maxAlive: 5,      // 同時出現上限
-      immediateOnClear: false, // 敵が全滅した際に即座に次を出すか
+      maxAlive: 5,      // 同時存在数上限
                            // null = 無制限
+      immediateOnClear: false, // 敵が全滅した際に即座に次を出すか
+
+      // ★同時出現（マルチスポーン）
+      multiCount: 1,    // 1回の出現で同時に出す敵の数（2なら2匹同時）
+      multiInterval: 1  // 何回に1回まとめて出すか
+                        //   2 → 「2回に1回」だけ multiCount 匹同時
+                        //   1 → 毎回まとめて出す（multiCount:1 なら従来どおり1匹ずつ）
+                        // 例) multiCount:2, multiInterval:2 → 1匹/2匹/1匹/2匹… の繰り返し
+                        //     multiCount:3, multiInterval:1 → 常に3匹同時
+                        // ※ limit / maxAlive は1体ずつ判定し、超過分は出現させずに打ち切る
+                        // ※ phases 内の spawn に書けばフェーズ単位で切り替え可能
     },
     // ---------------------------
     // アイテム出現設定（省略可）

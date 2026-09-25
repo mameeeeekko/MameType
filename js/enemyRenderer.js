@@ -389,7 +389,11 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, layer = "all"){
         return;
     }
 
-    renderEnemyBehaviorEffect(ctx,enemy);
+    const deferBehaviorEffect =
+        enemy.isFixed && enemy.turretKind === "laser";
+    if (!deferBehaviorEffect) {
+        renderEnemyBehaviorEffect(ctx, enemy);
+    }
     
     ctx.save(); // ←これ絶対
     ctx.textAlign = "center";
@@ -417,14 +421,31 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, layer = "all"){
     // =====================
     drawEnemyBody(ctx, enemy, enemyColor);
 
+    // 固定砲台の予兆だけは本体の上へ描画する。
+    if (deferBehaviorEffect) {
+        renderEnemyBehaviorEffect(ctx, enemy);
+    }
+
     // ★ビット連動ボス: 本体と生存ビットを電磁波風ラインで連結
     if (enemy.isBitBoss) {
         drawBitLinks(ctx, enemy);
     }
 
+    // =====================
+    // ★下部バッジの積み上げ（重なり回避）
+    //   ×残り回数（hitCount）とフリーズ残り秒数は同じ「敵の真下」に出るため、
+    //   両方表示中はフリーズ側を hitCount バッジの高さぶん下へ積む。
+    //   ※ 一時表示のフリーズ側だけを動かすことで、hitCount バッジは常に定位置を保つ。
+    // =====================
+    const HIT_COUNT_BADGE_H = 16;
+    const BADGE_GAP = 3;
+
+    const hasHitCountBadge = enemy.hitCount > 1;
+
     renderFreezeAura(
         ctx,
-        enemy
+        enemy,
+        hasHitCountBadge ? HIT_COUNT_BADGE_H + BADGE_GAP : 0
     );
 
     // ★召喚マーク
@@ -504,9 +525,9 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, layer = "all"){
         const padding = 4;
 
         const boxX = enemy.x - textWidth / 2 - padding;
-        const boxY = enemy.y + enemy.radius + 6;
+        const boxY = enemy.y + radius + 6; // ※ radius は drawEnemy のローカル変数（type.size と同値）
         const boxW = textWidth + padding * 2;
-        const boxH = 16;
+        const boxH = HIT_COUNT_BADGE_H; // ← 上部で定義した定数と共有（フリーズ秒数バッジとの重なり回避）
 
         // 角丸BOX
         ctx.fillStyle = "rgba(53, 53, 53, 0.5)";
@@ -856,8 +877,8 @@ function drawEnemyBody(ctx, enemy, color){
     // 少し回転（動きが出る）
     // =========================
     ctx.translate(x, y);
-    // 六角形は常に上を向くように回転を無効化
-    if (type.shape === "hexagon") {
+    // 通常形状は従来どおり回転を使う。固定砲台は左右対称の据置型なので回転させない。
+    if (type.shape === "hexagon" || enemy.isFixed) {
         ctx.rotate(0);
     } else {
         ctx.rotate(enemy.rotation);
@@ -941,6 +962,10 @@ function drawShape(ctx, x, y, type, color) {
             drawHexagon(ctx, x, y, size, grad, color);
             break;
 
+        case "turret":
+            drawTurretShape(ctx, x, y, size, grad, color);
+            break;
+
         case "diamond":
             drawDiamond(ctx, x, y, size, color);
             break;
@@ -983,6 +1008,51 @@ function drawShape(ctx, x, y, type, color) {
     }
 }
 
+
+// ============================================
+// 固定砲台の形状（砲身なし・低い据置型）
+// ============================================
+function drawTurretShape(ctx, x, y, size, grad, color) {
+
+    // 低い左右対称の本体。突出する砲身や方向部品は持たない。
+    ctx.beginPath();
+    defineShapePath(ctx, x, y, "turret", size);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.28)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // 中央の装甲リング1箇所だけを用いる。上下へ装甲を分割しない。
+    const coreRadius = size * 0.34;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+        const angle = -Math.PI / 2 + i * Math.PI / 3;
+        const px = x + Math.cos(angle) * coreRadius;
+        const py = y + Math.sin(angle) * coreRadius;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "rgba(5, 10, 18, 0.68)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.28)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(x, y, coreRadius * 0.58, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+    ctx.arc(x, y, coreRadius * 0.24, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(245,250,255,0.90)";
+    ctx.fill();
+}
 
 // ===============================
 // ラミエル風のダイヤモンド形状

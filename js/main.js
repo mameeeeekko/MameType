@@ -37,7 +37,16 @@ import { initMusicPlayer, openMusicModal, closeMusicModal, handleMusicModalKey }
 import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId, getRecoveryCode, setRecoveryCode } from "../online/playerProfile.js";
 import { openOnlineRanking, closeOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
-import { startDialogue, closeDialogue, isDialogueVisible, setDialogueSpeed, showDisclaimer } from "./dialogue.js";
+import {
+  startDialogue,
+  closeDialogue,
+  isDialogueVisible,
+  setDialogueSpeed,
+  getDialogueSpeedLevel,
+  DIALOGUE_SPEED_LABELS,
+  DIALOGUE_SPEED_CHANGED_EVENT,
+  showDisclaimer,
+} from "./dialogue.js";
 import { loadCoreAssets, loadRemainingAssets, images, collectOfflineAssetUrls, getBgmAssets } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds.js";
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
@@ -149,6 +158,7 @@ let unlock, autoLock, pause, activeSkill, saveKeybindBtn;
 let keybindConfigModal, keybindConfigCloseBtn, keybindConfigSaveBtn, keybindConfigContent;
 let playerLvRange;
 let enemyIntervalSlider, enemyImmediateToggle;
+let enemyMultiCountSlider, enemyMultiIntervalSlider; // ★同時出現（マルチスポーン）設定
 let currentFreeModeId = 'Standard'; // フリーモードの選択状態を保持する変数
 let currentEnemyPattern = 'time'; // エネミーモード内のパターン選択状態
 
@@ -275,6 +285,8 @@ function cacheDOM() {
   playerLvRange = document.getElementById("playerLvRange");
   enemyIntervalSlider = document.getElementById("enemyIntervalSlider");
   enemyImmediateToggle = document.getElementById("enemyImmediateToggle");
+  enemyMultiCountSlider = document.getElementById("enemyMultiCountSlider");       // ★同時出現数
+  enemyMultiIntervalSlider = document.getElementById("enemyMultiIntervalSlider"); // ★同時出現タイミング
 
 }
 
@@ -2058,17 +2070,12 @@ function initSettingsUI() {
   });
 
   // 会話速度スライダー
+  // 速度変更イベントは共通の状態と設定画面UIを同期する
   dialogueSpeedSlider?.addEventListener("input", e => {
     const level = parseInt(e.target.value, 10);
     setDialogueSpeed(level);
-    saveSettings();
-    // 数値表示を更新
-    const valDisplay = document.getElementById("dialogueSpeedValue");
-    if (valDisplay) {
-      const labels = ["Slowest", "Slow", "Normal", "Fast", "Fastest"];
-      valDisplay.textContent = labels[level] || "Normal";
-    }
   });
+  window.addEventListener(DIALOGUE_SPEED_CHANGED_EVENT, handleDialogueSpeedChanged);
 
   // 描画品質（いろいろな画面環境に対応）
   const renderQualitySelect = document.getElementById("renderQualitySelect");
@@ -2491,6 +2498,9 @@ function saveFreeModeConfig() {
       count: parseInt(document.getElementById("enemyCountSlider")?.value) || 30,
       interval: parseInt(document.getElementById("enemyIntervalSlider")?.value) || 2000,
       immediateOnClear: document.getElementById("enemyImmediateToggle")?.checked || false,
+      // ★同時出現（マルチスポーン）
+      multiCount: parseInt(document.getElementById("enemyMultiCountSlider")?.value) || 1,
+      multiInterval: parseInt(document.getElementById("enemyMultiIntervalSlider")?.value) || 1,
       tier: document.getElementById("freeEnemyTier")?.value || "1",
       typeSet: document.getElementById("freeEnemyTypeSet")?.value || "ENEMY_TIER_BALANCED",
       lv: parseInt(document.getElementById("playerLvRange")?.value) || 1,
@@ -2599,6 +2609,15 @@ function loadFreeModeConfig() {
       if (config.enemy.immediateOnClear !== undefined) {
         const el = document.getElementById("enemyImmediateToggle");
         if (el) el.checked = config.enemy.immediateOnClear;
+      }
+      // ★同時出現（マルチスポーン）の復元
+      if (config.enemy.multiCount !== undefined) {
+        const el = document.getElementById("enemyMultiCountSlider");
+        if (el) { el.value = config.enemy.multiCount; updateConfigSliderLabel("enemyMultiCountSlider", el.value); }
+      }
+      if (config.enemy.multiInterval !== undefined) {
+        const el = document.getElementById("enemyMultiIntervalSlider");
+        if (el) { el.value = config.enemy.multiInterval; updateConfigSliderLabel("enemyMultiIntervalSlider", el.value); }
       }
       if (config.enemy.tier) {
         const el = document.getElementById("freeEnemyTier");
@@ -2787,7 +2806,10 @@ function startFreeEnemyMode() {
     immediateOnClear: immediateOnClear,
     maxAlive: 10,
     limit: null,
-    tier: selectedTier // Tier情報を追加してenemyCore側に伝える
+    tier: selectedTier, // Tier情報を追加してenemyCore側に伝える
+    // ★同時出現（マルチスポーン）
+    multiCount: Math.max(1, parseInt(enemyMultiCountSlider?.value || "1")),
+    multiInterval: Math.max(1, parseInt(enemyMultiIntervalSlider?.value || "1"))
   };
 
   const activePattern = currentEnemyPattern.toLowerCase();
@@ -2896,7 +2918,7 @@ function initFreeModeConfigUI() {
   });
 
   // スライダー変更時に保存
-  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "playerLvRange", "bossPlayerLvRange", "defenseCharsSlider", "defenseTimeSlider", "defenseMinWordLengthSlider", "defenseMaxWordLengthSlider"]; // Defense slidersを追加
+  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "enemyMultiCountSlider", "enemyMultiIntervalSlider", "playerLvRange", "bossPlayerLvRange", "defenseCharsSlider", "defenseTimeSlider", "defenseMinWordLengthSlider", "defenseMaxWordLengthSlider"]; // Defense slidersを追加
   sliders.forEach(id => {
     const el = document.getElementById(id);
     el?.addEventListener("input", () => {
@@ -4597,7 +4619,7 @@ function handleMenuKey(e) {
   }
 
 // =====================================================
-// 設定（サウンド）
+// 設定（サウンド・会話速度）
 // =====================================================
 function applySoundSettingsToUI() {
   const current = Game.getSoundSettings();
@@ -4624,18 +4646,8 @@ function applySoundSettingsToUI() {
     seVolSlider.value = vols.se;
     document.getElementById("seVolumeValue").textContent = `${Math.round(vols.se * 100)}%`;
   }
-  // 会話速度
-  if (dialogueSpeedSlider) {
-    const settings = JSON.parse(localStorage.getItem("typing_game_settings") || "{}");
-    const speedLevel = settings.dialogueSpeed !== undefined ? settings.dialogueSpeed : 3; // デフォルトはFast
-    dialogueSpeedSlider.value = speedLevel;
-    setDialogueSpeed(speedLevel);
-    const valDisplay = document.getElementById("dialogueSpeedValue");
-    if (valDisplay) {
-      const labels = ["Slowest", "Slow", "Normal", "Fast", "Fastest"];
-      valDisplay.textContent = labels[speedLevel] || "Normal";
-    }
-  }
+  // 会話速度の設定UIを現在の共通状態に反映
+  updateDialogueSpeedUI(getDialogueSpeedLevel());
 
   if (soundToggle && soundIcon) {
     soundToggle.checked = Game.getSoundEnabled();
@@ -4643,12 +4655,33 @@ function applySoundSettingsToUI() {
   }
 }
 
+/**
+ * 会話速度変更を設定画面へ反映し、保存します。
+ */
+function updateDialogueSpeedUI(level) {
+  const numericLevel = Number(level);
+  const safeLevel = Number.isFinite(numericLevel)
+    ? Math.max(0, Math.min(Math.round(numericLevel), DIALOGUE_SPEED_LABELS.length - 1))
+    : getDialogueSpeedLevel();
+
+  if (dialogueSpeedSlider) dialogueSpeedSlider.value = safeLevel;
+  const valDisplay = document.getElementById("dialogueSpeedValue");
+  if (valDisplay) {
+    valDisplay.textContent = DIALOGUE_SPEED_LABELS[safeLevel] || DIALOGUE_SPEED_LABELS[3];
+  }
+}
+
+function handleDialogueSpeedChanged(event) {
+  updateDialogueSpeedUI(event.detail?.level ?? getDialogueSpeedLevel());
+  saveSettings();
+}
+
 function saveSettings() {
   localStorage.setItem("typing_game_settings", JSON.stringify({
     soundEnabled: Game.getSoundEnabled(),
     soundSettings: Game.getSoundSettings(),
     soundVolumes: Game.getSoundVolumes(),
-    dialogueSpeed: dialogueSpeedSlider ? parseInt(dialogueSpeedSlider.value, 10) : 3,
+    dialogueSpeed: getDialogueSpeedLevel(),
   }));
 }
 

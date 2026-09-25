@@ -15,6 +15,9 @@ let typeVinylGain = null; // レコードノイズ用ゲインノード
 let typeWarmFilter = null; // ローパスフィルター（温かみ用）
 
 export let laserEffects = [];
+const turretLaserEffects = [];
+const turretDamageEffects = [];
+const turretGuardEffects = [];
 import { gameState, getSoundEnabled, getSoundSettings } from "./gameCore.js";
 import { scaledParticleCount, getEffectsScale } from "./performance.js";
 
@@ -1248,6 +1251,106 @@ export function spawnLaserEffect(sx, sy, tx, ty, options = {}) {
     });
 }
 
+// ===========================================
+// 固定砲台 laser
+// ===========================================
+export function spawnTurretLaserEffect(sx, sy, tx, ty, options = {}) {
+    const angle = Math.atan2(ty - sy, tx - sx);
+    const blocked = Boolean(options.blocked);
+    const barrierRadius = Number(options.barrierRadius) || 32;
+    const scatter = [];
+
+    if (blocked) {
+        // バリアへ遮断された位置から、照射方向の逆側（バリア外）へ残光を散らす。
+        for (let i = 0; i < 7; i++) {
+            const sparkLife = 16 + Math.random() * 8;
+            const length = 7 + Math.random() * 13;
+            const offset = (Math.random() - 0.5) * 18;
+            const distance = 7 + i * 8;
+            scatter.push({
+                distance,
+                offset,
+                length,
+                life: sparkLife,
+                maxLife: sparkLife
+            });
+        }
+    }
+
+    turretLaserEffects.push({
+        sx, sy, tx, ty, angle, blocked, barrierRadius, scatter,
+        life: 26,
+        maxLife: 26
+    });
+}
+
+// ===========================================
+// 固定砲台の被弾
+// ===========================================
+export function spawnTurretDamageEffect(x, y, sx = x, sy = y) {
+    const angle = Math.atan2(y - sy, x - sx);
+    turretDamageEffects.push({
+        x, y, angle,
+        life: 24,
+        maxLife: 24,
+        particles: []
+    });
+
+    const effect = turretDamageEffects[turretDamageEffects.length - 1];
+    for (let i = 0; i < scaledParticleCount(10); i++) {
+        const spread = (Math.random() - 0.5) * 1.8;
+        const direction = angle + spread;
+        const speed = 1.5 + Math.random() * 3.5;
+        const particleLife = 14 + Math.random() * 8;
+        effect.particles.push({
+            x: x + Math.cos(direction) * 8,
+            y: y + Math.sin(direction) * 8,
+            vx: Math.cos(direction) * speed,
+            vy: Math.sin(direction) * speed,
+            life: particleLife,
+            maxLife: particleLife,
+            radius: 1 + Math.random() * 1.5
+        });
+    }
+}
+
+// ===========================================
+// 固定砲台を防御スキルで防いだ演出
+// ===========================================
+export function spawnTurretGuardEffect(
+    x,
+    y,
+    sx = x,
+    sy = y,
+    options = {}
+) {
+    const angle = Math.atan2(y - sy, x - sx);
+    const radius = Math.max(18, Number(options.radius) || 25);
+    turretGuardEffects.push({
+        x, y, angle,
+        radius,
+        life: 30,
+        maxLife: 30,
+        particles: []
+    });
+
+    const effect = turretGuardEffects[turretGuardEffects.length - 1];
+    for (let i = 0; i < scaledParticleCount(9); i++) {
+        const direction = angle + (Math.random() - 0.5) * 1.6;
+        const speed = 1.2 + Math.random() * 2.8;
+        const particleLife = 16 + Math.random() * 8;
+        effect.particles.push({
+            x: x + Math.cos(direction) * radius,
+            y: y + Math.sin(direction) * radius,
+            vx: Math.cos(direction) * speed,
+            vy: Math.sin(direction) * speed,
+            life: particleLife,
+            maxLife: particleLife,
+            radius: 1 + Math.random() * 1.5
+        });
+    }
+}
+
 export function spawnPlayerDamageEffect(x, y) {
 
     const effect = {
@@ -1316,6 +1419,221 @@ export function spawnPlayerNegateEffect(
 // ===============================
 // 敵attackのレーザーの描出および、ガード演出
 // ===============================
+// ===========================================
+// 固定砲台 laser の描画
+// ボス laser より細く短い、控えめな照射にする。
+// ===========================================
+export function renderTurretLaserEffects(ctx, deltaTime = 1 / 60) {
+    const scale = deltaTime * 60;
+
+    for (let i = turretLaserEffects.length - 1; i >= 0; i--) {
+        const e = turretLaserEffects[i];
+        e.life -= scale;
+
+        if (e.life <= 0) {
+            turretLaserEffects.splice(i, 1);
+            continue;
+        }
+
+        const progress = 1 - e.life / e.maxLife;
+        const alpha = Math.sin(progress * Math.PI);
+        const dirX = Math.cos(e.angle);
+        const dirY = Math.sin(e.angle);
+        const endX = e.tx - dirX * e.barrierRadius;
+        const endY = e.ty - dirY * e.barrierRadius;
+        const color = e.blocked ? "#ff9a7a" : "#ff625f";
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.lineCap = "round";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8;
+
+        // 控えめな二重の照射線
+        ctx.beginPath();
+        ctx.moveTo(e.sx, e.sy);
+        ctx.lineTo(e.blocked ? endX : e.tx, e.blocked ? endY : e.ty);
+        ctx.strokeStyle = e.blocked
+            ? `rgba(255, 154, 122, ${alpha * 0.34})`
+            : `rgba(255, 98, 95, ${alpha * 0.3})`;
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        ctx.shadowBlur = 3;
+        ctx.beginPath();
+        ctx.moveTo(e.sx, e.sy);
+        ctx.lineTo(e.blocked ? endX : e.tx, e.blocked ? endY : e.ty);
+        ctx.strokeStyle = e.blocked
+            ? `rgba(255, 225, 210, ${alpha * 0.9})`
+            : `rgba(255, 225, 220, ${alpha * 0.95})`;
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+
+        // 遮断点から照射方向の逆側へ散らす短い残光。
+        if (e.blocked) {
+            ctx.shadowBlur = 0;
+            for (const spark of e.scatter) {
+                spark.life -= scale;
+                const sparkAlpha = Math.max(0, spark.life / spark.maxLife) * alpha;
+                if (sparkAlpha <= 0) continue;
+
+                const px = endX - dirX * spark.distance - dirY * spark.offset;
+                const py = endY - dirY * spark.distance + dirX * spark.offset;
+                const ex = px - dirX * spark.length;
+                const ey = py - dirY * spark.length;
+
+                ctx.globalAlpha = sparkAlpha;
+                ctx.strokeStyle = "#ffd1bd";
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(ex, ey);
+                ctx.lineTo(px, py);
+                ctx.stroke();
+            }
+        } else {
+            ctx.shadowBlur = 5;
+            ctx.beginPath();
+            ctx.arc(e.tx, e.ty, 4 + progress * 5, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 220, 210, ${alpha * 0.8})`;
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+}
+
+// ===========================================
+// 固定砲台の被弾エフェクト
+// ===========================================
+export function renderTurretDamageEffects(ctx, deltaTime = 1 / 60) {
+    const scale = deltaTime * 60;
+
+    for (let i = turretDamageEffects.length - 1; i >= 0; i--) {
+        const e = turretDamageEffects[i];
+        e.life -= scale;
+
+        if (e.life <= 0) {
+            turretDamageEffects.splice(i, 1);
+            continue;
+        }
+
+        const progress = 1 - e.life / e.maxLife;
+        const alpha = Math.sin(progress * Math.PI);
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        for (const p of e.particles) {
+            p.x += p.vx * scale;
+            p.y += p.vy * scale;
+            p.life -= scale;
+            if (p.life <= 0) continue;
+
+            const pAlpha = Math.max(0, p.life / p.maxLife);
+            ctx.globalAlpha = alpha * pAlpha;
+            ctx.fillStyle = "#ff765f";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = "rgba(255, 126, 98, 0.9)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 12 + progress * 24, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 被弾方向に沿った短い衝撃線
+        const sideX = -Math.sin(e.angle);
+        const sideY = Math.cos(e.angle);
+        for (let n = -1; n <= 1; n++) {
+            const startX = e.x + sideX * n * 5;
+            const startY = e.y + sideY * n * 5;
+            const endX = startX + Math.cos(e.angle) * (12 + progress * 10);
+            const endY = startY + Math.sin(e.angle) * (12 + progress * 10);
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = "rgba(255, 235, 220, 0.9)";
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, Math.max(0.5, 5 * (1 - progress)), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// ===========================================
+// 固定砲台の防御スキル成功エフェクト
+// ===========================================
+export function renderTurretGuardEffects(ctx, deltaTime = 1 / 60) {
+    const scale = deltaTime * 60;
+
+    for (let i = turretGuardEffects.length - 1; i >= 0; i--) {
+        const e = turretGuardEffects[i];
+        e.life -= scale;
+
+        if (e.life <= 0) {
+            turretGuardEffects.splice(i, 1);
+            continue;
+        }
+
+        const progress = 1 - e.life / e.maxLife;
+        const alpha = Math.sin(progress * Math.PI);
+        const radius = e.radius || 25;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = "#8deaff";
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = "#54cfff";
+        ctx.shadowBlur = 8;
+
+        // 防御位置に合わせた六角形のバリア
+        ctx.beginPath();
+        for (let n = 0; n < 6; n++) {
+            const a = -Math.PI / 2 + n * Math.PI / 3;
+            const px = e.x + Math.cos(a) * radius;
+            const py = e.y + Math.sin(a) * radius;
+            if (n === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.globalAlpha = alpha * 0.16;
+        ctx.fillStyle = "#8deaff";
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = alpha;
+        for (const p of e.particles) {
+            p.x += p.vx * scale;
+            p.y += p.vy * scale;
+            p.life -= scale;
+            if (p.life <= 0) continue;
+
+            const pAlpha = Math.max(0, p.life / p.maxLife);
+            ctx.globalAlpha = alpha * pAlpha;
+            ctx.fillStyle = "#b9f5ff";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "#e7fcff";
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GUARD", e.x, e.y - radius - 8);
+        ctx.restore();
+    }
+}
+
 export function renderLaserEffects(ctx, deltaTime = 1 / 60) {
     // ★deltaTime(秒)を60fps基準のフレームスケールに正規化（リフレッシュレート非依存）
     const scale = deltaTime * 60;
@@ -2770,6 +3088,12 @@ export function renderEnemyBehaviorEffect(
     ctx,
     enemy
 ){
+    // 固定レーザーは行動状態の有無に関わらず、次の攻撃までの残量バーを表示する。
+    if (enemy.isFixed && enemy.turretKind === "laser") {
+        renderFixedTurretLaserCountdown(ctx, enemy);
+        return;
+    }
+
     if(
         !enemy.behaviorEffect ||
         enemy.behaviorEffectTimer <= 0
@@ -2788,7 +3112,6 @@ export function renderEnemyBehaviorEffect(
 
         case "shoot":
         case "attack":
-
             renderShootEffect(
                 ctx,
                 enemy,
@@ -2805,6 +3128,78 @@ export function renderEnemyBehaviorEffect(
             );
             break;
     }
+}
+
+function renderFixedTurretLaserCountdown(ctx, enemy) {
+    const behavior = enemy.type?.behaviors?.find(item => item.type === "laser");
+    if (!behavior) return;
+
+    const key = `${behavior.type}_${behavior.interval}`;
+    const state = enemy.behaviorStates?.[key];
+    const elapsed = Math.min(behavior.interval, state?.timer || 0);
+    const remaining = Math.max(0, behavior.interval - elapsed);
+    const remainingRatio = Math.max(0, Math.min(1, remaining / behavior.interval));
+    const count = Math.max(1, Math.ceil(remaining));
+    const isCharging = state?.charging === true;
+    const showNumber =
+        isCharging &&
+        remaining > 0 &&
+        remaining <= (behavior.preDelay || 3);
+    const size = enemy.type.size || 20;
+    const barWidth = size * 2.15;
+    const barHeight = 5;
+    const barX = enemy.x - barWidth / 2;
+    const barY = enemy.y - size * 0.72 - barHeight;
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // 攻撃間隔全体を消費する連続バー。0になった時に実際の攻撃条件も成立する。
+    ctx.fillStyle = "rgba(8, 12, 20, 0.86)";
+    ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    const urgent = remainingRatio <= 0.25;
+    const pulse = 0.72 + Math.sin(remaining * Math.PI * 2) * 0.18;
+    ctx.globalAlpha = urgent ? pulse : 0.88;
+    ctx.fillStyle = urgent ? "#ff4f4f" : "#ff8a70";
+    ctx.shadowColor = "#ff554f";
+    ctx.shadowBlur = urgent ? 7 : 3;
+    ctx.fillRect(barX, barY, barWidth * remainingRatio, barHeight);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    if (showNumber) {
+        // 数字と六角形バッグは同じ中心座標を使う。
+        const centerX = enemy.x;
+        const centerY = enemy.y;
+        const radius = 11;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = -Math.PI / 2 + i * Math.PI / 3;
+            const px = centerX + Math.cos(angle) * radius;
+            const py = centerY + Math.sin(angle) * radius;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = "rgba(12, 15, 24, 0.88)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255, 113, 98, 0.78)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.font = "bold 15px 'Noto Sans Mono', monospace";
+        ctx.fillStyle = "#fff4ef";
+        ctx.shadowColor = "#ff554f";
+        ctx.shadowBlur = 5;
+        ctx.fillText(String(count), centerX, centerY);
+        ctx.shadowBlur = 0;
+    }
+
+    ctx.restore();
 }
 
 function renderShootEffect(
@@ -2868,9 +3263,12 @@ function renderSpawnEffect(
 }
 
 // freeze中ずっと表示
+// ★offsetY: 呼び出し側が指定する下方向オフセット。
+//   敵の真下に出る他のバッジ（×残り回数など）と重ならないよう下へ積むために使う。
 export function renderFreezeAura(
     ctx,
-    enemy
+    enemy,
+    offsetY = 0
 ){
 
     if(
@@ -2948,7 +3346,7 @@ export function renderFreezeAura(
     const boxW = textW + padding * 2;
     const boxH = 17;
     const boxX = enemy.x - boxW / 2;
-    const boxY = enemy.y + enemy.type.size + 6;
+    const boxY = enemy.y + enemy.type.size + 6 + offsetY;
 
     ctx.fillStyle = "rgba(56, 110, 180, 0.55)";
     ctx.beginPath();
@@ -4551,6 +4949,9 @@ export function clearAllEffects() {
     laserEffects.length = 0;
     playerDamageEffects.length = 0;
     playerNegateEffects.length = 0;
+    turretLaserEffects.length = 0;
+    turretDamageEffects.length = 0;
+    turretGuardEffects.length = 0;
 }
 
 // ===========================================
@@ -4564,6 +4965,9 @@ export function areAllEffectsDone() {
            laserEffects.length === 0 &&
            playerDamageEffects.length === 0 &&
            playerNegateEffects.length === 0 &&
+           turretLaserEffects.length === 0 &&
+           turretDamageEffects.length === 0 &&
+           turretGuardEffects.length === 0 &&
            shotEffects.length === 0 &&
            hitEffects.length === 0 &&
            knockbackEffects.length === 0 &&

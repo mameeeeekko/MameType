@@ -1,6 +1,6 @@
 // dialogue.js
 
-import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed, getMaxClearedStageNumber, hasExtraCleared } from './questProgress.js'; // ★ MODIFIED: Import new functions
+import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasStageBeenEntered, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed, getMaxClearedStageNumber, hasExtraCleared } from './questProgress.js'; // ★ MODIFIED: Import new functions
 import { gameState } from './gameCore.js';
 import { playBGM, stopBGM, fadeOutBGM, fadeBGMTo, BGM_CONFIG, playDialogueSound, playSystemDialogueSound, playSE } from './effectManager.js';
 import { showHud } from './enemyCore.js';
@@ -19,12 +19,21 @@ let closeButton = null;
 let skipToEndButton = null; // 最後までスキップ
 let skipToChoiceButton = null; // 選択肢までスキップ
 let choicesContainer = null; // 選択肢コンテナ用の変数を追加
+let dialogueSpeedControl = null;
+let dialogueSpeedButton = null;
+let dialogueSpeedLabel = null;
+let dialogueSpeedMenu = null;
+let dialogueSpeedControlBound = false;
 let isStaffRollShowing = false; // スタッフロール表示中フラグ
 
 // ★ スタッフロールのスクロール速度（px/秒）。JSがrAFでピクセル絶対指定して流す。
 const STAFF_ROLL_SCROLL_SPEED = 80; //60
 
 let currentDialogueId = null;
+// ★ステージ前会話（"W1_Q1_start" 等）のクエストID（"W1_Q1"）。
+//   ランダムなステージ前会話では一時ID（_random_...）に差し替わるため、
+//   スキップ可否（skip to end / skip to choice）の判定用にここへ保持する。
+let currentQuestStartId = null;
 let currentMessageIndex = 0;
 let onCompleteCallback = null;
 let currentTypingMessage = null; // ★ MODIFIED: 現在タイピング中のメッセージを保持
@@ -35,16 +44,68 @@ let dialogueState = 'IDLE';
 
 let waitingForMapReturn = false; // ★ マップに戻る待機フラグ
 // イベントリスナーを管理するための変数
-const DIALOGUE_SPEEDS = [100, 80, 60, 40, 15]; // Slow -> Fast (ms)
-let currentDialogueSpeed = DIALOGUE_SPEEDS[3]; // デフォルトは "Fast" (30ms)
+export const DIALOGUE_SPEED_LABELS = Object.freeze(["Slowest", "Slow", "Normal", "Fast", "Fastest"]);
+export const DIALOGUE_SPEED_CHANGED_EVENT = "mametype-dialogue-speed-changed";
+const DIALOGUE_SPEEDS = Object.freeze([100, 80, 60, 40, 15]); // Slow -> Fast (ms)
+const DEFAULT_DIALOGUE_SPEED_LEVEL = 3;
+let currentDialogueSpeedLevel = DEFAULT_DIALOGUE_SPEED_LEVEL;
+let currentDialogueSpeed = DIALOGUE_SPEEDS[DEFAULT_DIALOGUE_SPEED_LEVEL]; // デフォルトは "Fast"
+
+/**
+ * 会話速度変更を会話画面内のUIへ反映します。
+ */
+function updateDialogueSpeedUI() {
+    const label = DIALOGUE_SPEED_LABELS[currentDialogueSpeedLevel];
+    if (dialogueSpeedLabel) dialogueSpeedLabel.textContent = label;
+    if (dialogueSpeedButton) {
+        dialogueSpeedButton.setAttribute(
+            "aria-expanded",
+            dialogueSpeedMenu && !dialogueSpeedMenu.hidden ? "true" : "false"
+        );
+    }
+    dialogueSpeedMenu?.querySelectorAll("[data-dialogue-speed-level]").forEach((option) => {
+        const isActive = Number(option.dataset.dialogueSpeedLevel) === currentDialogueSpeedLevel;
+        option.classList.toggle("active", isActive);
+        option.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+}
+
+/**
+ * 会話速度メニューを開閉します。
+ */
+function setDialogueSpeedMenuOpen(isOpen) {
+    if (!dialogueSpeedMenu) return;
+    dialogueSpeedMenu.hidden = !isOpen;
+    updateDialogueSpeedUI();
+}
+
+/**
+ * 現在の会話速度レベルを取得します。
+ * @returns {number} 速度レベル (0:Slowest ~ 4:Fastest)
+ */
+export function getDialogueSpeedLevel() {
+    return currentDialogueSpeedLevel;
+}
 
 /**
  * 会話のタイピング速度を設定します。
- * @param {number} level - 速度レベル (0:Slow ~ 4:Fast)
+ * @param {number} level - 速度レベル (0:Slowest ~ 4:Fastest)
  */
 export function setDialogueSpeed(level) {
-    const safeLevel = Math.max(0, Math.min(level, DIALOGUE_SPEEDS.length - 1));
+    const numericLevel = Number(level);
+    const safeLevel = Number.isFinite(numericLevel)
+        ? Math.max(0, Math.min(Math.round(numericLevel), DIALOGUE_SPEEDS.length - 1))
+        : DEFAULT_DIALOGUE_SPEED_LEVEL;
+    currentDialogueSpeedLevel = safeLevel;
     currentDialogueSpeed = DIALOGUE_SPEEDS[safeLevel];
+    updateDialogueSpeedUI();
+
+    if (typeof window !== "undefined" && typeof window.CustomEvent === "function") {
+        window.dispatchEvent(new CustomEvent(DIALOGUE_SPEED_CHANGED_EVENT, {
+            detail: { level: safeLevel },
+        }));
+    }
+    return safeLevel;
 }
 
 /**
@@ -266,6 +327,65 @@ export function showSaveConfirmPopup(message, onYes, onNo) {
 let handleDialogueClick = null;
 let handleDialogueKeydown = null;
 
+function buildDialogueSpeedMenu() {
+    if (!dialogueSpeedMenu) return;
+    if (dialogueSpeedMenu.children.length > 0) {
+        updateDialogueSpeedUI();
+        return;
+    }
+
+    dialogueSpeedMenu.innerHTML = "";
+    DIALOGUE_SPEED_LABELS.forEach((label, level) => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "dialogue-speed-option";
+        option.dataset.dialogueSpeedLevel = String(level);
+        option.setAttribute("role", "option");
+        option.textContent = label;
+        option.addEventListener("click", (event) => {
+            event.stopPropagation();
+            setDialogueSpeed(level);
+            setDialogueSpeedMenuOpen(false);
+        });
+        dialogueSpeedMenu.appendChild(option);
+    });
+    updateDialogueSpeedUI();
+}
+
+function bindDialogueSpeedControl() {
+    if (!dialogueSpeedControl || !dialogueSpeedButton || !dialogueSpeedMenu) return;
+    if (dialogueSpeedControlBound) {
+        setDialogueSpeedMenuOpen(false);
+        return;
+    }
+
+    dialogueSpeedButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        setDialogueSpeedMenuOpen(dialogueSpeedMenu.hidden);
+    });
+
+    // 速度操作自体を会話全体のクリック進行から分離する
+    dialogueSpeedControl.addEventListener("click", (event) => {
+        event.stopPropagation();
+    });
+    dialogueSpeedControl.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            if (!dialogueSpeedMenu.hidden) {
+                event.preventDefault();
+                event.stopPropagation();
+                setDialogueSpeedMenuOpen(false);
+            }
+            return;
+        }
+        // ボタン操作を会話のEnter/Space/ショートカットキーへ伝播させない
+        event.stopPropagation();
+    });
+
+    dialogueSpeedControlBound = true;
+    buildDialogueSpeedMenu();
+    setDialogueSpeedMenuOpen(false);
+}
+
 function createDialogueUI() {
     const existingModal = document.getElementById('dialogueModal');
     if (existingModal) {
@@ -276,10 +396,15 @@ function createDialogueUI() {
         choicesContainer = existingModal.querySelector('.dialogue-choices-container');
         skipToEndButton = existingModal.querySelector('#dialogueSkipToEndBtn');
         skipToChoiceButton = existingModal.querySelector('#dialogueSkipToChoiceBtn');
+        dialogueSpeedControl = existingModal.querySelector('.dialogue-speed-control');
+        dialogueSpeedButton = existingModal.querySelector('#dialogueSpeedBtn');
+        dialogueSpeedLabel = existingModal.querySelector('#dialogueSpeedBtnLabel');
+        dialogueSpeedMenu = existingModal.querySelector('#dialogueSpeedMenu');
         // ★ MODIFIED: 会話エリアの下に余白を追加してボタンとの重なりを防ぐ
         if (chatContent) {
             chatContent.style.paddingBottom = '100px';
         }
+        bindDialogueSpeedControl();
         return;
     }
 
@@ -302,6 +427,21 @@ function createDialogueUI() {
             <div id="dialogueCharLeft" class="dialogue-character-display"></div>
             <div id="dialogueCharRight" class="dialogue-character-display"></div>
             <button id="dialogueCloseBtn" class="dialogue-close-btn">×</button>
+            <div class="dialogue-speed-control">
+                <button
+                    id="dialogueSpeedBtn"
+                    class="dialogue-speed-button"
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                >
+                    <span class="dialogue-speed-icon" aria-hidden="true">⚙</span>
+                    <span>会話速度</span>
+                    <span id="dialogueSpeedBtnLabel">Fast</span>
+                    <span class="dialogue-speed-caret" aria-hidden="true">▾</span>
+                </button>
+                <div id="dialogueSpeedMenu" class="dialogue-speed-menu" role="listbox" hidden></div>
+            </div>
             <div class="dialogue-log-panel">
                 <h3>CHAPTER</h3>
                 <div id="dialogueLogChapters"></div>
@@ -328,6 +468,10 @@ function createDialogueUI() {
     choicesContainer = modal.querySelector('.dialogue-choices-container');
     skipToEndButton = modal.querySelector('#dialogueSkipToEndBtn');
     skipToChoiceButton = modal.querySelector('#dialogueSkipToChoiceBtn');
+    dialogueSpeedControl = modal.querySelector('.dialogue-speed-control');
+    dialogueSpeedButton = modal.querySelector('#dialogueSpeedBtn');
+    dialogueSpeedLabel = modal.querySelector('#dialogueSpeedBtnLabel');
+    dialogueSpeedMenu = modal.querySelector('#dialogueSpeedMenu');
 
     // ★ MODIFIED: 会話エリアの下に余白を追加してボタンとの重なりを防ぐ
     if (chatContent) {
@@ -341,6 +485,9 @@ function createDialogueUI() {
     // スキップボタンのイベント
     skipToEndButton.addEventListener('click', () => skipDialogue(true)); // true: 最後まで
     skipToChoiceButton.addEventListener('click', () => skipDialogue(false)); // false: 選択肢まで
+
+    // 会話速度設定ボタンのイベント
+    bindDialogueSpeedControl();
 
     // ★ SYSTEMメッセージ用のスタイルを動的に追加
     const systemStyle = document.createElement('style');
@@ -1459,7 +1606,6 @@ function showStaffRoll(onComplete) {
 function typeMessage(element, text, onFinished, noType = false, message = null) {
     dialogueState = 'TYPING';
     let i = 0;
-    const speed = noType ? 0 : currentDialogueSpeed;
     let timerId = null; // タイマーIDを保持する変数
 
     // ★ 右側の吹き出しの場合、タイピング開始前に最大幅を計算して固定する
@@ -1497,7 +1643,7 @@ function typeMessage(element, text, onFinished, noType = false, message = null) 
 
                 i++;
                 type();
-            }, speed);
+            }, noType ? 0 : currentDialogueSpeed);
         } else {
             if (onFinished) onFinished();
         }
@@ -1796,9 +1942,9 @@ function handleChoice(choice, choiceIndex, choiceId) {
         const hasMoreChoicesAhead = dialogueData.messages.slice(currentMessageIndex).some(m => m.choices && m.choiceId);
 
         if (dialogueData) {
-            // 会話全体がスキップ可能か（一度クリア/再生済みか）を判定
+            // 会話全体がスキップ可能か（一度ステージに入っているか／再生済みか）を判定
             const isSkippable = currentDialogueId.endsWith('_start')
-                ? isCleared(currentDialogueId.replace(/_start$/, ''))
+                ? hasStageBeenEntered(currentDialogueId.replace(/_start$/, ''))
                 : hasDialogueBeenPlayed(currentDialogueId);
 
 
@@ -1950,6 +2096,7 @@ function finishDialogue() {
  * コールバックは実行されません。
  */
 export function closeDialogue() {
+    setDialogueSpeedMenuOpen(false);
     if (dialogueModal) {
         dialogueModal.querySelector('.dialogue-controls')?.classList.add('hidden');
         dialogueModal.querySelector('.dialogue-log-panel')?.classList.add('hidden');
@@ -2000,6 +2147,15 @@ export function closeDialogue() {
  * @param {string} [bgmName] - 会話中に再生するBGM名。省略時はBGM_CONFIG.DIALOGUEを使用
  */
 export function startDialogue(dialogueId, onComplete, isContinuation = false, bgmName = BGM_CONFIG.DIALOGUE) {
+    // ★ステージ前会話のクエストIDを保持する
+    //   （ランダム会話の一時IDへ差し替わっても引き継げるよう、フォールバック処理より前に設定）
+    if (dialogueId.endsWith('_start')) {
+        currentQuestStartId = dialogueId.replace(/_start$/, '');
+    } else if (!dialogueId.startsWith('_random_')) {
+        // 戦闘後会話（_end）やプロローグ等の特殊会話ではリセット
+        currentQuestStartId = null;
+    }
+
     // --- ランダム会話のフォールバック処理 ---
     if (!DIALOGUE_DATA[dialogueId]) {
         const node = gameState.currentQuestNode;
@@ -2046,6 +2202,7 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
     if (!isContinuation) {
         createDialogueUI();
     }
+    setDialogueSpeedMenuOpen(false);
 
     // ★★★ 修正: 最後に再生したIDをグローバルに保持
     window._lastDialogueId = dialogueId;
@@ -2076,13 +2233,28 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
     // 継続でない場合のみイベントリスナーを再設定
     if (!isContinuation) {
         // イベントリスナーをセット
-        handleDialogueClick = () => advanceDialogue();
+        handleDialogueClick = () => {
+            // メニューを開いている場合は、会話を進めずメニューだけ閉じる
+            if (dialogueSpeedMenu && !dialogueSpeedMenu.hidden) {
+                setDialogueSpeedMenuOpen(false);
+                return;
+            }
+            advanceDialogue();
+        };
         handleDialogueKeydown = (e) => {
             // 会話モーダルが表示されていない場合は何もしない
             // ★スタッフロール表示中はメニューキーを無効化
             if (isStaffRollShowing) return true;
 
             if (!isDialogueVisible()) return;
+
+            // 速度メニューが開いている場合はEscapeでまずメニューだけを閉じる
+            if (e.key === 'Escape' && dialogueSpeedMenu && !dialogueSpeedMenu.hidden) {
+                e.preventDefault();
+                e.stopPropagation();
+                setDialogueSpeedMenuOpen(false);
+                return;
+            }
 
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -2143,9 +2315,12 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
 
         let canSkip = false;
         if (dialogueId.endsWith('_start')) {
-            // クエスト開始前の会話：クエストがクリア済みならスキップ可能
+            // クエスト開始前の会話：一度でもステージに入っていれば（未クリア・ESC中断でも）スキップ可能
             const questId = dialogueId.replace(/_start$/, '');
-            canSkip = isCleared(questId);
+            canSkip = hasStageBeenEntered(questId);
+        } else if (dialogueId.startsWith('_random_') && currentQuestStartId) {
+            // ★ランダムなステージ前会話（一時ID）：元のクエストIDでスキップ可否を判定する
+            canSkip = hasStageBeenEntered(currentQuestStartId);
         } else if (dialogueId.endsWith('_end')) {
             // クエストクリア後の会話：一度再生済みならスキップ可能
             const questId = dialogueId.replace(/_start$|_end$/, '');
@@ -2203,6 +2378,7 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
  */
 export function showLog() {
     createDialogueUI();
+    setDialogueSpeedMenuOpen(false);
     // ★ログ表示モードに設定
     dialogueModal.querySelector('.dialogue-container')?.classList.add('log-view-mode');
 

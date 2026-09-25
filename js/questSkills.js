@@ -58,9 +58,11 @@ export function activateSkill(skillId, gameState, enemies = []) {
                     ? "large"
                     : "medium",
 
+            // ★freezeはボスにも効くため、ボスにも六角拘束を表示する
+            //   (Freeze works on bosses too, so show the hex restraint on them.)
             targets:
                 enemies.filter(
-                    e => e && !e.isDead && !e.isItem && !e.type?.id?.includes("boss")
+                    e => e && !e.isDead && !e.isItem
                 )
         });
     }
@@ -146,7 +148,7 @@ const SKILL_HANDLERS = {
 
     const aliveEnemies =
         enemiesList.filter(
-            e => e && !e.isDead && !e.isItem && !e.type?.id?.includes("boss")
+            e => e && !e.isDead && !e.isItem && !isBossTarget(e) // no effect on boss
         );
 
     if (aliveEnemies.length === 0) return;
@@ -204,7 +206,10 @@ const SKILL_HANDLERS = {
 
   // ノックバック (画面端まで押し出す) と無敵系ハンドラを追加
   SKILL_HANDLERS.knockback = (value, state, enemiesList = []) => {
-    const targets = enemiesList.filter(e => e && !e.isDead && !e.isItem);
+    // 固定砲台（isFixed）はノックバックスキルの対象から除外する。
+    const targets = enemiesList.filter(
+        e => e && !e.isDead && !e.isItem && !e.isFixed
+    );
     if (!targets.length) return;
 
     const canvasEl = document.getElementById("enemyModeCanvas");
@@ -258,6 +263,43 @@ const SKILL_HANDLERS = {
     if (!state.player) return;
     state.player.invincibleTimer = Math.max(state.player.invincibleTimer || 0, value);
   };
+
+
+// ===========================================
+// ボス判定 / スキル有効性
+//   Kill skills do not work on bosses.
+// ============================================
+
+/** ボス判定（enemy.js の isBossEnemy と同じ条件） */
+export function isBossTarget(enemy) {
+    if (!enemy) return false;
+    return Boolean(
+        enemy.isBoss ||
+        enemy.isBitBoss ||
+        enemy.type?.isBoss ||
+        enemy.type?.isBitBoss ||
+        (enemy.type?.id && String(enemy.type.id).toLowerCase().includes("boss"))
+    );
+}
+
+/**
+ * このスキルが現在の敵リストに対して効果を持つかどうか
+ * Kill skills have no effect on bosses.
+ * @returns {boolean} true = 効果対象が1体以上いる
+ */
+export function canSkillAffectTargets(skillType, enemies = []) {
+    const alive = enemies.filter(e => e && !e.isDead && !e.isItem);
+
+    // ノックバックは固定砲台に効果がないため、実対象が残る場合だけ有効扱いにする。
+    if (skillType === "knockback") {
+        return alive.some(e => !e.isFixed);
+    }
+
+    // kill系はボスを撃破できないため、ボスは対象外
+    if (skillType === "kill") return alive.some(e => !isBossTarget(e));
+
+    return alive.length > 0;
+}
 
 
 // ===========================================
@@ -808,7 +850,7 @@ export const ACTIVE_SKILLS = {
     icon: "kill_1",
     desc: "最も近い敵を2体撃破",
     cooldown: 70, //80
-    type: "kill",
+    type: "kill", // no effect on boss
     value: {
       mode: "nearest",
       count: 2,
@@ -820,7 +862,7 @@ export const ACTIVE_SKILLS = {
     icon: "kill_random",
     desc: "ランダムで敵を5体撃破",
     cooldown: 140, //160
-    type: "kill",
+    type: "kill", // no effect on boss
     value: {
       mode: "random",
       count: 5,
@@ -832,7 +874,7 @@ export const ACTIVE_SKILLS = {
     icon: "kill_near",
     desc: "最も近い敵を4体撃破",
     cooldown: 140, //200
-    type: "kill",
+    type: "kill", // no effect on boss
     value: {
       mode: "nearest",
       count: 4,
@@ -844,7 +886,7 @@ export const ACTIVE_SKILLS = {
     icon: "kill_all",
     desc: "すべての敵を撃破",
     cooldown: 220,
-    type: "kill",
+    type: "kill", // no effect on boss
     value: {
       mode: "all",
     }

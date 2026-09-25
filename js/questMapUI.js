@@ -1,7 +1,7 @@
         //questMapUI.js
 
 import { QUEST_MAP } from "./questMap.js";
-import { isCleared, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId, hasSeenTrueEnding, getTotalStars } from "./questProgress.js";
+import { isCleared, markStageEntered, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId, hasSeenTrueEnding, getTotalStars } from "./questProgress.js";
 import { startEnemyMode } from "./enemyCore.js";
 import { startDefenseMode } from "./defenseCore.js";
 import { gameState } from "./gameCore.js";
@@ -606,7 +606,12 @@ export function renderQuestMapUI(){
                 gameState.currentQuestNode = node;
                 gameState.isQuestMode = true; // ★クエストモードであることを明示
 
+                // ▲▲▲ ステージ突入を記録する ▲▲▲
+                // クリアの有無・ESC中断で抜けたかは問わない。
+                // これにより2回目以降（未クリアでも）ステージ前会話の
+                // skip to end / skip to choice が使えるようになる。
                 const startCombat = () => {
+                  markStageEntered(node.id);
                   startEnemyMode({
                     stage: actualStage,
                     difficulty: typeof diff === "string" ? diff : diff.id,
@@ -615,6 +620,7 @@ export function renderQuestMapUI(){
                 };
 
                 const startDefense = () => {
+                  markStageEntered(node.id);
                   startDefenseMode({
                     isQuestMode: true,
                     bgm: stageData.bgm,

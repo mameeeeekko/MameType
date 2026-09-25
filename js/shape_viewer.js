@@ -6,7 +6,7 @@ const shapeList = [
     "circle", "pinwheel", "hexagon", "square", "arrow", "chip", "gate",
     "pulsar", "relay", "glitch_tri", "core_unit", "shard", "array",
     "terminal", "omega", "diamond", "rhombus", "shield", "star", "cross", "virus",
-    "triangle", "mobius", "gear", "clover", "octagon", "nova", "knot5",
+    "triangle", "mobius", "gear", "clover", "octagon", "nova", "turret", "knot5",
 ];
 
 const container = document.getElementById('shape-container');

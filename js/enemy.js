@@ -1,8 +1,10 @@
 // enemy.js
 
 import { getUISafeMinEnemyY, markDamageTaken, onEnemyRemovedByDamage, killEnemy } from "./enemyCore.js";
-import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect, 
-    spawnLaserEffect, spawnPlayerDamageEffect, spawnPlayerNegateEffect, playSE} from "./effectManager.js";
+import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect,
+    spawnLaserEffect, spawnPlayerDamageEffect, spawnPlayerNegateEffect,
+    spawnTurretLaserEffect, spawnTurretDamageEffect, spawnTurretGuardEffect,
+    playSE} from "./effectManager.js";
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
 import { buildBaseRomaji } from "./typingLogic.js";
 import { getRandomWordForType, getWordForBehavior, getLabelBox, getEnemyLabelBox, boxesOverlap } from "./enemySpawner.js";
@@ -256,6 +258,12 @@ export class Enemy {
         this.hitCount = type.hitCount || 1; // 残り問題数
         this.rotation = Math.random() * Math.PI * 2; // 初期角度
         this.rotationSpeed = type.rotationSpeed || 0; // 回転速度
+        this.isFixed = !!type?.isFixed;
+        this.turretKind = type?.turretKind || null;
+        if (this.isFixed) {
+            // 据置型は左右対称で、回転させない。
+            this.rotation = 0;
+        }
         this.behaviorTimers = {};
         this.behaviorEffect = null;
         this.behaviorEffectTimer = 0;
@@ -291,6 +299,13 @@ export class Enemy {
         this.textOffsetY = 0;       // 現在の描画オフセット（補間値・負=上方向）
         this.targetTextOffsetY = 0; // 目標オフセット（enemyRenderer.updateEnemyTextOffsets が毎フレーム設定）
 
+    }
+
+    /**
+     * 攻撃用の発生位置。固定砲台も通常敵も本体中心から攻撃する。
+     */
+    getAttackOrigin() {
+        return { x: this.x, y: this.y };
     }
 
     update(player, difficulty, state, deltaTime){
@@ -334,7 +349,9 @@ export class Enemy {
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy) || 0.0001;
-        // ダメージを受けた時
+
+        // 固定砲台は移動も回転もしない。
+
         // ダメージを受けた時
         if(dist < player.radius + this.type.size){
 
@@ -361,13 +378,25 @@ export class Enemy {
             if (getSoundEnabled() && getSoundSettings().soundeffect) {
                 playDamageSound(this.type.damageSound);
             }
-            spawnHitWave(player.x, player.y);
+            if (!this.isFixed) {
+                spawnHitWave(player.x, player.y);
+            }
 
             const damage = calcDamage(this.type, player, difficulty); // 変更なし（正しい）
 
             // 無敵タイマーがあればダメージ無効
             if (player.invincibleTimer > 0) {
-                spawnPlayerNegateEffect(player.x, player.y);
+                if (this.isFixed) {
+                    spawnTurretGuardEffect(
+                        player.x,
+                        player.y,
+                        this.x,
+                        this.y,
+                        { radius: (player.radius || 20) + 8 }
+                    );
+                } else {
+                    spawnPlayerNegateEffect(player.x, player.y);
+                }
                 markDamageTaken();
                 onEnemyRemovedByDamage(this.isObjective);
                 this.isDead = true;
@@ -386,7 +415,17 @@ export class Enemy {
                     !isBoss &&
                     Math.random() < negateChance
                 ) {
-                    spawnPlayerNegateEffect(player.x, player.y);
+                    if (this.isFixed) {
+                        spawnTurretGuardEffect(
+                            player.x,
+                            player.y,
+                            this.x,
+                            this.y,
+                            { radius: (player.radius || 20) + 8 }
+                        );
+                    } else {
+                        spawnPlayerNegateEffect(player.x, player.y);
+                    }
                     markDamageTaken();
                     onEnemyRemovedByDamage(this.isObjective);
                     this.isDead = true;
@@ -396,9 +435,11 @@ export class Enemy {
                 // ignore
             }
 
-            player.hp -= damage;
+            player.hp = Math.max(0, player.hp - damage);
+            if (this.isFixed) {
+                spawnTurretDamageEffect(player.x, player.y, this.x, this.y);
+            }
             spawnDamagePopup(player.x, player.y - 20, damage);
-            player.hp = Math.max(0, player.hp);
 
             markDamageTaken(); //damage受けたフラグOn
             onEnemyRemovedByDamage(this.isObjective); //damage受けた時敵が消えるため、processedCount ++
@@ -412,11 +453,14 @@ export class Enemy {
         const lengthPenalty = Math.max(0.3, 1.0 - (Math.max(0, (this.text?.length || 0) - 5) * 0.04));
         const moveSpeed = this.speed * 0.7 * lengthPenalty * (difficulty.enemy?.enemySpeed ?? 1);
 
-        if (!this.activeAttack) {
+        // 固定砲台は移動できないため、通常移動を無効化する。
+        if (!this.activeAttack && !this.isFixed) {
             this.x += dx / dist * moveSpeed * scale;
             this.y += dy / dist * moveSpeed * scale;
         }
-        this.rotation += this.rotationSpeed * scale;
+        if (!this.isFixed) {
+            this.rotation += this.rotationSpeed * scale;
+        }
 
         // ★物理押し出し（近接分離）は廃止：敵同士は自然に貫通して進む。
         //   ボスが召喚時に押される問題・前線の敵が押される問題も
@@ -429,7 +473,8 @@ export class Enemy {
 
         // UI侵入防止（中心Yだけでなく、半径＋上部テキストラベルまでUIに重ならないようにする）
         const minCenterY = getUISafeMinEnemyY(this.radius || this.type?.size || 15);
-        if (this.y < minCenterY) {
+        // 固定砲台は画面端へ押し出さず、生成時の位置を維持する。
+        if (!this.isFixed && this.y < minCenterY) {
             this.y = minCenterY;
         }
 
@@ -604,6 +649,15 @@ export class Enemy {
                         );
                         break;
 
+                    case "laser":
+                        this.executeTurretLaser(
+                            behavior,
+                            player,
+                            state,
+                            difficulty
+                        );
+                        break;
+
                     case "spawn":
                         this.spawnChildren(
                             behavior,
@@ -661,6 +715,44 @@ export class Enemy {
         }
 
         this.activeAttack = null;
+    }
+
+    executeTurretLaser(behavior, player, state, difficulty) {
+        const baseDamage = behavior.damage ?? this.type.damage ?? 0;
+        const barrierRadius = (player.radius || 20) + 8;
+        const origin = this.getAttackOrigin();
+        const blocked = (player.invincibleTimer || 0) > 0;
+        const damage = blocked
+            ? 0
+            : calcDamage({ damage: baseDamage }, player, difficulty);
+
+        // 固定砲台の laser は防御ワードを生成しない。
+        // 基礎防御力では軽減できるが、防御スキルの無敵時間のみを完全防御とする。
+        spawnTurretLaserEffect(
+            origin.x,
+            origin.y,
+            player.x,
+            player.y,
+            {
+                blocked,
+                barrierRadius
+            }
+        );
+
+        if (blocked) {
+            spawnTurretGuardEffect(
+                player.x,
+                player.y,
+                origin.x,
+                origin.y,
+                { radius: barrierRadius }
+            );
+        } else if (damage > 0) {
+            player.hp = Math.max(0, player.hp - damage);
+            markDamageTaken();
+            spawnTurretDamageEffect(player.x, player.y, origin.x, origin.y);
+            spawnDamagePopup(player.x, player.y - 20, damage);
+        }
     }
 
     startBehaviorEffect(type, duration = 1){
@@ -778,6 +870,7 @@ export class Enemy {
 
         const speed = behavior.bullet.speed;
         const count = behavior.bullet.count || 1;
+        const origin = this.getAttackOrigin();
 
         const reserved = new Set();
 
@@ -798,12 +891,11 @@ export class Enemy {
             const vx = Math.cos(angle) * speed;
             const vy = Math.sin(angle) * speed;
             
-            // ★発射位置はボスの中心（前の方式）:
-            // ボスの本体位置から360度方向へ弾が飛び出し、ホーミングでプレイヤーへ向かう
+            // 固定砲台を含む全敵の弾は、本体中心から発生する。
             const bullet = new BulletEnemy(
                 letter,
-                this.x,
-                this.y,
+                origin.x,
+                origin.y,
                 vx,
                 vy,
                 behavior.bullet
@@ -820,20 +912,22 @@ export class Enemy {
         this.hitCount--;
 
         if (this.hitCount > 0) {
-            // ノックバック
-            const dx = this.x - player.x;
-            const dy = this.y - player.y;
-            const dist = Math.hypot(dx, dy) || 1;
-            const knockbackBonus =
-                devOverride.other?.knockbackBonus
-                ?? player.knockbackBonus
-                ?? 1;
+            // 固定砲台は入力成功後もノックバックさせない
+            if (!this.isFixed) {
+                const dx = this.x - player.x;
+                const dy = this.y - player.y;
+                const dist = Math.hypot(dx, dy) || 1;
+                const knockbackBonus =
+                    devOverride.other?.knockbackBonus
+                    ?? player.knockbackBonus
+                    ?? 1;
 
-            const knockbackPower =
-                (this.type.knockback || 30) * knockbackBonus;
-                
-            this.x += dx / dist * knockbackPower;
-            this.y += dy / dist * knockbackPower;
+                const knockbackPower =
+                    (this.type.knockback || 30) * knockbackBonus;
+
+                this.x += dx / dist * knockbackPower;
+                this.y += dy / dist * knockbackPower;
+            }
 
             // 次の問題を取得
             const newWord = getRandomWordForType(this.type);
@@ -918,7 +1012,17 @@ export class BulletEnemy extends Enemy{
             const damage = calcDamage(this.type, player, difficulty); // ★ .enemy を削除
 
             if (player.invincibleTimer > 0) {
-                spawnPlayerDamageEffect(player.x, player.y, "GUARD", "#9befff");
+                if (this.type.isTurretBullet) {
+                    spawnTurretGuardEffect(
+                        player.x,
+                        player.y,
+                        this.x,
+                        this.y,
+                        { radius: (player.radius || 20) + 8 }
+                    );
+                } else {
+                    spawnPlayerNegateEffect(player.x, player.y);
+                }
                 this.isDead = true;
                 return false;
             }
@@ -928,15 +1032,29 @@ export class BulletEnemy extends Enemy{
                 const stats = getPlayerStatsForEnemy(statsMode);
                 const negateChance = Number(stats.damageNegateChance) || 0;
                 if (Math.random() < negateChance) {
-                    spawnPlayerDamageEffect(player.x, player.y, "GUARD", "#9befff");
+                    if (this.type.isTurretBullet) {
+                        spawnTurretGuardEffect(
+                            player.x,
+                            player.y,
+                            this.x,
+                            this.y,
+                            { radius: (player.radius || 20) + 8 }
+                        );
+                    } else {
+                        spawnPlayerNegateEffect(player.x, player.y);
+                    }
                     this.isDead = true;
                     return false;
                 }
             } catch (e) {}
 
-            player.hp -= damage;
+            player.hp = Math.max(0, player.hp - damage);
 
-            spawnDamagePopup( player.x, player.y-20, damage );
+            if (this.type.isTurretBullet) {
+                markDamageTaken();
+                spawnTurretDamageEffect(player.x, player.y, this.x, this.y);
+            }
+            spawnDamagePopup(player.x, player.y - 20, damage);
 
             this.isDead = true;
 
@@ -1394,6 +1512,8 @@ size            : 当たり判定半径(px)
 damage          : 接触ダメージ
 hitCount        : 撃破までの問題数
 knockback       : 問題クリア時ノックバック量
+isFixed         : true の場合、通常移動とノックバックを行わない
+turretKind      : 固定砲台の種類（laser / bullet）
 speed           : 移動速度
 score           : 撃破スコア
 killSound       : 撃破SE番号
@@ -1419,7 +1539,7 @@ maxLen          : 最大文字数
 
 【見た目】
 color           : 本体色
-shape           : "circle", "square", "pinwheel", "arrow", "hexagon", "chip", "gate", "pulsar", "relay", "glitch_tri", "core_unit", "shard", "array", "terminal", "omega", "diamond", "rhombus", "shield", "star", "cross", "triangle", "gear", "clover", "octagon", "nova"
+shape           : "circle", "square", "pinwheel", "arrow", "hexagon", "chip", "gate", "pulsar", "relay", "glitch_tri", "core_unit", "shard", "array", "terminal", "omega", "diamond", "rhombus", "shield", "star", "cross", "triangle", "gear", "clover", "octagon", "nova", "turret"
 pattern         : null, "stripe", "ring", "circuit"
 rotationSpeed   : 回転速度
 
@@ -1431,6 +1551,12 @@ behaviors:[
         preDelay:1.5,    // 演出後の発動までの時間（sec）
         spawnType:"slime",
         count:3          // 召喚数
+    },
+    {
+        type:"laser",
+        interval:8,        // 発動間隔(sec)
+        preDelay:1.2,     // 攻撃前の警告演出(sec)
+        damage:18         // 防御不可の直接攻撃ダメージ
     },
     {
         type:"shoot",
@@ -1454,6 +1580,187 @@ behaviors:[
 // =====================================================
 
 export const EnemyTypes = generateAllEnemyTypes();
+
+// =====================================================
+// 固定砲台タイプ
+// - 移動しない（isFixed）
+// - 大きさと色は見た目だけ
+// - Tierごとの強さは hitCount / 文字数 / 攻撃設定で調整
+// - 砲身を持たず、低い据置型でプレイヤー方向を向く動作も行わない
+// - score / laserInterval / bulletInterval / bulletSpeed / bulletCharType は
+//   T3〜T10のFIXED_TURRET_TIER_CONFIGで個別に変更可能
+// =====================================================
+const FIXED_TURRET_TIER_CONFIG = {
+    T3: {
+        hitCount: 1,
+        minLen: 5,
+        maxLen: 7,
+        score: 100,
+        laserInterval: 7,
+        laserDamage: 35,
+        bulletInterval: 7,
+        bulletCount: 3,
+        bulletDamage: 15,
+        bulletSpeed: 1.0,
+        bulletCharType: "alphabet"
+    },
+    T4: {
+        hitCount: 1,
+        minLen: 5,
+        maxLen: 8,
+        score: 120,
+        laserInterval: 7,
+        laserDamage: 40,
+        bulletInterval: 7,
+        bulletCount: 3,
+        bulletDamage: 20,
+        bulletSpeed: 1.0,
+        bulletCharType: "alphabet"
+    },
+    T5: {
+        hitCount: 2,
+        minLen: 6,
+        maxLen: 9,
+        score: 130,
+        laserInterval: 11,
+        laserDamage: 45,
+        bulletInterval: 11,
+        bulletCount: 4,
+        bulletDamage: 25,
+        bulletSpeed: 1.0,
+        bulletCharType: "alphabet"
+    },
+    T6: {
+        hitCount: 2,
+        minLen: 6,
+        maxLen: 10,
+        score: 150,
+        laserInterval: 11,
+        laserDamage: 50,
+        bulletInterval: 11,
+        bulletCount: 4,
+        bulletDamage: 30,
+        bulletSpeed: 1.0,
+        bulletCharType: "alphabet"
+    },
+    T7: {
+        hitCount: 2,
+        minLen: 7,
+        maxLen: 12,
+        score: 200,
+        laserInterval: 12,
+        laserDamage: 55,
+        bulletInterval:12,
+        bulletCount: 5,
+        bulletDamage: 35,
+        bulletSpeed: 1.0,
+        bulletCharType: "alphabet"
+    },
+    T8: {
+        hitCount: 2,
+        minLen: 8,
+        maxLen: 14,
+        score: 250,
+        laserInterval: 12,
+        laserDamage: 60,
+        bulletInterval: 12,
+        bulletCount: 5,
+        bulletDamage: 40,
+        bulletSpeed: 1.0,
+        bulletCharType: "alphabet"
+    },
+    T9: {
+        hitCount: 2,
+        minLen: 9,
+        maxLen: 16,
+        score: 300,
+        laserInterval: 12,
+        laserDamage: 70,
+        bulletInterval: 12,
+        bulletCount: 6,
+        bulletDamage: 45,
+        bulletSpeed: 1.0,
+        bulletCharType: "all"
+    },
+    T10: {
+        hitCount: 3,
+        minLen: 10,
+        maxLen: 18,
+        score: 350,
+        laserInterval: 16,
+        laserDamage: 80,
+        bulletInterval: 16,
+        bulletCount: 7,
+        bulletDamage: 50,
+        bulletSpeed: 1.0,
+        bulletCharType: "all"
+    }
+};
+
+function createFixedTurretType(kind, tierKey) {
+    const tier = FIXED_TURRET_TIER_CONFIG[tierKey];
+    const isLaser = kind === "laser";
+    const laserInterval = Math.max(0.1, Number(tier.laserInterval) || 8);
+    const bulletInterval = Math.max(0.1, Number(tier.bulletInterval) || 6);
+    const laserPreDelay = Math.min(3.0, laserInterval);
+    const suffix = tierKey.toLowerCase();
+    const id = `fixed_${kind}_turret_${suffix}`;
+
+    return {
+        id,
+        name: isLaser ? `固定レーザー砲台 T${tierKey.slice(1)}` : `固定弾砲台 T${tierKey.slice(1)}`,
+        color: isLaser ? "#717171" : "#d4d4d4",
+        shape: "turret",
+        pattern: null,
+        size: 20,
+        speed: 0,
+        rotationSpeed: 0,
+        damage: 15,
+        tags: [],
+        minLen: tier.minLen,
+        maxLen: tier.maxLen,
+        score: tier.score,
+        killSound: 1,
+        killedEffect: "enemy1",
+        damageSound: 1,
+        hitCount: tier.hitCount,
+        knockback: 0,
+        isFixed: true,
+        turretKind: kind,
+        behaviors: [
+            isLaser
+                ? {
+                    type: "laser",
+                    interval: laserInterval,
+                    preDelay: laserPreDelay,
+                    damage: tier.laserDamage
+                }
+                : {
+                    type: "shoot",
+                    interval: bulletInterval,
+                    preDelay: 1.0,
+                    bullet: {
+                        count: tier.bulletCount,
+                        speed: tier.bulletSpeed,
+                        damage: tier.bulletDamage,
+                        size: 12,
+                        shape: "arrow",
+                        color: "#4aa3df",
+                        homing: 0.03,
+                        charType: tier.bulletCharType,
+                        isTurretBullet: true
+                    }
+                }
+        ]
+    };
+}
+
+for (const tierKey of Object.keys(FIXED_TURRET_TIER_CONFIG)) {
+    for (const kind of ["laser", "bullet"]) {
+        EnemyTypes[`FIXED_TURRET_${kind.toUpperCase()}_${tierKey}`] =
+            createFixedTurretType(kind, tierKey);
+    }
+}
 
 // --- ボスや特殊な敵はここで個別に追加・上書き ---
 Object.assign(EnemyTypes, {

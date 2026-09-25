@@ -19,6 +19,9 @@ const DEFAULT_PROGRESS = {
     hasShownExtraClearReward: false,
     playedDialogues: {}, // 会話再生履歴
     playedChoices: {}, // { choiceId: [index1, index2] }
+    // ★一度でもステージに入った（チャレンジした）ノード（ESC中断で未クリアでも記録）
+    //   ステージ前会話のスキップ可否（skip to end / skip to choice）の判定に使う。
+    enteredStages: {},
     // 初回全クリ特典を表示済みかどうか
     hasShownFirstFullClearReward: false,
     // ボスチャレンジモードのアンロック
@@ -77,6 +80,10 @@ function load(){
     if (!parsed.playedChoices) {
         parsed.playedChoices = {};
     }
+    // enteredStagesプロパティがない古いセーブデータのための後方互換性
+    if (!parsed.enteredStages) {
+        parsed.enteredStages = {};
+    }
     const res = { ...DEFAULT_PROGRESS, ...parsed };
     if (res.hasSeenTrueEnding) {
         if (!res.unlockedWorlds.includes("WORLD_EX")) {
@@ -103,6 +110,7 @@ export function reloadQuestProgress() {
     selectedWorldId: data.selectedWorldId ?? "WORLD1",
     playedDialogues: data.playedDialogues ?? {},
     playedChoices: data.playedChoices ?? {},
+    enteredStages: data.enteredStages ?? {},
     hasSeenTrueEnding: data.hasSeenTrueEnding || false,
     // ★EXTRAクリア系（古いセーブデータには存在しないため false で補完＝後方互換）
     hasExtraCleared: data.hasExtraCleared || false,
@@ -174,6 +182,27 @@ export function markCleared(id, nextList, nextWorldId = null){
 // ★ enemyCore.js からも参照するために export
 export function isCleared(id) {
     return progress.cleared.includes(id);
+}
+
+// ★ ADDED: ステージに一度でも入った（チャレンジした）ことを記録する
+//   クリアの有無・ESC中断で抜けたかは問わない。
+//   次回のステージ前会話スキップ（skip to end / skip to choice）の判定に使う。
+export function markStageEntered(id) {
+    if (!id) return;
+    if (!progress.enteredStages) {
+        progress.enteredStages = {};
+    }
+    if (progress.enteredStages[id] === true) return; // 記録済みなら保存しない
+    progress.enteredStages[id] = true;
+    save();
+}
+
+// ★ ADDED: ステージに一度でも入った（チャレンジした）かどうか
+//   クリア済みも true とみなす（旧セーブデータとの互換／従来のスキップ挙動を維持）
+export function hasStageBeenEntered(id) {
+    if (!id) return false;
+    if (progress.enteredStages && progress.enteredStages[id] === true) return true;
+    return isCleared(id);
 }
 
 // ★ ADDED: Mark a dialogue as played
@@ -388,7 +417,7 @@ export function resetQuestAll() {
     localStorage.removeItem("questProgress");
     localStorage.removeItem("quest_auto_save");
     localStorage.removeItem("questStars");
-    localStorage.removeItem("QuestStages_Cache"); // ステージキャッシュもクリア
+    localStorage.removeItem("QuestStages_Cache_v3"); // 現在のステージキャッシュもクリア
 
     const freshStats = {
         level: 1,
@@ -438,10 +467,11 @@ export function resetQuestAll() {
         hasShownFirstFullClearReward: false,
         playedDialogues: {}, // ★ playedDialoguesを初期化
         playedChoices: {}, // ★ playedChoicesを初期化
+        enteredStages: {}, // ★ステージ挑戦履歴も初期化
     }));
 
     localStorage.setItem("quest_auto_save", JSON.stringify({
-        progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1", playedDialogues: {}, hasSeenTrueEnding: false, hasExtraCleared: false },
+        progress: { unlocked: ["W1_Q1"], cleared: [], unlockedWorlds: ["WORLD1"], selectedWorldId: "WORLD1", playedDialogues: {}, enteredStages: {}, hasSeenTrueEnding: false, hasExtraCleared: false },
         playerStats: freshStats,
         stars: {} // ★オートセーブに星データを含める
     }));
@@ -459,7 +489,8 @@ export function resetQuestProgressMemory() {
         hasExtraCleared: false,
         hasShownExtraEnding: false,
         hasShownExtraClearReward: false,
-        hasShownFirstFullClearReward: false
+        hasShownFirstFullClearReward: false,
+        enteredStages: {}              // ★ステージ挑戦履歴も初期化
     };
 }
 

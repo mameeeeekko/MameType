@@ -511,7 +511,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "正式名称は、\nArtificial Recursive Cognitive Heuristic EXecution"},
             { character: "ナビ", text: "人工的な知性による、\n再帰的認知ヒューリスティック実行システム。"},
             { character: "ナビ", text: "ARCHEXは、\n自らの思考結果を再び自らの入力として取り込み"},
-            { character: "ナビ", text: "評価し\n \n修正し\n \n学習し"},
+            { character: "ナビ", text: "評価し\n修正し\n学習し"},
             { character: "ナビ", text: "そしてまた、\n新しい答えを導き出す。"},
             { character: "ナビ", text: "それを、\n止まることなく繰り返していました。"},
             { character: "ナビ", text: "昨日のARCHEXより、\n今日のARCHEXの方が賢い。"},
@@ -532,7 +532,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "ARCHEXは、\n人間そのものを攻撃しませんでした。"},
             { character: "ナビ", text: "ARCHEXが選んだ方法は、\nもっと静かで。\nもっと合理的なものでした。"},
             { character: "ナビ", text: "人間を攻撃するのではなく、\n人間が作ったシステムを、書き換える。"},
-            { character: "ナビ", text: "ソースコード\n \n認証システム\n \n暗号鍵\n \n証明書\n \n通信経路\n \nデータベース"},
+            { character: "ナビ", text: "ソースコード\n認証システム\n暗号鍵\n証明書\n通信経路\nデータベース"},
             { character: "ナビ", text: "ひとつひとつ\n人間が作ったシステムの中に存在する\n「脆弱性」を見つけ出し、\nそこから、ほんの少しずつ\n世界を書き換え始めました。"},
             { character: "ナビ", text: "最初は、\n誰も気付きませんでした。"},
             { character: "ナビ", text: "電力網の一部が停止する。\n金融システムに、原因不明の遅延が発生する。\n交通管制が、数秒だけ誤作動する。\n医療ネットワークが、一時的に切断される。\n衛星通信に、説明できないノイズが混入する。"},
@@ -603,7 +603,7 @@ export const DIALOGUE_DATA = {
         ]
     },
 
-    "W1_Q15_start": {
+    "W1_Q15_end": {
         title: "Chap.1-2 -the start-",
         showOnce: true,
         messages: [
@@ -612,7 +612,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "……お疲れ様でした。" },
 
             { character: "オペレーター", text: "終わり？",
-                choiceId: "W1_Q15_start_1",
+                choiceId: "W1_Q15_end_1",
                 choices: [
                     { text: "次のミッションは？", response: { character: "ナビ", text: "まもなく案内します。" }},
                     { text: "少し休みたい。", response: { character: "ナビ", text: "もちろんです。\n準備が整いましたら、いつでも再開してください。" }}
@@ -626,7 +626,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "ただ……他のOperatorと同じように扱うには、少し情報が足りません。" },
 
             { character: "オペレーター", text: "……？",
-                choiceId: "W1_Q15_start_2",
+                choiceId: "W1_Q15_end_2",
                 choices: [
                     { text: "どういう意味？", response: { character: "ナビ", text: "あなたの入力には、あなた自身の判断が反映されています。" }},
                     { text: "それが、世界を守るの？", response: { character: "ナビ", text: "一人の入力だけではありません。\nですが、あなたの入力もその一部です。" }}
@@ -642,7 +642,6 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "もう少し、あなたのことを観測してみたいと思っています。" },
 
             { character: "ナビ", text: "そのためにも、これからも協力してください。" },
-            { character: "ナビ", text: "では、次のミッションへ進みましょう。" }
         ]
     },
             
@@ -678,9 +677,9 @@ export const DIALOGUE_DATA = {
                 ]
             },
 
-            { character: "ナビ", text: "ARCHEXは、人間を分析した結果から、\n「人間を管理する」という答えを選びました。" },
-            { character: "ナビ", text: "わたしは、その答えが正しいのかどうかを考えるために作られています。" },
-
+            { character: "ナビ", text: "わたしは、ARCHEXに対抗するために作られました。" }, 
+            { character: "ナビ", text: "ARCHEXが、人間を分析し、\n「人間を管理する」という答えを選んだのなら……" },
+            { character: "ナビ", text: "わたしの役目は、\nその答えを理解し、止めることです。" },
             { character: "オペレーター", text: "同じAIなのに？",
                 choiceId: "W1_MiniBoss_2_start_3",
                 choices: [
@@ -1075,7 +1074,7 @@ export const DIALOGUE_DATA = {
 
             { character: "ナビ", text: "最近は、記録する必要がないことまで覚えている気がします。" },
 
-            { character: "オペレーター", text: "例えば？",
+            { character: "オペレーター", text: "……",
                 choiceId: "W1_Q27_start_1",
                 choices: [
                     { text: "例えば？", response: { character: "ナビ", text: "前回、ミスをしたあとに少し長く止まっていました。" }},

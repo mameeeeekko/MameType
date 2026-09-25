@@ -345,6 +345,7 @@ export function spawnEnemy(
     const maxAllowedSpeed = distToPlayer / minFramesToReach;
     // ステージ倍率を適用（最後に入力保証キャップを通すため、タイプ不能な速度にはならない）
     enemy.speed = Math.min(enemy.speed * stageSpeedMult, maxAllowedSpeed);
+    if (type.isFixed) enemy.speed = 0;
 
     enemy.baseRomaji =
         buildBaseRomaji(enemy.text);

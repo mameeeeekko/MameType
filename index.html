@@ -425,6 +425,20 @@
                oninput="document.getElementById('enemyIntervalValue').innerText = (this.value / 1000).toFixed(1)">
       </div>
 
+      <!-- ★同時出現（マルチスポーン）: 1回の出現で同時に出す数 -->
+      <div class="config-row" style="margin-top: 10px;">
+        <label>同時出現数: <span id="enemyMultiCountValue">1</span>体</label>
+        <input type="range" id="enemyMultiCountSlider" min="1" max="5" step="1" value="1"
+               oninput="document.getElementById('enemyMultiCountValue').innerText = this.value">
+      </div>
+
+      <!-- ★同時出現タイミング: 何回に1回まとめて出すか -->
+      <div class="config-row" style="margin-top: 10px;">
+        <label><span id="enemyMultiIntervalValue">1</span>回に1回まとめて出現</label>
+        <input type="range" id="enemyMultiIntervalSlider" min="1" max="5" step="1" value="1"
+               oninput="document.getElementById('enemyMultiIntervalValue').innerText = this.value">
+      </div>
+
       <!-- 新しい設定項目: 全滅時即時出現 -->
       <div class="config-row" style="margin-top: 10px;">
         <label>

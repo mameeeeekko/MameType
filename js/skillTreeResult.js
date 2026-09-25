@@ -184,7 +184,7 @@ export function handleSkillModeResult(nodeId) {
                     <div class="value">${resultData.score}</div>
                 </div>
                 <div class="stat">
-                    <div class="label">CLEAR</div>
+                    <div class="label">SOLVED</div>
                     <div class="value">${gameState.solvedCount}</div>
                 </div>
                 <div class="stat">

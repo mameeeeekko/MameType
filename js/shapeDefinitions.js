@@ -42,6 +42,22 @@ export function defineShapePath(ctx, x, y, shapeType, size) {
         case "square":
             ctx.rect(x - size, y - size, size * 2, size * 2);
             break;
+        case "turret": {
+            // 幅が広く背の低い据置型。突出する砲身や方向部品は持たない。
+            const w = size * 1.08;
+            const h = size * 0.68;
+            const cut = size * 0.30;
+            ctx.moveTo(x - w + cut, y - h);
+            ctx.lineTo(x + w - cut, y - h);
+            ctx.lineTo(x + w, y - h + cut);
+            ctx.lineTo(x + w, y + h - cut);
+            ctx.lineTo(x + w - cut, y + h);
+            ctx.lineTo(x - w + cut, y + h);
+            ctx.lineTo(x - w, y + h - cut);
+            ctx.lineTo(x - w, y - h + cut);
+            ctx.closePath();
+            break;
+        }
         case "arrow":
             ctx.moveTo(x + size, y);
             ctx.lineTo(x - size, y - size * 0.35);
