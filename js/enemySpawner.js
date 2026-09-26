@@ -1,8 +1,32 @@
 import { Enemy, EnemyTypes, ItemEnemy, ItemTypes, spawnBitEnemiesFor } from "./enemy.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getUISafeMinEnemyY } from "./enemyCore.js";
-import { getWord } from "./target.js";
+import { getWord, resolveWordLengthRange } from "./target.js";
 import { buildBaseRomaji } from "./typingLogic.js";
+import { OVERWHELM_MISSION_NAME, OVERWHELM_MAX_WORD_LENGTH } from "./enemyModeConfig.js";
+
+
+// =====================================================
+// ステージ別の出題文字数上限
+// =====================================================
+
+/**
+ * 現在のフェーズ／ステージで適用する「出題文字数の上限」を返す。
+ * 制限なしの場合は null。
+ *
+ *  ・config.maxWordLength が明示されていればそれを優先
+ *  ・【圧倒】は localStorage に生成済みステージ（QuestStages_Cache）が
+ *    残っている可能性があるため、ミッション名からも判定して確実に効かせる
+ *
+ * @param {Object} config 現在のフェーズ／ステージ
+ * @returns {number|null}
+ */
+function getStageMaxWordLength(config) {
+    const explicit = Number(config?.maxWordLength);
+    if (Number.isFinite(explicit) && explicit > 0) return explicit;
+    if (config?.missionName === OVERWHELM_MISSION_NAME) return OVERWHELM_MAX_WORD_LENGTH;
+    return null;
+}
 
 
 // =====================================================
@@ -37,7 +61,7 @@ function pickWeightedType(table, typeMap){
 // 共通：重複なし単語取得
 // =====================================================
 
-function getUniqueWord(type, enemies = [], retry = 5){
+function getUniqueWord(type, enemies = [], retry = 5, maxLenLimit = null){
 
     const usedTexts =
         new Set(enemies.map(e => e.text));
@@ -45,7 +69,7 @@ function getUniqueWord(type, enemies = [], retry = 5){
     while (retry-- > 0) {
 
         const word =
-            getRandomWordForType(type);
+            getRandomWordForType(type, maxLenLimit);
 
         if (
             word &&
@@ -284,6 +308,11 @@ export function spawnEnemy(
     config, // stage または phase
     diff
 ){
+    // ★ ステージ別の出題文字数上限（例:【圧倒】= 10文字以内）
+    //   上限を超える長文の敵でも、敵の見た目・属性（タグ）はそのままで、
+    //   「そのタグの10文字以内の問題」に差し替えて処理しやすさを確保する。
+    const maxWordLength = getStageMaxWordLength(config);
+
     const entry = pickWeightedEntry(config?.enemyTable);
     if (!entry) return null;
 
@@ -297,7 +326,9 @@ export function spawnEnemy(
     const type = EnemyTypes[enemyTypeId];
     if (!type) return null;
 
-    const target = getUniqueWord(type, enemies);
+    // 文字数上限あり時は候補が絞られるため、未使用語を探すリトライ回数を増やす。
+    // 出せなかった場合は従来どおり、その回の出現だけ打ち切って次の間隔で再試行する。
+    const target = getUniqueWord(type, enemies, maxWordLength ? 10 : 5, maxWordLength);
     if (!target) return null;
 
     // 固定座標指定があれば使用、なければランダム
@@ -325,6 +356,9 @@ export function spawnEnemy(
     } else {
         enemy.damage = type.damage;
     }
+
+    // ★ ステージ別の出題文字数上限を保持（複数問題敵の2問目以降にも同じ制限を効かせる）
+    enemy.maxWordLength = maxWordLength;
 
     // ★ ステージ別 敵速度倍率（例: 圧倒 = 0.6 で低速化し、画面に敵が滞留する）
     let stageSpeedMult = config?.enemySpeedMultiplier ?? 1;
@@ -432,10 +466,12 @@ export function spawnItemEnemy(state, config, itemTableOverride){
 }
 
 // typeに応じたランダム単語を返す
-export function getRandomWordForType(type) {
+// maxLenLimit を渡すと、そのタイプの上限（例: 10）を超えない問題に差し替える
+export function getRandomWordForType(type, maxLenLimit = null) {
     // type.tags, minLen, maxLen を getWord にそのまま渡す
     // 大元の EnemyTypes 定義側で長さを調整することを推奨
-    return getWord(type.tags, type.minLen, type.maxLen);
+    const [minLen, maxLen] = resolveWordLengthRange(type, maxLenLimit);
+    return getWord(type.tags, minLen, maxLen);
 }
 
 export function getWordForBehavior(behavior) {

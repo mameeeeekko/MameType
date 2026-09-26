@@ -3123,6 +3123,35 @@ function drawWordFromBag(bagKey, pool) {
 }
 
 // ===============================
+// 文字数レンジの解決
+// ===============================
+/**
+ * 敵タイプなどの { minLen, maxLen } から、実際に使用する文字数レンジを返す。
+ * maxLenLimit（例: 10）を渡すと「上限」だけをそこまで縮める。
+ *
+ * 目的在于、敵の見た目・属性（tags）はそのままに、
+ * 「その属性の 10 文字以内の問題」へ差し替えること。
+ * 元の minLen が上限を超える場合のみ、下限も上限に合わせて詰める。
+ *
+ * @param {object} type 敵タイプ（EnemyTypes の要素など）
+ * @param {number|null} [maxLenLimit] 出題文字数の上限（null / 不正値なら制限なし）
+ * @returns {[number, number]} [minLen, maxLen]
+ */
+export function resolveWordLengthRange(type, maxLenLimit = null) {
+    const typeMin = Number(type?.minLen);
+    const typeMax = Number(type?.maxLen);
+
+    const minLen = Number.isFinite(typeMin) ? typeMin : 1;
+    const maxLen = Number.isFinite(typeMax) ? typeMax : minLen;
+
+    const limit = Number(maxLenLimit);
+    if (!Number.isFinite(limit) || limit <= 0) return [minLen, maxLen];
+
+    const cappedMax = Math.min(maxLen, limit);
+    return [Math.min(minLen, cappedMax), cappedMax];
+}
+
+// ===============================
 // 問題取得関数
 // enemySpawner などから呼ぶ
 // ===============================

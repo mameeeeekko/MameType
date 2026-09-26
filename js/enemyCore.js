@@ -231,6 +231,85 @@ function getChainBarCenter(){
     };
 }
 
+function updateSaturationState(stage, currentPhase, deltaTime) {
+    const stats = gameState.enemyStats;
+    if (!stats) return false;
+
+    const config = currentPhase?.saturation || stage?.saturation;
+    if (!config) {
+        stats.saturation = null;
+        stats.saturationLimit = null;
+        stats.saturationCapacity = null;
+        stats.overloadTimer = 0;
+        return false;
+    }
+
+    const rawCapacity = Number(
+        config.capacity ??
+        currentPhase?.spawn?.maxAlive ??
+        stage?.spawn?.maxAlive
+    );
+    const capacity = Number.isFinite(rawCapacity) && rawCapacity > 0
+        ? rawCapacity
+        : 1;
+    const rawLimit = Number(config.limit);
+    const limit = Number.isFinite(rawLimit)
+        ? Math.min(100, Math.max(1, rawLimit))
+        : 75;
+    const rawBulletWeight = Number(config.bulletWeight);
+    const bulletWeight = Number.isFinite(rawBulletWeight) && rawBulletWeight >= 0
+        ? rawBulletWeight
+        : 0.1;
+    const rawRiseRate = Number(config.riseRate);
+    const riseRate = Number.isFinite(rawRiseRate) && rawRiseRate > 0
+        ? rawRiseRate
+        : 0.2;
+    const rawFallRate = Number(config.fallRate);
+    const fallRate = Number.isFinite(rawFallRate) && rawFallRate > 0
+        ? rawFallRate
+        : 3.0;
+    const rawDuration = Number(config.overloadDurationMs);
+    const overloadDurationMs = Number.isFinite(rawDuration) && rawDuration >= 0
+        ? rawDuration
+        : 5000;
+
+    const enemyPressure = enemies.reduce((sum, enemy) => {
+        if (!enemy || enemy.isDead || enemy.isItem) return sum;
+        return sum + 1;
+    }, 0);
+    const bulletPressure = enemyBullets.reduce((sum, bullet) => {
+        if (!bullet || bullet.isDead) return sum;
+        return sum + bulletWeight;
+    }, 0);
+
+    const targetSaturation = Math.min(
+        100,
+        Math.max(0, ((enemyPressure + bulletPressure) / capacity) * 100)
+    );
+    const currentSaturation = Number.isFinite(stats.saturation)
+        ? stats.saturation
+        : 0;
+    // 敵が増えたときはゆっくり上がり、敵を倒したときは速やかに下がる。
+    const responseRate = targetSaturation > currentSaturation ? riseRate : fallRate;
+    const response = 1 - Math.exp(-responseRate * Math.max(0, deltaTime));
+    const saturation = Math.min(
+        100,
+        Math.max(0, currentSaturation + (targetSaturation - currentSaturation) * response)
+    );
+
+    stats.saturation = saturation;
+    stats.saturationLimit = limit;
+    stats.saturationCapacity = capacity;
+
+    if (saturation > limit) {
+        stats.overloadTimer = (stats.overloadTimer || 0) + (deltaTime * 1000);
+    } else {
+        stats.overloadTimer = 0;
+    }
+
+    return stats.overloadTimer >= overloadDurationMs;
+}
+
 function chainBurst(){
 
     const stats = gameState.enemyStats;
@@ -914,6 +993,12 @@ function gameLoop(timestamp) {
     let phaseComplete = false;
     let isClear = false;
 
+    // 飽和度超過は、saturation設定があるモードでタイマー開始後に判定する。
+    if (timerStarted && updateSaturationState(stage, currentPhase, deltaTime)) {
+        stats.failed = true;
+        forceFail = true;
+    }
+
     // 全体終了条件 (Global End Conditions)
     const globalEnd = stage.endConditions || {};
     const clear = stage.clearConditions || {};
@@ -1022,6 +1107,11 @@ function gameLoop(timestamp) {
     if (phaseCond.killCount != null && (stats.phaseObjectiveDefeated ?? 0) >= phaseCond.killCount) {
         phaseComplete = true;
     }
+    // ダメージで現在チェインが0に戻っても、再達成可能。
+    // 一度達成した最大値も保持するため、chainCountではなくmaxChainCountで判定する。
+    if (phaseCond.chainCount != null && (stats.maxChainCount ?? 0) >= phaseCond.chainCount) {
+        phaseComplete = true;
+    }
     if (timerStarted && phaseCond.timerMs != null && now - stats.phaseStartTime >= phaseCond.timerMs) {
         phaseComplete = true;
     }
@@ -1035,7 +1125,9 @@ function gameLoop(timestamp) {
     }
     if (
         // ★殲滅系で、目標撃破数が指定されていない場合
-        phaseCond.killCount == null && !phaseCond.allSpawnedDefeated &&
+        phaseCond.killCount == null &&
+        phaseCond.chainCount == null &&
+        !phaseCond.allSpawnedDefeated &&
         currentPhase.spawn.limit != null &&
         stats.phaseProcessedCount >= currentPhase.spawn.limit
     ) {
@@ -1054,6 +1146,13 @@ function gameLoop(timestamp) {
     ) {
         isClear = true;
     }
+    if (
+        !gameState.enemyStats.failed &&
+        clear.chainCount != null &&
+        gameState.enemyStats.maxChainCount >= clear.chainCount
+    ) {
+        isClear = true;
+    }
 
     // ■ 生存系（エンドレス以外）
     if (!gameState.enemyStats.failed && clear.killCount == null && !clear.endless) {
@@ -1065,6 +1164,7 @@ function gameLoop(timestamp) {
         // または全処理終了（フォールバック）
         if (
             clear.timerMs == null &&
+            clear.chainCount == null &&
             currentPhase.spawn?.limit != null &&
             spawnedCount >= currentPhase.spawn.limit &&
             enemies.length === 0
@@ -1092,8 +1192,9 @@ function gameLoop(timestamp) {
 
             // クリア条件の評価
             if (clear.killCount != null && stats.objectiveDefeated >= clear.killCount) isClear = true;
+            if (!gameState.enemyStats.failed && clear.chainCount != null && stats.maxChainCount >= clear.chainCount) isClear = true;
             if (clear.survive && !gameState.enemyStats.failed) isClear = true;
-            if (!isClear && clear.killCount == null && phaseComplete && isLastPhase) isClear = true;
+            if (!isClear && clear.killCount == null && clear.chainCount == null && phaseComplete && isLastPhase) isClear = true;
 
             // 最終的な失敗判定 (endlessモードは失敗にならない)
             if (!isClear && !isEndless) {
@@ -1204,7 +1305,9 @@ function transitionToNextPhase(now) {
     
     // 次のフェーズの条件を取得
     const nextCond = nextPhase.phaseConditions || nextPhase.endConditions || {};
-    if (nextCond.killCount) {
+    if (nextCond.chainCount != null) {
+        stats.nextPhaseGoal = `MISSION: CHAIN ${nextCond.chainCount}`;
+    } else if (nextCond.killCount) {
         stats.nextPhaseGoal = `MISSION: KILL ${nextCond.killCount}`;
     } else if (nextCond.timerMs) {
         stats.nextPhaseGoal = `MISSION: SURVIVE ${nextCond.timerMs / 1000}s`;
@@ -2208,6 +2311,12 @@ export async function startEnemyMode(config = {}) {
         remainingSpawn: 0,
         totalSpawn: 0,
 
+        // 飽和度（saturation設定があるモードのみ使用する）
+        saturation: null,
+        saturationLimit: null,
+        saturationCapacity: null,
+        overloadTimer: 0,
+
         freezeTimer: 0,     // itemのfreeze用のtimer
 
         // Chain System
@@ -2424,6 +2533,9 @@ export async function startEnemyMode(config = {}) {
 
     if (globalClear.endless) {
         gameState.enemyStats.nextPhaseGoal = "MISSION: ENDLESS SURVIVAL";
+    } else if (globalClear.chainCount != null || firstPhaseCond.chainCount != null) {
+        const target = globalClear.chainCount ?? firstPhaseCond.chainCount;
+        gameState.enemyStats.nextPhaseGoal = `MISSION: CHAIN ${target}`;
     } else if (globalClear.killCount || firstPhaseCond.killCount) {
         const target = globalClear.killCount || firstPhaseCond.killCount;
         gameState.enemyStats.nextPhaseGoal = `MISSION: KILL ${target} ENEMIES`;

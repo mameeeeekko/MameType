@@ -3146,36 +3146,41 @@ function renderFixedTurretLaserCountdown(ctx, enemy) {
         remaining > 0 &&
         remaining <= (behavior.preDelay || 3);
     const size = enemy.type.size || 20;
-    const barWidth = size * 2.15;
-    const barHeight = 5;
-    const barX = enemy.x - barWidth / 2;
-    const barY = enemy.y - size * 0.72 - barHeight;
+
+    // アイテムの寿命リングと同じ arc スタイル（横棒は文字列と重なるため使わない）
+    const ringR = size * 1.12;
+    const end = Math.PI;                 // 左固定（アイテムと同じ起点）
+    const start = Math.PI * (1 - remainingRatio);
 
     ctx.save();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    // 攻撃間隔全体を消費する連続バー。0になった時に実際の攻撃条件も成立する。
-    ctx.fillStyle = "rgba(8, 12, 20, 0.86)";
-    ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
-    ctx.fillRect(barX, barY, barWidth, barHeight);
+    // 背景リング（暗い帯で残り量の減りを読み取りやすくする）
+    ctx.beginPath();
+    ctx.arc(enemy.x, enemy.y, ringR, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(8, 12, 20, 0.78)";
+    ctx.lineWidth = 5;
+    ctx.stroke();
 
+    // 残量リング：アイテムと同じ「上半分が縮む」 arc 表現
     const urgent = remainingRatio <= 0.25;
-    const pulse = 0.72 + Math.sin(remaining * Math.PI * 2) * 0.18;
-    ctx.globalAlpha = urgent ? pulse : 0.88;
-    ctx.fillStyle = urgent ? "#ff4f4f" : "#ff8a70";
+    ctx.beginPath();
+    ctx.arc(enemy.x, enemy.y, ringR, start, end, false);
+    ctx.strokeStyle = urgent ? "#ef4444" : "#ff8a70";
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = "round";
     ctx.shadowColor = "#ff554f";
     ctx.shadowBlur = urgent ? 7 : 3;
-    ctx.fillRect(barX, barY, barWidth * remainingRatio, barHeight);
+    ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1;
 
     if (showNumber) {
         // 数字と六角形バッグは同じ中心座標を使う。
+        // 砲台サイズの増加に合わせて size 追従させる（小さい砲台でも従来の11pxは維持）。
         const centerX = enemy.x;
         const centerY = enemy.y;
-        const radius = 11;
+        const radius = Math.max(11, Math.round(size * 0.58));
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
             const angle = -Math.PI / 2 + i * Math.PI / 3;

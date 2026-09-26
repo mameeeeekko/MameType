@@ -963,7 +963,7 @@ function drawShape(ctx, x, y, type, color) {
             break;
 
         case "turret":
-            drawTurretShape(ctx, x, y, size, grad, color);
+            drawTurretShape(ctx, x, y, size, color);
             break;
 
         case "diamond":
@@ -1010,47 +1010,94 @@ function drawShape(ctx, x, y, type, color) {
 
 
 // ============================================
-// 固定砲台の形状（砲身なし・低い据置型）
+// 固定砲台の形状（正六角形の外壁＋同系色の内部装甲）
+// - 配色は adjustColor で明度だけ変えた同系色のみ。白いアクセントは中心コアの一点だけ
+// - 外壁には外側グロー（shadowBlur）を残し、暗い背景から分離する
+// - 中心は renderFixedTurretLaserCountdown の六角バッジが被るため、コアは控えめに留める
 // ============================================
-function drawTurretShape(ctx, x, y, size, grad, color) {
+function drawTurretShape(ctx, x, y, size, color) {
 
-    // 低い左右対称の本体。突出する砲身や方向部品は持たない。
+    const light = adjustColor(color, 55);
+    const dark  = adjustColor(color, -70);
+
+    // 正六角形（外接円半径 = size）にちょうど収まる放射グラデーション
+    const bodyGrad = ctx.createRadialGradient(
+        x - size * 0.30,
+        y - size * 0.40,
+        size * 0.10,
+        x,
+        y,
+        size
+    );
+    bodyGrad.addColorStop(0, light);
+    bodyGrad.addColorStop(0.50, color);
+    bodyGrad.addColorStop(1, dark);
+
+    // ① 外壁：発光グローを付けてから本体を重ねる
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = size * 0.35;
     ctx.beginPath();
     defineShapePath(ctx, x, y, "turret", size);
-    ctx.fillStyle = grad;
+    ctx.fillStyle = bodyGrad;
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.28)";
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+    ctx.restore();
 
-    // 中央の装甲リング1箇所だけを用いる。上下へ装甲を分割しない。
-    const coreRadius = size * 0.34;
+    ctx.beginPath();
+    defineShapePath(ctx, x, y, "turret", size);
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+
+    // ② 内部装甲：外壁と同じ向きで内接する小六角形
+    const armorR = size * 0.66;
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
         const angle = -Math.PI / 2 + i * Math.PI / 3;
-        const px = x + Math.cos(angle) * coreRadius;
-        const py = y + Math.sin(angle) * coreRadius;
+        const px = x + Math.cos(angle) * armorR;
+        const py = y + Math.sin(angle) * armorR;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
     }
     ctx.closePath();
-    ctx.fillStyle = "rgba(5, 10, 18, 0.68)";
+    ctx.fillStyle = dark;
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.28)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = light;
+    ctx.lineWidth = 1.6;
     ctx.stroke();
 
+    // ③ 装甲パネル線：小六角形の各頂点から外壁の同じ頂点へ放射状に戻す6本
+    const outerR = size;
+    ctx.strokeStyle = light;
+    ctx.lineWidth = 1.2;
+    ctx.globalAlpha = 0.5;
+    for (let i = 0; i < 6; i++) {
+        const angle = -Math.PI / 2 + i * Math.PI / 3;
+        ctx.beginPath();
+        ctx.moveTo(
+            x + Math.cos(angle) * armorR,
+            y + Math.sin(angle) * armorR
+        );
+        ctx.lineTo(
+            x + Math.cos(angle) * outerR,
+            y + Math.sin(angle) * outerR
+        );
+        ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // ④ 中心コア（この一点だけが白いアクセント）
+    const coreR = size * 0.22;
     ctx.beginPath();
-    ctx.arc(x, y, coreRadius * 0.58, 0, Math.PI * 2);
+    ctx.arc(x, y, coreR, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.shadowColor = color;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 10;
     ctx.fill();
     ctx.shadowBlur = 0;
 
     ctx.beginPath();
-    ctx.arc(x, y, coreRadius * 0.24, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(245,250,255,0.90)";
+    ctx.arc(x, y, coreR * 0.42, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
     ctx.fill();
 }
 
@@ -2250,9 +2297,15 @@ export function renderChainUI(gameState){
         _chainLast.label = "CHAIN";
         label.textContent = "CHAIN";
     }
-    if (_chainLast.value !== stats.chainCount) {
-        _chainLast.value = stats.chainCount;
-        value.textContent = stats.chainCount;
+    const chainGoal = gameState.stage?.clearConditions?.chainCount ??
+        gameState.stage?.phaseConditions?.chainCount;
+    const chainProgress = Math.max(stats.chainCount ?? 0, stats.maxChainCount ?? 0);
+    const chainDisplay = chainGoal != null
+        ? `${chainProgress}/${chainGoal}`
+        : stats.chainCount;
+    if (_chainLast.value !== chainDisplay) {
+        _chainLast.value = chainDisplay;
+        value.textContent = chainDisplay;
     }
     // 表示　ボーナス倍率
     const multiplier = getChainMultiplier(stats.chainCount);
@@ -2622,6 +2675,54 @@ export function resetSpawnDotState() {
     spawnAnimState = null;
 }
 
+function drawSaturationGauge(ctx, stats, x, y) {
+    const value = Math.max(0, Math.min(100, Number(stats.saturation) || 0));
+    const limit = Math.max(1, Math.min(100, Number(stats.saturationLimit) || 75));
+    const width = 18;
+    const height = 150;
+    const ratio = value / 100;
+    const limitY = y + height * (1 - limit / 100);
+    const color = value > limit
+        ? "#ff6666"
+        : (value >= limit * 0.85 ? "#ffb84d" : "#5cd65c");
+
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+    ctx.fillStyle = "#f0f6fc";
+    ctx.fillText("SATURATION", x, y - 20);
+
+    roundRect(ctx, x, y, width, height, 4);
+    ctx.fillStyle = "rgba(200,200,200,0.18)";
+    ctx.fill();
+
+    const fillHeight = height * ratio;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y + height - fillHeight, width, fillHeight);
+
+    ctx.strokeStyle = "#ffdf6b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - 4, limitY);
+    ctx.lineTo(x + width + 4, limitY);
+    ctx.stroke();
+
+    ctx.font = "bold 14px 'Noto Sans Mono', monospace";
+    ctx.fillStyle = color;
+    ctx.fillText(`${Math.round(value)}%`, x + width + 8, y + height / 2 - 10);
+    ctx.font = "11px 'Noto Sans Mono', monospace";
+    ctx.fillStyle = "#f0f6fc";
+    ctx.fillText(`LIMIT ${Math.round(limit)}%`, x + width + 8, y + height / 2 + 10);
+
+    if ((stats.overloadTimer || 0) > 0) {
+        ctx.fillStyle = "#ff6666";
+        ctx.fillText("OVERLOAD", x + width + 8, y + height / 2 + 28);
+    }
+
+    ctx.restore();
+}
+
 // ===============================
 // 終了条件UI（左上・複数対応）
 // ===============================
@@ -2631,7 +2732,10 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     let spawnText = "";
     
     const stats = gameState.enemyStats;
-    const end = stage.phaseConditions || stage.endConditions || {};
+    const end = {
+        ...(stage.endConditions || {}),
+        ...(stage.phaseConditions || {})
+    };
     const clear = stage.clearConditions || gameState.stage?.clearConditions || {};
     
     const lines = [];
@@ -2701,6 +2805,16 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
         lines2.push({
             label: "KILL", 
             value: `${current}/${clear.killCount}`,
+            color: isMet ? "#4caf50" : undefined
+        });
+    }
+
+    if (clear.chainCount != null) {
+        const current = Math.max(stats.chainCount ?? 0, stats.maxChainCount ?? 0);
+        const isMet = current >= clear.chainCount;
+        lines2.push({
+            label: "CHAIN",
+            value: `${current}/${clear.chainCount}`,
             color: isMet ? "#4caf50" : undefined
         });
     }
@@ -2844,6 +2958,15 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
             }
 
         });
+    }
+
+    if (Number.isFinite(stats.saturation)) {
+        drawSaturationGauge(
+            ctx,
+            stats,
+            x,
+            y + lines2.length * 26 + 24
+        );
     }
     
      ctx.restore();

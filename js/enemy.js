@@ -970,8 +970,8 @@ export class Enemy {
                 this.y += dy / dist * knockbackPower;
             }
 
-            // 次の問題を取得
-            const newWord = getRandomWordForType(this.type);
+            // 次の問題を取得（スポーン時と同じ文字数制限を効かせる）
+            const newWord = getRandomWordForType(this.type, this.maxWordLength);
             if (newWord) {
                 this.text = newWord.text;
                 this.word = newWord.word;
@@ -1638,9 +1638,9 @@ export const EnemyTypes = generateAllEnemyTypes();
 // =====================================================
 // 固定砲台タイプ
 // - 移動しない（isFixed）
-// - 大きさと色は見た目だけ
+// - 色と size は見た目だけでなく、接触判定（update内の dist < player.radius + size）にも使われる
 // - Tierごとの強さは hitCount / 文字数 / 攻撃設定で調整
-// - 砲身を持たず、低い据置型でプレイヤー方向を向く動作も行わない
+// - 砲身を持たず、左右対称の据置砲台シルエットでプレイヤー方向を向く動作も行わない
 // - score / laserInterval / bulletInterval / bulletSpeed / bulletCharType は
 //   T3〜T10のFIXED_TURRET_TIER_CONFIGで個別に変更可能
 // =====================================================
@@ -1763,10 +1763,10 @@ function createFixedTurretType(kind, tierKey) {
     return {
         id,
         name: isLaser ? `固定レーザー砲台 T${tierKey.slice(1)}` : `固定弾砲台 T${tierKey.slice(1)}`,
-        color: isLaser ? "#717171" : "#d4d4d4",
+        color: isLaser ? "#e05252" : "#3fa9e8",
         shape: "turret",
         pattern: null,
-        size: 20,
+        size: 26,
         speed: 0,
         rotationSpeed: 0,
         damage: 15,

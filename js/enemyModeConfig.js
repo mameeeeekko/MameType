@@ -88,6 +88,15 @@ export const ENEMY_MODE_CONFIG = {
 
 };
 
+// ======================================================
+// 【圧倒】専用: 出題文字数の上限
+// ======================================================
+// 圧倒は「同時出現数の大幅増 + 低速化」で画面に敵が溜まるため、
+// 出題が10文字を超えると処理しきれなくなる。
+// 敵の見た目・属性（tags）は変えず、そのタグの8文字以内の問題に差し替える。
+export const OVERWHELM_MISSION_NAME = "圧倒";
+export const OVERWHELM_MAX_WORD_LENGTH = 8;
+
 // ===============================
 // ステージ条件表示用テキスト
 //
@@ -141,6 +150,10 @@ export function buildClearText(clear, defenseConfig = null) {
   if (clear) {
     if (clear.killCount != null) {
       lines.push(`敵を${clear.killCount}体倒せ`);
+    }
+
+    if (clear.chainCount != null) {
+      lines.push(`チェイン${clear.chainCount}を達成せよ`);
     }
 
     if (clear.noMiss) {
@@ -592,6 +605,20 @@ function getStageEnemyTable(tierKey, table, stageNum) {
 }
 
 /**
+ * 砲台制圧戦用の固定砲台テーブルを返す。
+ * 固定砲台の専用定義はT3以降にあるため、T1・T2ではT3を最低Tierとして使う。
+ */
+function getFixedTurretTable(tierKey) {
+    const tierNumber = Math.max(3, normalizeTierNumber(tierKey));
+    const effectiveTierKey = `T${Math.min(10, tierNumber)}`;
+    const entries = (FIXED_TURRET_TIER_ENTRIES[effectiveTierKey] || [])
+        .map(entry => ({ ...entry }));
+
+    ENEMY_TABLE_TIER.set(entries, effectiveTierKey);
+    return entries;
+}
+
+/**
  * 属性セットの説明を取得
  */
 export function getTierDescription(table = ENEMY_TIER_BALANCED) {
@@ -713,27 +740,7 @@ function getTierSpawnPressure(stageNum) {
 }
 
 function isTierPressureExempt(stage, pattern = null) {
-    if (pattern !== null && pattern !== undefined) {
-        return [3, 4, 7, 8].includes(Number(pattern));
-    }
-
-    // 既存キャッシュでは番号ではなくミッション名から判定する。
-    if ([
-        "電撃戦",
-        "精密防衛",
-        "圧倒",
-        "精密射撃"
-    ].includes(stage?.missionName)) {
-        return true;
-    }
-
-    // 旧キャッシュでmissionNameが欠けていても、既存の特殊設定を検出する。
-    const detectedPattern = detectMultiSpawnPattern(stage);
-    if ([3, 4, 7, 8].includes(detectedPattern)) return true;
-
-    // 旧キャッシュで特殊パターンを判別できない場合の精密射撃フォールバック。
-    return stage?.endConditions?.failOnMissCount != null ||
-        stage?.clearConditions?.noMiss === true;
+    return [3, 4, 7, 8].includes(Number(pattern));
 }
 
 function applyTierSpawnPressure(config, stageNum, pattern = null) {
@@ -785,10 +792,10 @@ function applyTierSpawnPressure(config, stageNum, pattern = null) {
  *    1: 【生存目標】   - 制限時間まで生存。無限湧き。
  *    2: 【殲滅目標】   - 有限の出現数(limit)を全滅させるか、制限時間まで生存。
  *    3: 【電撃戦】     - 短い制限時間 + HP減少で敵が加速するberserk戦。
- *    4: 【精密防衛】   - 高密度サバイバル。出現数多め。
+ *    4: 【砲台制圧戦】 - 固定砲台を主体に出現させ、倒しながら攻撃に耐える。
  *    5: 【タイムアタック】- 時間内に通常より多いノルマを達成。
  *    6: 【サボタージュ】- HP継続減少デバフ + 撃破目標。
- *    7: 【圧倒】       - 同時出現上限(maxAlive)大幅増 + 低速化で滞留 + 生存目標。
+ *    7: 【圧倒】       - 同時出現上限(maxAlive)大幅増 + 低速化で滞留 + 生存目標 + 出題10文字以内。
  *    8: 【精密射撃】   - 1ミスで即終了(failOnMiss) + 少数精鋭を撃破。
  *    9: 【純粋なる試練】- アイテム・スキル使用禁止 + 撃破目標。
  *    - 抽選ルール:
@@ -808,7 +815,7 @@ function applyTierSpawnPressure(config, stageNum, pattern = null) {
  *              multiCount:2, multiInterval:1 → 毎回2匹同時
  *    - 採用パターン:
  *        case3 電撃戦   : multiCount 2（i>=40 で3） / multiInterval 3（i>=40 で2）
- *        case4 精密防衛 : multiCount 2 / multiInterval 2（i>=50 で1）
+ *        case4 砲台制圧戦: multiCount 2 / multiInterval 2
  *        case7 圧倒     : multiCount 3 / multiInterval 2
  *    - 注意: limit / maxAlive は1体ずつ判定して超過分は出現させずに打ち切る。
  *            limit:1 / maxAlive:1 のボス戦などでは実質無効（常に1体）。
@@ -902,11 +909,11 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
         { name: "撃破", desc: "指定数の敵を撃破せよ！" },
         { name: "生存", desc: "制限時間まで生き残れ！" },
         { name: "殲滅", desc: "敵を全て殲滅せよ！" },
-        { name: "電撃戦", desc: "短時間で敵を撃破せよ！HPが減ると敵が加速！" },
-        { name: "精密防衛", desc: "高密度攻撃を防衛せよ！" },
+        { name: "電撃戦", desc: "制限時間内に指定チェイン数を達成せよ！HPが減ると敵が加速！" },
+        { name: "砲台制圧戦", desc: "大量に出現する固定砲台を倒し、攻撃に耐えろ！" },
         { name: "タイムアタック", desc: "時間内に指定数撃破！" },
         { name: "サボタージュ", desc: "HP減少の中、敵を撃破せよ！" },
-        { name: "圧倒", desc: "低速の敵が大量に滞留！捌き切れ！" },
+        { name: "圧倒", desc: "大量の低速の敵を処理し、飽和度の上限を守れ！（敵は10文字以内）" },
         { name: "精密射撃", desc: "ミスなく敵を撃破せよ！" },
         { name: "純粋なる試練", desc: "アイテム・スキルなしで敵を撃破せよ！" }
     ];
@@ -973,6 +980,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
 
         case 1: // 【生存目標】時間まで生き残ればクリア
             config.spawn.limit = null; // 無限湧き
+            // 同時存在数の調整は、tier pressureの適用の後に行う（末尾で処理）。
             config.endConditions = { hpZero: true, timerMs: timeLimit };
             config.clearConditions = { survive: true };
 
@@ -1038,15 +1046,16 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             }
             break;
 
-        case 3: // 【電撃戦】短時間で決着。HPが減るほど敵が加速する(berserk)
+        case 3: // 【電撃戦】制限時間内に既存チェインを指定数までつなげる
             const blitzTime = Math.max(30000, 25000 + (i * 250)); // 制限時間 (30sベース)
-            const blitzKillGoal = Math.floor(killGoal * 0.6); // 討伐目標を基本の6割に緩和
+            const chainGoal = Math.min(12, 5 + Math.floor(i / 10));
+            config.chainGoal = chainGoal;
             config.spawn.interval *= 0.8; // 敵がどんどん出る
-            // 出現数は討伐目標より多め（猶予付き）：倒し切らなくても討伐数到達でクリア
-            config.spawn.limit = Math.floor(blitzKillGoal * 1.5) + 3;
-            config.endConditions = { hpZero: true, timerMs: blitzTime, killCount: blitzKillGoal };
-            config.clearConditions = { killCount: blitzKillGoal };
-            config.phaseConditions = { killCount: blitzKillGoal }; // ★ 討伐数到達でフェーズ完了（全滅不要＝逃しても詰まない）
+            // チェインが切れても制限時間内なら再挑戦できるよう、敵の総数は余分に確保する。
+            config.spawn.limit = Math.max(12, chainGoal * 3);
+            config.endConditions = { hpZero: true, timerMs: blitzTime };
+            config.clearConditions = { chainCount: chainGoal };
+            config.phaseConditions = { chainCount: chainGoal };
             config.spawn.immediateOnClear = true;
 
             // ★同時出現：3回に1回は2体まとめて出現（ステージ40以降は2回に1回3体）
@@ -1059,8 +1068,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             // スター：タイピング速度(KPM)
             config.star = {
                 type: "typingSpeed",
-                thresholds: [ // 圧倒も厳しかったため緩和
-                    80 + (i * 0.5), // 精密射撃も緩和
+                thresholds: [
+                    80 + (i * 0.5),
                     100 + (i * 0.5),
                     130 + (i * 0.5),
                     150 + (i * 0.5),
@@ -1069,24 +1078,27 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             };
             break;
 
-        case 4: // 【精密防衛】高密度サバイバル
+        case 4: // 【砲台制圧戦】固定砲台を倒しながら攻撃に耐える
+            // T1・T2には固定砲台の専用Tierがないため、最小のT3砲台を使用する。
+            config.enemyTable = getFixedTurretTable(tier);
+            config.turretMode = true;
+            config.enemyVariationDescription = "固定砲台主体";
             config.spawn.maxAlive += 2; // 増加量を抑制
             config.spawn.interval *= 0.8;
-            // ★同時出現：2回に1回まとめて2体（ステージ50以降は毎回2体で高密度化）
+            // ★同時出現：2回に1回まとめ
             config.spawn.multiCount = 2;
             config.spawn.multiInterval = 2;
-            //config.spawn.multiInterval = i >= 50 ? 1 : 2;
             config.endConditions = { hpZero: true, timerMs: timeLimit * 0.8 };
             config.clearConditions = { survive: true };
 
-            // スター：正確性(Accuracy) ではなく 残りHP率に変更（1ミス終了ルールの親和性のため）
+            // ★スター：固定砲台を倒しながら残りHPを保つ
             config.star = {
                 type: "hpRemaining",
                 thresholds: [
-                    0.4, 
-                    0.6, 
-                    0.7, 
-                    0.8, 
+                    0.4,
+                    0.6,
+                    0.7,
+                    0.8,
                     0.9,
                 ]
             };
@@ -1157,13 +1169,29 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
 
           case 7: // 【圧倒】途方もない数の敵を捌き切れ！ (Overwhelm)
             const overwhelmTime = timeLimit + (i * 500); // 長めの生存時間
-            config.spawn.interval *= 0.6; // 出現頻度を抑える (0.7 -> 0.8)
+            config.spawn.interval *= 0.6; // 出現頻度を上げる
             config.spawn.maxAlive = Math.min(14, maxAlive + 6); // 大幅増 → 画面に敵が溜まり続ける
             config.enemySpeedMultiplier = 0.6; // ★ 敵を低速化：到達が遅く、画面上に滞留して密度が上がる
+            // ★ 出題文字数を10文字以内に制限：大量の低速の敵を捌きやすくする。
+            //   敵の見た目・属性（タグ）・出現重みはそのままで、
+            //   「そのタグの10文字以内の問題」に差し替えて出題する。
+            //   （生成済みステージが localStorage に残るため、スポーン側でも missionName から判定する）
+            config.maxWordLength = OVERWHELM_MAX_WORD_LENGTH;
             // ★同時出現：2回に1回は3体まとめて出現（maxAlive 14 の範囲でループ側が自動制限）
             config.spawn.multiCount = 3;
             config.spawn.multiInterval = 2;
             config.spawn.limit = null; // 無限湧き
+            config.saturation = {
+                // 敵数だけでなく画面全体の余白も容量に含め、上限に到達しにくいようにする。
+                capacity: config.spawn.maxAlive * 1.25,
+                limit: 75,
+                // 弾は飽和度の計算への寄与を小さくする。
+                bulletWeight: 0.1,
+                // 上がりは遅く、下がりは速くする。
+                riseRate: 0.25,
+                fallRate: 2.0,
+                overloadDurationMs: 5000
+            };
             config.endConditions = { hpZero: true, timerMs: overwhelmTime };
             config.clearConditions = { survive: true };
 
@@ -1254,6 +1282,12 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
     // 特殊ミッションはapplyTierSpawnPressure()で既存バランスを優先して除外する。
     applyTierSpawnPressure(config, i, pattern);
 
+    // 生存だけは、既存のtier pressure確定後に同時存在数を1体だけ増やす。
+    // 出現間隔には触れない。
+    if (pattern === 1 && Number.isFinite(config.spawn?.maxAlive)) {
+        config.spawn.maxAlive += 1;
+    }
+
     return config;
 }
 
@@ -1272,203 +1306,14 @@ function shuffleArray(array) {
     return arr;
 }
 
-/**
- * クエストステージのキャッシュ移行：同時出現（マルチスポーン）パラメータの補完
- *
- * クエストステージは生成時の内容を LocalStorage に保存して固定するため、
- * 同時出現パラメータの追加前に生成されたキャッシュには multiCount / multiInterval が
- * 存在しない（＝出現処理側で 1 にフォールバックされ、同時出現が効かない）。
- *
- * ここでは以下だけを行う。
- *   - ステージ内容から ケース3（電撃戦）/ ケース4（精密防衛）/ ケース7（圧倒）を判定
- *   - ステージ番号（キャッシュキー "STAGE<n>"）から generateStage と同じ既定値を適用
- *   - 上記以外のステージは 1 / 1（従来どおり1体ずつ）を補完
- *
- * 進行状況・敵構成・出現間隔・終了条件など、スポーン以外の設定には一切触れない。
- */
-
-/**
- * キャッシュされたステージがどの出現パターン（generateStage の switch case）に該当するか判定する。
- * @param {Object} stage ステージ設定
- * @returns {number|null} case番号（3 / 4 / 7）、判定できない場合は null
- */
-function detectMultiSpawnPattern(stage) {
-    // 最も確実な判定：ミッション名
-    if (stage.missionName) {
-        if (stage.missionName === "電撃戦") return 3;
-        if (stage.missionName === "精密防衛") return 4;
-        if (stage.missionName === "圧倒") return 7;
-    }
-
-    // 旧キャッシュで missionName が無い場合の保険（generateStage が設定する固有フィールドで判定）
-    if (stage.berserk) return 3;
-    if (stage.enemySpeedMultiplier === 0.6) return 7;
-    if (stage.star?.type === "hpRemaining" && stage.clearConditions?.survive && stage.endConditions?.timerMs) return 4;
-
-    return null;
-}
-
-/**
- * 旧キャッシュに欠けている同時出現パラメータを補完する。
- * @param {Object} stages キャッシュされたクエストステージ（STAGE1〜STAGE100）
- * @returns {boolean} 補完して保存し直した場合は true
- */
-function backfillMultiSpawnSettings(stages) {
-    if (!stages || typeof stages !== "object") return false;
-
-    let changed = false;
-
-    for (const [key, stage] of Object.entries(stages)) {
-        if (!stage || typeof stage !== "object" || !stage.spawn || typeof stage.spawn !== "object") {
-            continue;
-        }
-
-        // ステージ番号（generateStage の i 相当）をキャッシュキーから取得
-        const numMatch = /^STAGE(\d+)$/.exec(key);
-        const stageNum = numMatch ? parseInt(numMatch[1], 10) : null;
-        const isLateStage = (threshold) => stageNum !== null && stageNum >= threshold;
-
-        // ケース3 / 4 / 7 以外は generateStage と同じ既定値（従来どおり1体ずつ）
-        let multiCount = 1;
-        let multiInterval = 1;
-
-        switch (detectMultiSpawnPattern(stage)) {
-            case 3: // 【電撃戦】3回に1回2体（ステージ40以降は2回に1回3体）
-                multiCount = isLateStage(40) ? 3 : 2;
-                multiInterval = isLateStage(40) ? 2 : 3;
-                break;
-            case 4: // 【精密防衛】2回に1回2体（ステージ50以降は毎回2体）
-                multiCount = 2;
-                multiInterval = isLateStage(50) ? 1 : 2;
-                break;
-            case 7: // 【圧倒】2回に1回3体
-                multiCount = 3;
-                multiInterval = 2;
-                break;
-            default:
-                // 既定値が設定済みなら何もしない（手動調整済み設定を壊さないため）
-                if (stage.spawn.multiCount !== undefined && stage.spawn.multiInterval !== undefined) {
-                    continue;
-                }
-                break;
-        }
-
-        if (stage.spawn.multiCount === multiCount && stage.spawn.multiInterval === multiInterval) {
-            continue;
-        }
-
-        stage.spawn.multiCount = multiCount;
-        stage.spawn.multiInterval = multiInterval;
-        changed = true;
-    }
-
-    return changed;
-}
-
-/**
- * 既存クエストキャッシュへT1〜T4の出現圧力を後付けする。
- * 生成済みキャッシュでも、段階的な出現圧力を反映する。
- */
-function backfillTierSpawnPressure(stages) {
-    if (!stages || typeof stages !== "object") return false;
-
-    let changed = false;
-    for (const [key, stage] of Object.entries(stages)) {
-        const match = /^STAGE(\d+)$/.exec(key);
-        if (!match || !stage || typeof stage !== "object") continue;
-
-        const stageNum = Number(match[1]);
-        if (applyTierSpawnPressure(stage, stageNum)) {
-            changed = true;
-        }
-    }
-    return changed;
-}
-
-/**
- * 既存クエストキャッシュのW1・T1後半へNormal敵の混在を後付けする。
- */
-function backfillW1T1LateComposition(stages) {
-    if (!stages || typeof stages !== "object") return false;
-
-    let changed = false;
-    for (const [key, stage] of Object.entries(stages)) {
-        const match = /^STAGE(\d+)$/.exec(key);
-        if (!match || !stage || typeof stage !== "object") continue;
-
-        const stageNum = Number(match[1]);
-        if (addW1T1LateComposition(stage.enemyTable, stageNum)) {
-            changed = true;
-        }
-    }
-    return changed;
-}
-
-/**
- * 既存クエストキャッシュへ固定砲台を後付けする。
- * 同じ table を二度変更しないよう、既存の固定砲台IDを確認してから不足分だけ追加する。
- */
-function backfillFixedTurretEntries(stages) {
-    if (!stages || typeof stages !== "object") return false;
-
-    let changed = false;
-    const addToTable = (table, tierKey) => {
-        if (!Array.isArray(table)) return;
-        if (tierKey === "T1" || tierKey === "T2") return;
-        const entries = FIXED_TURRET_TIER_ENTRIES[tierKey];
-        if (!entries?.length) return;
-
-        const missing = entries.filter(entry =>
-            !table.some(current => current?.type === entry.type)
-        );
-        if (missing.length === 0) return;
-
-        // ボス専用フェーズには通常砲台を混在させない。
-        if (table.some(entry => /BOSS|MID_BOSS|LAST_BOSS|EX_BOSS/.test(String(entry?.type || "")))) {
-            return;
-        }
-
-        table.push(...missing.map(entry => ({ ...entry })));
-        changed = true;
-    };
-
-    for (const [key, stage] of Object.entries(stages)) {
-        const match = /^STAGE(\d+)$/.exec(key);
-        if (!match || !stage || typeof stage !== "object") continue;
-
-        const stageNum = Number(match[1]);
-        if (!Number.isFinite(stageNum) || stageNum < 21) continue;
-        if (String(stage.enemyVariationDescription || "").includes("のみ")) continue;
-        const tierKey = `T${Math.min(10, Math.ceil(stageNum / 10))}`;
-
-        addToTable(stage.enemyTable, tierKey);
-        if (Array.isArray(stage.phases)) {
-            stage.phases.forEach(phase => addToTable(phase?.enemyTable, tierKey));
-        }
-    }
-
-    return changed;
-}
-
 function initGeneratedStages() {
     if (typeof localStorage === 'undefined') return {}; // 非ブラウザ環境用セーフティ
 
     const cached = localStorage.getItem(QUEST_STAGES_STORAGE_KEY);
     if (cached) {
         try {
-            const parsed = JSON.parse(cached);
-
-            // ★旧キャッシュ移行：出現圧力・敵構成・同時出現・固定砲台を補完し、保存し直す
-            // （進行データには影響しない。ステージ構成・敵内容もそのまま維持される）
-            const multiSpawnChanged = backfillMultiSpawnSettings(parsed);
-            const tierPressureChanged = backfillTierSpawnPressure(parsed);
-            const compositionChanged = backfillW1T1LateComposition(parsed);
-            const turretChanged = backfillFixedTurretEntries(parsed);
-            if (multiSpawnChanged || tierPressureChanged || compositionChanged || turretChanged) {
-                localStorage.setItem(QUEST_STAGES_STORAGE_KEY, JSON.stringify(parsed));
-            }
-
-            return parsed;
+            // ステージは生成時に固定して保存するため、キャッシュがあればそのまま使う。
+            return JSON.parse(cached);
         } catch (e) {
             console.warn("Quest stage cache corrupted. Regenerating...");
         }
@@ -1480,7 +1325,7 @@ function initGeneratedStages() {
     for (let block = 0; block < 10; block++) {
         // 序盤（下一桁 1〜3）: 基本形 [0:撃破, 1:生存, 2:殲滅] をシャッフルして配置
         const basicPatterns = shuffleArray([0, 1, 2]);
-        // 中盤〜後半（下一桁 4〜10）: 応用形 [3:電撃戦, 4:精密防衛, 5:タイムアタック, 6:サボタージュ, 7:圧倒, 8:精密射撃, 9:純粋なる試練] をシャッフルして配置
+        // 中盤〜後半（下一桁 4〜10）: 応用形 [3:電撃戦, 4:砲台制圧戦, 5:タイムアタック, 6:サボタージュ, 7:圧倒, 8:精密射撃, 9:純粋なる試練] をシャッフルして配置
         const advancedPatterns = shuffleArray([3, 4, 5, 6, 7, 8, 9]);
 
         const patterns = [...basicPatterns, ...advancedPatterns];

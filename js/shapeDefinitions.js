@@ -43,18 +43,17 @@ export function defineShapePath(ctx, x, y, shapeType, size) {
             ctx.rect(x - size, y - size, size * 2, size * 2);
             break;
         case "turret": {
-            // 幅が広く背の低い据置型。突出する砲身や方向部品は持たない。
-            const w = size * 1.08;
-            const h = size * 0.68;
-            const cut = size * 0.30;
-            ctx.moveTo(x - w + cut, y - h);
-            ctx.lineTo(x + w - cut, y - h);
-            ctx.lineTo(x + w, y - h + cut);
-            ctx.lineTo(x + w, y + h - cut);
-            ctx.lineTo(x + w - cut, y + h);
-            ctx.lineTo(x - w + cut, y + h);
-            ctx.lineTo(x - w, y + h - cut);
-            ctx.lineTo(x - w, y - h + cut);
+            // 真の正六角形（外接円半径 = size）。頂点が真上・真下なので左右対称で、
+            // enemyRenderer の rotate(0) 前提を維持できる。
+            // 外接円半径がそのまま当たり判定の半径（Enemy.radius）なので見た目と判定が一致する。
+            // 内部の装甲リングや発光は enemyRenderer の drawTurretShape 側で描く。
+            for (let i = 0; i < 6; i++) {
+                const angle = -Math.PI / 2 + i * Math.PI / 3;
+                const px = x + Math.cos(angle) * size;
+                const py = y + Math.sin(angle) * size;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
             ctx.closePath();
             break;
         }
