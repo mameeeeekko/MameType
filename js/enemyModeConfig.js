@@ -1047,8 +1047,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             break;
 
         case 3: // 【電撃戦】制限時間内に既存チェインを指定数までつなげる
-            const blitzTime = Math.max(30000, 25000 + (i * 250)); // 制限時間 (30sベース)
-            const chainGoal = Math.min(12, 5 + Math.floor(i / 10));
+            const blitzTime = Math.max(30000, 30000 + (i * 600)); // 制限時間
+            const chainGoal = Math.min(30, 10 + (2 * Math.floor(i / 10)));
             config.chainGoal = chainGoal;
             config.spawn.interval *= 0.8; // 敵がどんどん出る
             // チェインが切れても制限時間内なら再挑戦できるよう、敵の総数は余分に確保する。
@@ -1168,7 +1168,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             break;
 
           case 7: // 【圧倒】途方もない数の敵を捌き切れ！ (Overwhelm)
-            const overwhelmTime = timeLimit + (i * 500); // 長めの生存時間
+          const overwhelmTime = timeLimit; // 長めの生存時間
             config.spawn.interval *= 0.6; // 出現頻度を上げる
             config.spawn.maxAlive = Math.min(14, maxAlive + 6); // 大幅増 → 画面に敵が溜まり続ける
             config.enemySpeedMultiplier = 0.6; // ★ 敵を低速化：到達が遅く、画面上に滞留して密度が上がる
@@ -1210,11 +1210,11 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
 
         case 8: // 【精密射撃】ミスなく敵を撃破 (Precision Shot)
             const precisionKillTarget = killGoal + Math.floor(i / 5);
-            let missLimit = 1;
+            let missLimit = 3;
             if (i <= 30) {
-                missLimit = 4;
+                missLimit = 5;
             } else if (i <= 60) {
-                missLimit = 2;
+                missLimit = 4;
             }
      
             config.spawn.limit = precisionKillTarget; // 倒すべき敵は有限
@@ -1245,7 +1245,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             break;
 
         case 9: // 【純粋なる試練】アイテム・アクティブスキル禁止 (Pure Trial)
-            const pureTrialKillTarget = killGoal + Math.floor(i / 4);
+            const pureTrialKillTarget = killGoal - 2;
             config.spawn.limit = Math.floor(pureTrialKillTarget * 1.5);
             config.endConditions = { hpZero: true, killCount: pureTrialKillTarget };
             config.clearConditions = { killCount: pureTrialKillTarget };
