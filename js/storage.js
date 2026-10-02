@@ -797,30 +797,6 @@ export function loadQuestAuto() {
 }
 
 // ================================
-// 🔹スロット削除
-// ================================
-export function deleteQuestSlot(slotIndex) {
-  const slots = loadQuestSlots();
-
-  slots[slotIndex] = null; // 空にする
-
-  localStorage.setItem(QUEST_SLOTS_KEY, JSON.stringify(slots));
-}
-
-
-// ================================
-// 🔹リセット
-// ================================
-//savedataも消す
-export function resetQuestData() {
-  localStorage.removeItem("questProgress");
-  localStorage.removeItem("questPlayerStats");
-  localStorage.removeItem("questStars");
-  localStorage.removeItem(QUEST_SLOTS_KEY); // ★変更
-  localStorage.removeItem(QUEST_AUTO_KEY);
-}
-
-// ================================
 // 🔹はじめから（スロットは保持）
 // ================================
 export function startQuestFromBeginning(defaultStats = null) {

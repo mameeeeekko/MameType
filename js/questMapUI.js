@@ -1091,6 +1091,7 @@ export function openQuestMenuModal(type = "difficulty") {
                     damageNegateChance: 0,
                     reviveChance: 0,
                     cooldownSpeed: 1.0,
+                    startActiveSkillStock: 0,
                 };
 
                 nextEquipped.forEach(id => {
@@ -1125,6 +1126,7 @@ export function openQuestMenuModal(type = "difficulty") {
                         ${buildStatRow("ダメージ無効化率", current.damageNegateChance, next.damageNegateChance, false, 0, { format: v => `${(v * 100).toFixed(0)}%`, diffFormat: v => `${(v * 100).toFixed(0)}%` }, 1.0)}
                         ${buildStatRow("クールダウン速度", current.cooldownSpeed, next.cooldownSpeed, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 2.0)}
                         ${buildStatRow("REVIVE", current.reviveChance, next.reviveChance, false, 0, { format: v => `${(v * 100).toFixed(0)}%`, diffFormat: v => `${(v * 100).toFixed(0)}%` }, 1.0)}
+                        ${buildStatRow("開始時ストック", current.startActiveSkillStock, next.startActiveSkillStock, false, 0, { format: v => `+${v.toFixed(0)}`, diffFormat: v => `${v > 0 ? '+' : ''}${v.toFixed(0)}` }, 2)}
                     `;
                 } else {
                     html = `
@@ -1139,6 +1141,7 @@ export function openQuestMenuModal(type = "difficulty") {
                         ${buildStatRow("ダメージ無効化率", current.damageNegateChance, null, false, 0, { format: v => `${(v * 100).toFixed(0)}%` }, 1.0)}
                         ${buildStatRow("クールダウン速度", current.cooldownSpeed, null, false, 1.0, { format: v => `x${v.toFixed(2)}` }, 2.0)}
                         ${buildStatRow("REVIVE", current.reviveChance, null, false, 0, { format: v => `${(v * 100).toFixed(0)}%` }, 1.0)}
+                        ${buildStatRow("開始時ストック", current.startActiveSkillStock, null, false, 0, { format: v => `+${v.toFixed(0)}` }, 2)}
                     `;
                 }
 

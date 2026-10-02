@@ -36,7 +36,11 @@
 //      difficulty: "easy" | "normal" | "hard",
 //      questionLimit?: number,
 //      limitSec?: number,
-//      tags:[ "", "句読点", "促音", "英語","記号","数字","ことわざ","擬音"] （longの場合は["文学"、"セキュリティ"、"おもしろ"、"プログラミング"、"自作キーボード"]）
+//      tags:[ "", "句読点", "促音", "英語","記号","数字","ことわざ","擬音"] （longの場合は["文学"、"セキュリティ"、"おもしろ"、"プログラミング"、"自作キーボード","医療","時事"]）
+//      excludeTags?: string[]（除外タグ。tags 未指定のときだけ自動で入る）
+//      tagWeights?: {tag:string, weight:number}[]（long_text 専用。
+//                 「開始時に選ぶ重み付き候補」。ノード生成時にはタグを固定せず
+//                 この候補だけを持つ。出題時に1つだけ確定して tags に入る）
 //   }
 //
 //   modeごとの使用項目
@@ -44,6 +48,12 @@
 //   normal      → questionLimit
 //   time_attack → limitSec
 //   long_text   → 特殊設定なし
+//
+//   ★tags 未指定（isSupport=false）の場合
+//   --------------------------------
+//   tags を持たないため「全タグ出題」になるが、デイリーと同じく
+//   excludeTags: ["英語"] が自動設定され、英語を出題しない。
+//   （isSupport=true のノードは SUPPORT_TAGS に英語が含まれるため除外しない）
 //
 // children:
 //   解放後に表示される次ノードID配列
@@ -102,14 +112,18 @@
 //
 // =====================================================
 
-import { startGame } from "./gameCore.js";
+import { doCountdown } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
-import { backToQuestMap, showGameScreen } from "./main.js";
+import { backToQuestMap, showGameScreen, updateGameUIVisibility } from "./main.js";
 import { gameState } from "./gameCore.js";
 import { findParents } from "./skillTreeUI.js";
 import { getPlayerStats, reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { unlockNode } from "./skillTreeUI.js";
 import { isCleared } from "./questProgress.js";
+// ★ENGLISH_EXCLUDED_TAGS は target.js から直接 import する。
+//   gameModes.js を経由すると gameModes → difficulties → defenseCore → main
+//   → hud → skillTree の循環で TDZ（初期化前参照）エラーになる。
+import { ENGLISH_EXCLUDED_TAGS } from "./target.js";
 import { devOverride } from "../dev/devOverride.js";
 
 // =====================================================
@@ -267,6 +281,8 @@ export function startSkillMode(challenge, nodeId){
         console.warn("nodeId missing");
     }
 
+    // ★長文のタグは「開始時」に決める（ノード生成時ではない）
+    //   長文は候補（tagWeights）しか持たないため、ここで初めて1枚に絞る。
     gameState.currentSkillNodeId = nodeId; 
 
     showGameScreen(); 
@@ -277,7 +293,13 @@ export function startSkillMode(challenge, nodeId){
         long_text: GameModes.LONG_TEXT
     };
 
-    const mode = modeMap[challenge.mode];
+    const runtimeChallenge = createRuntimeChallenge(challenge);
+
+    const mode = modeMap[runtimeChallenge.mode];
+
+    // ★デイリーと同じく、速度バー／残り時間バーの表示をモードに合わせる
+    //   （doCountdown は非表示要素を元の値に戻すため、先に適用しておく必要がある）
+    updateGameUIVisibility(mode.id);
 
     // =========================
     // 解放条件の固定表示
@@ -287,7 +309,9 @@ export function startSkillMode(challenge, nodeId){
         const hint = document.getElementById("skillUnlockHint");
 
         if (node && hint) {
-            const unlockText = getUnlockText(node.unlock);
+            // ★長文「プログラミング」が出題された場合は補正後の秒数を表示する
+            //   （クリア判定と同じ補正を通さないと表示と判定がずれる）
+            const unlockText = getUnlockTextForChallenge(node.unlock, runtimeChallenge);
 
             hint.style.display = "block";
             hint.innerHTML = `
@@ -297,12 +321,13 @@ export function startSkillMode(challenge, nodeId){
         }
     });
 
-    startGame({
+    // ★デイリーと同じくカウントダウン（2→1）を挟んでから問題を開始する
+    doCountdown({
         mode,
         isFreeMode: false,
-        difficulty: challenge.difficulty,
+        difficulty: runtimeChallenge.difficulty,
         custom: {
-            ...challenge,
+            ...runtimeChallenge,
             isSkillMode: true,
             nodeId
         }
@@ -378,7 +403,7 @@ export const SKILL_DEPTH = {
 export const NORMAL_CHALLENGE_TABLE = {
     0: {
         difficulty: "normal",
-        questionLimit: 12
+        questionLimit: 15
     },
     1: {
         difficulty: "normal",
@@ -397,73 +422,73 @@ export const NORMAL_CHALLENGE_TABLE = {
 export const NORMAL_UNLOCK_TABLE = {
     0: [
         [
-            { type:"time", value:80 },
+            { type:"time", value:75 },
             { type:"accuracy", value:90 }
         ],
         [
-            { type:"time", value:80 },
+            { type:"time", value:75 },
             { type:"miss", value:8 }
         ],
         [
-            { type:"time", value:90 },
+            { type:"time", value:80 },
             { type:"score", value:140 }
         ],
         [
-            { type:"time", value:70 }
+            { type:"time", value:65 }
         ]
     ],
 
     1: [
         [
-            { type:"time", value:90 },
+            { type:"time", value:85 },
             { type:"accuracy", value:93 }
         ],
         [
-            { type:"time", value:90 },
+            { type:"time", value:85 },
             { type:"miss", value:5 }
         ],
         [
-            { type:"time", value:90 },
-            { type:"score", value:160 }
+            { type:"time", value:85 },
+            { type:"score", value:180 }
         ],
         [
-            { type:"time", value:80 }
+            { type:"time", value:75 }
         ]
     ],
 
     2: [
         [
-            { type:"time", value:180 },
+            { type:"time", value:150 },
             { type:"accuracy", value:95 }
         ],
         [
             { type:"time", value:150 },
-            { type:"miss", value:2 }
+            { type:"miss", value:5 }
         ],
         [
-            { type:"time", value:220 },
-            { type:"score", value:180 }
+            { type:"time", value:150 },
+            { type:"score", value:220 }
         ],
         [
-            { type:"time", value:150 }
+            { type:"time", value:140 }
         ]
     ],
 
     3: [
         [
-            { type:"time", value:240 },
-            { type:"accuracy", value:98 }
+            { type:"time", value:270 },
+            { type:"accuracy", value:97 }
         ],
         [
-            { type:"time", value:200 },
-            { type:"miss", value:0 }
+            { type:"time", value:270 },
+            { type:"miss", value:5 }
         ],
         [
-            { type:"time", value:300 },
-            { type:"score", value:200 }
+            { type:"time", value:270 },
+            { type:"score", value:240 }
         ],
         [
-            { type:"time", value:180 }
+            { type:"time", value:260 }
         ]
     ]
 };
@@ -498,34 +523,34 @@ export const TIME_ATTACK_UNLOCK_TABLE = {
 
     1: [
         [
-            { type:"target", value:17 },
+            { type:"target", value:21 },
             { type:"accuracy", value:93 }
         ],
         [
-            { type:"target", value:17 },
+            { type:"target", value:21 },
             { type:"miss", value:5 }
         ],
         [
-            { type:"target", value:17 },
-            { type:"score", value:160 }
+            { type:"target", value:21 },
+            { type:"score", value:180 }
         ],
         [
-            { type:"target", value:19 }
+            { type:"target", value:22 }
         ]
     ],
 
     2: [
         [
-            { type:"target", value:23 },
+            { type:"target", value:24 },
             { type:"accuracy", value:95 }
         ],
         [
-            { type:"target", value:23 },
-            { type:"miss", value:2 }
+            { type:"target", value:24 },
+            { type:"miss", value:5 }
         ],
         [
-            { type:"target", value:23 },
-            { type:"score", value:180 }
+            { type:"target", value:24 },
+            { type:"score", value:220 }
         ],
         [
             { type:"target", value:25 }
@@ -534,19 +559,19 @@ export const TIME_ATTACK_UNLOCK_TABLE = {
 
     3: [
         [
-            { type:"target", value:40 },
-            { type:"accuracy", value:98 }
+            { type:"target", value:42 },
+            { type:"accuracy", value:97 }
         ],
         [
-            { type:"target", value:40 },
-            { type:"miss", value:0 }
+            { type:"target", value:42 },
+            { type:"miss", value:5 }
         ],
         [
-            { type:"target", value:40 },
-            { type:"score", value:200 }
+            { type:"target", value:42 },
+            { type:"score", value:240 }
         ],
         [
-            { type:"target", value:42 }
+            { type:"target", value:43 }
         ]
     ]
 };
@@ -592,55 +617,55 @@ export const LONG_TEXT_UNLOCK_TABLE = {
 
     1: [
         [
-            { type:"time", value:185 },
+            { type:"time", value:160 },
             { type:"accuracy", value:90 }
         ],
         [
-            { type:"time", value:185 },
-            { type:"miss", value:15 }
+            { type:"time", value:160 },
+            { type:"miss", value:25 }
         ],
         [
-            { type:"time", value:185 },
-            { type:"score", value:160 }
+            { type:"time", value:160 },
+            { type:"score", value:180 }
         ],
         [
-            { type:"time", value:180 }
+            { type:"time", value:150 }
         ]
     ],
 
     2: [
         [
-            { type:"time", value:175 },
+            { type:"time", value:150 },
             { type:"accuracy", value:95 }
         ],
         [
-            { type:"time", value:175 },
-            { type:"miss", value:7 }
+            { type:"time", value:150 },
+            { type:"miss", value:15 }
         ],
         [
-            { type:"time", value:175 },
-            { type:"score", value:180 }
+            { type:"time", value:150 },
+            { type:"score", value:220 }
         ],
         [
-            { type:"time", value:170 }
+            { type:"time", value:140 }
         ]
     ],
 
     3: [
         [
-            { type:"time", value:155 },
-            { type:"accuracy", value:98 }
+            { type:"time", value:145 },
+            { type:"accuracy", value:97 }
         ],
         [
-            { type:"time", value:155 },
-            { type:"miss", value:3 }
+            { type:"time", value:145 },
+            { type:"miss", value:8 }
         ],
         [
-            { type:"time", value:155 },
-            { type:"score", value:200 }
+            { type:"time", value:145 },
+            { type:"score", value:240 }
         ],
         [
-            { type:"time", value:150 }
+            { type:"time", value:130 }
         ]
     ]
 };
@@ -655,6 +680,82 @@ export const SUPPORT_TAGS = {
 };
 
 // =====================================================
+// 英語主体（下の補助系）の難易度補正
+// =====================================================
+//
+// ★なぜ補正が必要か
+//   下の補助系ノードは SUPPORT_TAGS（英語＋数字＋記号）で出題されるが、
+//   クリア条件は左（normal）・上（time_attack）と同じテーブルから取っている。
+//   英語は「1文字＝1打鍵」に対し日本語（かな→ローマ字）は1文字あたり約1.4〜1.6打鍵
+//   なので、同じ文字数制限・同じ条件だと英語が明らかに易しい。
+//
+// ★係数の根拠（実測）
+//   同じ制限時間でクリアできる問数を計測した結果：
+//     ・240秒 … 日本語45問 / 英語56問（比 1.244 → 秒/問 0.804）
+//     ・150秒 … 日本語27問 / 英語35問（比 1.296 → 秒/問 0.771）
+//   2つの実験が独立にほぼ同じ値を示したため、
+//   英語は日本語の約 1.27 倍の問数（=0.79 倍の所要時間）で打てる。
+//   よって「左・上と同じ難易度」にするには、
+//     time   : 英語は短い時間でクリアできる → 秒数を 0.79 倍に詰める
+//     target : 同じ時間でより多く解ける     → 問数を 1.27 倍に増やす
+//
+// ★補正しない条件
+//   score / accuracy / miss はいずれも打鍵数ベースの指標
+//   （score = KPM × 正確率^3）で言語差が出ないため据え置く。
+//   ユーザーが「time と target だけ補正する」と指定済みでも同じ結論。
+//
+// ★どちらのモードでどちらを補正するか（固定）
+//   normal       → 出題側の問題数(questionLimit)は全ノード共通なので、
+//                  クリア条件の「時間」だけ短縮して等其他を揃える
+//   time_attack  → 出題側の制限時間(limitSec)は全ノード共通なので、
+//                  クリア条件の「問数」だけ増やして等其他を揃える
+export const ENGLISH_TIME_FACTOR = 0.79;    // normal      : time   = value × 0.79（秒を短く）
+export const ENGLISH_TARGET_FACTOR = 1.27;  // time_attack : target = value × 1.27（問数を増やす）
+
+/**
+ * スタンダード（normal）用の補正。
+ * 出題側の問題数は共通のまま、クリア条件の「秒数」だけを詰める。
+ *
+ * @param {Array<{type:string, value:number}>} unlock 補正前の条件配列
+ * @returns {Array<{type:string, value:number}>} 補正後の条件配列（time のみ値が変わる）
+ */
+function adjustUnlockForEnglishNormal(unlock) {
+    if (!unlock?.length) return unlock;
+
+    return unlock.map(cond => {
+        // time : クリア秒数を 0.79 倍（5秒刻みに丸めて表示をそろえる）
+        if (cond.type === "time") {
+            const scaled = cond.value * ENGLISH_TIME_FACTOR;
+            return { ...cond, value: Math.max(5, Math.round(scaled / 5) * 5) };
+        }
+
+        // score / accuracy / miss は打鍵数ベースなので据え置き
+        return cond;
+    });
+}
+
+/**
+ * タイムアタック（time_attack）用の補正。
+ * 出題側の制限時間は共通のまま、クリア条件の「問数」だけ増やす。
+ *
+ * @param {Array<{type:string, value:number}>} unlock 補正前の条件配列
+ * @returns {Array<{type:string, value:number}>} 補正後の条件配列（target のみ値が変わる）
+ */
+function adjustUnlockForEnglishTimeAttack(unlock) {
+    if (!unlock?.length) return unlock;
+
+    return unlock.map(cond => {
+        // target : クリア問数を 1.27 倍（1問未満にならないように最低1問）
+        if (cond.type === "target") {
+            return { ...cond, value: Math.max(1, Math.round(cond.value * ENGLISH_TARGET_FACTOR)) };
+        }
+
+        // score / accuracy / miss は打鍵数ベースなので据え置き
+        return cond;
+    });
+}
+
+// =====================================================
 // 条件生成関数
 // =====================================================
 
@@ -665,13 +766,21 @@ export function buildNormalSkill(depth, pattern = 0, isSupport = false) {
     };
     if (isSupport) {
         challenge.tags = SUPPORT_TAGS[depth];
+    } else {
+        // ★tags 未指定は「全タグ出題」になるが、デイリーと同じく英語は除外する
+        //   （isSupport=true は SUPPORT_TAGS に英語が含まれるため除外しない）
+        challenge.excludeTags = ENGLISH_EXCLUDED_TAGS;
     }
+
+    const unlock = NORMAL_UNLOCK_TABLE[depth][pattern].map(x => ({
+        mode: "normal",
+        ...x
+    }));
+
     return {
         challenge,
-        unlock: NORMAL_UNLOCK_TABLE[depth][pattern].map(x => ({
-            mode: "normal",
-            ...x
-        }))
+        // ★下（英語）のみ補正：問題数は共通なのでクリア秒数だけ縮める
+        unlock: isSupport ? adjustUnlockForEnglishNormal(unlock) : unlock
     };
 }
 
@@ -682,35 +791,40 @@ export function buildTimeAttackSkill(depth, pattern = 0, isSupport = false) {
     };
     if (isSupport) {
         challenge.tags = SUPPORT_TAGS[depth];
+    } else {
+        // ★tags 未指定は「全タグ出題」になるが、デイリーと同じく英語は除外する
+        //   （isSupport=true は SUPPORT_TAGS に英語が含まれるため除外しない）
+        challenge.excludeTags = ENGLISH_EXCLUDED_TAGS;
     }
+
+    const unlock = TIME_ATTACK_UNLOCK_TABLE[depth][pattern].map(x => ({
+        mode: "time_attack",
+        ...x
+    }));
+
     return {
         challenge,
-        unlock: TIME_ATTACK_UNLOCK_TABLE[depth][pattern].map(x => ({
-            mode: "time_attack",
-            ...x
-        }))
+        // ★下（英語）のみ補正：制限時間は共通なのでクリア問数だけ増やす
+        unlock: isSupport ? adjustUnlockForEnglishTimeAttack(unlock) : unlock
     };
 }
 
 export function buildLongTextSkill(depth, pattern = 0, isSupport = false) { // isSupport is unused but kept for consistency
-    const weightedRandom = (items) => {
-        const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
-        let r = Math.random() * totalWeight;
-        for (const item of items) {
-            r -= item.weight;
-            if (r <= 0) return item.tag;
-        }
-        return items[0].tag;
-    };
-    const tag =
-        weightedRandom(
-            LONG_TEXT_CHALLENGE_TABLE[depth].tags
-        );
 
+    // ★長文のタグはここでは決めない。
+    //   この関数は SKILL_TREE 定数の生成関数なので、ここで抽選すると
+    //   ページ読み込み時に1回だけ引かれてしまい、リロードするまで
+    //   全プレイで同じタグになってしまうため。
+    //   候補（重み付き）だけを保持し、実際の1枚は開始時に引く。
+    //   テーブルから複製するので、元テーブルとの参照は切れていて
+    //   偶発的な書き換えが起きない。
     return {
         challenge: {
             mode: "long_text",
-            tags: [tag]
+
+            // 開始時に pickWeightedTag() で1つだけ選ぶための重みテーブル
+            tagWeights: LONG_TEXT_CHALLENGE_TABLE[depth].tags
+                .map(t => ({ ...t }))
         },
 
         unlock:
@@ -750,6 +864,171 @@ export function buildSkill(mode, depth, isSupport = false, pattern = 0) {
         default:
             throw new Error(`Unknown mode: ${mode}`);
     }
+}
+
+// =====================================================
+// 長文チャレンジのタグ解決（開始時に実行）
+//
+// ★なぜ「開始時」なのか
+//   buildLongTextSkill() は SKILL_TREE 定数の生成関数なので、そこで
+//   抽選するとページ読み込み時に1回だけ引かれ、リロードするまで
+//   全プレイで同じタグになってしまう。
+//   そのため「候補（重み）」だけを保持し、開始時に引直す。
+//
+// ★表示側（オンマウス時ツールチップ / イントロ）は
+//   どのタグが引かれるか未定なので候補を全件表示する。
+//   getChallengeTagList() が担う。
+// =====================================================
+
+/**
+ * 重み付き抽選。buildLongTextSkill から移動したもの。
+ *
+ * @param {Array<{tag:string, weight:number}>} items 候補
+ * @returns {string} 抽選されたタグ
+ */
+function pickWeightedTag(items) {
+    const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+    let r = Math.random() * totalWeight;
+    for (const item of items) {
+        r -= item.weight;
+        if (r <= 0) return item.tag;
+    }
+    return items[0].tag;
+}
+
+/**
+ * 開始時点の challenge を生成する。
+ * 長文（tagWeights を持つ challenge）のみ tags を1つに確定させる。
+ * それ以外はそのまま返す。challenge 本体は改変せずコピーを返す。
+ *
+ * ★リトライ（skillTreeResult.js 側）も startSkillMode() を通るため、
+ *   開始のたびに別タグが引かれる。
+ *
+ * @param {object} challenge ノードの challenge
+ * @returns {object} 開始時点の challenge
+ */
+export function createRuntimeChallenge(challenge) {
+    if (!challenge) return challenge;
+
+    const tagWeights = challenge.tagWeights;
+
+    // 長文以外は開始時に決めるものがない（normal / time_attack は challenge 自体が確定的）
+    if (challenge.mode !== "long_text" ||
+        !Array.isArray(tagWeights) ||
+        !tagWeights.length) {
+        return challenge;
+    }
+
+    return {
+        ...challenge,
+        tags: [pickWeightedTag(tagWeights)]
+    };
+}
+
+/**
+ * 表示用のタグ一覧を返す。
+ * 長文は「選ばれる可能性があるタグ」を全件返す。
+ * それ以外は challenge.tags をそのまま返す。
+ *
+ * ★UI（オンマウス時のツールチップ／イントロ）からのみ使う。
+ *
+ * @param {object} challenge ノードの challenge
+ * @returns {string[]} 表示するタグ名の一覧
+ */
+export function getChallengeTagList(challenge) {
+    if (!challenge) return [];
+
+    const tagWeights = challenge.tagWeights;
+
+    if (Array.isArray(tagWeights) && tagWeights.length) {
+        return tagWeights.map(t => t.tag);
+    }
+
+    return challenge.tags || [];
+}
+
+// =====================================================
+// 長文「プログラミング」のクリア条件補正
+//
+// ★なぜ補正するか
+//   長文タグのうち「プログラミング」はコードサンプル数が多く打鍵数が
+//   他の長文より多い。同じ「◯秒以内にクリア」条件では
+//   明らかに厳しすぎるため、制限時間を 50 秒ぶん緩める。
+//
+// ★なぜ time だけか
+//   accuracy / miss / score はいずれも打鍵数ベースの指標で、
+//   今回の補正意図（所要時間の厳しさ）には直接効かないため据え置き。
+//   time は「◯秒以内にクリア」なので値が大きいほど緩くなる。
+// =====================================================
+
+// プログラミングが出題されたときの time 条件に加算する秒数
+export const PROGRAMMING_TAG_TIME_BONUS_SEC = 50;
+
+// 補正対象のタグ名
+const PROGRAMMING_TAG = "プログラミング";
+
+/**
+ * 出題タグが「プログラミング」の場合に、time 条件へ +50秒 を加える。
+ * unlock は改変せずコピーを返す（該当しなければ元の参照をそのまま返す）。
+ *
+ * ★開始時に確定した challenge.tags を渡すこと
+ *   長文は buildLongTextSkill() ではなく startSkillMode() でタグが決まるため、
+ *   判定時点では challenge.tags が「実際に出題されたタグ」を持っている。
+ *
+ * @param {Array|object} unlock ノードのクリア条件
+ * @param {object} challenge 開始時点の challenge（tags 確定済み）
+ * @returns {Array} 補正後の条件配列
+ */
+export function adjustUnlockForChallengeTags(unlock, challenge) {
+    if (!unlock) return unlock;
+
+    const tags = challenge?.tags || [];
+    if (!tags.includes(PROGRAMMING_TAG)) return unlock;
+
+    const list = Array.isArray(unlock) ? unlock : [unlock];
+
+    return list.map(cond => {
+        // time だけ加算する（他は据え置き）
+        if (cond.type !== "time") return cond;
+        return {
+            ...cond,
+            value: (cond.value || 0) + PROGRAMMING_TAG_TIME_BONUS_SEC
+        };
+    });
+}
+
+/**
+ * UI表示用: タグによるクリア条件補正の説明文。
+ * 補正対象の出題タグでなければ空文字を返す。
+ *
+ * ★長文の候補に「プログラミング」が含まれるノードでは
+ *   実際に引かれるタグが未確定なので、必ず説明を出す。
+ *
+ * @param {object} challenge ノードの challenge
+ * @returns {string} 説明文（該当なしは空文字）
+ */
+export function getChallengeTagNote(challenge) {
+    // 長文は候補（tagWeights）と開始時（tags）のどちらにも「プログラミング」が入る
+    const tags = getChallengeTagList(challenge);
+
+    if (!tags.includes(PROGRAMMING_TAG)) return "";
+
+    return `「プログラミング」は、クリア条件の制限時間に +${PROGRAMMING_TAG_TIME_BONUS_SEC}秒 を加算`;
+}
+
+/**
+ * 表示用のクリア条件テキストを返す。
+ * adjustUnlockForChallengeTags() で補正したうえで getUnlockText() に渡す。
+ *
+ * ★判定（adjustUnlockForChallengeTags）と表示は必ずこの関数で揃える
+ *   判定だけ補正すると「195秒でクリア」なのに表示は「145秒以内」となり矛盾する。
+ *
+ * @param {Array|object} unlock ノードのクリア条件
+ * @param {object} challenge 開始時点の challenge（tags 確定済み）
+ * @returns {string} 表示用テキスト
+ */
+export function getUnlockTextForChallenge(unlock, challenge) {
+    return getUnlockText(adjustUnlockForChallengeTags(unlock, challenge));
 }
 
 // =====================================================
@@ -830,6 +1109,7 @@ export const SKILL_TREE = {
         id: "CHAIN_UP_4",
         skillId: "chain_up_4",
         ...buildSkill("normal", SKILL_DEPTH.END, false, 3),
+        children: ["CHAIN_BONUS_4","GLASS_CHAIN_4","CHAIN_DECAY_4"],
         requirements: buildRequirements(SKILL_DEPTH.END),
     },
     
@@ -855,7 +1135,7 @@ export const SKILL_TREE = {
         id: "CHAIN_DECAY_3",
         skillId: "chain_decay_3",
         ...buildSkill("normal", SKILL_DEPTH.LATE, false, 0),
-        children: ["GLASS_CHAIN_4"],
+        children: ["CHAIN_UP_4"],
         requirements: buildRequirements(SKILL_DEPTH.LATE),
     },
     
@@ -863,6 +1143,7 @@ export const SKILL_TREE = {
         id: "CHAIN_DECAY_4",
         skillId: "chain_decay_4",
         ...buildSkill("normal", SKILL_DEPTH.END, false, 0),
+        children: ["STOCK_START_1"],
         requirements: buildRequirements(SKILL_DEPTH.END),
     },
     
@@ -896,7 +1177,7 @@ export const SKILL_TREE = {
         id: "GLASS_CHAIN_4",
         skillId: "glass_chain_4",
         ...buildSkill("normal", SKILL_DEPTH.END, false, 1),
-        children: ["CHAIN_BONUS_4","CHAIN_UP_4","CHAIN_DECAY_4"],
+        children: ["STOCK_START_1"],
         requirements: buildRequirements(SKILL_DEPTH.END),
     },
 
@@ -921,7 +1202,7 @@ export const SKILL_TREE = {
         id: "CHAIN_BONUS_3",
         skillId: "chain_bonus_3",
         ...buildSkill("normal", SKILL_DEPTH.LATE, false, 2),
-        children: ["GLASS_CHAIN_4"],
+        children: ["CHAIN_UP_4"],
         requirements: buildRequirements(SKILL_DEPTH.LATE),
     },
     
@@ -929,6 +1210,15 @@ export const SKILL_TREE = {
         id: "CHAIN_BONUS_4",
         skillId: "chain_bonus_4",
         ...buildSkill("normal", SKILL_DEPTH.END, false, 2),
+        children: ["STOCK_START_1"],
+        requirements: buildRequirements(SKILL_DEPTH.END),
+    },
+
+    // ===== 戦闘開始時ストック =====
+    STOCK_START_1: {
+        id: "STOCK_START_1",
+        skillId: "stock_start_1",
+        ...buildSkill("normal", SKILL_DEPTH.END, false, 1),
         requirements: buildRequirements(SKILL_DEPTH.END),
     },
     
@@ -963,7 +1253,7 @@ export const SKILL_TREE = {
     KB_UP_4: {
         id: "KB_UP_4",
         skillId: "kb_up_4",
-        ...buildSkill("time_attack", SKILL_DEPTH.END, true, 3),
+        ...buildSkill("time_attack", SKILL_DEPTH.END, false, 3),
         children: ["KILL_ALL","KNOCKBACK_EDGE"],
         requirements: buildRequirements(SKILL_DEPTH.END),
     },
@@ -1193,7 +1483,7 @@ export const SKILL_TREE = {
     FREEZE_HEAVY: {
         id: "FREEZE_HEAVY",
         skillId: "freeze_heavy",
-        ...buildSkill("time_attack", SKILL_DEPTH.END, true, 0),
+        ...buildSkill("time_attack", SKILL_DEPTH.END, false, 0),
         children: ["KB_UP_4"],
         requirements: buildRequirements(SKILL_DEPTH.END),
     },

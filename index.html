@@ -323,7 +323,96 @@
 
           <div id="enemyDifficultyInfo" class="difficulty-info"></div>
 
-      <div class="config-section-title"  style="margin-top: 40px;">Enemy Mode Pattern</div>
+      <div class="config-section-title" style="margin-top: 40px;">Rule Settings</div>
+      <div class="pattern-selector">
+        <button class="pattern-btn active" data-pattern="time">時間制限</button>
+        <button class="pattern-btn" data-pattern="count">討伐数指定</button>
+        <button class="pattern-btn" data-pattern="endless">エンドレス</button>
+        <button class="pattern-btn" data-pattern="blitz">電撃戦</button>
+        <button class="pattern-btn" data-pattern="intercept">迎撃</button>
+        <button class="pattern-btn" data-pattern="turret">砲台制圧戦</button>
+        <button class="pattern-btn" data-pattern="overwhelm">圧倒</button>
+      </div>
+
+      <div id="enemyParamTime" class="pattern-detail">
+        <div class="config-row">
+          <label>制限時間</label>
+          <input type="range" id="enemyTimeSlider" min="30" max="600" step="5" value="60"
+                 oninput="document.getElementById('enemyTimeValue').innerText = this.value">
+          <span class="config-value" id="enemyTimeValue">60</span>
+        </div>
+      </div>
+
+      <div id="enemyParamCount" class="pattern-detail" style="display: none;">
+        <div class="config-row">
+          <label>目標討伐数</label>
+          <input type="range" id="enemyCountSlider" min="1" max="200" step="1" value="30"
+                 oninput="document.getElementById('enemyCountValue').innerText = this.value">
+          <span class="config-value" id="enemyCountValue">30</span>
+        </div>
+      </div>
+
+      <div id="enemyParamEndless" class="pattern-detail" style="display: none;">
+        <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">力尽きるまで戦い続けます</p>
+      </div>
+
+      <!-- ★電撃戦：制限時間内にチェイン目標を達成。HPが減ると敵が加速する -->
+      <div id="enemyParamBlitz" class="pattern-detail" style="display: none;">
+        <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">制限時間内に指定チェイン数を達成せよ！HPが減ると敵が加速する</p>
+        <div class="config-row">
+          <label>制限時間</label>
+          <input type="range" id="blitzTimeSlider" min="30" max="300" step="5" value="60"
+                 oninput="document.getElementById('blitzTimeValue').innerText = this.value">
+          <span class="config-value" id="blitzTimeValue">60</span>
+        </div>
+        <div class="config-row">
+          <label>目標チェイン</label>
+          <input type="range" id="blitzChainSlider" min="5" max="50" step="1" value="15"
+                 oninput="document.getElementById('blitzChainValue').innerText = this.value">
+          <span class="config-value" id="blitzChainValue">15</span>
+        </div>
+      </div>
+
+      <!-- ★迎撃：敵は一体も出ず、飛んでくる弾を撃ち落とす -->
+      <div id="enemyParamIntercept" class="pattern-detail" style="display: none;">
+        <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">飛んでくる弾を撃ち落とせ！送り切った弾をすべて処理するとクリア（迎撃率で評価）</p>
+        <div class="config-row">
+          <label>使用文字種</label>
+          <select id="freeInterceptCharType">
+            <option value="alphabet">英語（a-z）</option>
+            <option value="number">数字（0-9）</option>
+            <option value="symbol">記号（!?,.-[]()@%:*+;）</option>
+            <option value="all" selected>すべて</option>
+          </select>
+        </div>
+        <div id="freeInterceptSpecInfo" style="font-size: 11px; color: #a3c8e4; margin: 8px 0;"></div>
+        <p style="font-size: 11px; color: #8b949e; margin: 8px 0;">※ 弾の総数・速度などは出現 Tier で決まります。ウェーブの送出間隔には下の「スポーン間隔」を使います。</p>
+      </div>
+
+      <!-- ★砲台制圧戦：固定砲台を倒しながら攻撃に耐える -->
+      <div id="enemyParamTurret" class="pattern-detail" style="display: none;">
+        <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">大量に出現する固定砲台を倒し、攻撃に耐えろ！</p>
+        <div id="freeTurretSpecInfo" style="font-size: 11px; color: #a3c8e4; margin: 8px 0;"></div>
+        <div class="config-row">
+          <label>制限時間</label>
+          <input type="range" id="turretTimeSlider" min="30" max="300" step="5" value="60"
+                 oninput="document.getElementById('turretTimeValue').innerText = this.value">
+          <span class="config-value" id="turretTimeValue">60</span>
+        </div>
+      </div>
+
+      <!-- ★圧倒：大量の低速の敵を捌き切り、飽和度の上限を守る -->
+      <div id="enemyParamOverwhelm" class="pattern-detail" style="display: none;">
+        <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">大量の低速の敵を処理し、飽和度の上限を守れ！（出題は8文字以内）</p>
+        <p style="font-size: 11px; color: #8b949e; margin: 8px 0;">※ 下の「スポーン間隔」「同時出現数」を下げると画面が詰まり、飽和度が上がりやすくなります。</p>
+        <div class="config-row">
+          <label>制限時間</label>
+          <input type="range" id="overwhelmTimeSlider" min="30" max="300" step="5" value="90"
+                 oninput="document.getElementById('overwhelmTimeValue').innerText = this.value">
+          <span class="config-value" id="overwhelmTimeValue">90</span>
+        </div>
+      </div>
+      <div class="config-section-title" style="margin-top: 40px;">Enemy Mode Pattern</div>
       <!-- 出現設定 (Tier & 種類) -->
       <div class="config-subset-section" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 15px;">
         <div class="config-row">
@@ -363,60 +452,6 @@
         </div>
       </div>
 
-      <div class="config-section-title" style="margin-top: 40px;">Rule Settings</div>
-      <div class="pattern-selector">
-        <button class="pattern-btn active" data-pattern="time">時間制限</button>
-        <button class="pattern-btn" data-pattern="count">討伐数指定</button>
-        <button class="pattern-btn" data-pattern="endless">エンドレス</button>
-      </div>
-
-      <div id="enemyParamTime" class="pattern-detail">
-        <div class="config-row">
-          <label>制限時間</label>
-          <input type="range" id="enemyTimeSlider" min="30" max="600" step="5" value="60"
-                 oninput="document.getElementById('enemyTimeValue').innerText = this.value">
-          <span class="config-value" id="enemyTimeValue">60</span>
-        </div>
-      </div>
-
-      <div id="enemyParamCount" class="pattern-detail" style="display: none;">
-        <div class="config-row">
-          <label>目標討伐数</label>
-          <input type="range" id="enemyCountSlider" min="1" max="200" step="1" value="30"
-                 oninput="document.getElementById('enemyCountValue').innerText = this.value">
-          <span class="config-value" id="enemyCountValue">30</span>
-        </div>
-      </div>
-
-      <div id="enemyParamEndless" class="pattern-detail" style="display: none;">
-        <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">力尽きるまで戦い続けます</p>
-      </div>
-      <!-- ★全クリア特典：フリーモード専用アクティブスキル設定（ENEMY用） -->
-      <div class="config-section-title" id="freeSkillSectionTitle" style="margin-top: 40px; display: none;">Active Skill</div>
-      <div id="freeSkillSection" class="config-subset-section" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none;">
-        <div class="config-row" style="margin-bottom: 8px;">
-          <label>使用スキル</label>
-          <span id="freeSkillNameValue" style="flex: 1 1 auto; text-align: right; font-size: 12px; color: #a3c8e4;">－</span>
-        </div>
-        <div class="config-row" style="margin-bottom: 0;">
-          <label>星強化</label>
-          <span id="freeSkillStarValue" style="flex: 1 1 auto; text-align: right; font-size: 12px; color: #ffd700;">Lv.0（CD -0%）</span>
-        </div>
-        <div class="config-row" style="margin-bottom: 8px;">
-          <button id="freeSkillSelectBtn" class="pattern-btn" style="flex: 1 1 0;">SKILL SELECT (V)</button>
-          <button id="freeSkillUpgradeBtn" class="pattern-btn" style="flex: 1 1 0;">STAR UPGRADE (U)</button>
-        </div>
-        <div class="config-row" style="margin-bottom: 0;">
-          <label>ストック上限</label>
-          <input type="range" id="freeSkillStockSlider" min="1" max="5" step="1" value="1"
-                 oninput="document.getElementById('freeSkillStockValue').innerText = this.value">
-          <span class="config-value" id="freeSkillStockValue">1</span>
-        </div>
-
-      </div>
-
-      <button id="startEnemyFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
-
       <!-- 新しい設定項目: スポーン間隔 -->
       <div class="config-section-title" style="margin-top: 40px;">Spawn Settings</div>
       <div class="config-row">
@@ -446,8 +481,33 @@
         </label>
       </div>
 
-    </div>
+      <!-- ★全クリア特典：フリーモード専用アクティブスキル設定（ENEMY用） -->
+      <div class="config-section-title" id="freeSkillSectionTitle" style="margin-top: 40px; display: none;">Active Skill</div>
+      <div id="freeSkillSection" class="config-subset-section" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none;">
+        <div class="config-row" style="margin-bottom: 8px;">
+          <label>使用スキル</label>
+          <span id="freeSkillNameValue" style="flex: 1 1 auto; text-align: right; font-size: 12px; color: #a3c8e4;">－</span>
+        </div>
+        <div class="config-row" style="margin-bottom: 0;">
+          <label>星強化</label>
+          <span id="freeSkillStarValue" style="flex: 1 1 auto; text-align: right; font-size: 12px; color: #ffd700;">Lv.0（CD -0%）</span>
+        </div>
+        <div class="config-row" style="margin-bottom: 8px;">
+          <button id="freeSkillSelectBtn" class="pattern-btn" style="flex: 1 1 0;">SKILL SELECT (V)</button>
+          <button id="freeSkillUpgradeBtn" class="pattern-btn" style="flex: 1 1 0;">STAR UPGRADE (U)</button>
+        </div>
+        <div class="config-row" style="margin-bottom: 0;">
+          <label>ストック上限</label>
+          <input type="range" id="freeSkillStockSlider" min="1" max="5" step="1" value="1"
+                 oninput="document.getElementById('freeSkillStockValue').innerText = this.value">
+          <span class="config-value" id="freeSkillStockValue">1</span>
+        </div>
 
+      </div>
+
+      <button id="startEnemyFree" class="pattern-btn active" style="width: 100% !important; margin-top: 10px !important;">GAME START</button>
+
+    </div>
     <div id="configLong" class="mode-config-group" style="display: none;">
       <div class="config-section-title">Long Phrase Config</div>
       <p style="font-size: 11px; color: #8b949e; margin: 10px 0;">固定の文章セットを開始します</p>
@@ -1344,6 +1404,14 @@
       <span id="viewDefMissPenalty"></span>
       <button onclick="dev.applyMissPenalty()">S</button>
       <button onclick="dev.resetMissPenalty()">R</button>
+    </div>
+
+    <div class="dev-row">
+      Damage <input type="number" step="100" id="damagePenaltyInput">
+      <span id="viewDamagePenalty"></span>ms
+      <span id="viewDefDamagePenalty"></span>
+      <button onclick="dev.applyDamagePenalty()">S</button>
+      <button onclick="dev.resetDamagePenalty()">R</button>
     </div>
 
     <div class="dev-row">

@@ -100,7 +100,8 @@ const defaultStats = {
   // 勲章
   // ========================
   achievements: [],     // 取得済み勲章ID一覧,
-  hasSeenTrueEnding: false, // ★真エンディングを見たことがあるか
+  hasSeenTrueEnding: false, // ★真エンディングを見たことがあるか（グローバル・スロット非依存）
+  hasExtraCleared: false,   // ★EXTRAワールド全クリアを見たことがあるか（グローバル・スロット非依存）
   seenAchievements: []  // 表示済み勲章ID（未読管理用）
 };
 
@@ -114,6 +115,7 @@ export function getPlayerStats() {
   if (!loaded.achievements) loaded.achievements = [];
   if (!loaded.seenAchievements) loaded.seenAchievements = [];
   if (loaded.hasSeenTrueEnding === undefined) loaded.hasSeenTrueEnding = false; // ★追加
+  if (loaded.hasExtraCleared === undefined) loaded.hasExtraCleared = false; // ★追加（グローバル実績）
   if (!loaded.regular.maxSpeedDate)
   loaded.regular.maxSpeedDate = null;
   if (!loaded.freeMode) {
@@ -173,6 +175,27 @@ export function getPlayerStats() {
 
   return loaded;
 }
+
+/**
+ * ★EXTRAワールド全クリアのグローバルフラグを立てる（永続特典）。
+ *
+ * questProgress.js の markExtraCleared() から window 経由で呼ばれる。
+ * 循環参照回避の理由は questProgress.js 側の getGlobalClearFlags() コメントを参照。
+ *   （playerStats.js:4 で既に questProgress.js を import 済みのため、逆向きは不可）
+ */
+export function markGlobalExtraCleared() {
+  const stats = getPlayerStats();
+  if (stats.hasExtraCleared) return;
+  stats.hasExtraCleared = true;
+  savePlayerStats(stats);
+}
+
+// questProgress.js から window 経由で参照される
+try {
+  if (typeof window !== "undefined") {
+    window.__markGlobalExtraCleared = markGlobalExtraCleared;
+  }
+} catch (e) { /* 無視 */ }
 
 
 // ================================

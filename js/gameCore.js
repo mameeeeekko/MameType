@@ -163,6 +163,8 @@ export const gameState = {
     // ★全クリア特典：フリーモード専用アクティブスキル（クエストとは独立）
     freeSkillEnabled: false, // フリーモードでスキル設定が有効かどうか
     freeSkillId: null,       // フリーモードで使用するスキルID  
+    freezeTimer: 0,          // スキルまたはアイテムによるフリーズ残り秒数
+    freezeSource: null,       // "skill" | "item"
     typed: "",
     inputedRomaji: "",
     pos: 0,
@@ -225,6 +227,8 @@ export function resetGameState() {
   gameState.currentIndex = 0;
   gameState.startTime = 0; // Reset game start time
   gameState.currentBgmInfo = null;
+  gameState.freezeTimer = 0;
+  gameState.freezeSource = null;
 } 
 
 export function resetAllModes() {
@@ -232,6 +236,8 @@ export function resetAllModes() {
   gameState.currentMode = null;
   gameState.currentQuestNode = null;
   gameState.isQuestMode = false;
+  gameState.freezeTimer = 0;
+  gameState.freezeSource = null;
   // エネミーモード終了／別モード移行時に前ステージのTier倍率を持ち越さない
   gameState.tierDamageMultiplier = 1;
   // ※ gameState.isFreeMode はここでリセットしない

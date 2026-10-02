@@ -2,7 +2,7 @@
 import { gameState, backToMenu } from "./gameCore.js";
 import { showQuestMap } from "./main.js";
 import { openQuestMenuModal } from "./questMapUI.js"; 
-import { startSkillMode, checkSkillUnlocks, SKILL_TREE, checkUnlockByResult, getUnlockText } from "./skillTree.js";
+import { startSkillMode, checkSkillUnlocks, SKILL_TREE, checkUnlockByResult, adjustUnlockForChallengeTags, getUnlockTextForChallenge } from "./skillTree.js";
 import { showSkillResultIntro } from "./skillTreeUI.js";
 import { getSkillById } from "./questSkills.js";
 import { getPlayerStats } from "./questPlayerStats.js";
@@ -59,9 +59,9 @@ export function handleSkillModeResult(nodeId) {
 
     if (node?.unlock) {
 
-        const unlocks = Array.isArray(node.unlock)
-            ? node.unlock
-            : [node.unlock];
+        // ★長文「プログラミング」が出題された場合は time 条件 +50秒 の補正を適用
+        //   challenge は gameState.currentChallenge で、開始時に tags が確定している
+        const unlocks = adjustUnlockForChallengeTags(node.unlock, challenge);
 
         isClear = unlocks.every(cond => {
 
@@ -116,7 +116,7 @@ export function handleSkillModeResult(nodeId) {
         goalDiv.style.textAlign = "center"; // 目標も中央寄せ
 
         const unlockText = node?.unlock
-            ? getUnlockText(node.unlock)
+            ? getUnlockTextForChallenge(node.unlock, challenge)
             : "条件なし";
 
         goalDiv.innerHTML = `

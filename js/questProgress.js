@@ -96,6 +96,27 @@ function load(){
     return res;
 }
 
+/**
+ * グローバル実績（typing_player_stats）にあるクリアフラグを読みます。
+ *
+ * なぜ playerStats.js を import しないのか：
+ *   playerStats.js は既に questProgress.js を import している（playerStats.js:4）。
+ *   ここで逆向きに import すると playerStats ⇄ questProgress の循環参照になり、
+ *   ES Modules の初期化順（TDZ）で実行時エラーになる可能性がある。
+ *   questProgress.js は他の箇所でも localStorage を直接読んでいるため、
+ *   ここも同様に直接読む（関数内で毎回 parse する軽量キャッシュ付きの読み取り）。
+ */
+function getGlobalClearFlags() {
+  try {
+    const json = localStorage.getItem("typing_player_stats");
+    if (!json) return false;
+    const s = JSON.parse(json);
+    return s && typeof s === "object" ? s : false;
+  } catch (e) {
+    return false;
+  }
+}
+
 export function reloadQuestProgress() {
   const data = JSON.parse(localStorage.getItem("questProgress"));
 
@@ -268,6 +289,10 @@ export function markTrueEndingSeen() {
         }
         // ★全クリア特典：フリーモードのアクティブスキル機能を解放
         progress.hasFreeActiveSkillUnlocked = true;
+        // ★全クリア特典：ボスチャレンジモードを解放
+        //   （main.js の CLEAR REWARD ボタン表示条件が hasBossChallengeUnlocked() を見るため、
+        //     真エンディング到達と同時に立てておく）
+        progress.hasBossChallengeUnlocked = true;
     }
     // ★全クリア特典：星の振り直しを無制限にする
     setRebuildUnlimited();
@@ -287,9 +312,14 @@ export function markTrueEndingSeen() {
     } catch (e) { /* 無視 */ }
 }
 // ★ ADDED: Check if true ending has been seen
+// ※「一回でも全クリアしたら特典は永続」という仕様のため、
+//   スロット固有フラグだけでなくグローバル実績（typing_player_stats）にも見る。
+//   これにより、全クリア済みのスロットを削除しても・ロードしなくても特典が残る。
 export function hasSeenTrueEnding() {
     // progress.hasSeenTrueEnding が undefined の場合も考慮して false を返す
-    return !!progress.hasSeenTrueEnding;
+    if (progress.hasSeenTrueEnding) return true;
+    const global = getGlobalClearFlags();
+    return !!(global && global.hasSeenTrueEnding);
 }
 
 // 初回全クリ特典表示フラグを記録する
@@ -308,6 +338,10 @@ export function markBossChallengeUnlocked() {
     if (progress) {
         progress.hasBossChallengeUnlocked = true;
     }
+    // ★グローバル実績にも記録する（markExtraCleared と同じ方針）。
+    //   ただし現在のグローバル実績が持つのは「全クリア」「EXTRA全クリア」の2つのみで、
+    //   ボスチャレンジ専用フラグは持たない。解放は hasSeenTrueEnding() に従うため、
+    //   ここで新たにグローバルフラグを立てる必要はない。
     save();
     // FREEメニューのBOSSボタン表示キャッシュを破棄（次回表示時に再判定）
     try {
@@ -318,7 +352,11 @@ export function markBossChallengeUnlocked() {
 }
 
 export function hasBossChallengeUnlocked() {
-    return !!progress.hasBossChallengeUnlocked || !!progress.hasSeenTrueEnding;
+    if (progress.hasBossChallengeUnlocked) return true;
+    // ★hasSeenTrueEnding() 経由でグローバル実績（typing_player_stats）にも見る。
+    //    補足: hasSeenTrueEnding() は既にグローバル対応済みで、
+    //   直接 progress.hasSeenTrueEnding を読むとグローバル分を失うため必ず関数呼び出しにする。
+    return hasSeenTrueEnding();
 }
 
 /**
@@ -343,7 +381,9 @@ export function markFreeActiveSkillUnlocked() {
  * @returns {boolean}
  */
 export function hasFreeActiveSkillUnlocked() {
-    return !!progress.hasFreeActiveSkillUnlocked || !!progress.hasSeenTrueEnding;
+    if (progress.hasFreeActiveSkillUnlocked) return true;
+    // ★hasSeenTrueEnding() 経由でグローバル実績にも見る（上記と同じ理由）
+    return hasSeenTrueEnding();
 }
 
 // =====================================================
@@ -359,6 +399,16 @@ export function markExtraCleared() {
     if (progress) {
         progress.hasExtraCleared = true;
     }
+    // ★グローバル実績（typing_player_stats）にも記録する。
+    //   スロット固有の進捗はスロット削除・NEW GAME で消えるため、
+    //   「一回でも全クリアしたら特典が残る」仕様はグローバル側を正とする。
+    //   ※playerStats.js との循環参照を避けるため window 経由で呼び出す
+    //     （登録元は playerStats.js の window.__markGlobalExtraCleared）
+    try {
+        if (typeof window !== "undefined" && typeof window.__markGlobalExtraCleared === "function") {
+            window.__markGlobalExtraCleared();
+        }
+    } catch (e) { /* 無視 */ }
     // ※トップメニューの MUSIC／フリーモードのBGM選択行の表示は
     //   メニュー表示時に hasExtraCleared() を直接見て判定するため、
     //   ここでキャッシュを破棄する必要はない。
@@ -370,7 +420,9 @@ export function markExtraCleared() {
  * @returns {boolean}
  */
 export function hasExtraCleared() {
-    return !!progress.hasExtraCleared;
+    if (progress.hasExtraCleared) return true;
+    const global = getGlobalClearFlags();
+    return !!(global && global.hasExtraCleared);
 }
 
 /** EXTRAクリア演出（暗転 → ナビの台詞 → THE END）を再生済みとして記録します。 */
@@ -417,7 +469,7 @@ export function resetQuestAll() {
     localStorage.removeItem("questProgress");
     localStorage.removeItem("quest_auto_save");
     localStorage.removeItem("questStars");
-    localStorage.removeItem("QuestStages_Cache_v3"); // 現在のステージキャッシュもクリア
+    localStorage.removeItem("QuestStages_Cache_v5"); // 現在のステージキャッシュもクリア
 
     const freshStats = {
         level: 1,

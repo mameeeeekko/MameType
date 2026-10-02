@@ -1064,6 +1064,7 @@ function calcQuestSkillStats() {
     damageNegateChance: 0,
     reviveChance: 0,
     cooldownSpeed: 1.0,
+    startActiveSkillStock: 0,
   };
 
   equipped.forEach(id => {

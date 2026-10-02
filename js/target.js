@@ -2,6 +2,21 @@
 // id 今現在使用していない。
 // tags : 句読点、促音、記号、英語、ことわざ、擬音、数字、ネタ
 // tags(long): 文学、セキュリティ、おもしろ、プログラミング、自作キーボード,医療,時事
+
+// =====================================================
+// 出題タグの固定設定（単一ソース）
+// =====================================================
+// デイリーの Standard / TimeAttack、および
+// スキルチャレンジ（node.challenge に tags を持たないノード）で
+// 英語タグの単語を除外して出題する。
+//    Consumers: js/main.js（デイリー）, js/skillTree.js（buildSkill）
+//
+// ★このファイルは循環参照を避けるため依存ゼロの純データモジュールに置く。
+//   gameModes.js を起点とした循環（gameModes → difficulties → defenseCore
+//   → main → hud → skillTree → gameModes）が存在するため、ここから入れない。
+// =====================================================
+export const ENGLISH_EXCLUDED_TAGS = ["英語"];
+
 export const TARGETS = [
   // --- 標準問題 (タグなし) 難易度別 ---
 

@@ -14,11 +14,15 @@ import { startQuestSession, stopQuestSession, resetQuestSession, flushQuestSessi
 import * as Game from "./gameCore.js";
 import { gameState, getLastSpecialModeInfo, getPaused, setPaused, backToMenu, getNow } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
+// ★ENGLISH_EXCLUDED_TAGS は target.js から直接 import する。
+//   gameModes.js を経由すると gameModes → difficulties → defenseCore → main
+//   → hud → skillTree の循環で TDZ（初期化前参照）エラーになる。
+import { ENGLISH_EXCLUDED_TAGS } from "./target.js";
 import { updateHud, initAchievementsUI, showHud } from "./hud.js"; export { showHud };
 import { handleKey } from './inputCore.js';
 import { startEnemyMode, endEnemyMode, handleEnemyKey, restartEnemyMode, wasLastModeBossOnly } from "./enemyCore.js";
 import { renderQuestMapUI, openQuestMenuModal, closeQuestModal } from "./questMapUI.js";
-import { reloadQuestProgress, resetQuestAll, hasSeenTrueEnding as hasSeenTrueEndingInAutoSave } from "./questProgress.js";
+import { reloadQuestProgress, resetQuestAll } from "./questProgress.js";
 import { hasBossChallengeUnlocked, hasFreeActiveSkillUnlocked, hasExtraCleared } from "./questProgress.js";
 import { openFreeSkillSelectModal, openFreeStarUpgradeModal, handleFreeSkillModalKey, clampFreeSkillStarLevel, FREE_SKILL_STAR_MAX_LEVEL, getFreeSkillStarTimeFactor, getFreeSkillInfo } from "./freeSkillUI.js";
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
@@ -44,7 +48,12 @@ import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
 import { fitStage, getStageScale } from "./stageScale.js";
 import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
-import { TIER_TABLES, getTierEnemies, STAGES } from "./enemyModeConfig.js";
+import { TIER_TABLES, getTierEnemies, STAGES, getFixedTurretTable, getInterceptTierSpec, INTERCEPT_CHAR_TYPES, buildFreeEnemyMissionConfig } from "./enemyModeConfig.js";
+// ★固定砲台の仕様は enemy.js の FIXED_TURRET_TIER_CONFIG が単一ソース。
+//   ここに直接 import することで、戦闘値の編集がそのまま UI 説明欄へ追従する。
+//   （enemy.js → enemyCore.js → enemyModeConfig.js という下向き依存があるため、
+//     enemyModeConfig.js 側からは enemy.js を参照できず、main.js で受けている）
+import { FIXED_TURRET_TIER_CONFIG } from "./enemy.js";
 import "../dev/devTools.js";
 import {
   getCurrentDifficulty,
@@ -89,12 +98,6 @@ export function isGameplayActive() {
   });
 }
 window.isGameplayActive = isGameplayActive;
-
-// ================================
-// 🔹デイリーモードの固定設定
-// ================================
-// デイリーのStandard / TimeAttackでは英語タグの単語を除外して出題する（固定設定）
-const DAILY_EXCLUDED_TAGS = ["英語"];
 
 // ================================
 // 🔹DOM参照（グローバル）
@@ -151,6 +154,21 @@ let enemyIntervalSlider, enemyImmediateToggle;
 let enemyMultiCountSlider, enemyMultiIntervalSlider; // ★同時出現（マルチスポーン）設定
 let currentFreeModeId = 'Standard'; // フリーモードの選択状態を保持する変数
 let currentEnemyPattern = 'time'; // エネミーモード内のパターン選択状態
+
+// =====================================================
+// フリーモード（ENEMY）の特殊ミッション設定ルール
+// ------------------------------------------------------------
+// ・time / count / endless 以外の「データ駆動のミッション」はこの集合で判定する
+// ・timeSec はルールごとに別のスライダーを使うため ID を対応表で持つ
+//   （迎撃は制限時間そのものを固定しないため、値を持たない）
+// ・index.html の data-pattern と 1:1 で対応させること
+// =====================================================
+const FREE_ENEMY_MISSION_RULES = new Set(["blitz", "intercept", "turret", "overwhelm"]);
+const FREE_ENEMY_MISSION_TIME_IDS = {
+  blitz: "blitzTimeSlider",
+  turret: "turretTimeSlider",
+  overwhelm: "overwhelmTimeSlider",
+};
 
 // ★全クリア特典：フリーモード（ENEMY）用アクティブスキル設定（クエストとは独立）
 let currentFreeSkillId = null;      // 選択中のスキルID（null = なし）
@@ -1844,6 +1862,11 @@ function renderQuestSlots() {
       resetQuestSession(); // ★旧セッション破棄（他スロットの時間が混ざらないように）
       reloadQuestProgress();
       reloadQuestPlayerStats();
+      // ★ロードしたスロットの解放状況を反映するため、メニュー表示の判定キャッシュを破棄する
+      //   （スロット固有フラグを持ち替わるため、破棄しないと解放済みQUEST BOSSボタン等が
+      //     前のスロットの状態を返し続ける）
+      resetFreeBossUnlockCache();
+      resetFreeSkillUnlockCache();
       updateHud(null, { isQuestMode: true });
 
       // ★ロード後はマップではなく、一度クエストメニューを表示する
@@ -2490,9 +2513,18 @@ function saveFreeModeConfig() {
     },
     enemy: {
       difficulty: getCurrentDifficulty("free-enemy").id,
-      pattern: document.querySelector("#configEnemy .pattern-btn.active")?.dataset.pattern || "time",
+      // ★#configEnemy 内には GAME START ボタン（pattern-btn active）も存在するため、
+      //   Rule Settings のセレクタ配下を指定して誤検出を防ぐ
+      pattern: document.querySelector("#configEnemy .pattern-selector .pattern-btn.active")?.dataset.pattern || "time",
       time: parseInt(document.getElementById("enemyTimeSlider")?.value) || 60,
       count: parseInt(document.getElementById("enemyCountSlider")?.value) || 30,
+      // ★特殊ミッション（電撃戦 / 迎撃 / 砲台制圧戦 / 圧倒）の個別設定
+      blitzTime: parseInt(document.getElementById("blitzTimeSlider")?.value) || 60,
+      blitzChain: parseInt(document.getElementById("blitzChainSlider")?.value) || 15,
+      turretTime: parseInt(document.getElementById("turretTimeSlider")?.value) || 60,
+      overwhelmTime: parseInt(document.getElementById("overwhelmTimeSlider")?.value) || 90,
+      // ★迎撃の使用文字種（select）
+      interceptCharType: document.getElementById("freeInterceptCharType")?.value || "all",
       interval: parseInt(document.getElementById("enemyIntervalSlider")?.value) || 2000,
       immediateOnClear: document.getElementById("enemyImmediateToggle")?.checked || false,
       // ★同時出現（マルチスポーン）
@@ -2599,6 +2631,25 @@ function loadFreeModeConfig() {
         const el = document.getElementById("enemyCountSlider");
         if (el) { el.value = config.enemy.count; updateConfigSliderLabel("enemyCountSlider", el.value); }
       }
+      // ★特殊ミッション（電撃戦 / 迎撃 / 砲台制圧戦 / 圧倒）の復元
+      //   保存データに無いフィールド（旧セーブ）はスキップし、初期値のままにする
+      const freeMissionSliders = {
+        blitzTime: "blitzTimeSlider",
+        blitzChain: "blitzChainSlider",
+        turretTime: "turretTimeSlider",
+        overwhelmTime: "overwhelmTimeSlider",
+      };
+      for (const [key, sliderId] of Object.entries(freeMissionSliders)) {
+        if (config.enemy[key] === undefined) continue;
+        const el = document.getElementById(sliderId);
+        if (el) { el.value = config.enemy[key]; updateConfigSliderLabel(sliderId, el.value); }
+      }
+      // ★迎撃の使用文字種を復元（選択肢に無い値で保存されていた場合は初期値へ）
+      if (config.enemy.interceptCharType !== undefined) {
+        const el = document.getElementById("freeInterceptCharType");
+        const valid = INTERCEPT_CHAR_TYPES.some(t => t.id === config.enemy.interceptCharType);
+        if (el) el.value = valid ? config.enemy.interceptCharType : "all";
+      }
       if (config.enemy.interval) {
         const el = document.getElementById("enemyIntervalSlider");
         if (el) { el.value = config.enemy.interval; updateConfigSliderLabel("enemyIntervalSlider", el.value); }
@@ -2692,6 +2743,10 @@ function loadFreeModeConfig() {
     // ★全クリア特典：フリーモードのスキル設定欄（ENEMY / QUEST BOSS）を復元値で更新
     updateFreeSkillConfigUI("enemy");
     updateFreeSkillConfigUI("boss");
+
+    // ★Tier依存の説明欄（迎撃・砲台制圧戦）を復元後の値で初期化する
+    updateFreeInterceptSpecInfo();
+    updateFreeTurretSpecInfo();
   } catch (e) {
     console.warn("Failed to load free mode config", e);
   }
@@ -2812,6 +2867,9 @@ function startFreeEnemyMode() {
   const activePattern = currentEnemyPattern.toLowerCase();
   
   let customConditions = {};
+  // ★迎撃は通常敵を湧かさない、砲台制圧戦は固定砲台専用のテーブルを使う。
+  //   それ以外はユーザーが選択した Tier / 属性セットのテーブルをそのまま使う。
+  let missionEnemyTable = enemyTable;
 
   if (activePattern === "time") {
     const timeVal = document.getElementById("enemyTimeSlider")?.value;
@@ -2829,6 +2887,40 @@ function startFreeEnemyMode() {
       clearConditions: { killCount: count, timerMs: null },
       spawn: spawnConfig
     };
+  } else if (FREE_ENEMY_MISSION_RULES.has(activePattern)) {
+    // =============================================================
+    // ★特殊ミッション（電撃戦 / 迎撃 / 砲台制圧戦 / 圧倒）
+    //   ミッション固有の条件は enemyModeConfig 側に集約しているため、
+    //   ここでは「UIの値を読む → プリセットを組み立てる → スポーン設定をマージ」まで行う。
+    //   出現間隔・同時出現数などの共通スポーン設定はユーザー設定を優先する。
+    // =============================================================
+    const timeSec = parseInt(document.getElementById(FREE_ENEMY_MISSION_TIME_IDS[activePattern])?.value || "60");
+    const chainGoal = parseInt(document.getElementById("blitzChainSlider")?.value || "15");
+    // ★迎撃の文字種（既定は「すべて」）。不正値は buildFreeEnemyMissionConfig 側で弾かれる
+    const charType = document.getElementById("freeInterceptCharType")?.value || "all";
+
+    const mission = buildFreeEnemyMissionConfig({
+      rule: activePattern,
+      tier: selectedTier,
+      timeSec: timeSec,
+      chainGoal: chainGoal,
+      charType: charType
+    });
+
+    // ミッション側の spawn 指定（迎撃の総弾数・maxAlive など）をユーザー設定に上書きさせる
+    customConditions = {
+      ...mission,
+      spawn: { ...spawnConfig, ...(mission.spawn || {}) }
+    };
+
+    if (activePattern === "intercept") {
+      // 迎撃は通常敵が湧かないため、テーブルを空にする
+      // （空配列でも startEnemyMode 側の `if (config.enemyTable)` は true になるため反映される）
+      missionEnemyTable = [];
+    } else if (activePattern === "turret") {
+      // 砲台制圧戦は固定砲台テーブル（T1・T2は内部でT3に丸められる）
+      missionEnemyTable = getFixedTurretTable(`T${selectedTier}`);
+    }
   } else {
     // エンドレス
     customConditions = {
@@ -2854,7 +2946,7 @@ function startFreeEnemyMode() {
     stage: "FREE", // フリーモードのベースステージ
     level: selectedLv,
     customConditions: customConditions,
-    enemyTable: enemyTable, // Tierと属性セットから生成したテーブルをトップレベルで渡す
+    enemyTable: missionEnemyTable, // Tierと属性セット（迎撃=空 / 砲台制圧戦=砲台テーブル）から生成したテーブル
     // ★全クリア特典：ENEMY用のアクティブスキル設定（クエストとは独立）
     freeSkill: buildFreeSkillConfig("enemy"),
     // ★EXTRA CLEAR 特典：選択されたBGM（未選択なら各モード既定）
@@ -2898,12 +2990,12 @@ function startFreeDefenseMode() {
 // =====================================================
 function initFreeModeConfigUI() {
   const configEnemy = document.getElementById("configEnemy");
-  // ★パターン切替は「時間制限/討伐数/エンドレス」の3ボタンのみ。
+  // ★パターン切替は「時間制限/討伐数/エンドレス/電撃戦/迎撃/砲台制圧戦/圧倒」のみ。
   //   スキル設定ボタン（STAR/SKILL系）には切替を結線しない
   const patternBtns = configEnemy?.querySelectorAll(".pattern-selector .pattern-btn") || [];
   const patternDetails = configEnemy?.querySelectorAll(".pattern-detail") || [];
 
-  // エネミーモード内のパターン切り替え（時間制限/討伐数/エンドレス）
+  // エネミーモード内のパターン切り替え（時間制限/討伐数/エンドレス/特殊ミッション4種）
   patternBtns.forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -2915,7 +3007,7 @@ function initFreeModeConfigUI() {
   });
 
   // スライダー変更時に保存
-  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "enemyMultiCountSlider", "enemyMultiIntervalSlider", "playerLvRange", "bossPlayerLvRange", "defenseCharsSlider", "defenseTimeSlider", "defenseMinWordLengthSlider", "defenseMaxWordLengthSlider"]; // Defense slidersを追加
+  const sliders = ["stdCountSlider", "taTimeSlider", "enemyTimeSlider", "enemyCountSlider", "enemyIntervalSlider", "enemyMultiCountSlider", "enemyMultiIntervalSlider", "playerLvRange", "bossPlayerLvRange", "blitzTimeSlider", "blitzChainSlider", "turretTimeSlider", "overwhelmTimeSlider", "defenseCharsSlider", "defenseTimeSlider", "defenseMinWordLengthSlider", "defenseMaxWordLengthSlider"]; // Defense slidersを追加
   sliders.forEach(id => {
     const el = document.getElementById(id);
     el?.addEventListener("input", () => {
@@ -2925,8 +3017,19 @@ function initFreeModeConfigUI() {
   });
 
   // Tierと属性セットの変更時にも保存を実行する
-  document.getElementById("freeEnemyTier")?.addEventListener("change", saveFreeModeConfig);
+  document.getElementById("freeEnemyTier")?.addEventListener("change", () => {
+    // ★迎撃・砲台制圧戦の仕様はTier依存のため、選択するたび実数値を表示し直す
+    updateFreeInterceptSpecInfo();
+    updateFreeTurretSpecInfo();
+    saveFreeModeConfig();
+  });
   document.getElementById("freeEnemyTypeSet")?.addEventListener("change", saveFreeModeConfig);
+
+  // ★迎撃の文字種を変えたら説明欄も追従させる
+  document.getElementById("freeInterceptCharType")?.addEventListener("change", () => {
+    updateFreeInterceptSpecInfo();
+    saveFreeModeConfig();
+  });
 
   // チェックボックス変更時に保存
   if (enemyImmediateToggle) {
@@ -3167,6 +3270,85 @@ function updateConfigSliderLabel(id, value) {
 }
 
 /**
+ * 【迎撃】は出現 Tier の仕様に完全追従するため、実際の弾設定
+ * （総弾数 / 1ウェーブの発数 / 同時存在上限 / 弾速 / ダメージ）を
+ * Rule Settings パネルに読み取り専用で表示する。
+ * ウェーブの送出間隔だけは共通スポーン設定（スポーン間隔スライダー）を使う。
+ */
+function updateFreeInterceptSpecInfo() {
+  const el = document.getElementById("freeInterceptSpecInfo");
+  if (!el) return;
+
+  const tier = document.getElementById("freeEnemyTier")?.value || "1";
+  const spec = getInterceptTierSpec(tier);
+  if (!spec) { el.textContent = ""; return; }
+
+  el.innerHTML =
+    `${spec.tierKey}：総弾数 <b>${spec.goal}</b> 発 ／ 1ウェーブ <b>${spec.count}</b> 発 ／ 同時存在 <b>${spec.maxAlive}</b> ／ ` +
+    `弾速 <b>${Number(spec.speed).toFixed(1)}</b> ／ ダメージ <b>${spec.damage}</b><br>` +
+    `使用文字種：<b>${formatInterceptCharType(document.getElementById("freeInterceptCharType")?.value || "all")}</b>`;
+}
+
+/**
+ * 迎撃の文字種IDを表示用ラベルに変換する。
+ */
+function formatInterceptCharType(charTypeId) {
+  const found = INTERCEPT_CHAR_TYPES.find(t => t.id === charTypeId);
+  return found ? found.label : charTypeId;
+}
+
+/**
+ * 固定砲台の「入力回数」表示文字列を作る。
+ * hitCountRatio が設定されている Tier は個体ごとに変わるため、
+ * 「2回(60%) / 1回(40%)」のように内訳まで出す。
+ */
+function formatFixedTurretHitCountText(spec) {
+  const baseCount = Math.max(1, Number(spec.hitCount) || 1);
+  const ratio = Number(spec.hitCountRatio);
+
+  // 1入力しか使わない Tier（hitCount:1、または比率が0以下のもの）は常に1回
+  if (baseCount <= 1) return "1回";
+
+  if (!Number.isFinite(ratio)) return `${baseCount}回`;
+
+  const pct = Math.round(Math.min(1, Math.max(0, ratio)) * 100);
+  // 端数（0% / 100%）は1種類にまとめて表記
+  if (pct >= 100) return `${baseCount}回`;
+  if (pct <= 0) return `${baseCount - 1}回`;
+
+  return `${baseCount}回(${pct}%) / ${baseCount - 1}回(${100 - pct}%)`;
+}
+
+/**
+ * 【砲台制圧戦】は出現 Tier で固定砲台の性能が変わるため、
+ * 迎撃と同じ形式で仕様を読み取り専用で表示する。
+ *
+ * ★値の出典は enemy.js の FIXED_TURRET_TIER_CONFIG（戦闘と表示の単一ソース）。
+ *   そちらを編集すればそのままこの説明欄へ反映される。
+ * 固定砲台の専用定義は T3 以降のため、T1・T2 指定時は T3 として動作することを明示する。
+ */
+function updateFreeTurretSpecInfo() {
+  const el = document.getElementById("freeTurretSpecInfo");
+  if (!el) return;
+
+  const tier = parseInt(document.getElementById("freeEnemyTier")?.value || "1", 10) || 1;
+  // 実効Tierの丸めは getFixedTurretTable() と同じ条件（最小T3）に揃える
+  const requestedTier = Math.min(10, Math.max(1, tier));
+  const effectiveTier = Math.max(3, requestedTier);
+  const tierKey = `T${effectiveTier}`;
+  const spec = FIXED_TURRET_TIER_CONFIG[tierKey];
+  if (!spec) { el.textContent = ""; return; }
+
+  el.innerHTML =
+    `${tierKey}：入力 <b>${formatFixedTurretHitCountText(spec)}</b> ／ 出題 <b>${spec.minLen}〜${spec.maxLen}</b>文字 ／ 撃破スコア <b>${spec.score}</b><br>` +
+    `レーザー：ダメージ <b>${spec.laserDamage}</b> ／ <b>${spec.laserInterval}</b>秒間隔<br>` +
+    `弾砲：<b>${spec.bulletCount}</b>連射 ／ ダメージ <b>${spec.bulletDamage}</b> ／ <b>${spec.bulletCharType}</b>` +
+    (requestedTier !== effectiveTier
+      ? `<br>※ 固定砲台の専用定義は T3 以降のため、T${requestedTier} 指定時は <b>${tierKey}</b> として動作します`
+      : "");
+}
+
+/**
  * エネミーモード内の表示パターンを切り替える
  */
 function switchEnemyPattern(pattern) {
@@ -3187,6 +3369,13 @@ function switchEnemyPattern(pattern) {
     detail.style.display = isTarget ? "block" : "none";
     detail.classList.toggle("active-detail", isTarget);
   });
+
+  // ★迎撃・砲台制圧戦のルール表示中は Tier 依存の実数値を最新にしておく
+  if (pattern === "intercept") {
+    updateFreeInterceptSpecInfo();
+  } else if (pattern === "turret") {
+    updateFreeTurretSpecInfo();
+  }
 
   saveFreeModeConfig();
 }
@@ -3234,7 +3423,7 @@ function switchFreeModeConfig(modeId, opts = {}) {
  * ゲームモードに応じてゲーム画面のUI要素の表示/非表示を切り替える
  * @param {string} modeId - GameModesのID (e.g., 'time_attack', 'normal')
  */
-function updateGameUIVisibility(modeId) {
+export function updateGameUIVisibility(modeId) {
   const speedContainer = document.getElementById("speed-container");
   const speedLabel = document.getElementById("speed-label");
   const timeBarContainer = document.getElementById("time-bar-container");
@@ -3624,8 +3813,12 @@ function bindModeStartEvents() {
 
       reloadQuestProgress();
       reloadQuestPlayerStats();
+      // ★NEW GAME ではスロット固有フラグが初期化されるため、解放判定キャッシュも破棄する
+      //   （未全クリアのNEW GAME 後に解放済みQUEST BOSSボタン等が残らないようにする）
+      resetFreeBossUnlockCache();
+      resetFreeSkillUnlockCache();
       updateHud(null, { isQuestMode: true });
-  
+
       // 画面切り替え
       hideLoading();
       showQuestMap();
@@ -3658,15 +3851,15 @@ function bindModeStartEvents() {
   startBtn?.addEventListener("click", () => {
     hideAllScreens();
     updateGameUIVisibility(GameModes.NORMAL.id); // UI表示を更新
-    // ★デイリーでは英語タグを除外して出題する（固定設定）
-    Game.doCountdown({ mode: GameModes.NORMAL, isFreeMode: false, difficulty: "hard", custom: { excludeTags: DAILY_EXCLUDED_TAGS } });
+    // ★デイリーでは英語タグを除外して出題する（固定設定 / target.js の単一ソース）
+    Game.doCountdown({ mode: GameModes.NORMAL, isFreeMode: false, difficulty: "hard", custom: { excludeTags: ENGLISH_EXCLUDED_TAGS } });
   });
 
   timeAttackBtn?.addEventListener("click", () => {
     hideAllScreens();
     updateGameUIVisibility(GameModes.TIME_ATTACK.id); // UI表示を更新
-    // ★デイリーでは英語タグを除外して出題する（固定設定）
-    Game.doCountdown({ mode: GameModes.TIME_ATTACK, isFreeMode: false, difficulty: "hard", custom: { excludeTags: DAILY_EXCLUDED_TAGS } });
+    // ★デイリーでは英語タグを除外して出題する（固定設定 / target.js の単一ソース）
+    Game.doCountdown({ mode: GameModes.TIME_ATTACK, isFreeMode: false, difficulty: "hard", custom: { excludeTags: ENGLISH_EXCLUDED_TAGS } });
   });
 
   longTextBtn?.addEventListener("click", () => {

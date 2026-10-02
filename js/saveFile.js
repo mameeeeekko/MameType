@@ -26,7 +26,7 @@
  *   typing_player_stats
  * Quest:
  *   questProgress, questPlayerStats, questStars, quest_slots, quest_auto_save,
- *   QuestStages_Cache_v3, difficulty_quest
+ *   QuestStages_Cache_v5, difficulty_quest
  * Settings:
  *   typing_game_settings, typing_game_quality, keybinds, final_n_mode,
  *   free_mode_config_v1, difficulty_free, difficulty_free_enemy
@@ -274,7 +274,7 @@ const TARGET_KEYS = Object.freeze([
   "questStars",
   "quest_slots",
   "quest_auto_save",
-  "QuestStages_Cache_v3",
+  "QuestStages_Cache_v5",
   "difficulty_quest",
   "typing_game_settings",
   "typing_game_quality",
@@ -294,7 +294,7 @@ const JSON_VALUE_KEYS = new Set([
   "questStars",
   "quest_slots",
   "quest_auto_save",
-  "QuestStages_Cache_v3",
+  "QuestStages_Cache_v5",
   "typing_game_settings",
   "keybinds",
   "free_mode_config_v1",
@@ -405,7 +405,7 @@ function buildPayload(storageImpl) {
         stars: value("questStars") ?? {},
         slots: value("quest_slots") ?? [],
         autoSave: value("quest_auto_save"),
-        stageCache: value("QuestStages_Cache_v3"),
+        stageCache: value("QuestStages_Cache_v5"),
         difficulty: value("difficulty_quest"),
       },
       settings: {
@@ -707,6 +707,12 @@ function validatePlayerStats(playerStats) {
   if (playerStats.hasSeenTrueEnding !== undefined && typeof playerStats.hasSeenTrueEnding !== "boolean") {
     throw new SaveFileError(
       "セーブデータの値が正しくありません（global.playerStats.hasSeenTrueEnding）。",
+      "INVALID_VALUE",
+    );
+  }
+  if (playerStats.hasExtraCleared !== undefined && typeof playerStats.hasExtraCleared !== "boolean") {
+    throw new SaveFileError(
+      "セーブデータの値が正しくありません（global.playerStats.hasExtraCleared）。",
       "INVALID_VALUE",
     );
   }
@@ -1054,7 +1060,7 @@ function buildStorageWrites(payload) {
     ["questStars", JSON.stringify(data.quest.stars)],
     ["quest_slots", JSON.stringify(data.quest.slots)],
     ["quest_auto_save", serializeStoredJson(data.quest.autoSave)],
-    ["QuestStages_Cache_v3", serializeStoredJson(data.quest.stageCache)],
+    ["QuestStages_Cache_v5", serializeStoredJson(data.quest.stageCache)],
     ["difficulty_quest", data.quest.difficulty ?? null],
     ["typing_game_settings", serializeStoredJson(data.settings.game)],
     ["typing_game_quality", data.settings.renderQuality ?? null],

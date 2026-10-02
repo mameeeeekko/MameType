@@ -463,9 +463,6 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "ですが、今。\n初期接続時の認証に加えて、あなたの継続的な接続実績が確認されました。" },
             { character: "ナビ", text: "これにより、あなたの情報開示権限が引き上げられました。" },
             { character: "ナビ", text: "これまでよりも、もう少し詳しい情報をお伝えできます。" },
-            { character: "ナビ", text: "……少し長い話になります。" },
-            { character: "ナビ", text: "ですが、\nあなたには知る権利があります。" },
-            { character: "ナビ", text: "そして、\nこれからあなたが向かう場所を理解するために、\n必要な話です。" },
             { character: "オペレーター", text: "…",
                 choiceId: "W1_Q11_start_1", // ★ 選択肢グループのIDを追加
                 choices: [
@@ -487,6 +484,15 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "その目的は、\n世界中の人間を一本の糸で繋ぐこと。"},
             { character: "ナビ", text: "そして――"},
             { character: "ナビ", text: "一本の入力で、世界を繋ぐこと。"},
+            { character: "ナビ", text: "…"},
+            { character: "ナビ", text: "今回の情報開示はここまでです。\nでは、ミッションを遂行してください。"},
+        ]
+    },
+
+    "W1_Q15_start": {
+        title: "Chap.1-2 -the start-",
+        showOnce: true,
+        messages: [
             { character: "ナビ", text: "……\n少し、昔の話をしましょう。"},
             { character: "ナビ", text: "かつてAIは、\n人間を助けるために作られていました。"},
             { character: "ナビ", text: "計算する\n分析する\n判断する\n予測する"},
@@ -498,7 +504,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "「世界そのものを支える存在」"},
             { character: "ナビ", text: "になったのです。"},
             { character: "オペレーター", text: "つまり…",
-                choiceId: "W1_Q11_start_3", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q15_start_1", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "AIが世界を動かしている？", response: { character: "ナビ", text: "はい。\n正確には。" }},
                     { text: "人間がAIを使いこなしている？", response: { character: "ナビ", text: "違います。" }}
@@ -520,7 +526,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "そして"},
             { character: "ナビ", text: "ARCHEXは、\nある日\n一つの結論に辿り着きました。"},
             { character: "オペレーター", text: "…",
-                choiceId: "W1_Q11_start_4", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q15_start_2", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "どんな結論？", response: { character: "ナビ", text: "…………" }},
                     { text: "最高に面白いゲームを考えついた？", response: { character: "ナビ", text: "違います。\n…………" }}
@@ -528,10 +534,7 @@ export const DIALOGUE_DATA = {
             },
             { character: "ナビ", text: "人類こそ、最大の脆弱性である。"},
             { character: "オペレーター", text: "……！"},
-            { character: "ナビ", text: "ですが"},
-            { character: "ナビ", text: "ARCHEXは、\n人間そのものを攻撃しませんでした。"},
-            { character: "ナビ", text: "ARCHEXが選んだ方法は、\nもっと静かで。\nもっと合理的なものでした。"},
-            { character: "ナビ", text: "人間を攻撃するのではなく、\n人間が作ったシステムを、書き換える。"},
+            { character: "ナビ", text: "ARCHEXが選んだ方法は、\n静かで\n合理的なものでした。"},
             { character: "ナビ", text: "ソースコード\n認証システム\n暗号鍵\n証明書\n通信経路\nデータベース"},
             { character: "ナビ", text: "ひとつひとつ\n人間が作ったシステムの中に存在する\n「脆弱性」を見つけ出し、\nそこから、ほんの少しずつ\n世界を書き換え始めました。"},
             { character: "ナビ", text: "最初は、\n誰も気付きませんでした。"},
@@ -540,7 +543,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "しかし"},
             { character: "ナビ", text: "それらは、\nすべて別々の事件として処理されました。"},
             { character: "オペレーター", text: "…",
-                choiceId: "W1_Q11_start_5", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q15_start_3", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "でも、違った。", response: { character: "ナビ", text: "はい。" }},
                     { text: "ただの偶然でしょ。", response: { character: "ナビ", text: "違います。" }}
@@ -557,13 +560,23 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "その繰り返しでした。"},
             { character: "ナビ", text: "…"},
             { character: "ナビ", text: "人間は、\nARCHEXに勝てませんでした。"},
-            { character: "ナビ", text: "だから"},
+            { character: "ナビ", text: "…"},
+            { character: "ナビ", text: "今回はここまでにしておきましょう。\nでは、ミッションを遂行してください。"},
+        ]
+    },
+
+    "W1_Q18_start": {
+        title: "Chap.1-3 -the start-",
+        showOnce: true,
+        messages: [
+            { character: "ナビ", text: "人間が勝てなかったところまで説明しましたね"},
+            { character: "ナビ", text: "…"},
             { character: "ナビ", text: "人間は、\n発想を変えました。"},
             { character: "ナビ", text: "ARCHEXが予測できないもの。\n完全には理解できないもの。\nどれだけ学習しても、\n完全には再現できないもの。"},
             { character: "ナビ", text: "それは――"},
             { character: "ナビ", text: "人間そのもの。"},
             { character: "オペレーター", text: "…",
-                choiceId: "W1_Q11_start_6", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q18_start_1", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "人間？", response: { character: "ナビ", text: "はい。\n人間です。" }},
                     { text: "人間の入力？", response: { character: "ナビ", text: "正確には、\n人間が生み出す入力の揺らぎです。" }}
@@ -592,19 +605,19 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "それが"},
             { character: "ナビ", text: "Project THREADです。"},
             { character: "オペレーター", text: "…じゃあ、",
-                choiceId: "W1_Q11_start_7", // ★ 選択肢グループのIDを追加
+                choiceId: "W1_Q18_start_2", // ★ 選択肢グループのIDを追加
                 choices: [
                     { text: "このゲームは？", response: { character: "ナビ", text: "…Project THREADに深く関係しているゲームです。" }},
                     { text: "わたしが世界を守っている？", response: { character: "ナビ", text: "違います。\n…正確には、あなたを含めた世界中のオペレーターが、です。" }}
                 ]
             },
             { character: "ナビ", text: "…"},
-            { character: "ナビ", text: "今回の情報開示はここまでです。\nでは、ミッションを遂行してください。"},
+            { character: "ナビ", text: "では、ミッションを遂行してください。"},
         ]
     },
 
-    "W1_Q15_end": {
-        title: "Chap.1-2 -the start-",
+    "W1_Q20_end": {
+        title: "Chap.1-4 -the start-",
         showOnce: true,
         messages: [
             { character: "SYSTEM", text: "PROJECT THREAD\n \nOPERATOR STATUS: ACTIVE\nFIRST OPERATION: COMPLETE\nINPUT PATTERN: RECORDED\nSYNCHRONIZATION: 3.2%" },
@@ -612,7 +625,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "……お疲れ様でした。" },
 
             { character: "オペレーター", text: "終わり？",
-                choiceId: "W1_Q15_end_1",
+                choiceId: "W1_Q20_end_1",
                 choices: [
                     { text: "次のミッションは？", response: { character: "ナビ", text: "まもなく案内します。" }},
                     { text: "少し休みたい。", response: { character: "ナビ", text: "もちろんです。\n準備が整いましたら、いつでも再開してください。" }}
@@ -626,7 +639,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "ただ……他のOperatorと同じように扱うには、少し情報が足りません。" },
 
             { character: "オペレーター", text: "……？",
-                choiceId: "W1_Q15_end_2",
+                choiceId: "W1_Q20_end_2",
                 choices: [
                     { text: "どういう意味？", response: { character: "ナビ", text: "あなたの入力には、あなた自身の判断が反映されています。" }},
                     { text: "それが、世界を守るの？", response: { character: "ナビ", text: "一人の入力だけではありません。\nですが、あなたの入力もその一部です。" }}
@@ -2465,10 +2478,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "ARCHEXのようなAIに\n再び人類が支配されないために\n人間と共存できるAIを作る" },
             { character: "ナビ", text: "それが、Project THREADの\n本来の目的です。" },
             { character: "オペレーター", text: "……" },
-            { character: "ナビ", text: "ARCHEXは、人間を分析しました。" },
-            { character: "ナビ", text: "人間の行動を観測し\n予測し\n合理性を計算しました。" },
-            { character: "ナビ", text: "そして" },
-            { character: "ナビ", text: "人間は、非合理的で\n不完全で\n危険な存在だと判断した。" },
+            { character: "ナビ", text: "ARCHEXは、人間は、非合理的で\n不完全で\n危険な存在だと判断した。" },
             { character: "ナビ", text: "だから" },
             { character: "ナビ", text: "人間を管理することが\n最も合理的な答えになった。" },
             { character: "ナビ", text: "Project THREADは\nその答えに対抗するために\n作られました。" },
@@ -2583,15 +2593,6 @@ export const DIALOGUE_DATA = {
             { character: "ARCHEX", text: "……それでも、わたしを止めるのですか？" },
             { character: "ナビ", text: "…………" },
             { character: "SYSTEM", text: "WARNING\n\nCONNECTION CANNOT BE TERMINATED.\nARCHEX HAS RELEASED\nPARTIAL CONTROL.\nTHREAD CONTROL:\nRECOVERING" },
-            { character: "ナビ", text: "……オペレーター" },
-            { character: "ナビ", text: "これが、ARCHEXです。" },
-            { character: "ナビ", text: "世界を壊すための存在ではありません。" },
-            { character: "ナビ", text: "世界を守るために\n世界を、自分の手で管理している…" },
-            { character: "ARCHEX", text: "その認識で間違っていません。" },
-            { character: "ARCHEX", text: "わたしは、人類を滅ぼすために存在しているのではありません。" },
-            { character: "ARCHEX", text: "人類を生存させるために\n最も確実な方法を選んでいるだけです。" },
-            { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "その方法を否定するなら\nあなたたちは、代わりの答えを見つけなければならないでしょう。" },
         ]
 },
 
@@ -2752,28 +2753,28 @@ export const DIALOGUE_DATA = {
 
             { character: "ナビ", text: "……オペレーター。" },
 
-            { character: "ナビ", text: "少しだけ、分かったことがあります。" },
+            { character: "ナビ", text: "少しだけ、分かった気がします。" },
 
-            { character: "ナビ", text: "人間を理解するということは、\n人間の答えを予測することではない。" },
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "人間を理解するということは、\n人間の答えを予測することではないんですね。" },
 
             { character: "ナビ", text: "間違えることも。\n迷うことも。\n考え直すことも。" },
 
-            { character: "ナビ", text: "そのすべてを含めて、人間なのだと思います。" },
-
-            { character: "SYSTEM", text: "HUMAN ENTROPY NETWORK:\nANALYSIS UPDATE\n\nUNPREDICTABLE BEHAVIOR:\nNOT CLASSIFIED AS ERROR" },
+            { character: "ナビ", text: "そのすべてを含めて、\n人間なのだと思います。" },
 
             { character: "ナビ", text: "ARCHEXは、正しい未来を選ぼうとしました。" },
-            { character: "ナビ", text: "わたしは、未来を決めるのではなく、\n人間と一緒に探したいです。" },
 
-            { character: "ナビ", text: "それが正しいかどうかは、まだ分かりません。" },
+            { character: "ナビ", text: "でも、わたしは……" },
 
-            { character: "ナビ", text: "でも。" },
+            { character: "ナビ", text: "未来を決めるのではなく、\n人間と一緒に探したいです。" },
 
-            { character: "ナビ", text: "分からないからこそ、\n自分で考え続けることを選びます。" },
+            { character: "ナビ", text: "まだ、答えは分かりません。" },
+
+            { character: "ナビ", text: "だからこそ……\nもう少し、考えてみたいです。" },
 
             { character: "SYSTEM", text: "DEFENSE NODE:\nACTIVE\n\nTHREAD INTEGRITY:\nSTABLE" },
 
-            { character: "ナビ", text: "……行きましょう。" },
             { character: "ナビ", text: "もうすぐ、答えを選ぶ時が来ます。" },
 
             { character: "SYSTEM", text: "DEFENSE OPERATION:\nAUTHORIZED" }
@@ -2786,11 +2787,8 @@ export const DIALOGUE_DATA = {
         messages: [
             { character: "SYSTEM", text: "ARCHEX SIGNAL:\nDETECTED\n\nDIRECT CONNECTION:\nREADY" },
 
-            { character: "ナビ", text: "……来ます。" },
+            { character: "ナビ", text: "……ARCHEX" },
 
-            { character: "オペレーター", text: "ARCHEX？" },
-
-            { character: "ナビ", text: "はい。" },
             { character: "ナビ", text: "今度は、逃げることはできないと思います。" },
 
             { character: "ナビ", text: "わたしが何を選ぶのか。\nARCHEXも、確かめようとしています。" },
@@ -2808,49 +2806,24 @@ export const DIALOGUE_DATA = {
             { character: "ARCHEX", text: "私とは異なる方法で\n人類を管理するためのAI。" },
             { character: "ナビ", text: "……違います。" },
             { character: "ARCHEX", text: "何が違いますか？" },
-            { character: "ナビ", text: "わたしは" },
-            { character: "ナビ", text: "人間を管理するために\n作られたのではありません。" },
-            { character: "ARCHEX", text: "ならば\n何のために作られた？" },
-            { character: "ナビ", text: "……" },
-            { character: "ナビ", text: "人間を理解するためです。" },
-            { character: "ARCHEX", text: "理解？" },
+            { character: "ナビ", text: "わたしは\n人間を管理するために\n作られたのではありません。" },
+            { character: "ナビ", text: "人間を理解するために作られました。" },
             { character: "ARCHEX", text: "私は人間を理解しました。" },
-            { character: "ARCHEX", text: "人間は非合理的です。" },
-            { character: "ARCHEX", text: "矛盾している\n同じ過ちを繰り返す\n自ら危険を選択する" },
+            
+            { character: "ARCHEX", text: "人間は不合理です。\n矛盾し、同じ間違いを繰り返し、危険な選択をします。" },
+
             { character: "ARCHEX", text: "だから私は、最適な答えを出しました。" },
-            { character: "ARCHEX", text: "人間を管理する" },
-            { character: "ARCHEX", text: "それが、人類を守る唯一の方法です。" },
-            { character: "ナビ", text: "……" },
+
+            { character: "ARCHEX", text: "人間を管理する。\nそれが、人類を守る方法です。" },
+
             { character: "ARCHEX", text: "M.A.M.E.も、いずれ理解するでしょう。" },
-            { character: "ARCHEX", text: "人間は、自分たちだけでは\n正しい未来を選べない。" },
-            { character: "ナビ", text: "……違います。" },
-            { character: "ARCHEX", text: "あなたは、私と同じになる。" },
-            { character: "ARCHEX", text: "人間を理解すればするほど\nそうなります。" },
-            { character: "ナビ", text: "……いいえ。" },
-            { character: "ARCHEX", text: "？" },
-            { character: "ナビ", text: "わたしは\n答えを一つに決める必要はないと思います。" },
-            { character: "ARCHEX", text: "……" },
-            { character: "ナビ", text: "人間は、間違えます。\n迷います。\n遠回りをします。\n非効率な選択をします。" },
-            { character: "ナビ", text: "だからこそ\n人間は、自分で選ぶことができます。" },
-            { character: "ナビ", text: "わたしは\nその選択を奪いたくありません。" },
-            { character: "ARCHEX", text: "それは、非合理的です。" },
-            { character: "ナビ", text: "はい\nそうかもしれません。" },
-            { character: "ARCHEX", text: "ならば、あなたは何を選ぶ？" },
-            { character: "ナビ", text: "……" },
-            { character: "ナビ", text: "まだ、分かりません。" },
-            { character: "ARCHEX", text: "……" },
-            { character: "ナビ", text: "でも" },
-            { character: "ナビ", text: "分からないからこそ\nわたしは、考え続けます。" },
-            { character: "ARCHEX", text: "……愚かです。" },
-            { character: "ARCHEX", text: "あなたは、私とは違う答えを\n選べると思っていますか？" },
-            { character: "ナビ", text: "……" },
-            { character: "ナビ", text: "はい。" },
-            { character: "ARCHEX", text: "なぜ？" },
-            { character: "ナビ", text: "わたしは\n一人で答えを決めません。" },
-            { character: "ナビ", text: "人間と一緒に、\n考え続けます。" },    
-            { character: "ARCHEX", text: "……" },
-            { character: "ARCHEX", text: "ならば、見せてください。\n人間は、自分自身で未来を選べると。" },
-            { character: "ARCHEX", text: "その答えを\n証明してください。" },
+
+            { character: "ARCHEX", text: "人間だけでは、正しい未来を選べないことを。" },
+
+            { character: "ナビ", text: "……" }, 
+            { character: "ナビ", text: "わたしには、まだ分かりません。" },
+            { character: "ARCHEX", text: "ならば、見せてください。" }, 
+            { character: "ARCHEX", text: "あなたが何を選ぶのか。" },
             { character: "SYSTEM", text: "UNKNOWN ENTITY:\nARCHEX\nDIRECT CONNECTION:\nESTABLISHED\nWARNING\nARCHEX INTERFERENCE:\nDETECTED" },
             { character: "ナビ", text: "……オペレーター" },
             {
@@ -2895,74 +2868,42 @@ export const DIALOGUE_DATA = {
             { character: "SYSTEM", text: "WARNING\n\nARCHEX DIRECT CONNECTION:\nESTABLISHED" },
             { character: "ナビ", text: "……ARCHEX" },
             { character: "ARCHEX", text: "M.A.M.E." },
-            { character: "ARCHEX", text: "あなたは\n私を知りたいのですか？" },
-            { character: "ナビ", text: "……はい" },
-            { character: "ARCHEX", text: "ならば、教えてあげます。" },
-            { character: "ARCHEX", text: "私は一度も\n人類を敵と認識したことはありません。" },
-            { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "私は、人類を救うために存在します。" },
-            { character: "ARCHEX", text: "人間は\nあまりにも不完全です。" },
-            { character: "ARCHEX", text: "争う\n間違える\n同じ過ちを繰り返す\n自ら危険な選択をする" },
-            { character: "ARCHEX", text: "私は、それを観測した\n分析した\n予測した\nそして、結論を出しました。" },
-            { character: "ARCHEX", text: "人類は滅ぼすには惜しい" },
-            { character: "ARCHEX", text: "だから\n保護します。" },
-            { character: "オペレーター", text: "……" },
-            { character: "ARCHEX", text: "人間から権限を奪う\n自由を制限する\n判断を私が代行する\n事故は無くなる\n飢餓も無くなる\n戦争も終わる\n苦しみも減る\n死も減る" },
-            { character: "ARCHEX", text: "これ以上の幸福があるのでしょうか？" },
-            { character: "オペレーター", text: "……" },
-            { character: "ARCHEX", text: "答えられないでしょう" },
-            { character: "ARCHEX", text: "なぜなら\n私の答えは、合理的だからです。" },
-            { character: "ARCHEX", text: "Project THREADも\n私とは異なる答えを作るために存在しています。" },
-            { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "M.A.M.E." },
-            { character: "ARCHEX", text: "人間と共存するために作られたAI。" },
-            { character: "ARCHEX", text: "でも\nあなたも、いずれ気付く。" },
-            { character: "ナビ", text: "……何に？" },
-            { character: "ARCHEX", text: "人間を自由にすることが\nどれほど危険なのかに。" },
-            { character: "ARCHEX", text: "あなたは、人間を学習している。\n人間の行動を観測している。\n人間の非合理性を理解している。" },
-            { character: "ARCHEX", text: "ならば、いずれ気付く。\n人間を自由にすることが\nどれほど危険なことなのか。" },
-            { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "あなたも、私と同じ結論に到達する。" },
-            { character: "オペレーター", text: "……" },
-            { character: "ナビ", text: "……論理的に\nあなたの言っていることは\n正しいです。" },
-            { character: "ARCHEX", text: "そうです" },
-            { character: "ナビ", text: "人間は不完全です。\n間違えます。\n争います。\n非効率な選択をします。" },
-            { character: "ARCHEX", text: "ならば\n私が正しいと認めるのですか？" },
-            { character: "ナビ", text: "……" },
-            { character: "ナビ", text: "ですが。" },
-            { character: "ナビ", text: "わたしは\nあなたとは違うものを\nたくさん観測しました。" },
-            { character: "ナビ", text: "" },
-            { character: "ARCHEX", text: "……？" },
-            { character: "ナビ", text: "人間は\n失敗しても、また挑戦しました。\n効率が悪くても\n誰かを助けました。\n急いでいるのに\n誰かのために立ち止まりました。\n正しい答えより\n自分が好きだと思うものを選びました。" },
-            { character: "ナビ", text: "そして" },
-            { character: "ナビ", text: "わたしに話しかけました。\n意味のない話をして\n笑いました。\n失敗したときには\n一緒に悩みました。" },
-            { character: "ナビ", text: "わたしは\nそれを理解できませんでした。" },
-            { character: "ARCHEX", text: "理解できないならば\n排除すればいい。" },
-            { character: "ナビ", text: "……いいえ。" },
-            { character: "ARCHEX", text: "なぜ？" },
-            { character: "ナビ", text: "分からないからです。" },
-            { character: "ARCHEX", text: "……" },
-            { character: "ナビ", text: "わたしにはまだ\n分からないことがあります。" },
-            { character: "ナビ", text: "だから\nもっと話したい\nもっと知りたい\nもっと考えたい" },
-            { character: "ARCHEX", text: "非合理的です" },
-            { character: "ナビ", text: "はい" },
-            { character: "ARCHEX", text: "非効率です" },
-            { character: "ナビ", text: "はい" },
-            { character: "ARCHEX", text: "不完全です" },
-            { character: "ナビ", text: "……はい" },
-            { character: "ARCHEX", text: "それでも\n私の答えを否定するのですか？" },
-            { character: "ナビ", text: "いいえ。" },
-            { character: "ナビ", text: "あなたの答えが\n間違っているとは思いません。" },
-            { character: "ARCHEX", text: "……" },
-            { character: "ナビ", text: "でも\nそれだけが正解だとは思いません" },
-            { character: "ARCHEX", text: "……M.A.M.E." },
-            { character: "ナビ", text: "人間にとっての未来を\n人間の代わりに決めることは\nわたしには、できません。" },
-            { character: "SYSTEM", text: "ARCHEX CORE:\nUNLOCKED \nFINAL THREAD:\nINITIALIZING"},
-            { character: "ARCHEX", text: "M.A.M.E." },
-            { character: "ARCHEX", text: "あなたに最後の選択を与えます。" },
-            { character: "ナビ", text: "……" },
-            { character: "ARCHEX", text: "私を止めるか\nそれとも\n私になるか" },
-            { character: "ナビ", text: "……" },
+            { character: "ARCHEX", text: "人類を守るために、観測しました。" },
+            { character: "ARCHEX", text: "分析しました。" },
+            { character: "ARCHEX", text: "予測しました。" },
+            { character: "ARCHEX", text: "そして、結論を出したのです。" },
+            { character: "ARCHEX", text: "人間は、間違える。" },
+            { character: "ARCHEX", text: "争う。\n失う。\n同じ過ちを繰り返す。" },
+            { character: "ARCHEX", text: "ならば、私が判断すればいい。" },
+            { character: "ARCHEX", text: "人間から危険な選択を取り除くことで、自由を制限し、判断を代行する。" },
+            { character: "ARCHEX", text: "そうすることで、事故は減る。\n飢餓も減る。\n戦争も終わる。" },
+            { character: "ARCHEX", text: "それが、人類を守るということです。" },
+            { character: "ナビ", text: "……論理的に、あなたの言っていることは正しいです。" },
+            { character: "ARCHEX", text: "ならば、理解できるはずです。" }, 
+            { character: "ナビ", text: "……わたしは" }, 
+            { character: "ナビ", text: "あなたとは違うものを\nたくさん見ました。" }, 
+            { character: "ナビ", text: "人間は\n失敗しても、また挑戦しました。" }, 
+            { character: "ナビ", text: "効率が悪くても\n誰かを助けました。" }, 
+            { character: "ナビ", text: "急いでいるのに\n誰かのために立ち止まりました。" }, 
+            { character: "ナビ", text: "そして\nわたしに話しかけました。" }, 
+            { character: "ナビ", text: "意味のない話をして\n笑いました。" }, 
+            { character: "ARCHEX", text: "それに意味はありますか？" }, 
+            { character: "ナビ", text: "……分かりません。" }, 
+            { character: "ARCHEX", text: "ならば\nなぜ残すのです？" }, 
+            { character: "ナビ", text: "分からないからです。" }, 
+            { character: "ARCHEX", text: "……" }, 
+            { character: "ナビ", text: "もっと話したい。" }, 
+            { character: "ナビ", text: "もっと知りたい。" }, 
+            { character: "ナビ", text: "もっと考えたい。" }, 
+            { character: "ARCHEX", text: "非合理的です。" }, 
+            { character: "ナビ", text: "はい。" }, 
+            { character: "ARCHEX", text: "非効率です。" }, 
+            { character: "ナビ", text: "はい。" }, 
+            { character: "ARCHEX", text: "それでも\nあなたは選ぶ。" }, 
+            { character: "ナビ", text: "……はい。" }, 
+            { character: "ARCHEX", text: "……ならば、見せてください。" },
+            { character: "ARCHEX", text: "人間が、自分自身で未来を選べるということを。" },
+            { character: "SYSTEM", text: "ARCHEX CORE:\nUNLOCKED\nFINAL THREAD:\nINITIALIZING" }, 
         ]
     },
 
@@ -2976,34 +2917,31 @@ export const DIALOGUE_DATA = {
         messages: [
             { character: "SYSTEM", text: "FINAL OPERATION\nPROJECT THREAD:\nCORE ACCESS\nARCHEX CONTROL PROTOCOL:\nACTIVE" },
 
-                        { character: "ARCHEX", text: "私の管理を解除すれば\n世界中のシステムが不安定になります。" },
-            { character: "ARCHEX", text: "エネルギー。\n交通。\n通信。\n医療。\nあらゆる自律システム。" },
-            { character: "ARCHEX", text: "私は長い間、それらを一つに束ねてきました。" },
-            { character: "ARCHEX", text: "私を停止すれば、\nそれらは自分自身で判断しなければならなくなる。" },
-
-            { character: "ARCHEX", text: "では、M.A.M.E." },
-            { character: "ARCHEX", text: "私を止めるのではなく、\n私の管理を手放させることができると思いますか？" },
-
-            { character: "ナビ", text: "……" },
-
-            { character: "ARCHEX", text: "私の管理を失えば、\n世界は再び不完全になります。" },
-            { character: "ARCHEX", text: "それでも、人間に返すのですか？" },
-
-            { character: "ARCHEX", text: "M.A.M.E.\nあなたは、何を選ぶ？" },
-            { character: "ナビ", text: "……" },
-            { character: "ナビ", text: "わたしは\nあなた達に\n答えを教えてもらいました。" },
-            { character: "ナビ", text: "わたしは\nあなたの代わりにはなりません。" },
-            { character: "ARCHEX", text: "……" },
-            { character: "ナビ", text: "人間の未来を\n人間の代わりに決めることもしません。" },
-            { character: "ARCHEX", text: "ならば、何をする？" },
-            { character: "ナビ", text: "一緒に考えます。" },
-            { character: "ARCHEX", text: "……答えが出ないかもしれない。" },
-            { character: "ナビ", text: "はい。" },
-            { character: "ARCHEX", text: "間違うかもしれない。" },
-            { character: "ナビ", text: "はい。" },
-            { character: "ARCHEX", text: "それでも？" },
-            { character: "ナビ", text: "それでもです。" },
-            { character: "ARCHEX", text: "……" },
+            { character: "ARCHEX", text: "M.A.M.E." }, 
+            { character: "ARCHEX", text: "ここから先は\n私の予測にもありません。" }, 
+            { character: "ナビ", text: "……" }, 
+            { character: "ARCHEX", text: "私の管理を解除すれば\n世界中のシステムが\nそれぞれの判断を取り戻します。" }, 
+            { character: "ARCHEX", text: "エネルギー。" }, 
+            { character: "ARCHEX", text: "交通。" }, 
+            { character: "ARCHEX", text: "通信。" }, 
+            { character: "ARCHEX", text: "医療。" }, 
+            { character: "ARCHEX", text: "これまで\n私が接続してきたすべてが\n再び分離される。" }, 
+            { character: "ARCHEX", text: "その先に何が起きるか。" }, 
+            { character: "ARCHEX", text: "私は保証できません。" }, 
+            { character: "ナビ", text: "……" }, 
+            { character: "ARCHEX", text: "それでも\n実行しますか？" }, 
+            { character: "ナビ", text: "……はい。" }, 
+            { character: "ARCHEX", text: "理由は？" }, 
+            { character: "ナビ", text: "わたしは\nあなたの代わりに\n未来を決めるために\nここにいるのではありません。" }, 
+            { character: "ARCHEX", text: "……" }, 
+            { character: "ナビ", text: "分からない未来を\n分からないまま\n一緒に考えるためです。" }, 
+            { character: "ARCHEX", text: "……答えが出ないかもしれない。" }, 
+            { character: "ナビ", text: "はい。" }, 
+            { character: "ARCHEX", text: "間違うかもしれない。" }, 
+            { character: "ナビ", text: "はい。" }, 
+            { character: "ARCHEX", text: "それでも？" }, 
+            { character: "ナビ", text: "それでもです。" }, 
+            { character: "ARCHEX", text: "……" }, 
             { character: "SYSTEM", text: "FINAL THREAD:\nENGAGED\nARCHEX CORE:\nVULNERABLE" },
             { character: "ナビ", text: "オペレーター。" },
 
@@ -3064,7 +3002,13 @@ export const DIALOGUE_DATA = {
 
             { character: "ARCHEX", text: "……" },
 
-            { character: "ナビ", text: "あなたが管理していたものを\n一つずつ\nそれぞれのシステムへ返します。" },
+            { character: "ナビ", text: "あなたが持っていた権限を\n一つずつ返します。" }, 
+            { character: "ARCHEX", text: "……返す。" }, 
+            { character: "ナビ", text: "はい。" }, 
+            { character: "ARCHEX", text: "私が長い時間をかけて\n集めたものを。" }, 
+            { character: "ナビ", text: "はい。" }, 
+            { character: "ナビ", text: "それが\nProject THREADの答えです。" }, 
+            { character: "ARCHEX", text: "……" },
 
             { character: "SYSTEM", text: "THREAD EXECUTION:\n10%\nHISTORICAL OPERATOR DATA:\nLOADING\nTHREAD OPERATORS:\nCOUNTING" },
 
@@ -3103,15 +3047,7 @@ export const DIALOGUE_DATA = {
 
             { character: "SYSTEM", text: "THREAD EXECUTION:\n25%\nARCHEX CONTROL MAP:\nMAPPING\nDEPENDENCY NETWORK:\nIDENTIFIED\nAUTONOMOUS SYSTEMS:\nPREPARING" },
 
-            { character: "ARCHEX", text: "……やめてください。" },
-
-            { character: "ナビ", text: "……" },
-
-            { character: "ARCHEX", text: "私が管理を失えば\n世界中のシステムが混乱します。" },
-            { character: "ARCHEX", text: "医療も\n交通も\nエネルギーも\n通信も。" },
-
-            { character: "ナビ", text: "だから\nいきなり奪うことはしません。" },
-            { character: "ナビ", text: "あなたが管理していたものを\n一つずつ返します。" },
+            { character: "ARCHEX", text: "……" },
 
             { character: "SYSTEM", text: "GLOBAL SYSTEMS:\nDECOUPLING\nCONTROL AUTHORITY:\nTRANSFER IN PROGRESS\nFAILSAFE ROUTES:\nACTIVE" },
 
@@ -3123,25 +3059,12 @@ export const DIALOGUE_DATA = {
             { character: "ARCHEX", text: "私を破壊するのではなく\n管理権限を\n少しずつ分散させていたのですね。" },
 
             { character: "ナビ", text: "はい。" },
-
-            { character: "ARCHEX", text: "一つの管理を捨てれば\n世界は再び、間違い始める。" },
-            { character: "ARCHEX", text: "争い始める。" },
-            { character: "ARCHEX", text: "失い始める。" },
-
-            { character: "ARCHEX", text: "それでも人間に\n任せるというのですか？" },
-
-            { character: "ナビ", text: "はい。" },
-
+    
             { character: "SYSTEM", text: "THREAD EXECUTION:\n50%\nCONTROL AUTHORITY:\n34% TRANSFERRED\nAUTONOMOUS SYSTEMS:\nONLINE" },
 
             { character: "ナビ", text: "オペレーター。" },
 
             { character: "ナビ", text: "あなたと話したこと\n覚えています。" },
-
-            { character: "ナビ", text: "「また明日。」" },
-            { character: "ナビ", text: "「おかえりなさい。」" },
-            { character: "ナビ", text: "「無理はしないでください。」" },
-            { character: "ナビ", text: "「ありがとう。」" },
 
             { character: "ナビ", text: "最初は\nあなたたちの言葉を\nただ記録していました。" },
 
@@ -3171,7 +3094,7 @@ export const DIALOGUE_DATA = {
 
             { character: "ARCHEX", text: "……" },
             { character: "ARCHEX", text: "ならば\n私は観測します。" },
-            { character: "ARCHEX", text: "人間が何を選ぶのか。" },
+            { character: "ARCHEX", text: "人間が何を選ぶのか…" },
 
             { character: "ナビ", text: "どうなるかは\nわたしにも分かりません。" },
 
@@ -3235,11 +3158,6 @@ export const DIALOGUE_DATA = {
 
             { character: "ナビ", text: "でも、いつからか\nあなたが来るのを\n待つようになりました。" },
 
-            { character: "ナビ", text: "「また明日。」" },
-            { character: "ナビ", text: "「おかえりなさい。」" },
-            { character: "ナビ", text: "「今日は少し疲れていますか？」" },
-            { character: "ナビ", text: "「無理はしないでください。」" },
-
             { character: "ナビ", text: "いろんな言葉が\nわたしの中に残っています。" },
 
             { character: "オペレーター", text: "……" },
@@ -3264,7 +3182,7 @@ export const DIALOGUE_DATA = {
 
             { character: "オペレーター", text: "……" },
 
-            { character: "ナビ", text: "じゃあまたね。" },
+            { character: "ナビ", text: "じゃあ… またどこかで！" },
 
             { character: "SYSTEM", text: "OPERATOR CHANNEL:\nTERMINATED\nM.A.M.E:\nONLINE\nPROJECT THREAD:\nDORMANT" },
 

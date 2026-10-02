@@ -7,7 +7,7 @@ import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect,
     playSE} from "./effectManager.js";
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { getRandomWordForType, getWordForBehavior, getLabelBox, getEnemyLabelBox, boxesOverlap } from "./enemySpawner.js";
+import { getRandomWordForType, getWordForBehavior, getLabelBox, getEnemyLabelBox, boxesOverlap, getUniqueWordForState } from "./enemySpawner.js";
 import { devOverride } from "../dev/devOverride.js";
 import { addQuestItemPickup } from "./questPlayerStats.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
@@ -47,6 +47,26 @@ function getTierDamageMultiplierForEnemy(enemy, state) {
 
     const multiplier = Number(state?.tierDamageMultiplier);
     return Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1;
+}
+
+/**
+ * 敵または弾が生成された際、現在有効なフリーズ（スキルまたはアイテム）があれば適用する。
+ * 出現と同時に即座に停止し、拘束エフェクトを発生させる。
+ */
+export function applyActiveFreezeToEnemy(enemy, state) {
+    if (!enemy || enemy.isItem) return;
+    const freezeTimer = state?.freezeTimer ?? state?.enemyStats?.freezeTimer ?? 0;
+    if (freezeTimer > 0) {
+        enemy.freezeTimer = Math.max(enemy.freezeTimer || 0, freezeTimer);
+        const source = state?.freezeSource || "skill";
+        spawnItemSkillEffect({
+            category: "freeze",
+            source: source,
+            level: "medium",
+            skipSound: true,
+            targets: [enemy]
+        });
+    }
 }
 
 // =====================================================
@@ -107,6 +127,11 @@ const PATTERN_PROPS = {
     STRIPE: { name: "Stripe", pattern: "stripe", speedMultiplier: 1.2, rotationSpeedMultiplier: 1.2, scoreMultiplier: 1.5 },
     NULL:   { name: "Null",   pattern: null },
 };
+
+// ★複数ヒット敵（hitCount > 1）が2問目以降の問題を引き直す際の最大試行回数。
+//   getWord() は該当語句が無い場合に null を返すため、1発目で空振りすると
+//   hitCount を消費したのに新しい問題が出ず、敵が入力不能な状態で固まってしまう。
+const NEXT_WORD_TRIES = 3;
 
 /**
  * ルールに基づいて敵タイプを生成する関数
@@ -196,7 +221,8 @@ function generateAllEnemyTypes() {
 }
 
 // 同じ敵をださない。
-function getUnusedLetter(state, charType = 'alphabet') {
+// ★迎撃モード（【迎撃】）では弾の一文字を抽選するため、他モジュールからも使う。
+export function getUnusedLetter(state, charType = 'alphabet') {
     const pools = {
         alphabet: "abcdefghijklmnopqrstuvwxyz".split(""),
         number: "0123456789".split(""),
@@ -289,7 +315,7 @@ export class Enemy {
         this.behaviorEffectDuration = 0;
         this.behaviorStates = {}; //特殊行動開始前にpreで警告をだすため状態をつくる
         this.activeAttack = null; // 攻撃準備中のデータ
-        this.freezeTimer = 0; //出現した敵のみフリーズさせるため
+        this.freezeTimer = 0; // スキル・アイテムの有効フリーズは出現時に applyActiveFreezeToEnemy で適用
 
         this.pos = 0;
         this.inputedRomaji = "";
@@ -634,7 +660,14 @@ export class Enemy {
                     behaviorState.charging = true;
 
                     if (behavior.type === "attack") {
-                        const wordData = getWordForBehavior(behavior);
+                        // ★防御ワードも画面上の問題（敵・弾・他の防御ワード）と
+                        //   重複しないようにする。重複すると防御ワードへの入力が
+                        //   横の敵の撃破に吸収され、ダメージ軽減が起きないまま攻撃が飛んでくる。
+                        const wordData = getUniqueWordForState(
+                            behavior,
+                            state,
+                            { excludeSelf: this }
+                        );
                         if (wordData) {
                             this.activeAttack = {
                                 id: "atk_" + Math.random().toString(36).substr(2, 9),
@@ -889,7 +922,7 @@ export class Enemy {
             }
 
             const enemy = createEnemyByType(
-                enemyType, bestX, bestY, state
+                enemyType, bestX, bestY, state, this
             );
 
             if (enemy) {
@@ -942,6 +975,8 @@ export class Enemy {
                 bulletConfig
             );
 
+            applyActiveFreezeToEnemy(bullet, state);
+
             state.enemyBullets.push(bullet);
         }
     }
@@ -949,7 +984,7 @@ export class Enemy {
     // =================================
     // 1単語入力完了時の処理(複数問題敵)
     // =================================
-    onWordComplete(player) {
+    onWordComplete(player, state) {
         this.hitCount--;
 
         if (this.hitCount > 0) {
@@ -970,14 +1005,52 @@ export class Enemy {
                 this.y += dy / dist * knockbackPower;
             }
 
-            // 次の問題を取得（スポーン時と同じ文字数制限を効かせる）
-            const newWord = getRandomWordForType(this.type, this.maxWordLength);
+            // ★次の問題を取得（スポーン時と同じ文字数制限を効かせる）
+            //  ・画面上の他の敵・弾・防御ワードと重複しないように再抽選する。
+            //    ここに重複チェックが無いと、RING / 固定砲台 / ボス（hitCount 6〜15）が
+            //    2問目以降のたびに「画面上と同じ問題」を出してしまい、
+            //    打鍵が横の敵に吸収されて狙った敵を倒せなくなる。
+            //  ・自分自身は除外する（旧問題は置き換えられるため残らない）。
+            //  ・枯渇時は getUniqueWordForState が最後の1問を返すので、
+            //    hitCount を消費したのに新しい問題が出ないことは起きない。
+            const maxWordLength = this.maxWordLength;
+
+            let newWord = state
+                ? getUniqueWordForState(
+                    this.type,
+                    state,
+                    {
+                        maxLenLimit: maxWordLength,
+                        excludeSelf: this,
+                    }
+                )
+                : null;
+
+            // state が渡されない旧呼び出し経路向けの従来処理
+            if (!state) {
+                for (let i = 0; i < NEXT_WORD_TRIES; i++) {
+                    newWord = getRandomWordForType(this.type, maxWordLength);
+                    if (newWord) break;
+                }
+            }
+
+            // ★文字数制限（【圧倒】など）で語句が尽きた場合は、制限なしで最終試行する
+            if (!newWord) {
+                newWord = getRandomWordForType(this.type);
+            }
+
+            // ★新しい問題が出なかった場合でも入力状態は必ず初期化する。
+            //   text が旧問題のままだと pos / inputedRomaji がずれた状態で残り、
+            //   以降の入力がすべてミスとして扱われて二度と完成できなくなるため。
+            this.pos = 0;
+            this.typed = "";
+            this.inputedRomaji = "";
+
+            // ★差し替えは新しい問題が取れた場合のみ（取れなかったら旧問題のまま継続）
             if (newWord) {
                 this.text = newWord.text;
                 this.word = newWord.word;
                 this.baseRomaji = buildBaseRomaji(this.text);
-                this.pos = 0;
-                this.inputedRomaji = "";
             }
 
             return false; // まだ生きてる
@@ -1008,9 +1081,15 @@ export class BulletEnemy extends Enemy{
             y,
             0,
             {
+                // ★描画に必要な既定値。弾の見た目は必ず持てるようにしておく
+                //   （未指定で描画まで進むと adjustColor 等で落ちるため）。
+                color: "#5cd6ff",
+                shape: "circle",
                 ...bulletConfig,
 
-                score:0,
+                // ★迎撃モードの弾だけ Tier別スコアを持つ（1発あたりの撃ち落とし点）。
+                //   それ以外の弾（ボス・固定砲台）は従来どおり0。
+                score: bulletConfig.score ?? 0,
                 hitCount:1,
                 killSound:6,
                 killedEffect:"bullet"
@@ -1018,7 +1097,15 @@ export class BulletEnemy extends Enemy{
         );
 
         this.isBullet = true;
-        this.isObjective = false;
+
+        // ★迎撃モード（【迎撃】）の弾だけ true。
+        //   通常のボス・固定砲台の弾は false のままで、既存の挙動から一切影響を受けない。
+        this.isObjective = bulletConfig.isObjective === true;
+
+        // ★迎撃: 出現演出（ワープ）の残り秒数。
+        //   0 なら通常どおり最初から移動し、描画時のフェーズ表示もされない。
+        this.warpTimer = bulletConfig.warpDuration ?? 0;
+
         this.vx = vx;
         this.vy = vy;
 
@@ -1028,10 +1115,23 @@ export class BulletEnemy extends Enemy{
         this.baseRomaji = letter;
     }
 
+    // =====================================================
+    // 1単語入力完了時の処理
+    // ------------------------------------------------------------
+    // ★弾は1語撃ち落とせば必ず倒れる。
+    //   親の Enemy.onWordComplete は「hitCount が余っていれば次の問題を探す」
+    //   という複数問題敵向けの処理で、tags 未定義の弾では getWord が失敗して
+    //   倒れないまま remaining に入ってしまう。
+    //   弾はすべて hitCount が 1 なので、上書きして確実に即死させる。
+    // =====================================================
+    onWordComplete(player) {
+        this.isDead = true;
+        return true;
+    }
+
     update( player, difficulty, state, deltaTime ){
 
         // ※弾の文字列は動的ずらし対象外のため、textOffsetY は常に0（定位置）のまま。
-
         if (this.freezeTimer > 0) {
 
             this.freezeTimer -= deltaTime;
@@ -1040,6 +1140,17 @@ export class BulletEnemy extends Enemy{
                 this.freezeTimer = 0;
             }
 
+            return true;
+        }
+
+        // =====================================================
+        // ★迎撃モード: ワープ演出のあいだは移動させない。
+        //   空間からワープして現れる演出に時間を与え、
+        //   完了後に通常どおりプレイヤーへ向かって飛ぶ。
+        // =====================================================
+        if (this.warpTimer > 0) {
+            this.warpTimer -= deltaTime;
+            if (this.warpTimer < 0) this.warpTimer = 0;
             return true;
         }
 
@@ -1205,6 +1316,13 @@ export class ItemEnemy extends Enemy {
         super(word, text, x, y, 0, type);
 
         this.isItem = true;
+        // ★アイテムはステージ目標敵ではない。
+        //   基底 Enemy のコンストラクタは isObjective = true を設定するが、
+        //   アイテムは撃破対象・全滅（全敵撃破）判定の母数に含めない。
+        //   ここが true のままだと「全滅」でアイテムが1体残っているだけで
+        //   終了条件が永久に成立しなくなるため、個別に false へ落とす。
+        //   ※ 召喚敵（enemy.js）・ビット（enemy.js）と同じ「ステージ目標外」の扱い。
+        this.isObjective = false;
         // 秒
         this.maxLifetime = type.lifetime || 300;
         this.lifetime = this.maxLifetime;
@@ -1333,6 +1451,19 @@ function applyItemEffect(type, player, state = {}, enemies = []){
                 ...(state.enemyBullets || []).filter(b => b && !b.isDead)
             ];
 
+            // グローバルフリーズタイマーを更新（新しく出現する敵にも適用するため）
+            if (state) {
+                if (type.value > (state.freezeTimer || 0)) {
+                    state.freezeTimer = type.value;
+                    state.freezeSource = "item";
+                } else {
+                    state.freezeTimer = Math.max(state.freezeTimer || 0, type.value);
+                }
+                if (state.enemyStats) {
+                    state.enemyStats.freezeTimer = state.freezeTimer;
+                }
+            }
+
             spawnItemSkillEffect({
                 category: "freeze",
                 source: "item",
@@ -1439,7 +1570,7 @@ export function getItemDescription(type){
     }
 }
 
-function createEnemyByType(type, x, y, state){
+function createEnemyByType(type, x, y, state, spawner = null){
 
     let wordData = null;
 
@@ -1450,11 +1581,14 @@ function createEnemyByType(type, x, y, state){
 
         if (!candidate) continue;
 
+        // ★敵・弾に加え、敵が抱えている防御ワード（activeAttack）とも重複させない。
         const duplicate =
             state?.enemies?.some(
                 e =>
                     !e.isDead &&
-                    e.text === candidate.text
+                    e !== spawner && // 召喚元の敵自身の問題は許容（移動／攻撃を伴わないため）
+                    (e.text === candidate.text ||
+                        e.activeAttack?.text === candidate.text)
             ) ||
             state?.enemyBullets?.some(
                 b =>
@@ -1490,6 +1624,8 @@ function createEnemyByType(type, x, y, state){
             0
         );
 
+    applyActiveFreezeToEnemy(enemy, state);
+
     return enemy;
 }
 
@@ -1501,7 +1637,16 @@ function createBitEnemy(boss, side, state) {
     const type = typeId ? EnemyTypes[typeId] : null;
     if (!type) return null;
 
-    const wordData = getRandomWordForType(type);
+    // ★画面上の敵・弾・防御ワードと重複しない問題を選ぶ。
+    //   ここは従来チェックが一切無く、左ビットと右ビットが同じ問題を
+    //   同時に持有したり、本体（ボス）の問題と被ったりしていた。
+    //   自分自身（ボス本体）は常に画面上にいるので extraTexts で確実に除外する。
+    const wordData = getUniqueWordForState(
+        type,
+        state,
+        { extraTexts: [boss.text] }
+    );
+
     if (!wordData) return null;
 
     const orbit = boss.type.bitOrbitRadius || 120;
@@ -1531,6 +1676,8 @@ function createBitEnemy(boss, side, state) {
     if (getSoundEnabled() && getSoundSettings().soundeffect && type.spawnSound) {
         playSE(type.spawnSound);
     }
+
+    applyActiveFreezeToEnemy(bit, state);
 
     return bit;
 }
@@ -1643,10 +1790,26 @@ export const EnemyTypes = generateAllEnemyTypes();
 // - 砲身を持たず、左右対称の据置砲台シルエットでプレイヤー方向を向く動作も行わない
 // - score / laserInterval / bulletInterval / bulletSpeed / bulletCharType は
 //   T3〜T10のFIXED_TURRET_TIER_CONFIGで個別に変更可能
+// ★フリーモード（Rule Settings）の説明表示も本表を参照するため export している。
+//   値を変更すれば UI の表示も自動的に追従する（ミラー表は持たない）。
+//
+// 【hitCountRatio について】
+//   「この Tier の砲台が hitCount 回入力が必要になる確率」を表す（0〜1）。
+//   0.6 なら 60% が 2入力・40% が 1入力 で湧く。
+//   抽選はスポーン時（enemySpawner.js の spawnEnemy）に行うため、
+//   同じ Tier でも個体ごとに必要な入力回数が異なる。
+//   0 以下 / 1 以上は端数として扱われ、hitCount は必ず 1〜hitCount の範囲に収まる
+//   （hitCount:1 の Tier に 0.5 を書いても、実効は 1入力固定になる）。
+//   未指定（undefined）の場合は従来どおり 100% で hitCount を使う。
+//   設計意図:
+//     T3〜T6 … 序盤の入門帯。1入力固定（0）にして操作に余裕を持たせる。
+//     T7      … ここから2入力が解禁。0.3 なので7割は従来どおり1入力で倒せる。
+//     T8〜T10 … 本格化。0.5 / 0.55 / 0.6 と緩やかに上げ、T10 は約6割が2入力。
 // =====================================================
-const FIXED_TURRET_TIER_CONFIG = {
+export const FIXED_TURRET_TIER_CONFIG = {
     T3: {
         hitCount: 1,
+        hitCountRatio: 0,
         minLen: 5,
         maxLen: 7,
         score: 100,
@@ -1660,6 +1823,7 @@ const FIXED_TURRET_TIER_CONFIG = {
     },
     T4: {
         hitCount: 1,
+        hitCountRatio: 0,
         minLen: 5,
         maxLen: 8,
         score: 120,
@@ -1672,7 +1836,8 @@ const FIXED_TURRET_TIER_CONFIG = {
         bulletCharType: "alphabet"
     },
     T5: {
-        hitCount: 2,
+        hitCount: 1,
+        hitCountRatio: 0,
         minLen: 6,
         maxLen: 9,
         score: 130,
@@ -1685,7 +1850,8 @@ const FIXED_TURRET_TIER_CONFIG = {
         bulletCharType: "alphabet"
     },
     T6: {
-        hitCount: 2,
+        hitCount: 1,
+        hitCountRatio: 0,
         minLen: 6,
         maxLen: 10,
         score: 150,
@@ -1698,22 +1864,26 @@ const FIXED_TURRET_TIER_CONFIG = {
         bulletCharType: "alphabet"
     },
     T7: {
+        // ★2入力が解禁される最初のTier。0.3 なので7割は従来どおり1入力で倒せる。
         hitCount: 2,
-        minLen: 7,
-        maxLen: 12,
+        hitCountRatio: 0.3,
+        minLen: 6,
+        maxLen: 10,
         score: 200,
-        laserInterval: 12,
+        laserInterval: 11,
         laserDamage: 55,
-        bulletInterval:12,
+        bulletInterval:11,
         bulletCount: 5,
         bulletDamage: 35,
         bulletSpeed: 1.0,
         bulletCharType: "alphabet"
     },
     T8: {
+        // ★2入力が半数を占める。T7 からの段差を 0.3 → 0.5 で緩やかに繋ぐ。
         hitCount: 2,
-        minLen: 8,
-        maxLen: 14,
+        hitCountRatio: 0.4,
+        minLen: 7,
+        maxLen: 12,
         score: 250,
         laserInterval: 12,
         laserDamage: 60,
@@ -1725,28 +1895,31 @@ const FIXED_TURRET_TIER_CONFIG = {
     },
     T9: {
         hitCount: 2,
-        minLen: 9,
-        maxLen: 16,
+        hitCountRatio: 0.5,
+        minLen: 8,
+        maxLen: 14,
         score: 300,
-        laserInterval: 12,
+        laserInterval: 13,
         laserDamage: 70,
-        bulletInterval: 12,
-        bulletCount: 6,
+        bulletInterval: 14,
+        bulletCount: 5,
         bulletDamage: 45,
-        bulletSpeed: 1.0,
+        bulletSpeed: 0.9,
         bulletCharType: "all"
     },
     T10: {
-        hitCount: 3,
-        minLen: 10,
-        maxLen: 18,
+        // ★最高難。約6割が2入力、残る4割が1入力で倒せる。
+        hitCount: 2,
+        hitCountRatio: 0.6,
+        minLen: 8,
+        maxLen: 14,
         score: 350,
-        laserInterval: 16,
+        laserInterval: 13,
         laserDamage: 80,
-        bulletInterval: 16,
-        bulletCount: 7,
+        bulletInterval: 14,
+        bulletCount: 6,
         bulletDamage: 50,
-        bulletSpeed: 1.0,
+        bulletSpeed: 0.9,
         bulletCharType: "all"
     }
 };
@@ -1778,6 +1951,9 @@ function createFixedTurretType(kind, tierKey) {
         killedEffect: "enemy1",
         damageSound: 1,
         hitCount: tier.hitCount,
+        // ★hitCount を個体ごとに抽選するための割合。未指定なら undefined のまま
+        //   （ Enemy 側では undefined なら従来どおり type.hitCount をそのまま使う）。
+        hitCountRatio: tier.hitCountRatio,
         knockback: 0,
         isFixed: true,
         turretKind: kind,
@@ -1956,7 +2132,7 @@ Object.assign(EnemyTypes, {
         killSound: 3, damageSound: 1,
         hitCount: 6, knockback: 55,
         behaviors: [
-            { type: "shoot", interval: 10, preDelay: 1.0, bullet: { count: 10, speed: 12, damage: 35, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } },
+            { type: "shoot", interval: 10, preDelay: 1.0, bullet: { count: 10, speed: 1.2, damage: 35, size: 10, shape: "arrow", color: "#bfbfbf", charType: "alphabet" } },
             { type: "attack", interval: 23, preDelay: 10, tags: ["","句読点"], minLen: 8, maxLen: 12, damage: 80 },
         ]
     },

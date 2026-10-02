@@ -126,12 +126,25 @@ const SKILL_HANDLERS = {
   },
 
   freeze: (value, state, enemiesList = []) => {
-      //表示している敵と弾丸が止まる
+      // グローバルフリーズタイマーを更新（新しく出現する敵にも適用するため）
+      if (state) {
+          if (value > (state.freezeTimer || 0)) {
+              state.freezeTimer = value;
+              state.freezeSource = "skill";
+          } else {
+              state.freezeTimer = Math.max(state.freezeTimer || 0, value);
+          }
+          if (state.enemyStats) {
+              state.enemyStats.freezeTimer = state.freezeTimer;
+          }
+      }
+
+      // 表示している敵と弾丸が止まる
       const targets = [
           ...enemiesList.filter(
               e => e && !e.isDead && !e.isItem
           ),
-          ...(state.enemyBullets || []).filter(
+          ...(state?.enemyBullets || []).filter(
               b => b && !b.isDead
           )
       ];
@@ -767,6 +780,17 @@ export const PASSIVE_SKILLS = {
     equipable: false,
   },
 
+  // 戦闘開始時からアクティブスキルが使用可能な状態になる
+  stock_start_1: {
+    name: "事前充填",
+    icon: "stockstart_1",
+    desc: "戦闘開始時、アクティブスキルが使用可能な状態で開始",
+    equipable: true,
+    apply: (p) => {
+      p.startActiveSkillStock = (p.startActiveSkillStock || 0) + 1;
+    }
+  },
+
 };
 
 
@@ -793,7 +817,7 @@ export const ACTIVE_SKILLS = {
     name: "エイド",
     icon: "recover_1",
     desc: "HPを30回復",
-    cooldown: 50, //sec
+    cooldown: 40, //sec
     type: "heal",
     value: 30,
   },
@@ -802,7 +826,7 @@ export const ACTIVE_SKILLS = {
     name: "キュア",
     icon: "recover_2",
     desc: "HPを80回復",
-    cooldown: 100, //sec
+    cooldown: 80, //sec
     type: "heal",
     value: 80,
   },
@@ -811,7 +835,7 @@ export const ACTIVE_SKILLS = {
     name: "リカバー",
     icon: "recover_3",
   desc: "HPを200回復",
-    cooldown: 150, //sec
+    cooldown: 130, //sec
     type: "heal",
     value: 200,
   },
@@ -821,7 +845,7 @@ export const ACTIVE_SKILLS = {
     name: "フリーズ3",
     icon: "freeze_1",
     desc: "敵を5秒間停止",
-    cooldown: 50,
+    cooldown: 40,
     type: "freeze",
     value: 5, // seconds
   },
@@ -830,7 +854,7 @@ export const ACTIVE_SKILLS = {
     name: "フリーズ5",
     icon: "freeze_2",
     desc: "敵を8秒間停止",
-    cooldown: 100,
+    cooldown: 80,
     type: "freeze",
     value: 8, // seconds
   },
@@ -839,7 +863,7 @@ export const ACTIVE_SKILLS = {
     name: "フリーズ8",
     icon: "freeze_3",
     desc: "敵を12秒間停止",
-    cooldown: 160,
+    cooldown: 140,
     type: "freeze",
     value: 12, // seconds
   },
@@ -849,7 +873,7 @@ export const ACTIVE_SKILLS = {
     name: "照準",
     icon: "kill_1",
     desc: "最も近い敵を2体撃破",
-    cooldown: 70, //80
+    cooldown: 50, //80
     type: "kill", // no effect on boss
     value: {
       mode: "nearest",
@@ -861,7 +885,7 @@ export const ACTIVE_SKILLS = {
     name: "熱線",
     icon: "kill_random",
     desc: "ランダムで敵を5体撃破",
-    cooldown: 140, //160
+    cooldown: 120, //160
     type: "kill", // no effect on boss
     value: {
       mode: "random",
@@ -873,7 +897,7 @@ export const ACTIVE_SKILLS = {
     name: "光線",
     icon: "kill_near",
     desc: "最も近い敵を4体撃破",
-    cooldown: 140, //200
+    cooldown: 120, //200
     type: "kill", // no effect on boss
     value: {
       mode: "nearest",
@@ -885,7 +909,7 @@ export const ACTIVE_SKILLS = {
     name: "殲光",
     icon: "kill_all",
     desc: "すべての敵を撃破",
-    cooldown: 220,
+    cooldown: 180,
     type: "kill", // no effect on boss
     value: {
       mode: "all",
@@ -897,7 +921,7 @@ export const ACTIVE_SKILLS = {
     name: "山嵐",
     icon: "knockback",
     desc: "画面端まで敵をノックバックさせる",
-    cooldown: 160, //200
+    cooldown: 140, //200
     type: "knockback",
     value: {
       mode: "edge"
@@ -909,7 +933,7 @@ export const ACTIVE_SKILLS = {
     name: "シールド",
     icon: "guard_1",
     desc: "5秒間無敵になる",
-    cooldown: 100, //120
+    cooldown: 80, //120
     type: "invincible",
     value: 5
   },
@@ -918,7 +942,7 @@ export const ACTIVE_SKILLS = {
     name: "ウォール",
     icon: "guard_2",
     desc: "8秒間無敵になる",
-    cooldown: 150,
+    cooldown: 130,
     type: "invincible",
     value: 8
   },
@@ -927,7 +951,7 @@ export const ACTIVE_SKILLS = {
     name: "バリア",
     icon: "guard_3",
     desc: "12秒間無敵になる",
-    cooldown: 180,//240
+    cooldown: 160,//240
     type: "invincible",
     value: 12
   }

@@ -129,7 +129,10 @@ function buildFinalStats(base) {
         reviveChance: 0,
 
         skillSlotMax: (base.baseSkillSlot || 0) + (base.bonusSkillSlot || 0),
-        activeSkillStockMax: (base.baseActiveSkillStockMax || 0) + (base.bonusActiveSkillStockMax || 0)
+        activeSkillStockMax: (base.baseActiveSkillStockMax || 0) + (base.bonusActiveSkillStockMax || 0),
+
+        // ★戦闘開始時のアクティブスキルストック（equippedSkills の apply で加算）
+        startActiveSkillStock: 0
     };
 
     // ★ここで分岐

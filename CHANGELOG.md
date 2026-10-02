@@ -2,6 +2,548 @@
 
 ---
 
+## [1.0.72] - 2026-10-02
+
+### Changed
+- **スキルツリー長文「プログラミング」が出題されたとき、クリア条件の制限時間に +50秒 を加算**
+  - 背景: 長文タグのうち「プログラミング」はコードサンプルが多く打鍵数が多い。
+    他の長文と同じ「◯秒以内にクリア」条件では明らかに厳しすぎたため補正する。
+  - 補正内容（`js/skillTree.js`）:
+    - `PROGRAMMING_TAG_TIME_BONUS_SEC` … 加算秒数の定数（50）を新規追加。
+    - `adjustUnlockForChallengeTags(unlock, challenge)` … 新規追加。
+      出題タグ（`challenge.tags`）に「プログラミング」を含む場合のみ、
+      条件の `type: "time"` だけ `value + 50` を返す。`unlock` 本体は改変せずコピーを返す。
+    - `getChallengeTagNote(challenge)` … 新規追加。補正対象なら説明文を返す。
+      長文は開始時までタグが未確定なので、候補（`tagWeights`）に
+      「プログラミング」が含まれていれば必ず説明を返す。
+    - `getUnlockTextForChallenge(unlock, challenge)` … 新規追加。
+      補正したうえで `getUnlockText()` を通す表示用ヘルパー。
+      判定と表示がずれるのを防ぐため、クリア条件の表示はすべてこれを経由させる。
+  - 判定側の変更（`js/skillTreeResult.js`）:
+    - `handleSkillModeResult()` が `node.unlock` を直接使っていたのを
+      `adjustUnlockForChallengeTags(node.unlock, challenge)` 経由に変更。
+      `challenge` は `gameState.currentChallenge` で、開始時に `tags` が確定しているため
+      「実際に出題されたタグ」で判定できる。
+  - 表示側の変更（`js/skillTree.js` / `js/skillTreeResult.js` / `js/skillTreeUI.js` / `style.css`）:
+    - **長文入力中の上部ヒント（`#skillUnlockHint`）** … `startSkillMode()` が
+      `getUnlockText(node.unlock)` を使っていたのを
+      `getUnlockTextForChallenge(node.unlock, runtimeChallenge)` に変更。
+      「プログラミング」が出題された場合は加算後の秒数（例: 145 → 195秒）を表示する。
+    - **結果画面の「クリア目標」** … 同じく `getUnlockTextForChallenge()` 経由に変更し、
+      判定値と表示値を一致させた。
+    - オンマウス時のツールチップと開始イントロのタグ表示直下に
+      「プログラミング」は文字数が多く難しいため、クリア条件の制限時間に +50秒 を加算
+      を表示（`.skill-tag-note` スタイルを新規追加）。
+    - 候補に「プログラミング」が含まれる長文ノードでのみ表示される。
+  - 影響範囲:
+    - 対象は長文タグ候補に「プログラミング」を含むノードのみ。
+      該当するのは `LONG_TEXT_CHALLENGE_TABLE[3]`（`KILL_NEAREST_H` /
+      `KILL_RANDOM` / `KILL_ALL` / `KB_UP_4` / `KNOCKBACK_EDGE` /
+      `COOLDOWN_SPEED_3` / `DAMAGE_NEGATE_3` の一部）のみ。
+    - `time` 条件だけ加算し、`accuracy` / `miss` / `score` は打鍵数ベースの指標のため据え置き。
+    - `checkSkillUnlocks()`（子ノードの開放判定）は補正なし。
+      子ノード解放は「親ノードでクリアしたか」ベースのため個別補正は不要。
+    - 左（normal）・上（time_attack）・下（英語主体）は `challenge.tags` に
+      「プログラミング」を持たないため挙動不変。
+    - セーブデータ非互換なし。
+- アプリケーションバージョンを `1.0.72` に更新
+  - `js/version.js` の `APP_VERSION` を `1.0.72` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.72` に更新。
+
+---
+
+## [1.0.71] - 2026-10-02
+
+### Changed
+- **スキルツリー右側（長文）の出題タグを「ノード生成時」から「チャレンジ開始時」に変更**
+  - 症状: `buildLongTextSkill()` が `SKILL_TREE` 定数の生成関数であるにもかかわらず
+    長文タグの重み抽選を行っていたため、タグは**ページ読み込み時に1回だけ**決まっていた。
+    → リロードするまで同じノードの長文はずっと同じタグが出題されていた。
+  - 変更内容（`js/skillTree.js`）:
+    - `buildLongTextSkill()` … 抽選処理を削除。`challenge` は重み付き候補
+      （`tagWeights`）だけを持ち、タグを固定しなくなった。
+      `LONG_TEXT_CHALLENGE_TABLE[depth].tags` を `map(t => ({ ...t }))` で複製して保持するため
+      元テーブルとの参照は切れており、偶発的な書き換えは発生しない（単一ソースは `LONG_TEXT_CHALLENGE_TABLE` のまま）。
+    - `pickWeightedTag()` … `buildLongTextSkill()` 内の抽選ロジックを共通関数として切り出し。
+    - `createRuntimeChallenge()` … 新規追加。開始時点の `challenge` を生成する。
+      長文のみ重み抽選して `tags: [tag]` を1つに確定させ、
+      `normal` / `time_attack` は決定的なのでそのまま返す（`challenge` 本体は改変せずコピーを返す）。
+    - `startSkillMode()` … `createRuntimeChallenge()` を通過させた `runtimeChallenge` を
+      `doCountdown({ custom })` に渡すよう変更（`mode` / `difficulty` も同オブジェクトから取得）。
+  - 表示側の変更（`js/skillTreeUI.js`）:
+    - オンマウス時のツールチップ（`canvas.onmousemove`）と
+      開始イントロ（`showSkillIntro`）のタグ表示を
+      `node.challenge.tags` 直参照から `getChallengeTagList(node.challenge)` に変更。
+    - `getChallengeTagList()` は「選ばれる可能性があるタグ」を全件返すため、
+      長文は 1個ではなく候補すべて（2〜3個）が表示される。
+      `.skill-tags` / `.skill-tag` は元から `flex-wrap: wrap` のため折り返して収まり、**CSS変更は不要**。
+  - 影響範囲:
+    - 対象は右側（long_text）のノードのみ（`isSupport=false` のため英語補正も無関係）。
+    - 左（normal）・上（time_attack）・下（英語主体）は `challenge` に `tagWeights` を持たないため
+      従来と完全に同一の挙動。
+    - 出題フィルタ（`js/gameModes.js` の `LONG_TEXT.buildTargets` → `filterByTags`）は
+      開始時に確定した `tags: [tag]` を参照するため、**出題範囲自体は従来と同一**。
+      変わるのは「そのタグがいつ 引かれるか」だけ。
+    - リトライ（`js/skillTreeResult.js` の `startSkillMode()` 再呼び出し）も開始時なので、
+      **リトライのたびに別タグが引かれる**。
+    - 解放判定（`checkSkillUnlocks` / `unlock` / `requirements`）は challenge を参照しないため不変。
+    - セーブデータ非互換なし（保存されるのは `unlockedNodes` のID配列のみ。challenge は保存されない）。
+- アプリケーションバージョンを `1.0.71` に更新
+  - `js/version.js` の `APP_VERSION` を `1.0.71` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.71` に更新。
+
+---
+
+## [1.0.70] - 2026-10-02
+
+### Changed
+- **スキルツリー「下」（英語主体）のノードで、クリア条件の難易度を補正**
+  - 背景: 下の補助系ノード（`isSupport=true`）は `SUPPORT_TAGS`（英語＋数字＋記号）で出題されるが、
+    クリア条件は左（normal）・上（time_attack）と同じテーブルから取っていた。
+    英語は「1文字＝1打鍵」に対し日本語（かな→ローマ字）は1文字あたり約1.4〜1.6打鍵なので、
+    同じ文字数制限・同じ条件だと英語が明らかに易しかった。
+  - 係数の根拠（実測 / 同じ制限時間でクリアできる問数）:
+    - 240秒 … 日本語45問 / 英語56問（比 1.244 → 秒/問 0.804）
+    - 150秒 … 日本語27問 / 英語35問（比 1.296 → 秒/問 0.771）
+    - 2つの実験が独立にほぼ同じ値を示したため、英語は日本語の約 1.27 倍の問数
+      （= 0.79 倍の所要時間）で打けると判断。
+  - 補正内容（`js/skillTree.js` の `ENGLISH_TIME_FACTOR` / `ENGLISH_TARGET_FACTOR`）:
+    - **スタンダード（normal）** … 出題側の問題数（`questionLimit`）は全ノード共通なので、
+      クリア条件の**時間（time）だけ**を 0.79 倍に詰める（5秒刻みに丸め）
+      `adjustUnlockForEnglishNormal()` が担当
+    - **タイムアタック（time_attack）** … 出題側の制限時間（`limitSec`）は全ノード共通なので、
+      クリア条件の**問数（target）だけ**を 1.27 倍に増やす（整数丸め）
+      `adjustUnlockForEnglishTimeAttack()` が担当
+    - `score` / `accuracy` / `miss` はいずれも打鍵数ベースの指標（`score` は `KPM × 正確率^3`）で
+      言語差が出ないため**据え置き**（ご指定の「time と target だけ補正」と一致）
+    - モードごとに補正関数を分けているため、time / target を一律で処理する汎用分岐ではなく、
+      各モードで対象になる条件だけが確実に補正される
+  - 補正後の条件:
+    - time   : 75→60 / 80→65 / 65→50 / 85→65 / 150→120 / 140→110 / 270→215 / 260→205
+    - target : 8→10 / 9→11 / 21→27 / 22→28 / 24→30 / 25→32 / 42→53 / 43→55
+  - 影響範囲:
+    - 対象は下の16ノードのみ（SLOT_1 / STOCK_1 / ITEM_SPAWN_1〜3 / MAX_HP_1〜3 /
+      DEF_UP_1〜3 / EXP_UP_1〜3 / EXP_AUTO_1 / EXP_UP_2 / COOLDOWN_SPEED_1）
+    - 左（normal）・上（time_attack）・右（long_text）は `isSupport=false` のため**完全に不変**
+    - `challenge` 側（`questionLimit` / `limitSec` / `tags`）も変更なし＝**クリア条件だけ**を補正
+    - 表示は `getUnlockText()` が `cond.value` を読むため UI側の変更は不要
+    - セーブデータ非互換なし（`unlockedNodes` の保存形式は不変。既に解放済みのノードは巻き戻らない）
+- アプリケーションバージョンを `1.0.70` に更新
+  - `js/version.js` の `APP_VERSION` を `1.0.70` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.70` に更新。
+
+---
+
+## [1.0.69] - 2026-10-01
+
+### Changed
+- **クエストマップの通常ステージのノード名を「Q11」〜「Q90」形式に変更**
+  - 対象: `js/questMap.js` の `QUEST_MAP` にある通常ステージノード（全76ノード）のみ。
+  - 採番規則: ノードIDの数字部分を引き、その値をそのまま表示名にする。
+    - WORLD1: `W1_Q11`〜`W1_Q30` → `Q11`〜`Q30`（20ノード）
+    - WORLD2: `W2_Q31`〜`W2_Q60` のうち防衛以外の28ノード → `Q31`〜`Q60`
+    - WORLD3: `W3_Q61`〜`W3_Q90` のうち防衛以外の28ノード → `Q61`〜`Q90`
+  - 据え置き（変更対象外）:
+    - 接続テスト1〜10（`W1_Q1`〜`W1_Q10`）— チュートリアルとしての名称を維持するため。
+    - 防衛ノード全12（`W1_DEFENSE_1`〜`WEX_DEFENSE_12`）— ノード種別が判別できる名称を維持。
+    - 中ボス全10（`W1_MiniBoss_1`〜`WEX_MiniBoss_10`）とボス4
+      （`W1_BOSS` / `W2_BOSS` / `W3_BOSS` / `WEND_LastBoss` = "Final Thread"）。
+    - EXTRAの通常ステージ10（`WEX_Q91`〜`WEX_Q100`）— 現在の `EX1`〜`EX10` を維持。
+  - `id` / `stage` / `next` / `pos` / `reward` / `enableRandomDialogue` には一切手を触れておらず、
+    **進行状況・星・クリア判定のロジックは変更なし**（セーブデータ互換性に影響しない）。
+  - 影響する表示（いずれも `node.name` の表示のみ）:
+    - マップ上のノードラベル（`js/questMapUI.js` の `label.textContent = node.name`）
+    - 会話ログ画面のステージ名（`js/dialogue.js` の `getStageName()`）
+    - クエスト記録の「STAGE11 (Q11)」形式の表示（`js/hud.js` の `findQuestNode()`）
+  - 補足: `js/questMap.js` の `W1_MiniBoss_1` に `name` が2行重複して定義されていた
+    （`"最終接続テスト"` が上、`"システム・コア"` が下。後者が常に優先される状態だった）ため、
+    実効値である `name: "システム・コア"` のみを残し、順序に依存する混乱を解消した。
+    中ボス系の表示名は従来どおり「システム・コア」で、挙動は変わらない。
+- アプリケーションバージョンを `1.0.69` に更新
+  - `js/version.js` の `APP_VERSION` を `1.0.69` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.69` に更新。
+
+---
+
+## [1.0.68] - 2026-10-01
+
+### Changed
+- **【純粋なる試練】（case 9）で、アクティブスキルUIに禁止マークを表示し、クールダウンタイムバーを動かさないよう変更**
+  - 背景: case 9 は `js/enemyModeConfig.js` の `config.player = { ...ENEMY_MODE_CONFIG.player, disableActiveSkill: true }`
+    によりアクティブスキルの使用が禁止されるが、表示側がそれを反映していなかった。
+    `js/enemyCore.js` の Active Skill Charge Update は `skillUiEnabled` のみで条件判定していたため、
+    **禁止されたにもかかわらずクールダウンが減り、ストックが1まで溜まってリングが満タン（＝使用可能に見える）状態**になっていた。
+    同じ理由でコンボによるクールダウン短縮倍率のポップアップも出てしまっていた。
+  - 実装:
+    - `js/enemyCore.js`（`gameLoop()`）:
+      - `skillUiEnabled` の直後に `activeSkillDisabled`（= `gameState.player?.disableActiveSkill === true`）を派生。
+      - チャージ更新の条件に `!activeSkillDisabled` を追加。
+        これによりクールダウンは減らず、ストックは0のまま保たれ、進捗リングは0で固定される。
+      - `updateComboTierBar()` の第2引数に `skillUiEnabled && !activeSkillDisabled` を渡し、
+        クールダウンが動かないため、倍率ポップアップ（`triggerCooldownSpeedPopup`）も出さない。
+    - `js/enemyRenderer.js`（`renderActiveSkillUI()`）:
+      - `disabled` を同様に判定。
+      - `ratio` は禁止時に0で固定。`ready` / `fullyCharged` には `!disabled` をANDで追加した。
+        これにより既存関数（`drawCooldownCircle` / `drawSkillIconCircle`）の挙動をそのまま活用できる。
+      - 禁止時は `drawSkillProhibitMark()` でアイコン上に禁止マーク（暗幕＋赤リング＋左上→右下の斜線）を重ねる。
+        アイコン自体は消さない（「装備はあるが、この試練では発動できない」ことを明示するため）。
+      - ストック数字は禁止時は描画しない。
+      - ツールチップ（`drawSkillTooltip()`）に `disabled` 引数を追加し、
+        禁止時は先頭に赤字で「この試練では使用できません」の警告行を出す。
+  - 影響範囲:
+    - `disableActiveSkill: true` を設定しているステージ（＝ case 9 の純粋なる試練）のみ。
+    - 他のステージは `disableActiveSkill` が `false` のため挙動は一切変わらない。
+    - 通常モードは `initPlayerByMode` の else 側で `disableActiveSkill = false` に固定されているため従来どおり。
+  - 付随: `js/version.js` の `APP_VERSION` を `1.0.68` に、
+    Service Worker のキャッシュ名を `mametype-v1.0.68` に更新。
+
+---
+
+## [1.0.67] - 2026-10-01
+
+### Fixed
+- **全滅（Eliminate）終了条件が、アイテムが残っていると成立しなくなっていた不具合を修正**
+  - 影響箇所: `js/enemyCore.js` の `gameLoop()` 内・フェーズ完了判定（`allSpawnedDefeated`）および
+    クリア条件の「全処理終了（フォールバック）」判定。
+  - 背景: 「全敵撃破で終了」は `enemies.filter(e => e.isObjective).length === 0`（= 目標敵が0体）
+    を条件にしていた。しかし `ItemEnemy` は `Enemy` を継承するだけで `isObjective` を上書きしておらず、
+    基底コンストラクタの `isObjective = true`（`js/enemy.js`）をそのまま引き継いでいた。
+    このため **画面上にアイテムが1体残っているだけで「目標敵が0体」にならず、
+    終了条件が一切発火しない** 状態になっていた（アイテムを取得、または寿命切れで
+    `enemies` から消えた瞬間にようやく条件が揃って終了する、という挙動）。
+  - 実装:
+    - `js/enemy.js` の `ItemEnemy` コンストラクタに `this.isObjective = false;` を追加。
+      アイテムは「ステージ目標敵」ではないというセマンティクスを根本的に修正した。
+      既に `isObjective = false` を明示している召喚敵（`js/enemy.js`）・
+      ビット（`js/enemy.js`）と同じ「ステージ目標外」の扱いに揃えたもの。
+    - `js/enemyCore.js` の全滅判定を
+      `e => e && !e.isDead && e.isObjective && !e.isItem` に変更。
+      決定地点に「アイテムは終了判定を止めない」意図をコードとして残し、自己ガードとした。
+    - `js/enemyCore.js` の「全処理終了（フォールバック）」側の `enemies.length === 0` も
+      `e => e && !e.isDead && !e.isItem` に変更し、同種の不整合を解消。
+  - 変更後の挙動: 残ったアイテムの有無に関わらず、敵が全滅していれば即座に終了する。
+    残っていたアイテムは自動取得されず、屏幕上に取り残されて消える（スコア・戦績には影響しない）。
+  - 影響範囲:
+    - `endConditions.allSpawnedDefeated` / `phaseConditions.allSpawnedDefeated` を使う
+      エネミーモードの全滅ステージのみ。`spawn.limit != null` ガードがあるため、
+      該当しないステージの挙動は一切変わらない。
+    - `killEnemy()` は元から `if (!isItem && !isBullet)` ガード内で
+      `defeatedCount` / `objectiveDefeated` / `processedCount` / `phaseProcessedCount` /
+      スコアを加算しているため、**アイテム取得を「敵をキルした」ように数える
+      挙動は一切生じない**（従来どおり）。`chainCount` は元から `!isItem` ガードの外側に
+      ありアイテム取得でも加算されるが、今回の変更では一切触れていない（既存の挙動を維持）。
+  - 付随: `js/version.js` の `APP_VERSION` を `1.0.67` に、
+    Service Worker のキャッシュ名を `mametype-v1.0.67` に更新。
+
+---
+
+## [1.0.66] - 2026-10-01
+
+### Added
+- **【精密射撃】の CLEAR 欄に「MISS」行を追加（KILL の直下）**
+  - 背景: 精密射撃は `endConditions.failOnMissCount`（ステージにより 7 / 5 / 3）で
+    ミス数を制限，早在 `js/enemyCore.js` で `mistakeCount >= failOnMissCount` を失敗判定にしている。
+    しかしゲーム中HUDの CLEAR 欄には KILL 行しか無く、残り何回ミスできるかが
+    画面上からは分からなかった（ミッション説明の `buildEndText()` に「◯回ミスすると終了」と出るのみ）。
+  - 実装: `js/enemyRenderer.js` の `renderEndCondition()` で、
+    `clear.killCount`（KILL 行）の push 直後に `MISS` 行を `lines2` へ追加。
+    - 表示形式: `MISS: <現在のミス数>/<許容ミス数>`（KILL 行と同じ「現在/目標」形式）
+    - 分母は `end.failOnMissCount` をそのまま使用。失敗判定と同一の値なので二重管理にならない。
+    - 判定は `!= null` のため、`failOnMissCount` を持たない他ミッションの表示は一切変わらない。
+    - 残り1回以下（その1回で終了する状態）のみ赤字 `#ff6b6b`。
+      達成条件の緑（`#4caf50`）とは意味が逆のため、両者を混同させない。
+  - 影響範囲: エネミーモード（精密射撃ステージ）／クエスト・フリーモードの両方。
+    通常モード・防衛モードには影響しない。
+  - 付随: `js/version.js` の `APP_VERSION` を `1.0.66` に、
+    Service Worker のキャッシュ名を `mametype-v1.0.66` に更新。
+
+---
+
+## [1.0.65] - 2026-10-01
+
+### Fixed
+- **エネミーモードで同じ問題が同時に存在しうる問題を修正**
+  - 背景: 画面上の敵同士が**まったく同じ問題**を持っていると、プレイヤーが打鍵した
+    文字が「どちらの敵への入力」か判別できず、狙った敵を倒せないまま入力が吸われる。
+    重複チェックがあったのは通常スポーン時のみで、以下の経路にはチェックが無く重複し得た。
+    1. `Enemy.onWordComplete()` — 複数問題敵の2問目以降（RING / 固定砲台 / ボス hitCount 6〜15）
+    2. `createBitEnemy()` — 左右のビット同士、およびボス本体との重複
+    3. `spawnEnemy()` — 敵だけでなく弾・防御ワードが判定対象に入っていなかった
+    4. `updateBehaviors("attack")` — ボスの防御ワード（activeAttack）
+  - 実装:
+    - `js/enemySpawner.js` に共通ヘルパー2つを追加。
+      - `collectUsedTexts(state, excludeSelf, extraTexts)`
+        生存中の敵・弾・各敵の `activeAttack` から「使用中のtext」を Set に集める。
+      - `getUniqueWordForState(type, state, { maxLenLimit, retry, excludeSelf, extraTexts })`
+        上記Setに含まれない問題だけを最大20回再抽選して返す。
+        枯渇時のみ**重複を許容して最後の一問を返す**（敵が出現し損ねたり、
+        hitCount を消費したのに新しい問題が出ず入力不能になる事故を防ぐ）。
+    - 上記1〜4をすべて新ヘルパー経由に変更。
+    - `js/enemy.js` `createEnemyByType()`（召喚敵）も `activeAttack` を重複判定に加えた。
+      召喚元（`spawner`）自身の問題は許容する。
+  - 影響範囲: エネミーモードの通常出現 / 複数問題敵 / ボス（ビット連動含む）/ 迎撃 / 召喚 /
+    ボスの防御ワード。フリーモード・クエストステージの両方に効く。
+  - 影響を受けないもの: 通常モード・防衛モードの問題列挙（別ルートのため）。
+  - 補足:
+    - 2問目引き直しと防御ワードは、自分自身は重複判定から除外する
+      （自分自身は画面上で1つの問題しか持たないため）。
+    - `js/target.js` のシャッフルバッグ（1巡するまで重複しない）は変更していない。
+  - アプリケーションバージョン: `js/version.js` の `APP_VERSION` を `1.0.65` に、
+    Service Worker のキャッシュ名を `mametype-v1.0.65` に更新。
+---
+
+## [1.0.64] - 2026-10-01
+
+### Changed
+- **同時存在数（`maxAlive`）の上限に達しているときは、敵を倒してもすぐには補充しないようにした**
+  - 影響箇所: `js/enemyCore.js` のスポーン処理（`gameLoop` 内）。
+  - 変更前の挙動: 出現タイマーの基準時刻 `lastSpawnTime` は「実際に敵を1体以上出した時」しか更新されなかった。
+    このため `maxAlive` で上限に達して湧きが止められている間に経過した時間が残り、
+    敵を倒して枠が空いた瞬間に `now - lastSpawnTime > spawn.interval` が条件を満たしてしまい、
+    待ち時間なしで次の敵が補充されていた（上限を設けた意味が薄れていた）。
+  - 変更後の挙動: 上限に達している間は `lastSpawnTime` を現在時刻まで巻き戻すようにした。
+    これにより「枠が空いた時点（`maxAlive` から減った時点）」を起点に、
+    `spawn.interval`（× 難易度の `spawnRate`）が経過してから出現する。
+  - 実装: `aliveLimitOk`（同時存在数の判定）が false のときに `lastSpawnTime = now` を代入する3行のみ。
+    既存の `lastSpawnTime` を流用しているため、ポーズ中の時間同期（`lastSpawnTime += deltaMs`）と、
+    フェーズ切替時・ゲーム開始時のリセットはそのまま正しく働く。
+  - 影響範囲:
+    - 通常出現（`enemies.length`）と迎撃モード（`enemyBullets.length`）の両方に効く。
+    - `immediateOnClear`（全滅時は即座に出現）の挙動は変更なし。
+      本変更が影響するのは「画面が空になったとき」ではないため、maxAlive 溜まり状態とは干渉しない。
+    - DEV overrides の `spawn.maxAlive` で上限を動的に上げた場合も、1間隔待ってから出現する。
+  - 補足: `spawn.limit`（出現総数）によるブロックではタイマーを巻き戻さない（そもそも再出現しないため）。
+
+---
+
+## [1.0.63] - 2026-09-30
+
+### Changed
+- **RING（リング）の出現比率を全14テーブルで削減**
+  - 影響箇所: `js/enemyModeConfig.js` の
+    HEAVY系7（`ENEMY_TIER_BALANCED` / `ENEMY_TIER_ENGLISH_HEAVY` / `ENEMY_TIER_SYMBOL_HEAVY` /
+    `ENEMY_TIER_ONOMATOPOEIA_HEAVY` / `ENEMY_TIER_PUNCTUATION_HEAVY` / `ENEMY_TIER_SOKUON_HEAVY` /
+    `ENEMY_TIER_PROVERB_HEAVY`）＋ ONLY系7。
+  - 背景: RING は `hitCount: 2`（1体につき2入力）のため、出現割合が高いと**実効的な湧き速度が低下**し、
+    湧いた敵を捌ききれないため、難易度が跳ね上がっていた。
+    特に HEAVY系の T8 が約61%、ONLY系の T8 が約52% と突出していた。
+  - 対応方針:
+    1. RING は各階層1枠に集約し、連続湧きを防止
+    2. 減らした weight は STRIPE（速度1.2倍・入力は1回のまま＝湧き速度を維持）か 無地LARGE へ転用
+    3. 目標RING比率: T4 15% / T5 10% / T6 20% / T7 25% / T8 30% / T9 30% / T10 35%
+  - 主な変更（T8 / T10 の例）:
+    - HEAVY系 T8: 約61% → 約27%
+    - HEAVY系 T10: 約55% → 約32%
+    - `ENEMY_TIER_SOKUON_HEAVY` の T4: 約50%（突出） → 約14%
+    - ONLY系 T8: 約52% → 約24%
+    - ONLY系 T10: 約42% → 約23%
+  - 設計の根拠はコード内のコメント（「RING（リング）出現率の設計方針」）に記載。
+  - 重みは `pickWeightedEntry()` が合計で正規化する相対抽選のため、weight 合計が 100 を超えていても
+    挙動は weight 比のまま。
+  - 注意: クエストステージは `enemyTable` を localStorage（`QuestStages_Cache_v5`）に保存済みのため、
+    保存済みステージには旧構成が残る。フリーモードと新規生成ステージには新構成が反映される。
+- **固定砲台の hitCount を Tier ごとの割合で抽選できるようにした**
+  - 影響箇所:
+    - `js/enemy.js` … `FIXED_TURRET_TIER_CONFIG` に `hitCountRatio`（0〜1）を追加。
+      `createFixedTurretType()` がその値を type へ通す。
+    - `js/enemySpawner.js` … `spawnEnemy()` で固定砲台のみ `Math.random()` を引いて
+      `enemy.hitCount` を上書き（1〜hitCount の範囲に収める安全ガード付き）。
+    - `js/main.js` … フリーモード【砲台制圧戦】の仕様表示に
+      `formatFixedTurretHitCountText()` を追加し、「2回(60%) / 1回(40%)」のように内訳を表示。
+  - `hitCountRatio` の意味: **「その Tier の砲台が `hitCount` 回入力になる確率」**（0.6 なら 6割が2入力）。
+    未指定（`undefined`）の Tier は従来どおり 100% で `hitCount` を使う。
+  - 採用値: T3〜T6 = `0`（1入力固定） / T7 = `0.3`（2入力が解禁される最初のTier、7割は1入力） /
+    T8 = `0.5` / T9 = `0.55` / T10 = `0.6`。
+  - 補足: `hitCount: 1` の Tier に比率を書いても `Math.max(1, hitCount-1)` = 1 となるため
+    実効は1入力固定。T7 で `hitCount` を 1→2 に上げたことで、初めて2入力が実際に混ざる。
+  - 挙動: 画面上の「×2」バッジは `enemy.hitCount > 1` で個体ごとに判定されるため、
+    1入力の砲台には出ず、2入力の砲台にだけ出る。`onWordComplete()` は `hitCount--` のみ行うため
+    追加対応は不要。弾（`BulletEnemy`）は `hitCount: 1` 固定なので影響なし。
+  - 撃破スコアは hitCount に比例配分せず据え置き。1入力の砲台が得点効率では有利になるが、
+    実装の単純さと「運良く1入力で倒せたときの達成感」を優先した意図的な設計。
+  - 単一ソースの原則を維持: 表示値は `FIXED_TURRET_TIER_CONFIG` を直接参照し、ミラー表は設けていない。
+- **アプリケーションバージョンを `1.0.63` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.63` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.63` に更新。
+
+---
+
+## [1.0.62] - 2026-09-30
+
+### Changed
+- **単色（ONLY）敵テーブルの全7色統一**
+  - 影響箇所: `js/enemyModeConfig.js` の
+    `ENEMY_TIER_GRAY_ONLY` / `ENEMY_TIER_PURPLE_ONLY` / `ENEMY_TIER_YELLOW_ONLY` /
+    `ENEMY_TIER_BLUE_ONLY` / `ENEMY_TIER_PINK_ONLY` / `ENEMY_TIER_GREEN_ONLY` / `ENEMY_TIER_RED_ONLY`。
+  - 背景: 従来は `ENEMY_TIER_RED_ONLY` だけが「T1〜T4=SMALL主体 → T5でLARGE登場 → T9〜T10=LARGE主体+装飾」
+    という10階層の骨格を持っていたが、ほかの6色は 1〜3 エントリ固定で、T5以降も SMALL/NORMAL が主力だった。
+    色を選ぶと敵の構成の厚みが大きく変わっていたため、7色すべてを同じ骨格に揃えた。
+  - 並び替え規則（3階層）を7色すべてに適用:
+    1. `size`    : LARGE → NORMAL → SMALL
+    2. `pattern` : 無地 → STRIPE → RING
+    3. `shape`   : CIRCLE → SQUARE → PINWHEEL
+  - 色は主shapeで差別化し、見た目にも違いが出るよう調整した:
+    GRAY / PURPLE / YELLOW / RED は CIRCLE 主体、PINK / GREEN は SQUARE 主体、BLUE は PINWHEEL 主体。
+  - `ENEMY_TIER_YELLOW_ONLY` は「ことわざ＝短い語彙がない」ため SMALL タイプが存在しない
+    （`enemySpawner.js` / `enemy.js` で `YELLOW_*_SMALL*` は NORMAL へ強制変換される）。
+    従来 T1 が `YELLOW_CIRCLE_SMALL` のみで実質 NORMAL の二重指定になっていたため、
+    Yellow だけ NORMAL を最小サイズとして扱う形に修正。
+  - 重みは `pickWeightedEntry()` が合計で正規化する相対抽選のため、各階層の weight 合計は 100 を超えていても
+    挙動は weight 比のまま（並び替え・重み再設計による抽選結果の変化は意図したもの）。
+  - 変更なし: キーの名前、`description`（「のみ」を含むので `addFixedTurretEntriesToTable()` の
+    固定砲台除外条件はそのまま有効）、`index.html` の選択肢、`TIER_TABLES` の登録順。
+  - 注意: クエストステージは `enemyTable` を localStorage（`QuestStages_Cache_v5`）に保存済みのため、
+    保存済みステージには旧構成が残る。フリーモードと新規生成ステージには新構成が反映される。
+
+---
+
+## [1.0.61] - 2026-09-30
+
+### Changed
+- **被弾時のチェインの挙動を「0リセット」から「多めに減少」に変更**
+  - 従来は `markDamageTaken()` が `chainBurst()` を無条件に呼び、被弾するたびに
+    `chainCount` が即座に 0 になっていた（チェイン強制リセット）。
+  - これを撤回。ミス時と同じ「チェインバーを減算する」方式に統一し、
+    **減る量だけを `missPenalty`(500) より重い `damagePenalty`(2500) にして** 被弾を表現する。
+  - `chainCount` を直接触らないため、バーが 0 を割り込まない限りチェインは維持される。
+    0 を割り込んだ場合は従来通り `updateChainBar()` → `chainBurst()` で自然に破断する（ミスと同じ挙動）。
+  - 設定: `js/enemyModeConfig.js` の `ENEMY_MODE_CONFIG.chain.damagePenalty`（既定 `2500`）。
+  - 反映箇所: `js/enemyCore.js` の `markDamageTaken()` / `gameState.enemyStats` 初期化 / Dev Override 適用部。
+  - 変更なし: ミス時の処理（`inputCore.js` / `enemyCore.js`）、時間減衰による自然破断（`updateChainBar`）。
+- **DEV パネル（PARAM）に `Damage` 行を追加**
+  - `missPenalty` と同じ操作（値の投入 / 適用 / リセット、`Def/2500` 表示）で
+    `damagePenalty` を調整できるようにした。`dev/devTools.js` に
+    `setDamagePenalty` / `applyDamagePenalty` / `resetDamagePenalty` を追加。
+- **アプリケーションバージョンを `1.0.61` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.61` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.61` に更新。
+
+---
+
+## [1.0.60] - 2026-09-29
+
+### Added
+- **フリーモード（ENEMY）の Rule Settings に特殊ミッション4種を追加**
+  - 選択肢が「時間制限 / 討伐数指定 / エンドレス」から、
+    さらに「電撃戦 / 迎撃 / 砲台制圧戦 / 圧倒」の計7種に拡張。
+  - 実装: `index.html` の `data-pattern` と `.pattern-detail` パネル（`enemyParamBlitz` / `enemyParamIntercept` / `enemyParamTurret` / `enemyParamOverwhelm`）。
+  - ミッション構成はクエストの `generateStage()` case 2/3/4/7 と同一パラメータで、
+    `js/enemyModeConfig.js` の `buildFreeEnemyMissionConfig()` に集約（`INTERCEPT_TIER_SPEC` / `OVERWHELM_MAX_WORD_LENGTH` を再利用し、バランス値は二重管理にしない）。
+- **【迎撃】に使用文字種の選択を追加（英語 / 数字 / 記号 / すべて）**
+  - `freeInterceptCharType` の select を追加。文字プールは `enemy.js` の `getUnusedLetter()` に既にある4種をそのまま使う。
+  - `INTERCEPT_CHAR_TYPES` を単一ソースとして、select 選択肢・保存値の妥当性検証・説明表示で共有。
+  - `getInterceptTierSpec()` は `INTERCEPT_TIER_SPEC` 本体の参照を返すため、
+    `buildFreeEnemyMissionConfig()` 内で**必ずコピーを作って** `charType` を上書きする（直接書き換えるとクエスト等其他ゲームへ波及する）。
+- **【迎撃】【砲台制圧戦】に出現 Tier の実数値を説明欄に表示**
+  - 迎撃: 総弾数 / 1ウェーブ発数 / 同時存在上限 / 弾速 / ダメージ / 使用文字種。
+  - 砲台制圧戦: 入力回数 / 出題文字数 / 撃破スコア / レーザーと弾砲のダメージ・間隔・連射数・文字種。
+  - 固定砲台の専用定義は T3 以降のため、T1・T2 指定時は T3 として動作することを注記。
+  - ★砲台の表示値は `enemy.js` の `FIXED_TURRET_TIER_CONFIG` を直接参照する（単一ソース）。
+    そちらの値を編集すれば UI の説明欄も自動的に追従する。ミラー表は設けない。
+
+### Fixed
+- **フリーモードの特殊ミッションが「時間制限 Survive が少し違うだけの通常戦」になっていた不具合を修正**
+  - `js/enemyCore.js` のフリーモード分岐は、終了条件をゼロから再構築し `phaseConditions` を削除、
+    `spawn.limit` を強制 `null` にするため、ミッション固有の設定が一切 `stage` へ引き継がれていなかった。
+  - 3点を緩和:
+    1. `custom.phaseConditions` があれば復元（クリア判定は phaseCond 優先のため、電撃戦・迎撃ではこれが無いと発火しない）
+    2. `endConditions` / `clearConditions` の再構築に `chainCount` / `survive` / `allBulletsResolved` を通す
+    3. `spawn.limit` を `custom.spawn?.limit ?? null` に変更（迎撃の総弾数が進行そのもの）
+  - 加えて `FREE_MISSION_STAGE_KEYS` で `interceptMode` / `interceptSpec` / `berserk` / `saturation` / `turretMode` / `maxWordLength` / `enemySpeedMultiplier` / `missionName` を `stage` に引き継ぐ。
+  - 結果として迎撃は「全弾処理完了」でクリア可能になり、電撃戦はチェイン達成、砲台制圧戦・圧倒は生存クリアが効く。
+- **Rule Settings の保存先が誤検出する問題を修正**
+  - `#configEnemy` 内の GAME START ボタンも `pattern-btn active` を持つため、
+    保存時のセレクタを `#configEnemy .pattern-selector .pattern-btn.active` に絞った。
+
+### Changed
+- アプリケーションバージョンを `1.0.60` に更新
+  - `js/version.js` の `APP_VERSION` を `1.0.60` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.60` に更新。
+
+---
+
+## [1.0.59] - 2026-09-28
+
+### Changed
+- **【迎撃】を各ブロックの先頭ステージ（STAGE1 / 11 / 21 / 31 / 41 ...）に配置しないように変更**
+  - 既定では序盤3枠（下一桁 1〜3）を `[0:撃破, 1:生存, 2:迎撃]` のシャッフルで埋めており、
+    ブロック先頭に迎撃が来る可能性があったため。
+  - `initGeneratedStages()` で先頭が迎撃だった場合のみ 2〜3番目と入れ替える（それ以外は従来どおりのランダム配置）。
+  - `generateStage()` のパターン自動決定（`explicitPattern` なし時）も、
+    下一桁が 1 のときは `[0, 1]` からだけ選ぶよう修正して不変条件を生成側に固定。
+- **【迎撃】弾の色を速度別に変えた（色相は固定・明度/彩度のみ）**
+  - `INTERCEPT_TIER_SPEC` の `variance` により同じウェーブでも弾速がばらつくため、
+    速度に合わせて「遅い弾＝深い青 `#00b8f5` / 標準＝従来色 `#5cd6ff` / 速い弾＝明るいシアン `#b8edff`」
+    を3点で補間して設定するようにした。
+  - 3色とも色相約195°で揃えているため、背景や敵との配色バランスは崩れない。
+  - `getInterceptBulletColor()` を `enemyModeConfig.js` に追加（スポーン側・描画側の単一ソース）。
+  - ワープ出現演出（`drawInterceptWarpEffect`）の光輪・収束リング・中心閃光も
+    弾の速度色に合わせて着色し、出現直後から速さが色で見えるようにした。
+  - 入力対象（ロック／候補）になった弾のオレンジ化は従来どおり（他ミッションと共有のため変更なし）。
+- **クエストステージキャッシュキーを `QuestStages_Cache_v4` → `QuestStages_Cache_v5` に変更**
+  - 保存済みステージを新配置で再生成するため。
+  - 参照箇所: `enemyModeConfig.js` / `questProgress.js`（`resetQuestAll`）/ `saveFile.js`（allowlist・JSON化対象・読取・書出・コメント）/ `dev/saveFileTest.js`
+- **アプリケーションバージョンを `1.0.59` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.59` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.59` に更新。
+
+---
+
+## [1.0.55] - 2026-09-28
+
+### Fixed
+- **【迎撃】の左上パネル（OBJECTIVE / CLEAR / 迎撃率リング）が描画されない不具合を修正**
+  - タイマー開始条件が「通常敵が画面に入った時」のみで、敵を一体も使わない迎撃では永久に開始されず、
+    `renderEndCondition` が `if (!startTime) return;` で全描画をスキップしていた。
+  - 弾が画面に入った時点でタイマーを開始するよう修正（通常モードの挙動は不変）。
+- **【迎撃】で結果の統計がすべて 0 だった不具合を修正**
+  - `gScore`: 弾の撃ち落としがスコアを加算していなかった（`if (!isItem && !isBullet)` の内側だったため）
+  - `kills` / `defeatedCount`: 同様に弾が加算対象になっていなかった
+  - `correctCount` / `mistakeCount` / `accuracy`: 入力統計は元から動作。KPMのみ無効化。
+
+### Added
+- **【迎撃】弾1発あたりのスコアを T1〜T10 で設定可能に**
+  - `INTERCEPT_TIER_SPEC` に `score` を追加（T1: 30 → T10: 90）
+  - チェイン倍率が乗る。通常の敵と同様の方式
+
+### Changed
+- **【迎撃】では KPM を評価軸にしない**
+  - `gKpm` / `skillScore` / `rank` を無効化（`rank` は `-`）
+  - スコア計算の速度ボーナスも加算しない
+  - クエスト記録への `kpm` 登録を行わない（`hasKpm: false`）
+  - 結果画面の KPM 欄は「迎撃率（撃ち落とし/総数）」に差し替え
+  - ※ `avgKpm` は `totalTyped / totalBattleTime` で算出されるため影響を受けない
+- **アプリケーションバージョンを `1.0.55` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.55` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.55` に更新。
+
+---
+
+## [1.0.54] - 2026-09-28
+
+### Added
+- **【迎撃】ミッションを新規追加（旧【殲滅】スロットを置き換え）**
+  - 敵は一体も出ず、空間からワープして現れる弾を撃ち落とすだけのミッション。
+  - 弾は homing 100%（必ずプレイヤーへ向かう）なので、回避はできない。「撃ち落とすか当たるか」の二択になる。
+  - 迎撃率（撃ち落とした弾 / 湧いた弾の総数）でスター評価する。★5 は迎撃率100%のみ。
+  - 迎撃率100%はフリーズ／回復スキルなどを使ってかなり頑張る必要がある。
+- **弾の速度ゆらぎ**（1ウェーブ内で「遅い弾」と「速い弾」が混在）
+- **迎撃率HUD**：円形リング内に百分比を表示（被弾するとリングが短くなる）
+- **弾の出現演出**：ワープ（収束リング＋光輪＋中心閃光）。演出中は移動しない
+- **迎撃用のHUD表示**：`SPAWNED 送出した数/総数`、`BULLET 画面上の残弾数`、`SHOT 撃ち落とし進捗`
+
+### Changed
+- ミッションパターン枠は従来どおり10種のまま（増減なし）。パターン2（【迎撃】）のみ差し替え
+- 迎撃の弾は既存の `enemyBullets` 配列をそのまま使い、`isObjective` で迎撃の弾だけを区別する
+- 弾の `BulletEnemy` は既定の `color` / `shape` を保持（描画で落ちないように）
+- クエストステージキャッシュキーを `QuestStages_Cache_v3` → `QuestStages_Cache_v4` に変更（保存済みステージを新構成で再生成）
+- `isTierPressureExempt` にパターン2（迎撃）を追加（出現間隔・同時存在数を独自設計）
+- **アプリケーションバージョンを `1.0.54` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.54` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.54` に更新。
+
+---
+
 ## [1.0.53] - 2026-09-26
 
 ### Changed

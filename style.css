@@ -4910,7 +4910,10 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 /* SCORE */
 #questSkillResult .score-row {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    /* 中央のスコアが太いほど左右の余白が減るため、両端は潰せる列にして
+       はみ出しを防ぐ。最低の余白は column-gap が保証する */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    column-gap: clamp(12px, 3%, 40px);
     align-items: baseline;
 }
 
@@ -4922,11 +4925,12 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 #questSkillResult .score-left {
     justify-content: flex-end;
-    margin-right: 6px;
 }
 
 #questSkillResult .score-right {
     justify-content: flex-start;
+    /* 中央のスコアと / RANK (eScore) の最低ア NEXT */
+    padding-left: 10px;
 }
 
 #questSkillResult .score-center {
@@ -4937,6 +4941,41 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
     font-size: 32px;
     font-weight: bold;
     color: #fff;
+    white-space: nowrap;
+}
+
+/* 桁数が増えるほど中央のスコアだけ縮め、右側の / RANK (eScore) と詰まらないようにする */
+#questSkillResult .score-value--small {
+    font-size: 26px;
+}
+
+#questSkillResult .score-value--tiny {
+    font-size: 20px;
+}
+
+/* 防衛戦結果：スコアと「/ RANK (eScore)」を横並びにする。
+   絶対配置（left:50% + margin-left:2.5em）で配置すると、スコアが 15,700 のように
+   桁数が増えたときにスコア本体へ重なってしまうため、通常フローのフレックスに変更 */
+#questSkillResult .score-value-container {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* 旧インライン指定（絶対配置）の無効化 */
+#questSkillResult .score-value-container .score-rank {
+    position: static;
+    transform: none;
+    left: auto;
+    top: auto;
+    margin-left: 0;
+    white-space: nowrap;
+}
+
+#questSkillResult .score-value-container .score-value {
+    white-space: nowrap;
 }
 
 #questSkillResult .score-base {
@@ -6666,6 +6705,17 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
     color:#fff;
     font-size:11px;
     border:1px solid #666;
+}
+
+/* 長文タグによるクリア条件補正の説明（プログラミング +50秒）
+   ツールチップ（幅260pxで折り返す）とイントロの両方で使うため中央寄せ */
+.skill-tag-note{
+    margin:0 0 8px;
+    width:100%;
+    color:#ffcf87;
+    font-size:11px;
+    line-height:1.5;
+    text-align:center;
 }
 
 

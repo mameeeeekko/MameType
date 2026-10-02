@@ -134,6 +134,15 @@ export const dev = {
         log("MissPenalty:", value);  
     },
 
+    setDamagePenalty(value) {
+        devOverride.chain = devOverride.chain || {};
+        devOverride.chain.damagePenalty = value;
+        const el = document.getElementById("viewDamagePenalty");
+        if (el) el.textContent = value;
+
+        log("DamagePenalty:", value);  
+    },
+
     setDecayRate(value) {
         devOverride.chain = devOverride.chain || {};
         devOverride.chain.decayRate = value;
@@ -387,6 +396,11 @@ export const dev = {
         if (!isNaN(v)) this.setMissPenalty(v);
     },
 
+    applyDamagePenalty() {
+        const v = Number(document.getElementById("damagePenaltyInput")?.value);
+        if (!isNaN(v)) this.setDamagePenalty(v);
+    },
+
     applyDecayRate() {
         const v = Number(document.getElementById("decayRateInput")?.value);
         if (!isNaN(v)) this.setDecayRate(v);
@@ -496,6 +510,15 @@ export const dev = {
         log("MissPenalty reset");
     },
 
+    resetDamagePenalty() {
+        if (devOverride.chain) delete devOverride.chain.damagePenalty;
+
+        const el = document.getElementById("viewDamagePenalty");
+        if (el) el.textContent = "";
+
+        log("DamagePenalty reset");
+    },
+
     resetDecayRate() {
         if (devOverride.chain) delete devOverride.chain.decayRate;
 
@@ -525,6 +548,7 @@ export const dev = {
             "viewGainOnType",
             "viewGainOnKill",
             "viewMissPenalty",
+            "viewDamagePenalty",
             "viewDecayRate",
             "viewKnockBackBonus",
 
@@ -960,6 +984,7 @@ function getDefaultValue() {
     setDef("viewDefGainOnKill", chain.gainOnKill);
     setDef("viewDefGainOnType", chain.gainOnType);
     setDef("viewDefMissPenalty", chain.missPenalty);
+    setDef("viewDefDamagePenalty", chain.damagePenalty);
 }
 
 

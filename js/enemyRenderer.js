@@ -13,6 +13,7 @@ import { images } from "./assetsLoader.js";
 import { defineShapePath } from "./shapeDefinitions.js";
 import { stageRect, STAGE_W, STAGE_H } from "./stageScale.js";
 import { getEnemyTextBox } from "./enemySpawner.js";
+import { INTERCEPT_WARP_DURATION } from "./enemyModeConfig.js";
 
 // テキストが英数字・記号のみ（英語問題）か判定
 const isEnglish = (str) => /^[a-zA-Z0-9\s.,!?-]+$/.test(str);
@@ -52,6 +53,37 @@ function adjustColor(hex, amount) {
     b = Math.max(0, Math.min(255, b));
 
     return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * 色に透明度（alpha）を付けて rgba() 文字列に変換する。
+ * 入力は #rgb / #rrggbb（adjustColor の戻り値である rgb() 形式にも対応）。
+ * 解釈できない場合は color をそのまま返す（描画側で落ちないことを優先）。
+ */
+function withAlpha(color, alpha) {
+    if (typeof color !== "string") return color;
+
+    if (color.startsWith("#")) {
+        let col = color.slice(1);
+        if (col.length === 3) col = col.split("").map(v => v + v).join("");
+        if (col.length === 6) {
+            const num = Number.parseInt(col, 16);
+            if (Number.isFinite(num)) {
+                return `rgba(${(num >> 16) & 0xff}, ${(num >> 8) & 0xff}, ${num & 0xff}, ${alpha})`;
+            }
+        }
+        return color;
+    }
+
+    // adjustColor() の戻り値 "rgb(r, g, b)" にも対応する
+    const m = color.match(/^rgba?\(([^)]+)\)$/);
+    if (m) {
+        const parts = m[1].split(",").map(v => Number(v.trim()));
+        if (parts.length >= 3 && parts.slice(0, 3).every(Number.isFinite)) {
+            return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+        }
+    }
+    return color;
 }
 
 const bgCache = new Map();
@@ -381,6 +413,118 @@ export function renderActiveAttackUI(ctx, player, enemies, lockedTarget, candida
     });
 }
 
+// ===========================================================
+// 【迎撃】Interception Rate の円形バー
+// ------------------------------------------------------------
+// 撃ち落とした弾の割合を、百分比を囲むリングで表す。
+// ・背景リング（未被弾の余り）
+// ・迎撃率アーク（12時起点・時計回り）
+// ・リング内に百分比
+// ===========================================================
+function drawInterceptRateRing(ctx, cx, cy, r, rate) {
+
+    ctx.save();
+
+    // 背景リング
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    // 迎撃率アーク
+    const color =
+        rate >= 0.95 ? "#4caf50" :
+        rate >= 0.85 ? "#fadb14" :
+        rate >= 0.70 ? "#ff9f43" :
+        "#ff6b6b";
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * rate);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    // リング内の百分比
+    ctx.font = "bold 15px 'Noto Sans Mono', monospace";
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`${Math.round(rate * 100)}%`, cx, cy + 1);
+
+    ctx.restore();
+}
+
+// ===========================================================
+// 【迎撃】ワープ出現演出
+// ------------------------------------------------------------
+// 弾は敵から発射されないので、空間からワープして現れる。
+// ・収束するリング + 拡大する光輪 + 中心の閃光で「空間に現れた」感じを出す
+// ・warpTimer が減るにつれてリングが締まってきている（完了間は敵 update 側で移動を止める）
+// ===========================================================
+function drawInterceptWarpEffect(ctx, enemy) {
+
+    const total = INTERCEPT_WARP_DURATION;
+    if (!total || total <= 0) return;
+
+    // 0（出現直後）→ 1（出現完了直前）へ進む進捗
+    const t = Math.max(0, Math.min(1, 1 - (enemy.warpTimer / total)));
+    const r = enemy.type?.size || enemy.radius || 10;
+
+    // ★弾の色（速度別）をそのまま演出にも使う。
+    //   遅い弾＝深い青 / 速い弾＝明るいシアン のまま出現演出が出るため、
+    //   ワープしている時点でも速さが色で見える。
+    const baseColor = enemy.type?.color || "#5cd6ff";
+    const haloColor = adjustColor(baseColor, 40);   // 光輪
+    const ringColor = adjustColor(baseColor, 60);   // 収束リング
+    const coreColor = adjustColor(baseColor, 90);   // 中心閃光
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // 外側に広がる光輪（出現とともに消えていく）
+    const haloR = r * (1 + t * 3.2);
+    const haloAlpha = (1 - t) * 0.35;
+    if (haloAlpha > 0) {
+        const grad = ctx.createRadialGradient(enemy.x, enemy.y, r * 0.5, enemy.x, enemy.y, haloR);
+        grad.addColorStop(0, withAlpha(haloColor, haloAlpha));
+        grad.addColorStop(1, withAlpha(haloColor, 0));
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, haloR, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 収束リング（外側から中心へ締まる）
+    const ringR = r * (2.6 - t * 1.4);
+    ctx.beginPath();
+    ctx.arc(enemy.x, enemy.y, ringR, 0, Math.PI * 2);
+    ctx.strokeStyle = withAlpha(ringColor, 0.25 + t * 0.6);
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // 中心の閃光（完了に向けて明るく）
+    const coreR = r * (0.35 + t * 0.65);
+    ctx.beginPath();
+    ctx.arc(enemy.x, enemy.y, coreR, 0, Math.PI * 2);
+    ctx.fillStyle = withAlpha(coreColor, 0.25 + t * 0.65);
+    ctx.fill();
+
+    // 出現完了の直前だけ快速增长するリング
+    if (t > 0.55) {
+        const q = (t - 0.55) / 0.45;
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, r * (1 + q * 2.2), 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - q) * 0.8})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
 function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, layer = "all"){
 
     // "text" レイヤー: 文字列（word＋ローマ字の2行）のみを描画する
@@ -447,6 +591,11 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, layer = "all"){
         enemy,
         hasHitCountBadge ? HIT_COUNT_BADGE_H + BADGE_GAP : 0
     );
+
+    // ★迎撃: ワープ出現演出（空間から現れてくるあいだだけ描く）
+    if (enemy.isBullet && enemy.warpTimer > 0) {
+        drawInterceptWarpEffect(ctx, enemy);
+    }
 
     // ★召喚マーク
     if (enemy.isSummoned) {
@@ -703,10 +852,19 @@ function drawItemLabel(ctx, enemy){
 
     if (!text) return;
 
-    const y =
+    let y =
         enemy.y +
         enemy.type.size +
         10;
+
+    const h = 14;
+
+    // 画面下端はみ出し防止ガード（常にアイテム情報が全て見えるようにする）
+    const canvasH = ctx.canvas?.clientHeight || ctx.canvas?.height || 900;
+    const bottomSafeMargin = 8;
+    if (y + h > canvasH - bottomSafeMargin) {
+        y = canvasH - bottomSafeMargin - h;
+    }
 
     ctx.save();
 
@@ -721,7 +879,6 @@ function drawItemLabel(ctx, enemy){
 
     const padX = 6;
     const w = textW + padX * 2;
-    const h = 14;
 
     const x =
         enemy.x - w / 2;
@@ -2299,10 +2456,13 @@ export function renderChainUI(gameState){
     }
     const chainGoal = gameState.stage?.clearConditions?.chainCount ??
         gameState.stage?.phaseConditions?.chainCount;
-    const chainProgress = Math.max(stats.chainCount ?? 0, stats.maxChainCount ?? 0);
+    // ★電撃戦は「チェインが切れたら 0 から組み直し」の仕様（enemyModeConfig.js case3）。
+    //   進捗表示も現在値(stats.chainCount)を使う。maxChainCount を使うと、
+    //   切れた後も最大値が残って 0 に戻らず、倍率表示と矛盾するため。
+    const chainProgress = stats.chainCount ?? 0;
     const chainDisplay = chainGoal != null
         ? `${chainProgress}/${chainGoal}`
-        : stats.chainCount;
+        : chainProgress;
     if (_chainLast.value !== chainDisplay) {
         _chainLast.value = chainDisplay;
         value.textContent = chainDisplay;
@@ -2797,6 +2957,16 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     if (end.allSpawnedDefeated) {
         lines.push({ label2: "Eliminate" });
     }
+
+    // =====================================================
+    // ★迎撃 OBJECTIVE: 撃ち落とした弾 / 全弾数 を出す。
+    // =====================================================
+    if (end.allBulletsResolved) {
+        const goal = stage.spawn?.limit ?? stats.interceptGoal ?? 0;
+        const killed = stats.interceptKilled ?? 0;
+
+        lines.push({ label: "BULLET", value: `${killed}/${goal}` });
+    }
     
     // クリア条件（進捗表示）
     if (clear.killCount != null) {
@@ -2809,8 +2979,27 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
         });
     }
 
+    // ★精密射撃など「ミス◯回で終了」型の攻略条件を KILL の直下に表示する。
+    //   表示: MISS: 現在のミス数/許容ミス数（分母は end.failOnMissCount＝
+    //   失敗判定 js/enemyCore.js の `mistakeCount >= failOnMissCount` と同じ値。
+    //   ミッション説明 buildEndText() の「◯回ミスすると終了」とも一致する）。
+    //   条件は `!= null` 判定なので、この設定が無い他ミッションの表示は変わらない。
+    if (end.failOnMissCount != null) {
+        const missLimit = end.failOnMissCount;
+        const currentMiss = stats.mistakeCount ?? 0;
+        const remainingMiss = Math.max(0, missLimit - currentMiss);
+        lines2.push({
+            label: "MISS",
+            value: `${currentMiss}/${missLimit}`,
+            // 残り1回以下（この1回で終了する状態）は警告の赤。
+            // 達成条件の緑（KILL等）とは意味が逆なので混同させない。
+            color: remainingMiss <= 1 ? "#ff6b6b" : undefined
+        });
+    }
+
     if (clear.chainCount != null) {
-        const current = Math.max(stats.chainCount ?? 0, stats.maxChainCount ?? 0);
+        // ★現在値表示（チェイン切れで 0 に戻る）。チェインバーと同じ表示に揃える。
+        const current = stats.chainCount ?? 0;
         const isMet = current >= clear.chainCount;
         lines2.push({
             label: "CHAIN",
@@ -2842,6 +3031,22 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
         lines2.push({
             label2: `生存`
         });
+    }
+
+    // =====================================================
+    // ★迎撃: 迎撃率の円形バー（CLEAR 欄は使わない）
+    // ------------------------------------------------------------
+    // 撃ち落とした弾の割合を、百分比を囲むリングで表す。
+    // ★分母は「迄今送出数」ではなく【全弾数】に固定する。
+    //   こうすることで、撃ち落とすたびにリングが確実に伸びていく。
+    //   被弾した弾は分子に入らないため、1発被弾ごとに最終的な率は下がる。
+    // =====================================================
+    let interceptRate = null;
+    if (end.allBulletsResolved) {
+        // 分母は【全弾数】。stage の spawn.limit を優先し、統計値にフォールバックする。
+        const goal = stage.spawn?.limit ?? stats.interceptGoal ?? 0;
+        const killed = stats.interceptKilled ?? 0;
+        interceptRate = goal > 0 ? Math.max(0, Math.min(1, killed / goal)) : 0;
     }
 
     // =========================
@@ -2920,6 +3125,12 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
         });
 
         y += lines.length * 26 + 20;
+    }
+
+    // ★迎撃: 迎撃率の円形バー（OBJECTIVE の直後・CLEAR の上に置く）
+    if (interceptRate != null) {
+        drawInterceptRateRing(ctx, x + 40, y + 34, 30, interceptRate);
+        y += 78;
     }
 
     // タイトル
@@ -3251,6 +3462,12 @@ export function renderActiveSkillUI(ctx, state, canvas, deltaTime = 1 / 60) {
     const cooldownMax = state.activeSkillCooldownMax ?? 1;
     const current = state.activeSkillCooldown ?? 0;
 
+    // ★純粋なる試練など、ステージ設定で禁止されている場合の判定。
+    //   アイコン自体は残し、禁止マークを重ねて
+    //   「装備はされているが、この試練では発動できない」ことを示す。
+    //   完全に非表示にするとバグに見えるため、表示は維持する。
+    const disabled = state.player?.disableActiveSkill === true;
+
     const stock = state.activeSkillStock ?? 0;
     const maxStock =
         state.player?.activeSkillStockMax ??
@@ -3258,16 +3475,19 @@ export function renderActiveSkillUI(ctx, state, canvas, deltaTime = 1 / 60) {
         1;
 
     // 次チャージ進行率
+    // ★禁止時は「動かない」ことを視覚的にするため進捗を常に0で固定する
     const rawRatio = 1 - current / cooldownMax;
-    const ratio = Number.isFinite(rawRatio)
-        ? Math.max(0, Math.min(1, rawRatio))
-        : 0;
+    const ratio = disabled
+        ? 0
+        : (Number.isFinite(rawRatio)
+            ? Math.max(0, Math.min(1, rawRatio))
+            : 0);
 
-    // 1個でもあれば使用可能
-    const ready = stock > 0;
+    // 1個でもあれば使用可能（禁止時は発光もグレイ表示も「使用不可」側へ寄せる）
+    const ready = !disabled && stock > 0;
 
     // 最大まで溜まってるか
-    const fullyCharged = stock >= maxStock && current <= 0;
+    const fullyCharged = !disabled && stock >= maxStock && current <= 0;
 
     ctx.save();
 
@@ -3300,10 +3520,20 @@ export function renderActiveSkillUI(ctx, state, canvas, deltaTime = 1 / 60) {
         ready
     );
 
+    // ★禁止時はアイコンの上に禁止マーク（赤リング＋斜線）を重ねる
+    if (disabled) {
+        drawSkillProhibitMark(
+            ctx,
+            x + size / 2,
+            y + size / 2,
+            size / 2 - 0.5
+        );
+    }
+
     ctx.restore();
 
-    // ストック数字
-    if (stock > 0) {
+    // ストック数字（禁止時は発動できないため敢えて出さない）
+    if (stock > 0 && !disabled) {
         drawSkillStockNumber(
             ctx,
             x + size - 2,
@@ -3313,12 +3543,46 @@ export function renderActiveSkillUI(ctx, state, canvas, deltaTime = 1 / 60) {
     }
 
     if (isMouseHoverRect(x, y, size, size)) {
-        drawSkillTooltip(ctx, skill, x, y + size + 8);
+        drawSkillTooltip(ctx, skill, x, y + size + 8, disabled);
     }
 
     // コンボで獲得したクールタイム短縮倍率のポップアップ
     // （スキルUI表示中＝装備中のみ描画される）
     drawCooldownSpeedPopup(ctx, canvas, deltaTime);
+}
+
+function drawSkillProhibitMark(ctx, x, y, r) {
+    ctx.save();
+
+    // アイコンを沈める暗幕（禁止中であることが最優先で伝わるようにする）
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(10, 14, 22, 0.72)";
+    ctx.fill();
+
+    // 赤リング
+    ctx.beginPath();
+    ctx.arc(x, y, r - 1, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 90, 90, 0.95)";
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // 左上→右下の斜線（黒アウトラインを先に描いて視認性を確保）
+    const d = (r - 1) * Math.SQRT1_2 * 1.05;
+    const drawSlash = (color, width) => {
+        ctx.beginPath();
+        ctx.moveTo(x - d, y - d);
+        ctx.lineTo(x + d, y + d);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.stroke();
+    };
+
+    drawSlash("rgba(0, 0, 0, 0.75)", 5.5);
+    drawSlash("rgba(255, 90, 90, 0.98)", 3);
+
+    ctx.restore();
 }
 
 function drawSkillIconCircle(ctx, skill, x, y, size, ready) {
@@ -3440,7 +3704,7 @@ function isMouseHoverRect(x, y, w, h) {
     );
 }
 
-function drawSkillTooltip(ctx, skill, x, y) {
+function drawSkillTooltip(ctx, skill, x, y, disabled = false) {
 
     const w = 180;
     const padding = 10;
@@ -3449,7 +3713,10 @@ function drawSkillTooltip(ctx, skill, x, y) {
 
     ctx.font = "12px 'M PLUS Rounded 1c', sans-serif";
 
+    // ★禁止時は説明文の前に警告行を出す（この試練では発動できない旨）
+    const banNote = disabled ? "この試練では使用できません" : "";
     const desc = skill.desc ?? "";
+
     const descWidth = w - padding * 2;
     const lineHeight = 16;
 
@@ -3472,8 +3739,8 @@ function drawSkillTooltip(ctx, skill, x, y) {
         lines.push(line);
     }
 
-    // 高さを自動計算
-    const h = 38 + lines.length * lineHeight;
+    // 高さを自動計算（警告行の有無で増減させる）
+    const h = 38 + lines.length * lineHeight + (banNote ? 18 : 0);
 
     roundRect(ctx, x, y, w, h, 10);
 
@@ -3491,15 +3758,24 @@ function drawSkillTooltip(ctx, skill, x, y) {
     ctx.fillStyle = "#e7f3ff";
     ctx.fillText(skill.name, x + padding, y + 8);
 
+    // 説明文の上に警告行（禁止時のみ）
+    if (banNote) {
+        ctx.font = "bold 12px 'M PLUS Rounded 1c', sans-serif";
+        ctx.fillStyle = "#ff7a7a";
+        ctx.fillText(banNote, x + padding, y + 30);
+    }
+
     // 説明
     ctx.font = "12px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "rgba(220,235,255,0.7)";
+
+    const descTop = banNote ? 48 : 30;
 
     lines.forEach((text, i) => {
         ctx.fillText(
             text,
             x + padding,
-            y + 30 + i * lineHeight
+            y + descTop + i * lineHeight
         );
     });
 

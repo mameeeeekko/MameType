@@ -103,6 +103,11 @@ export function showQuestResult(stats) { // Already exported, no change needed
         ? `<div style="font-size: 0.75em; color: #8b949e; margin-top: 6px; letter-spacing: 1px;">TOTAL MULTIPLIER: ×${stats.scoreBreakdown.totalMultiplier.toFixed(2)}</div>`
         : "";
 
+   // 桁数が増えるほど中央のスコアだけ縮小し、右側の「/ RANK (eScore)」と詰まらないようにする
+   const scoreText = stats.isInvalidRun ? "ー" : (stats.gScore ?? 0).toLocaleString();
+   const scoreSizeClass = scoreText.length >= 10 ? " score-value--tiny"
+                      : scoreText.length >= 8 ? " score-value--small" : "";
+
    const scoreBlock = `
         <div class="quest-skill-block">
             <div class="quest-skill-label2">SCORE</div>
@@ -117,8 +122,8 @@ export function showQuestResult(stats) { // Already exported, no change needed
             </div>
 
             <div class="score-center">
-                <span class="score-value">
-                    ${stats.isInvalidRun ? "ー" : (stats.gScore ?? 0).toLocaleString()}
+                <span class="score-value${scoreSizeClass}">
+                    ${scoreText}
                 </span>
                 ${multiplierText}
             </div>
@@ -176,10 +181,26 @@ export function showQuestResult(stats) { // Already exported, no change needed
                     <div class="value">${((stats.typingActiveTime)/1000).toFixed(2)}s</div>
                 </div>
 
-                <div class="quest-skill-stat">
-                    <div class="label">gKPM</div>
-                    <div class="value">${stats.gKpm.toFixed(2)}</div>
-                </div>
+                ${
+                    // ★迎撃モード: KPM は評価軸にしないため、迎撃率を表示する。
+                    //   分母は迄今送出数ではなく【全弾数】（interceptGoal）を使う。
+                    stats.hasKpm === false
+                        ? `<div class="quest-skill-stat">
+                            <div class="label">Interception</div>
+                            <div class="value">${
+                                (() => {
+                                    const goal = stats.interceptGoal ?? stats.interceptTotal ?? 0;
+                                    const killed = stats.interceptKilled ?? 0;
+                                    const rate = goal > 0 ? Math.round((killed / goal) * 100) : 0;
+                                    return `${killed}/${goal} (${rate}%)`;
+                                })()
+                            }</div>
+                        </div>`
+                        : `<div class="quest-skill-stat">
+                            <div class="label">gKPM</div>
+                            <div class="value">${stats.gKpm.toFixed(2)}</div>
+                        </div>`
+                }
 
                 <div class="quest-skill-stat">
                     <div class="label">MaxCombo</div>

@@ -11,7 +11,8 @@ import { initAudio, playEnemyKillSound, stopBGM, playBGM, ensureSound, spawnEnem
     renderLaserEffects, renderPlayerDamageEffects, spawnLaserEffect, spawnHitWave,
     renderPlayerNegateEffects,
     renderTurretLaserEffects, renderTurretDamageEffects, renderTurretGuardEffects} from "./effectManager.js";
-import { spawnEnemy, spawnItemEnemy } from "./enemySpawner.js";
+import { spawnEnemy, spawnItemEnemy, spawnInterceptWave } from "./enemySpawner.js";
+import { applyActiveFreezeToEnemy } from "./enemy.js";
 import { showEnemyResult } from "./enemyResult.js";
 import { showQuestResult, showEnemyEndIntro } from "./questResult.js";
 import { handleKey, resetCandidates, fullResetInput } from "./inputCore.js";
@@ -19,7 +20,7 @@ import { handleGlobalSoundToggle } from "./main.js";
 import { gameState, setGameActive, renderState, setLastWasEnemyMode, getSoundSettings, getSoundEnabled, resetGameState, setPaused, getPaused, getNow, getERank } from "./gameCore.js";
 import { GameModes, QUEST_MAP } from "./gameModes.js";
 import { addRankingEntry } from "./storage.js";
-import { ENEMY_MODE_CONFIG, STAGES, getTierDamageMultiplier, getTierFromEnemyTable } from "./enemyModeConfig.js";
+import { ENEMY_MODE_CONFIG, STAGES, getTierDamageMultiplier, getTierFromEnemyTable, isInterceptStage } from "./enemyModeConfig.js";
 import { addExp, scoreToExp, getPlayerStatsForEnemy, updateQuestStats,
     applySkillNodeEffect, hasReceivedStageReward, markStageRewardReceived,
     getEvolutionStage, getEquippedActiveSkills, getCooldownSpeed, addQuestActiveSkillUse, addQuestStageAttempt, getActiveSkillStockMax,
@@ -68,6 +69,23 @@ function resolveCurrentTierKey(stage, currentPhase) {
         ?? "T1";
 }
 
+/**
+ * フリーモード（ENEMY）で引き継ぐミッション固有ステージキー
+ * ------------------------------------------------------------
+ * customConditions から stage へそのまま写す必要がある設定。
+ * ここに無いキーはフリーモードでは一切反映されないため、追加時は必ず足すこと。
+ */
+const FREE_MISSION_STAGE_KEYS = [
+    "missionName",           // ミッション名（HUD・記録・spawner判定用）
+    "interceptMode",         // 迎撃: 通常敵の湧きを止め、弾のスポーンに切替える
+    "interceptSpec",         // 迎撃: Tier別の弾仕様（速度・発数・ダメージ・総弾数）
+    "berserk",               // 電撃戦: 残りHPが少ないほど敵が加速する
+    "saturation",            // 圧倒: 画面内の敵密度（飽和度）上限
+    "turretMode",            // 砲台制圧戦: 固定砲台主体
+    "maxWordLength",         // 圧倒: 出題文字数の上限
+    "enemySpeedMultiplier",  // 圧倒: 敵速度の倍率（低速化）
+];
+
 let loopId = null;
 let currentEnemyDifficulty = null;
 let forceNextEnemyFrame = false; // ★キー入力直後のフレーム間引きを防止するフラグ
@@ -98,7 +116,7 @@ let lastEnemyConfig = null; //もう一回ように
 
 let spawnedCount = 0;
 let spawnEventCount = 0;   // ★出現イベント番号（同時出現のタイミング判定用）
-let lastSpawnTime = 0;     // ★最後に敵を出した時間
+let lastSpawnTime = 0;     // ★出現タイマーの基準時刻（最後に敵を出した時間／maxAlive上限で塞がれている間は現在時刻まで巻き戻す）
 let lastItemSpawnTime = 0;
 let enemyStartTime = null;    // タイマー用
 let timerStarted = false;  // 敵が出てからタイマースタートさせるため
@@ -327,6 +345,39 @@ function chainBurst(){
     stats.chainActive = false;
 }
 
+/**
+ * 1文字対象の即時撃破時に、コンボとチェインバーを加算する。
+ * ------------------------------------------------------------
+ * 弾（迎撃）や1文字の敵は inputCore.handleKey を通らないため、
+ * onCorrectType / onTypingStart が通常行うコンボ加算が走らない。
+ * ここで同じ内容を実施して、コンボ表示・チェインバーが動くようにする。
+ */
+function addComboForOneCharTarget() {
+
+    const stats = gameState.enemyStats;
+    if (!stats) return;
+
+    // コンボ加算（inputCore.addCombo と同じ対象規則）
+    const comboTarget = stats.currentCombo != null ? stats : gameState;
+    comboTarget.currentCombo = (comboTarget.currentCombo || 0) + 1;
+    if (comboTarget.currentCombo > (comboTarget.maxCombo || 0)) {
+        comboTarget.maxCombo = comboTarget.currentCombo;
+    }
+
+    // 速度バー（KPM）への加算
+    gameState.speedCorrectChars = (gameState.speedCorrectChars || 0) + 1;
+
+    // チェインを起動し、打鍵量ぶんバーを伸ばす
+    if (!stats.chainActive) {
+        stats.chainActive = true;
+        stats.lastChainUpdate = getNow();
+    }
+    stats.chainBar += (stats.gainOnType ?? 0) * (stats.chainRate ?? 1);
+    if (stats.chainBar > stats.chainBarMax) {
+        stats.chainBar = stats.chainBarMax;
+    }
+}
+
 export function getChainMultiplier(chainCount) {
 
     const stats = gameState.enemyStats; 
@@ -374,6 +425,19 @@ export function killEnemy(enemy, state, options = {}) {
     const isBullet = enemy.isBullet === true;
 
     // =====================================================
+    // ★迎撃モード: 撃ち落とした弾を数える（迎撃率の分子）
+    //   迎撃の弾だけ isObjective が true なので、既存の弾には影響しない。
+    //   被弾して消えた弾はここに来ないため、迎撃率が下がる。
+    // =====================================================
+    if (isBullet && enemy.isObjective === true) {
+        stats.interceptKilled = (stats.interceptKilled ?? 0) + 1;
+        stats.phaseProcessedCount = (stats.phaseProcessedCount || 0) + 1;
+        // ★結果画面の「撃破数(kills)」にも数えるため defeatedCount に加算する。
+        //   通常敵は下の if (!isItem && !isBullet) 側で加算されるので二重計上にならない。
+        stats.defeatedCount = (stats.defeatedCount ?? 0) + 1;
+    }
+
+    // =====================================================
     // ✅ 通常・スキルキル（完全同一処理）
     // =====================================================
     if (!isItem && !isBullet) {
@@ -416,6 +480,24 @@ export function killEnemy(enemy, state, options = {}) {
         stats.gScore += gainedScore;
 
         spawnScorePopup(enemy.x, enemy.y, baseScore, multiplier);
+    }
+
+    // =====================================================
+    // ★迎撃モード: 撃ち落とした弾にも Tier別スコアを付ける
+    //   上のスコア処理は isBullet を含まないため、弾は 0 点だった。
+    //   迎撃の弾（isObjective === true）だけ、1発につき spec.score を加算する。
+    // =====================================================
+    if (isBullet && enemy.isObjective === true) {
+        const bulletScore = Number(enemy.type?.score) || 0;
+
+        if (bulletScore > 0) {
+            const multiplier = getChainMultiplier(stats.chainCount);
+            const gainedScore = Math.floor(bulletScore * multiplier);
+
+            stats.gScore += gainedScore;
+
+            spawnScorePopup(enemy.x, enemy.y, bulletScore, multiplier);
+        }
     }
 
     // =========================
@@ -530,6 +612,12 @@ function gameLoop(timestamp) {
       !isPureEnemyMode &&
       (gameState.isFreeMode !== true || gameState.freeSkillEnabled === true);
 
+    // ★ステージ設定（純粋なる試練など）でアクティブスキルが禁止されている場合。
+    //   アイコン自体は「使用できない」ことを明示するため描画し続けるが、
+    //   チャージ（クールダウン）／進捗リング／倍率ポップアップは一切動かさない。
+    const activeSkillDisabled =
+      gameState.player?.disableActiveSkill === true;
+
     // プレイヤー無敵タイマーの減算
     if (gameState.player && gameState.player.invincibleTimer > 0) {
         gameState.player.invincibleTimer = Math.max(0, gameState.player.invincibleTimer - deltaTime);
@@ -543,6 +631,17 @@ function gameLoop(timestamp) {
         gameState.invincibleSoundPlaying = false;
     }
 
+    // グローバルフリーズタイマー更新（スキル・アイテム）
+    if (gameState.freezeTimer > 0) {
+        gameState.freezeTimer = Math.max(0, gameState.freezeTimer - deltaTime);
+        if (gameState.enemyStats) {
+            gameState.enemyStats.freezeTimer = gameState.freezeTimer;
+        }
+        if (gameState.freezeTimer === 0) {
+            gameState.freezeSource = null;
+        }
+    }
+
     // 復活スキル使用済みフラグのリセット
     if (gameState._reviveUsed && player.hp > 0) {
         player.lastDeathCause = null;
@@ -551,7 +650,8 @@ function gameLoop(timestamp) {
     // ===============================
     // Active Skill Charge Update
     // ===============================j
-    if (skillUiEnabled && !stats.isTransitioning) { // スキル有効かつフェーズ移行中ではない場合のみチャージ
+    // ★スキル有効・禁止されていない・フェーズ移行中ではない場合のみチャージ
+    if (skillUiEnabled && !activeSkillDisabled && !stats.isTransitioning) {
 
         if (gameState.activeSkillStock == null) {
             gameState.activeSkillStock = 0;
@@ -624,7 +724,9 @@ function gameLoop(timestamp) {
     // Combo update
     updateComboTierBar(
         gameState.enemyStats,
-        skillUiEnabled // ★スキル有効時のみクールタイム短縮ポップアップを有効化
+        // ★スキル有効時のみクールタイム短縮ポップアップを有効化
+        //   （禁止時はクールダウンが動かないためポップアップも出さない）
+        skillUiEnabled && !activeSkillDisabled
     );
 
     // UIセーフエリアを定期的に再計算（コンボバーの高さ変化に追従）
@@ -753,7 +855,13 @@ function gameLoop(timestamp) {
     if (!timerStarted) {
         const visibleEnemy = enemies.find(e => !e.isDead && isEnemyVisible(e));
 
-        if (visibleEnemy) {
+        // ★迎撃モード: 通常敵が湧かないため、弾が入ったらタイマーを開始する。
+        //   ここが false のままだと renderEndCondition が startTime を受け取れず、
+        //   左上パネル（OBJECTIVE / CLEAR / 迎撃率リング）が一切描画されない。
+        //   ※ 通常モードでは敵が出る方が早く、他モードの挙動には影響しない。
+        const visibleBullet = enemyBullets.find(b => b && !b.isDead);
+
+        if (visibleEnemy || visibleBullet) {
             enemyStartTime = now;
             timerStarted = true;
             gameState.enemyStats.startTime = now;
@@ -889,9 +997,22 @@ function gameLoop(timestamp) {
                     devOverride.spawn?.maxAlive ??
                     spawnCfg.maxAlive;
 
+                // ★迎撃モードでは通常敵が涌かないため、同時存在数の対象は弾になる。
+                const aliveCount = currentPhase.interceptMode
+                    ? enemyBullets.length
+                    : enemies.length;
+
                 const aliveLimitOk =
                     maxAlive == null ||
-                    enemies.length < maxAlive;
+                    aliveCount < maxAlive;
+
+                // ★maxAlive上限で出現が塞がれている間は、出現タイマーの基準時刻を現在時刻まで巻き戻す。
+                //   塞がれている間の経過時間はスポーン时机として消費されないため、そのままにしておくと
+                //   「枠が空いた瞬間（敵を倒した直後）」に待ち時間なしで補充されてしまう。
+                //   巻き戻すことで、枠が空いた時点から spawn.interval 経過後に出現する。
+                if (!aliveLimitOk) {
+                    lastSpawnTime = now;
+                }
 
                 if (spawnLimitOk && aliveLimitOk) {
 
@@ -908,46 +1029,74 @@ function gameLoop(timestamp) {
 
                     let spawnedThisRound = 0;
 
-                    for (let k = 0; k < spawnTarget; k++) {
+                    // =====================================================
+                    // ★迎撃モード: 敵は涌かず、飛んでくる弾だけを生成する
+                    // =====================================================
+                    if (currentPhase.interceptMode) {
 
-                        // 1体ずつ上限を再判定（同時出現で limit / maxAlive を超えないようにする）
-                        if (spawnCfg.limit != null && spawnedCount >= spawnCfg.limit) break;
-                        if (maxAlive != null && enemies.length >= maxAlive) break;
-
-                        const enemy = spawnEnemy(
+                        const made = spawnInterceptWave(
                             player,
-                            enemies,
-                            canvas,
+                            gameState,
                             currentPhase,
-                            diff
+                            spawnCfg,
+                            spawnedCount
                         );
 
-                        // 単語枯渇などで生成できなかった場合は、その回の同時出現を打ち切る
-                        if (!enemy || !enemy.word) break;
-
-                        enemy.originalWord = enemy.word;
-                        enemy.pos = 0;
-                        enemy.inputedRomaji = "";
-                        enemy.typed = "";
-                        enemy.baseRomaji = buildBaseRomaji(enemy.text,0);
-
-                        // フリーモード時はすべての敵をノルマ対象(isObjective)として扱う
-                        if (gameState.isFreeMode) {
-                            enemy.isObjective = true;
+                        if (made > 0) {
+                            spawnedCount += made;
+                            if (spawnCfg.limit != null) {
+                                gameState.enemyStats.remainingSpawn -= made;
+                            }
                         }
 
-                        enemies.push(enemy);
+                    } else {
 
-                        if (enemy.isObjective) {
-                            gameState.enemyStats.objectiveSpawned++;
+                        for (let k = 0; k < spawnTarget; k++) {
+
+                            // 1体ずつ上限を再判定（同時出現で limit / maxAlive を超えないようにする）
+                            if (spawnCfg.limit != null && spawnedCount >= spawnCfg.limit) break;
+                            if (maxAlive != null && enemies.length >= maxAlive) break;
+
+                            const enemy = spawnEnemy(
+                                player,
+                                enemies,
+                                gameState,
+                                canvas,
+                                currentPhase,
+                                diff
+                            );
+
+                            // 単語枯渇などで生成できなかった場合は、その回の同時出現を打ち切る
+                            if (!enemy || !enemy.word) break;
+
+                            enemy.originalWord = enemy.word;
+                            enemy.pos = 0;
+                            enemy.inputedRomaji = "";
+                            enemy.typed = "";
+                            enemy.baseRomaji = buildBaseRomaji(enemy.text,0);
+
+                            // フリーモード時はすべての敵をノルマ対象(isObjective)として扱う
+                            if (gameState.isFreeMode) {
+                                enemy.isObjective = true;
+                            }
+
+                            // フリーズ（スキル・アイテム）発動中の場合は出現直後に停止
+                            applyActiveFreezeToEnemy(enemy, gameState);
+
+                            enemies.push(enemy);
+
+                            if (enemy.isObjective) {
+                                gameState.enemyStats.objectiveSpawned++;
+                            }
+
+                            if (spawnCfg.limit != null) {
+                                gameState.enemyStats.remainingSpawn--;
+                            }
+
+                            spawnedCount++;
+                            spawnedThisRound++;
                         }
 
-                        if (spawnCfg.limit != null) {
-                            gameState.enemyStats.remainingSpawn--;
-                        }
-
-                        spawnedCount++;
-                        spawnedThisRound++;
                     }
 
                     // 1体以上出現した時だけ、出現時刻の更新とアイテム判定を行う（従来挙動を維持）
@@ -966,8 +1115,10 @@ function gameLoop(timestamp) {
                             if (now - lastItemSpawnTime >= itemInterval) {
 
                                 const itemTable = currentPhase.itemTable || stage.itemTable;
+                                // ★敵・弾の両方を重複判定対象にするため enemyBullets も渡す
                                 spawnItemEnemy({
                                     enemies,
+                                    enemyBullets,
                                     player,
                                     canvas
                                 }, itemConfig, itemTable);
@@ -992,6 +1143,9 @@ function gameLoop(timestamp) {
     let forceFail = false; //強制的にリザルトへ行く合図
     let phaseComplete = false;
     let isClear = false;
+    // ★迎撃モード専用: 全弾の処理が完了した瞬間にtrueになる。
+    //   このフラグでクリアを確定させる（clearConditions の総当り判定に任せない）。
+    let isInterceptResolved = false;
 
     // 飽和度超過は、saturation設定があるモードでタイマー開始後に判定する。
     if (timerStarted && updateSaturationState(stage, currentPhase, deltaTime)) {
@@ -1119,12 +1273,31 @@ function gameLoop(timestamp) {
         phaseCond.allSpawnedDefeated &&
         currentPhase.spawn.limit != null &&
         stats.phaseProcessedCount >= currentPhase.spawn.limit &&
-        enemies.filter(e => e.isObjective).length === 0 // ★目標敵が0体になったら
+        // ★目標敵が0体になったら
+        //   アイテムは ItemEnemy 側で isObjective=false だが、判定の意図が
+        //   分かるよう !isItem も明示して自己ガードする。
+        //   アイテムが1体残っていても、敵が全滅していればここで終了する。
+        enemies.filter(e => e && !e.isDead && e.isObjective && !e.isItem).length === 0
     ) {
         phaseComplete = true;
     }
     if (
-        // ★殲滅系で、目標撃破数が指定されていない場合
+        // ★迎撃モード: 弾を送り切ったうえで、画面上の弾が1つもなくなったらクリア。
+        //   弾は必ずプレイヤーに吸い込まれる（回避不可）なので、
+        //   「消えた」=「撃ち落とした」か「命中した」のどちらかになる。
+        phaseCond.allBulletsResolved === true &&
+        currentPhase.spawn.limit != null &&
+        stats.interceptTotal >= currentPhase.spawn.limit &&
+        enemyBullets.filter(b => b && !b.isDead).length === 0
+    ) {
+        phaseComplete = true;
+        // ★この瞬間にクリア済みフラグを立てる。
+        //   下の「生存系フォールバック」だけでは clearConditions.survive が
+        //   使われているため判定がぶれるので、専用フラグで確実にクリアさせる。
+        isInterceptResolved = true;
+    }
+    if (
+        // ★出現上限まで送り切った系で、個別目標が指定されていない場合
         phaseCond.killCount == null &&
         phaseCond.chainCount == null &&
         !phaseCond.allSpawnedDefeated &&
@@ -1154,8 +1327,20 @@ function gameLoop(timestamp) {
         isClear = true;
     }
 
+    // ■ 迎撃系: 弾を送り切って画面上から全て消えたらクリア
+    //   survive を使わないため、この判定で明示的に isClear を立てる。
+    if (clear.allBulletsResolved === true && isInterceptResolved) {
+        isClear = true;
+    }
+
     // ■ 生存系（エンドレス以外）
-    if (!gameState.enemyStats.failed && clear.killCount == null && !clear.endless) {
+    //   ※迎撃（allBulletsResolved）は上の専用判定で扱うため、ここでは除外する。
+    if (
+        !gameState.enemyStats.failed &&
+        clear.killCount == null &&
+        clear.allBulletsResolved !== true &&
+        !clear.endless
+    ) {
         // タイマー終了でクリア
         if (timerStarted && clear.timerMs != null && now - enemyStartTime >= clear.timerMs) {
             isClear = true;
@@ -1167,7 +1352,8 @@ function gameLoop(timestamp) {
             clear.chainCount == null &&
             currentPhase.spawn?.limit != null &&
             spawnedCount >= currentPhase.spawn.limit &&
-            enemies.length === 0
+            // ★上の全滅判定と条件を揃える（アイテムは終了判定に含めない）
+            enemies.filter(e => e && !e.isDead && !e.isItem).length === 0
         ) {
             isClear = true;
         }
@@ -1194,6 +1380,9 @@ function gameLoop(timestamp) {
             if (clear.killCount != null && stats.objectiveDefeated >= clear.killCount) isClear = true;
             if (!gameState.enemyStats.failed && clear.chainCount != null && stats.maxChainCount >= clear.chainCount) isClear = true;
             if (clear.survive && !gameState.enemyStats.failed) isClear = true;
+            // ★迎撃: 全弾処理が完了していればクリア。
+            //   HP0（被弾で死亡）していない限りクリア扱いになる。
+            if (clear.allBulletsResolved === true && isInterceptResolved && !gameState.enemyStats.failed) isClear = true;
             if (!isClear && clear.killCount == null && clear.chainCount == null && phaseComplete && isLastPhase) isClear = true;
 
             // 最終的な失敗判定 (endlessモードは失敗にならない)
@@ -1480,10 +1669,19 @@ export function handleEnemyKey(e) {
             // 1文字敵を即座に処理（撃破）
             e.preventDefault();
             const isKilled = closestOneChar.onWordComplete(player, gameState, enemies);
-            if (isKilled) killEnemy(closestOneChar, gameState);
-            
+            if (isKilled) {
+                // ★この経路は inputCore.handleKey を経由しないため、
+                //   inputCore.onCorrectType が通常行う処理（正解数・コンボ・速度）を
+                //   ここで代替する。ここを通さないと迎撃（弾）で
+                //   correctCount / accuracy / コンボが一切加算されない。
+                gameState.correctCount = (gameState.correctCount || 0) + 1;
+                addComboForOneCharTarget();
+
+                killEnemy(closestOneChar, gameState);
+            }
+
             // 入力バッファや候補は汚さずに終了
-            return; 
+            return;
         }
     }
 
@@ -1845,12 +2043,18 @@ export function handleEnemyKey(e) {
     // ★修正：単語完成時の即時撃破処理（候補更新後に移動）
     // =============================================================
     // 現在の候補の中から、入力バッファと完全に一致するものを探す
-    const completedEnemy = candidateEnemies.find(enemy => {
-        if (!enemy || enemy.isDead) return false;
-        const targetRoma = (enemy.baseRomaji || "").toLowerCase()
-            .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-").replaceAll("「", "[").replaceAll("」", "]").replaceAll("　", " ");
-        return targetRoma === typedBuffer;
-    });
+    // ★「アイスクリーム」と「アイスクリーム食べたい」のような包含関係では
+    //   完全一致するのは短い方だけになる。同一のローマ字を持つ敵が複数いても
+    //   配列順に依存しないよう、text が短い（短い問題）ものを優先して選ぶ。
+    const completedEnemy = candidateEnemies
+        .filter(enemy => {
+            if (!enemy || enemy.isDead) return false;
+            const targetRoma = (enemy.baseRomaji || "").toLowerCase()
+                .replaceAll("！", "!").replaceAll("？", "?").replaceAll("ー", "-").replaceAll("「", "[").replaceAll("」", "]").replaceAll("　", " ");
+            return targetRoma === typedBuffer;
+        })
+        // ★短い問題（text が短い）を優先。同じ長さなら元の配列順を維持（安定ソート）
+        .sort((a, b) => (a.text?.length ?? 0) - (b.text?.length ?? 0))[0];
 
     // 短い単語が完成した場合（例: 'neko'）、長い単語（'nekonoshippo'）も候補に残っていても、ここで短い方を優先して処理する
     if (completedEnemy) {
@@ -1875,7 +2079,10 @@ export function handleEnemyKey(e) {
         } else {
             // 複数ヒットでまだ生存している場合：
             candidateEnemies = []; // 他の候補はクリア
-            completedEnemy.typed = ""; // ★重要：複数ヒット敵自身の入力バッファもクリア
+            // ★重要：複数ヒット敵自身の入力状態もフルリセットする。
+            //   completedEnemy.typed = "" だけだと pos / inputedRomaji が
+            //   前の入力の残骸のまま残り、次の1打が必ずミスになる。
+            resetEnemyInput(completedEnemy);
             typedBuffer = "";      // グローバル入力バッファもクリア
         }
 
@@ -2088,14 +2295,29 @@ export async function startEnemyMode(config = {}) {
                 hpZero: true,
                 timerMs: custom.endConditions?.timerMs !== undefined ? custom.endConditions.timerMs : null,
                 killCount: custom.endConditions?.killCount !== undefined ? custom.endConditions.killCount : null,
-                failOnMiss: custom.endConditions?.failOnMiss === true
+                failOnMiss: custom.endConditions?.failOnMiss === true,
+                // ★迎撃（Rule Settings追加分）: 弾を送り切って全部処理したらクリア
+                allBulletsResolved: custom.endConditions?.allBulletsResolved === true
             };
 
             stage.clearConditions = {
                 timerMs: custom.clearConditions?.timerMs !== undefined ? custom.clearConditions.timerMs : null,
                 killCount: custom.clearConditions?.killCount !== undefined ? custom.clearConditions.clearCount : custom.clearConditions?.killCount ?? null,
-                endless: !!custom.clearConditions?.endless
+                endless: !!custom.clearConditions?.endless,
+                // ★Rule Settings追加分: 電撃戦=チェイン目標 / 砲台制圧戦・圧倒=生存 / 迎撃=全弾処理完了
+                //   判定側が `!= null` / `=== true` で見ており、null のままにして
+                //   「未設定」と区別できるようにしている
+                chainCount: custom.clearConditions?.chainCount ?? null,
+                survive: custom.clearConditions?.survive === true ? true : null,
+                allBulletsResolved: custom.clearConditions?.allBulletsResolved === true ? true : null
             };
+
+            // 3.5 フェーズ進行条件は削除する（多段ステージの残存を防ぐ）が、
+            //     Rule Settings の特殊ミッションで指定された場合は復元する。
+            //     ※クリア判定は phaseCond 優先のため、電撃戦・迎撃ではこれが無いと発火しない
+            if (custom.phaseConditions) {
+                stage.phaseConditions = { ...custom.phaseConditions };
+            }
 
             // 4. スポーン設定のマージ
             stage.spawn = {
@@ -2114,8 +2336,17 @@ export async function startEnemyMode(config = {}) {
                 stage.spawn.tier = custom.spawn.tier;
             }
 
+            // 4.5 ミッション固有設定をステージへ引き継ぐ
+            //     （迎撃の弾仕様・電撃戦の加速・圧倒の飽和度/低速化など）
+            for (const key of FREE_MISSION_STAGE_KEYS) {
+                if (custom[key] !== undefined) {
+                    stage[key] = custom[key];
+                }
+            }
+
             // 5. フリーモードでは、討伐目標の有無に関わらず出現数自体は制限せず無限に出現させる
-            stage.spawn.limit = null; 
+            //    ※迎撃だけは「送り切る弾の総数」が進行そのものなので custom の指定を尊重する
+            stage.spawn.limit = custom.spawn?.limit ?? null;
 
             console.log("FREE MODE: MODE APPLIED", {
                 mode: stage.clearConditions.endless ? "endless" : (stage.clearConditions.killCount ? "count" : "time"),
@@ -2261,6 +2492,9 @@ export async function startEnemyMode(config = {}) {
         ? freeSkillStockMax
         : (playerStats.activeSkillStockMax ?? 1);
 
+    gameState.freezeTimer = 0;
+    gameState.freezeSource = null;
+
     // ★ここで統計を初期化
     const diff = currentEnemyDifficulty;
 
@@ -2311,6 +2545,20 @@ export async function startEnemyMode(config = {}) {
         remainingSpawn: 0,
         totalSpawn: 0,
 
+        // ★迎撃モードの統計
+        //   interceptTotal : 迄今送出された弾の数
+        //   interceptKilled: 撃ち落とした弾の数（迎撃率の分子）
+        //   interceptGoal   : 全弾数（迎撃率の分母・＝ステージが湧かせる総数）
+        //   ★分母は interceptGoal（全弾数）を使い、撃ち落とすたびに率が確実に上がるようにする。
+        //     被弾した弾は分子に入らないため、1発被弾するたびに最終的な率は下がる。
+        interceptTotal: 0,
+        interceptKilled: 0,
+        interceptGoal: 0,
+
+        // ★KPMを評価軸にしないモード（迎撃）のフラグ。
+        //   結果集計で false のとき kpm を記録しない。
+        hasKpm: true,
+
         // 飽和度（saturation設定があるモードのみ使用する）
         saturation: null,
         saturationLimit: null,
@@ -2329,6 +2577,7 @@ export async function startEnemyMode(config = {}) {
         chainRate: playerStats.chainRate, //skill
         chainDecayRate: playerStats.chainDecayRate, //skill
         chainBonus: playerStats.chainBonus, //skill
+        damagePenalty: CHAIN_CONFIG.damagePenalty, //被弾ペナルティ（下でDev Override適用）
         knockbackBonus: playerStats.knockbackBonus ?? 1,
         
         // cooldown計算用
@@ -2356,7 +2605,12 @@ export async function startEnemyMode(config = {}) {
     gameState.freeSkillId = useFreeSkill ? freeSkillId : null;
     gameState.enemyStats.activeSkillId = activeSkillId ?? null;
 
-    gameState.activeSkillStock = 0;
+    // ★事前充填（パッシブ）：戦闘開始時からストックを所持した状態で開始する
+    const startStockCap = gameState.activeSkillStockMax ?? 1;
+    gameState.activeSkillStock = Math.min(
+        Math.max(0, Math.floor(playerStats.startActiveSkillStock || 0)),
+        startStockCap
+    );
 
     // ★クールダウン短縮倍率を設定
     if (useFreeSkill) {
@@ -2375,6 +2629,11 @@ export async function startEnemyMode(config = {}) {
     gameState.activeSkillCooldownMax = (activeSkill?.cooldown || 20);
 
     gameState.activeSkillCooldown = gameState.activeSkillCooldownMax;
+
+    // 開始時点で既に満タンなら、チャージ待ちに入らない
+    if (gameState.activeSkillStock >= startStockCap) {
+        gameState.activeSkillCooldown = 0;
+    }
 
     // 純粋なる試練モードでアクティブスキルが禁止されている場合
     if (player.disableActiveSkill) {
@@ -2456,6 +2715,9 @@ export async function startEnemyMode(config = {}) {
     gameState.enemyStats.missPenalty =
         devChain.missPenalty ?? CHAIN_CONFIG.missPenalty;
 
+    gameState.enemyStats.damagePenalty =
+        devChain.damagePenalty ?? CHAIN_CONFIG.damagePenalty;
+
     gameState.enemyStats.decayRate =
         devChain.decayRate ?? CHAIN_CONFIG.decayRate;
 
@@ -2514,6 +2776,12 @@ export async function startEnemyMode(config = {}) {
     const total = currentPhase?.spawn?.limit ?? stage.spawn?.limit ?? 0;
     gameState.enemyStats.totalSpawn = total;
     gameState.enemyStats.remainingSpawn = total;
+
+    // ★迎撃モード: 迎撃率の分母となる【全弾数】を確定させる。
+    //   HUD・結果画面・スター評価すべてがこの値を分母に用いる。
+    if (isInterceptStage(currentPhase) || isInterceptStage(stage)) {
+        gameState.enemyStats.interceptGoal = total;
+    }
 
     // ===============================
     // 初期ミッション表示設定 (Free Mode / Daily Mode / Quest Mode)
@@ -2617,10 +2885,27 @@ function onTypingStart(){
 
 //enemy.jsでフラグを使うため
 export function markDamageTaken() {
-    gameState.enemyStats.tookDamage = true;
-    // ★追加：チェイン強制リセット
-    chainBurst();
-    
+    const stats = gameState.enemyStats;
+
+    if (!stats) return;
+
+    stats.tookDamage = true;
+
+    // =============================================================
+    // ★被弾時のチェインペナルティ
+    // ------------------------------------------------------------
+    // 従来の chainBurst()（チェイン強制0リセット）は撤回。
+    // ミスと同じ「チェインバー減算」方式に統一し、
+    // 減る量だけを damagePenalty（missPenalty より重い）にして被弾を表現する。
+    // chainCount を直接触らないので、チェインは 0 にならない限り維持される。
+    // （バーが0を割り込んだ場合は(updateChainBar→chainBurst)、ミスと同じく自然に破断する）
+    // =============================================================
+    const penalty =
+        devOverride.chain?.damagePenalty ??
+        stats.damagePenalty ??
+        CHAIN_CONFIG.damagePenalty;
+
+    stats.chainBar -= penalty;
 }
 
 //enemy.jsで使うため
@@ -2658,6 +2943,8 @@ export async function endEnemyMode(isAbort = false) {
     //   （クエストの装備スキルがフリーモードへ漏れない＆モードをまたいだ誤認を防ぐ）
     gameState.freeSkillEnabled = false;
     gameState.freeSkillId = null;
+    gameState.freezeTimer = 0;
+    gameState.freezeSource = null;
     // 戦闘終了時に「一度だけ復活」フラグをリセットする
     gameState._reviveUsed = false;
 
@@ -2691,8 +2978,20 @@ export async function endEnemyMode(isAbort = false) {
     // ★生performance.now()ベースに統一（ポーズ中はループ側でstartTimeをずらすため、getNow()併用だと二重補正になる）
     stats.endTime = performance.now();
 
+    // ★迎撃モード: タイピング速度（KPM）は評価軸にしないため無効化する。
+    //   迎撃は「弾をどれだけ正確に撃ち落としたか（迎撃率）」で評価するため、
+    //   KPM ボーナス・ランク（skillScore）は意味を持たない。
+    const isInterceptRun = isInterceptStage(gameState.stage);
+    stats.hasKpm = !isInterceptRun;
+
+    // ★迎撃: 迎撃率の分母に使う【全弾数】を確定させる。
+    //   結果画面（questResult.js）から参照するため統計へ載せておく。
+    if (isInterceptRun) {
+        stats.interceptGoal = Number(gameState.stage?.spawn?.limit) || 0;
+    }
+
     const elapsedSec = Math.max(0.001, stats.typingActiveTime / 1000);
-    const gKpm = (stats.correctCount / elapsedSec) * 60;
+    const gKpm = isInterceptRun ? 0 : (stats.correctCount / elapsedSec) * 60;
     stats.gKpm = Math.round(gKpm);
 
     // gScoreの計算======================================
@@ -2712,7 +3011,8 @@ export async function endEnemyMode(isAbort = false) {
 
     // 各要素の「加算倍率（ボーナス分）」を算出
     const chainBonusInc = stats.maxChainCount / sc.chainDivisor;
-    const speedBonusInc = stats.gKpm / sc.speedDivisor;
+    // ★迎撃モードでは KPM 評価を行わないため，速度ボーナスも加算しない。
+    const speedBonusInc = isInterceptRun ? 0 : stats.gKpm / sc.speedDivisor;
     const diffBonusInc  = enemyDiff.scoreMultiplier - 1.0;
 
     //クリア、ノーミス、ノーダメのボーナス
@@ -2757,8 +3057,14 @@ export async function endEnemyMode(isAbort = false) {
     // =======================================================
 
     // タイピング技能ベースのランク判定 (eScore方式)
-    stats.skillScore = Math.round(stats.gKpm * Math.pow(accuracy, 3));
-    stats.rank = getERank(stats.skillScore);
+    // ★迎撃モードでは KPM を無効化しているため、ランクも算出しない。
+    if (isInterceptRun) {
+        stats.skillScore = 0;
+        stats.rank = "-";
+    } else {
+        stats.skillScore = Math.round(stats.gKpm * Math.pow(accuracy, 3));
+        stats.rank = getERank(stats.skillScore);
+    }
 
     // ループ停止
     enemyLoopActive = false;
@@ -2983,7 +3289,10 @@ export async function endEnemyMode(isAbort = false) {
             kills: stats.defeatedCount,
             typed: stats.correctCount,
             miss: stats.mistakeCount,
-            kpm: stats.gKpm,
+            // ★迎撃モードは KPM を無効化しているため、kpm を渡さない
+            //   （0 を渡すと最高KPMの更新判定に 0 が入り、記録が壊れる）。
+            //   avgKpm は totalTyped / totalBattleTime で算出されるため影響を受けない。
+            ...(stats.hasKpm === false ? {} : { kpm: stats.gKpm }),
             maxCombo: stats.maxCombo || 0,
             maxChain: stats.maxChainCount || 0,
             gScore: stats.gScore, // gScoreを追加

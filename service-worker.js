@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.53";
+const CACHE_NAME = "mametype-v1.0.72";
 
 // =====================================================
 // オフライン用キャッシュ（固定名）
@@ -218,6 +218,7 @@ const DYNAMIC_ASSETS = [
 
   "./assets/pic/skill/skillslot_1.png",
   "./assets/pic/skill/stock_1.png",
+  "./assets/pic/skill/stockstart_1.png",
 
   // ---------------------------------------------------
   // activeスキル画像

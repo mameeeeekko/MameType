@@ -2,6 +2,9 @@
 import { getDifficulty } from "./difficulties.js";
 import { QUEST_MAP } from "./questMap.js"; export { QUEST_MAP };
 
+// 出題タグの固定設定は target.js が単一ソース（循環参照回避のため依存ゼロ側に配置）
+export { ENGLISH_EXCLUDED_TAGS } from "./target.js";
+
 // 難易度==========================================
 function filterByDifficulty(targets, difficultyId) {
   const diff = getDifficulty(difficultyId);

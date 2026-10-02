@@ -144,6 +144,32 @@ export const STAR_EVALUATORS = {
   },
 
   // =========================
+  // =========================
+  // 迎撃モード：迎撃率ベース
+  // =========================
+  // interceptRate = 撃ち落とした弾 / 全弾数（ステージの湧く弾の総数）
+  // ★分母は迄今送出数ではなく全弾数に固定する。こうすることで撃ち落とすたびに
+  //   率が確実に上がり、最終的な評価（迎撃率100%）が「1発も漏らさない」ことに対応する。
+  //   被弾した弾は分子に入らないため、1発被弾ごとに最終的な率は下がる。
+  interceptRate: (stats, ctx, config) => {
+    if (stats.failed) return 0;
+
+    const goal = Number(ctx?.stage?.spawn?.limit) || 0;
+    const total = goal > 0 ? goal : (stats.interceptTotal ?? 0);
+    const killed = stats.interceptKilled ?? 0;
+    if (total === 0) return 1;
+
+    const rate = Math.max(0, Math.min(1, killed / total));
+
+    let stars = 0;
+    config.thresholds.forEach((t, i) => {
+      if (rate >= t) stars = i + 1;
+    });
+
+    return Math.max(stars, 1);
+  },
+
+  // =========================
   // 防衛モード：超過文字数ベース
   // =========================
   defenseSurplus: (stats, ctx, config) => {

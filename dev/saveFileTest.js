@@ -97,7 +97,7 @@ function fixtureEntries() {
       playerStats: { level: 2 },
       stars: { W1_Q1: 3 },
     }),
-    QuestStages_Cache_v3: JSON.stringify({ STAGE1: { missionName: "test" } }),
+    QuestStages_Cache_v5: JSON.stringify({ STAGE1: { missionName: "test" } }),
     difficulty_quest: "hard",
     typing_game_settings: JSON.stringify({ soundEnabled: true, dialogueSpeed: 3 }),
     typing_game_quality: "high",
@@ -307,7 +307,7 @@ async function run() {
       nullDestination.getItem("questProgress") === null &&
       nullDestination.getItem("questPlayerStats") === null &&
       nullDestination.getItem("quest_auto_save") === null &&
-      nullDestination.getItem("QuestStages_Cache_v3") === null &&
+      nullDestination.getItem("QuestStages_Cache_v5") === null &&
       nullDestination.getItem("typing_game_settings") === null &&
       nullDestination.getItem("keybinds") === null &&
       nullDestination.getItem("free_mode_config_v1") === null,
@@ -360,7 +360,7 @@ async function run() {
     "questStars",
     "quest_slots",
     "quest_auto_save",
-    "QuestStages_Cache_v3",
+    "QuestStages_Cache_v5",
     "difficulty_quest",
     "typing_game_settings",
     "typing_game_quality",

@@ -3290,7 +3290,7 @@ export function renderFreezeAura(
         ) * 0.2;
 
     const radius =
-        enemy.type.size + 10;
+        (enemy.type?.size ?? 15) + 10;
 
     ctx.save();
 
@@ -3762,11 +3762,14 @@ export function spawnItemSkillEffect(opts = {}) {
     const {
         category = "kill",
         source = "item",
-        level = "small"
+        level = "small",
+        skipSound = false
     } = opts;
 
     // sound
-    playEffectSound(category, level, source);
+    if (!skipSound) {
+        playEffectSound(category, level, source);
+    }
 
     // source別
     if (source === "skill") {

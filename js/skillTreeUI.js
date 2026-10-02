@@ -1,4 +1,4 @@
-import { SKILL_TREE, startSkillMode, getUnlockText, getChallengeText, getRequirementText, checkSkillRequirements } from "./skillTree.js";
+import { SKILL_TREE, startSkillMode, getUnlockText, getChallengeText, getRequirementText, checkSkillRequirements, getChallengeTagList, getChallengeTagNote } from "./skillTree.js";
 import { getSkillById, ACTIVE_SKILLS } from "./questSkills.js";
 import { applySkillNodeEffect, getPlayerStats } from "./questPlayerStats.js";
 import { closeQuestModal, openQuestMenuModal } from "./questMapUI.js";
@@ -21,7 +21,7 @@ const NODE_POS = {
     CHAIN_UP_1: { x: -80, y: 0 },
     CHAIN_UP_2: { x: -400, y: 0 },
     CHAIN_UP_3: { x: -480, y: 70 },
-    CHAIN_UP_4: { x: -720, y: -70 },
+    CHAIN_UP_4: { x: -640, y: 0 },
 
     CHAIN_DECAY_1: { x: -160, y: 0 },
     CHAIN_DECAY_2: { x: -320, y: 70 },
@@ -31,12 +31,15 @@ const NODE_POS = {
     GLASS_CHAIN_1: { x: -240, y: 0 },
     GLASS_CHAIN_2: { x: -240, y: 70 },
     GLASS_CHAIN_3: { x: -480, y: -70 },
-    GLASS_CHAIN_4: { x: -640, y: 0 },
+    GLASS_CHAIN_4: { x: -720, y: -70 },
 
     CHAIN_BONUS_1: { x: -240, y: -70 },
     CHAIN_BONUS_2: { x: -320, y: -70 },
     CHAIN_BONUS_3: { x: -560, y: -70 },
     CHAIN_BONUS_4: { x: -720, y: 0 },
+
+    // 戦闘開始時ストック（一番左端）
+    STOCK_START_1: { x: -880, y: 0 },
 
     // 右（防御回復系）
     HEAL_SMALL: { x: 80, y: 0 },
@@ -495,9 +498,11 @@ export function renderSkillTreeUI(container){
         const unlockText = getUnlockText(node.unlock);
         const challengeText = getChallengeText(node.challenge);
         const requirementText = getRequirementText(node.requirements);
-        const tagHtml = (node.challenge.tags || [])
+        // ★長文は開始時までタグが決まらないため、候補を全件表示する
+        const tagHtml = getChallengeTagList(node.challenge)
             .map(tag => `<span class="skill-tag">${tag}</span>`)
             .join("");
+        const tagNote = getChallengeTagNote(node.challenge);
 
         const skillCardHTML = `
             <div class="skill-item equipped" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px; border-radius: 6px; box-shadow: none; cursor: default; margin-bottom: 10px;">
@@ -541,6 +546,11 @@ export function renderSkillTreeUI(container){
                         ${tagHtml}
                     </div>
                 `
+                : ""
+            }
+
+            ${tagNote
+                ? `<div class="skill-tag-note">${tagNote}</div>`
                 : ""
             }
 
@@ -617,9 +627,11 @@ export function showSkillIntro(node, onStart, onCancel) {
 
   const unlockText = getUnlockText(node.unlock);
   const challengeText = getChallengeText(node.challenge);
-  const tagHtml = (node.challenge.tags || [])
+  // ★長文は開始時までタグが決まらないため、候補を全件表示する
+  const tagHtml = getChallengeTagList(node.challenge)
             .map(tag => `<span class="skill-tag">${tag}</span>`)
             .join("");
+  const tagNote = getChallengeTagNote(node.challenge);
 
   overlay.innerHTML = `
     <div class="stage-intro-box">
@@ -648,6 +660,11 @@ export function showSkillIntro(node, onStart, onCancel) {
                     ${tagHtml}
                 </div>
             `
+            : ""
+        }
+
+        ${tagNote
+            ? `<div class="skill-tag-note">${tagNote}</div>`
             : ""
         }
 

@@ -93,6 +93,7 @@ const remainingAssets = [
   { type: "img", name: "item_3", src: "./assets/pic/skill/item_3.png" },
   { type: "img", name: "skillslot_1", src: "./assets/pic/skill/skillslot_1.png" },
   { type: "img", name: "stock_1", src: "./assets/pic/skill/stock_1.png" },
+  { type: "img", name: "stockstart_1", src: "./assets/pic/skill/stockstart_1.png" },
   // activeスキル画像
   { type: "img", name: "guard_1", src: "./assets/pic/skill/guard_1.png" },
   { type: "img", name: "guard_2", src: "./assets/pic/skill/guard_2.png" },

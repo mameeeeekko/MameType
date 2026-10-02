@@ -183,6 +183,11 @@ function _renderQuestDefenseResult(stats) {
     const resultTitle = failed ? "MISSION FAILED" : "MISSION COMPLETE";
     const rank = getERank(skillScore);
 
+    // 桁数が増えるほどスコアだけ縮小し、右側の「/ RANK (eScore)」と詰まらないようにする
+    const scoreText = stats.isInvalidRun ? "ー" : (stats.gScore ?? 0).toLocaleString();
+    const scoreSizeClass = scoreText.length >= 10 ? " score-value--tiny"
+                       : scoreText.length >= 8 ? " score-value--small" : "";
+
     const starHTML = (!failed && stars > 0 && !stats.isInvalidRun) ? `
         <div class="quest-skill-stars">${[...Array(5)].map((_, i) => `<span>${i < stars ? "★" : "☆"}</span>`).join("")}</div>
     ` : "";
@@ -212,9 +217,9 @@ function _renderQuestDefenseResult(stats) {
 
             <div class="quest-skill-block" style="margin-bottom: 16px;">
                 <div class="quest-skill-label2">SCORE</div>
-                <div class="score-value-container" style="position: relative; text-align: center;">
-                    <span class="score-value">${stats.isInvalidRun ? "ー" : (stats.gScore ?? 0).toLocaleString()}</span>
-                    <span class="score-rank" style="position: absolute; left: 50%; top: 12px; transform: translateX(10px); white-space: nowrap; margin-left: 2.5em;">
+                <div class="score-value-container">
+                    <span class="score-value${scoreSizeClass}">${scoreText}</span>
+                    <span class="score-rank">
                         ${stats.isInvalidRun ? "" : ` / ${rank ?? "-"} <span style="font-size: 1.1em;">(${skillScore ?? 0})</span>`}</span>
                 </div>
             </div>
