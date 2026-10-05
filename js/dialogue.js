@@ -2516,16 +2516,32 @@ export async function startExtraEndingSequence(onCompleteCallback) {
     const { overlay, text } = createExtraEndingOverlay();
     await new Promise(r => setTimeout(r, 800));
 
-    // 「ここまで遊んでくれて、ありがとう。」
-    await showExtraEndingLine(text, "ここまで遊んでくれて、ありがとう。", 2800);
+    await showExtraEndingLine(text, "また会えましたね。", 2200);
     await new Promise(r => setTimeout(r, 900)); // 少し間
 
+    // 「ここまで遊んでくれて、ありがとう。」
+    await showExtraEndingLine(text, "ここまで遊んでくれて、ありがとう。", 2200);
+    await new Promise(r => setTimeout(r, 900)); // 少し間
+
+    await showExtraEndingLine(text, "……ふふ。", 2000);
+    await new Promise(r => setTimeout(r, 800)); // もう少し間  
+
     // 「ところで、」
-    await showExtraEndingLine(text, "ところで、", 2200);
-    await new Promise(r => setTimeout(r, 1800)); // もう少し間
+    await showExtraEndingLine(text, "ところで、", 2000);
+    await new Promise(r => setTimeout(r, 800)); // もう少し間
 
     // 「タイピング、前より上手くなった？」
-    await showExtraEndingLine(text, "タイピング、前より上手くなった？", 3200);
+    await showExtraEndingLine(text, "タイピング、ちょっとは上手くなった？", 2200);
+    await new Promise(r => setTimeout(r, 800)); // もう少し間
+
+    await showExtraEndingLine(text, "……", 1800);
+    await new Promise(r => setTimeout(r, 800)); // もう少し間    
+
+    await showExtraEndingLine(text, "それじゃあ、", 2000);
+    await new Promise(r => setTimeout(r, 800)); // もう少し間
+
+    await showExtraEndingLine(text, "また気が向いたら、遊びに来てくださいね。", 2200);
+
 
     // 3. そのまま暗転（台詞を消して、しばらく暗転を保持）
     await new Promise(r => setTimeout(r, 1400));
@@ -2533,7 +2549,7 @@ export async function startExtraEndingSequence(onCompleteCallback) {
     // 4. THE END を表示
     const theEnd = document.createElement('div');
     theEnd.className = 'extra-ending-the-end';
-    theEnd.textContent = 'THE END';
+    theEnd.textContent = 'KEEP TYPING!';
     overlay.appendChild(theEnd);
     requestAnimationFrame(() => { theEnd.classList.add('show'); });
 

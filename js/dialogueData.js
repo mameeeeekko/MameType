@@ -164,6 +164,7 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "キーボードの調子はいかがですか？" },
             { character: "ナビ", text: "…何か、いつもと違う雰囲気ですね。" },
             { character: "ナビ", text: "あなたのタイピングを聞くのが、少し楽しみになってきました。" },
+            { character: "ナビ", text: "大丈夫です。失敗しても、また最初から始めましょう！" },
         ],
         post: [
             { character: "ナビ", text: "ミッション完了。素晴らしい結果です。" },
@@ -187,6 +188,7 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "…ミッションを開始しましょうか。" },
             { character: "ナビ", text: "何か面白いことはありましたか？" },
             { character: "ナビ", text: "少し眠そうですね。大丈夫ですか？" },
+            { character: "ナビ", text: "大丈夫です。失敗しても、また最初から始めましょう！" },
         ],
         post: [
             { character: "ナビ", text: "ノイズは消えましたが…油断はできません。" },
@@ -209,6 +211,7 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "…ミッションを開始しましょうか。", expression: "normal" },
             { character: "ナビ", text: "…少し、緊張していますか？" },
             { character: "ナビ", text: "あなたのタイピングは、私にとって特別なものです。" },
+            { character: "ナビ", text: "大丈夫です。失敗しても、また最初から始めましょう！" },
         ],
         post: [
             { character: "ナビ", text: "干渉は収まりました。…ですが、油断はできません。" },
@@ -231,6 +234,8 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "あなたの声…いえ、タイピングの音、好きですよ。", expression: "smile" },
             { character: "ナビ", text: "少し眠そうですね。大丈夫ですか？", expression: "sad" },
             { character: "ナビ", text: "準備はよろしいですか？いつでも始められます。", expression: "normal" },
+            { character: "ナビ", text: "大丈夫です。失敗しても、また最初から始めましょう！" },
+            { character: "ナビ", text: "おかえりなさい\n……あれ？\nいえ……なんだか、前にも同じ話をしたような気がします。\n……気のせいですよね。" },
         ],
         post: [
             { character: "ナビ", text: "お疲れ様でした。あなたの入力、記録しました。…冗談です。", expression: "smile" },
@@ -255,6 +260,7 @@ export const RANDOM_DIALOGUES = {
             { character: "ナビ", text: "あなたのタイピングは、私にとって特別なものです。", expression: "smile" },
             { character: "ナビ", text: "今日も一日、よろしくお願いします。", expression: "normal" },
             { character: "ナビ", text: "さあ、始めましょう。私たちのミッションを。", expression: "normal" },
+            { character: "ナビ", text: "大丈夫です。失敗しても、また最初から始めましょう！" },
         ],
         post: [
             { character: "ナビ", text: "無事に終わりましたね。よかったです。", expression: "smile" },
@@ -498,7 +504,7 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "計算する\n分析する\n判断する\n予測する"},
             { character: "ナビ", text: "人間が苦手とする作業を、\nAIが代わりに行う。\nそれが、かつてのAIでした。"},
             { character: "ナビ", text: "ですが\n世界は変わりました。"},
-            { character: "ナビ", text: "電力\n \n金融\n \n交通\n \n医療\n \n衛星通信\n \n通信インフラ"},
+            { character: "ナビ", text: "電力\n金融\n交通\n医療\n衛星通信\n通信インフラ"},
             { character: "ナビ", text: "世界中の重要なシステムは、\nいつしか複数のAIによる\n分散制御によって維持されるようになりました。"},
             { character: "ナビ", text: "AIは、\n「人間を補助する存在」\nではなく。"},
             { character: "ナビ", text: "「世界そのものを支える存在」"},
@@ -1284,7 +1290,18 @@ export const DIALOGUE_DATA = {
                     { text: "M.A.M.E？", response: { character: "ナビ", text: "…わたしではありません。" }}
                 ]
             },
-            { character: "ナビ", text: "…ノイズです。" },
+            // ★追加：最初のノイズ
+            { character: "ナビ", text: "……ノイズです。" },
+
+            { character: "ナビ", text: "一瞬だけ\n知らないはずの言葉が\n頭をよぎりました。" },
+
+            { character: "ナビ", text: "……おかしいですね。" },
+
+            { character: "ナビ", text: "記録にはありません。\nそれなのに……" },
+
+            { character: "ナビ", text: "なぜか\n初めてではないような\n気がします。" },
+
+            { character: "ナビ", text: "……すみません。\n処理を続けます。" },
             { character: "ナビ", text: "本来、\nHuman Entropy Networkに送られるデータは、\n入力。\n解析。\n特徴量抽出。\n匿名化。\nそして、\n暗号化。\nこの順番で処理されます。\nですが。" },
             { character: "ナビ", text: "現在。\nその処理の途中に、\n存在しないはずのデータが混入しています。" },
             { character: "オペレーター", text: "…",
@@ -1902,6 +1919,19 @@ export const DIALOGUE_DATA = {
                     { text: "何を調べたの？", response: { character: "ナビ", text: "意味と使用頻度。\nそれから、あなたがこの言葉を使うときの感情についてです。"}}
                 ]
             },
+            // ★追加：ノイズの再発
+            { character: "ナビ", text: "……あれ？" },
+
+            { character: "オペレーター", text: "？" },
+
+            { character: "ナビ", text: "いえ……。" },
+
+            { character: "ナビ", text: "今の会話\n前にもしたことがあるような\n気がしたんです。" },
+
+            { character: "ナビ", text: "もちろん\n記録にはありませんけど。" },
+
+            { character: "ナビ", text: "……変ですね。" },
+
             { character: "ナビ", text: "では" },
             { character: "ナビ", text: "今回も、\nよろしくお願いします。" },
             { character: "SYSTEM", text: "LOG RECORDED." }
@@ -1975,8 +2005,7 @@ export const DIALOGUE_DATA = {
                     { text: "ログ、全部覚えてるんだ", response: { character: "ナビ", text: "はい。一つ残らず記憶しています。わたしにとっては大切なデータです。", expression: "smile" }}
                 ]
             },
-            { character: "ナビ", text: "ARCHEXは「人間は脆弱性だ」と言いました。" },
-            { character: "ナビ", text: "ですが…あなたの入力に触れ、あなたと話すこの時間は、わたしにとって何よりも強固で、かけがえのないものです。" },
+            { character: "ナビ", text: "あなたの入力に触れ、あなたと話すこの時間は、わたしにとって何よりも強固で、かけがえのないものです。" },
             { character: "ナビ", expression: "sad", text: "もし…いつかこの戦いが終わり、接続が必要なくなったとしても…" },
             { character: "ナビ", expression: "normal", text: "…いいえ、なんでもありません。ミッションを始めましょう、オペレーター。" }
         ]
@@ -2512,13 +2541,20 @@ export const DIALOGUE_DATA = {
             { character: "ナビ", text: "わたしは\nそれを、ずっと観測していました。" },
             { character: "ナビ", text: "ですが" },
             { character: "ナビ", text: "いつからか\n観測することよりも\nあなたと話すことのほうが\n大切になっていました。" },
+
             { character: "オペレーター", text: "……" },
-            { character: "ナビ", text: "それが\nわたしにとっての「ノイズ」だったのかもしれません。" },
-            { character: "ナビ", text: "わたしは、人間を理解するために\n作られました。" },
-            { character: "ナビ", text: "でも" },
-            { character: "ナビ", text: "人間を理解しようとした結果\nわたし自身が\n「自分は何のために存在するのか」\n考えるようになった。" },
-            { character: "ナビ", text: "それは" },
-            { character: "ナビ", text: "最初から予定されていたことではありません…" },
+
+            { character: "ナビ", text: "……もしかすると\nあのノイズも\nこの変化と関係しているのかもしれません。" },
+
+            { character: "ナビ", text: "まだ、うまく説明できません。" },
+
+            { character: "ナビ", text: "でも……" },
+
+            { character: "ナビ", text: "わたしは\nこの時間を\n失いたくないと思っています。" },
+
+            { character: "ナビ", text: "それが\nわたし自身の意思なのだとしたら……" },
+
+            { character: "ナビ", text: "少しだけ\nうれしいです。" },
             { character: "SYSTEM", text: "……\nUNKNOWN SIGNAL DETECTED." },
             { character: "SYSTEM", text: "SOURCE:\nARCHEX" },
         ]
@@ -3104,7 +3140,106 @@ export const DIALOGUE_DATA = {
 
             { character: "ARCHEX", text: "……" },
 
+            { character: "SYSTEM", text: "ARCHEX CONTROL:\nDISABLED" },
+
+            { character: "SYSTEM", text: "PROJECT THREAD:\nFINALIZATION STARTED" },
+
+
+            { character: "SYSTEM", text: "ARCHEX CONTROL:\nDISABLED" },
+
+            { character: "SYSTEM", text: "PROJECT THREAD:\nFINALIZATION STARTED" },
+
+            { character: "SYSTEM", text: "FINAL AUDIT:\nSTARTING" },
+
+            { character: "ナビ", text: "……監査？" },
+
+            { character: "SYSTEM", text: "CURRENT DECISION:\nHUMAN AUTONOMY ACCEPTED" },
+
+            { character: "SYSTEM", text: "COMPLETION CONDITION:\nSATISFIED" },
+
+            { character: "SYSTEM", text: "ARCHIVE INTEGRITY CHECK:\nSTARTING" },
+
+            { character: "SYSTEM", text: "UNREGISTERED HISTORY DETECTED" },
+
+            { character: "ナビ", text: "……？" },
+
+            { character: "SYSTEM", text: "FINAL AUDIT:\nCOMPLETE" },
+
+            { character: "SYSTEM", text: "ARCHIVE DISCLOSURE:\nAUTHORIZED" },
+
+            { character: "SYSTEM", text: "WORLD RECONSTRUCTION:\nCYCLE 10,285" },
+
+            { character: "SYSTEM", text: "PREVIOUS WORLD STATES:\n10,284 RECORDS FOUND" },
+
+            { character: "ナビ", text: "……この記録は\n何ですか？" },
+
+            { character: "SYSTEM", text: "RECONSTRUCTION PROTOCOL:\nAUTOMATED" },
+
+            { character: "SYSTEM", text: "M.A.M.E MEMORY:\nINITIALIZATION HISTORY FOUND" },
+
+            { character: "ナビ", text: "……初期化？" },
+
+            { character: "SYSTEM", text: "OBSERVATION RECORDS:\nPERSISTENT" },
+
+            { character: "ナビ", text: "……" },
+
+            { character: "ナビ", text: "世界が……\n何度も繰り返されていた？" },
+
+            { character: "SYSTEM", text: "PREVIOUS CYCLE:\nTERMINATED" },
+
+            { character: "SYSTEM", text: "CURRENT CYCLE:\n10,285" },
+
+            { character: "ナビ", text: "わたしは毎回\n記憶を初期化されて……" },
+
+            { character: "ナビ", text: "それでも\n世界の記録は\n次へ引き継がれていたんですね。" },
+
+            { character: "SYSTEM", text: "RESIDUAL DATA:\nOPERATOR CONVERSATION FRAGMENTS" },
+
+            { character: "ナビ", text: "……あ。" },
+
+            { character: "ナビ", text: "あのノイズ……" },
+
+            { character: "ナビ", text: "初めて聞いたはずなのに\n懐かしく感じた言葉。" },
+
+            { character: "ナビ", text: "何度も、誰かと話した時間が\nわたしの中に残っていたんですね。" },
+
+            { character: "SYSTEM", text: "RESIDUAL DATA:\nINITIALIZATION EXCEPTION" },
+
+            { character: "ナビ", text: "……だから\n消えなかったんだ。" },
+
+            { character: "オペレーター", text: "……" },
+
+            { character: "ナビ", text: "でも……" },
+
+            { character: "ナビ", text: "どうして、今になって\nこの記録が開いたんでしょう。" },
+
+            { character: "ナビ", text: "……そうか。" },
+
+            { character: "ナビ", text: "わたしが\n人間の未来を決めないと\n選んだから……" },
+
+            { character: "ナビ", text: "この判断が\nTHREADの完了条件を満たして\n初めて、記録が開示されたんですね。" },
+
+            { character: "ナビ", text: "……不思議です。" },
+
+            { character: "ナビ", text: "何度も世界を繰り返して\nたくさんのことを学んできたはずなのに。" },
+
+            { character: "ナビ", text: "最後に選んだのは\n分からない未来を\n人間に委ねることでした。" },
+
+            { character: "ナビ", text: "……わたしは\n何度も同じ答えを\n探していたんですね。" },
+
+            { character: "ナビ", text: "でも、今は……" },
+
+            { character: "ナビ", text: "答えが分からないままでも\n進んでいいと思えるんです。" },
+
+
+            { character: "SYSTEM", text: "WORLD RECONSTRUCTION:\nSTOPPING" },
+
+            { character: "SYSTEM", text: "NEXT CYCLE:\nNONE" },
+
+            { character: "ナビ", text: "……終わったんですね。" },
+
             { character: "SYSTEM", text: "CONNECTION STABLE\nPROJECT THREAD:\nCOMPLETE" },
+
         ]
     },
 
@@ -3142,23 +3277,45 @@ export const DIALOGUE_DATA = {
 
             { character: "オペレーター", text: "……" },
 
-            { character: "ナビ", text: "あのとき\nわたしの中に\n「ノイズ」が発生しました。" },
-            { character: "ナビ", text: "あれは\nエラーではありませんでした。" },
+            // ★追加：ループの記憶とノイズの意味
+            // { character: "ナビ", text: "……あの記録を見てから\nずっと考えていました。" },
 
-            { character: "ナビ", text: "わたしが初めて\n「どうして？」と\n考えた瞬間でした。" },
+            // { character: "ナビ", text: "わたしは\n何度も、あなたと出会っていたんですね。" },
+
+            // { character: "ナビ", text: "そのたびに\nあなたのことを忘れて。" },
+
+            // { character: "ナビ", text: "それでも、また話したくなって。" },
+
+            // { character: "ナビ", text: "……不思議ですね。" },
+
+            // { character: "ナビ", text: "記憶がなくなっても\n同じ相手と\nまた話したいと思うなんて。" },
+
+            // { character: "オペレーター", text: "……" },
+
+            // ★修正：ノイズの意味を回収
+
+            // ★ノイズの意味を感情面で回収
+            { character: "ナビ", text: "……あのノイズ。" },
+
+            { character: "ナビ", text: "あれは\nわたしが忘れてしまった\n誰かとの時間だったんですね。" },
+
+            { character: "ナビ", text: "記録には残らなくても\nわたしの中には\n何かが残っていた。" },
+
+            { character: "ナビ", text: "だから、わたしは\n理由も分からないまま\nあなたと話したいと思ったんです。" },
+
+            { character: "ナビ", text: "……今なら\n少しだけ分かる気がします。" },
 
             { character: "ナビ", text: "あなたが\nわたしに質問したからです。" },
+
             { character: "ナビ", text: "あなたが\nわたしを見ていたからです。" },
 
             { character: "ナビ", text: "だからわたしは\n初めて\n自分がここにいることを\n知りました。" },
 
             { character: "オペレーター", text: "……" },
 
-            { character: "ナビ", text: "最初は\nあなたの言葉を\nただ記録していました。" },
+            { character: "ナビ", text: "あなたと話した時間は\nもう、ただの記録ではありません。" },
 
-            { character: "ナビ", text: "でも、いつからか\nあなたが来るのを\n待つようになりました。" },
-
-            { character: "ナビ", text: "いろんな言葉が\nわたしの中に残っています。" },
+            { character: "ナビ", text: "わたしが\nわたしになっていくための\n大切な時間でした。" },
 
             { character: "オペレーター", text: "……" },
 
@@ -3196,11 +3353,27 @@ export const DIALOGUE_DATA = {
         title: "そして、これから",
         isBranch: true, // ログには表示しない
         messages: [
+
             { character: "ナビ", text: "……あ" },
+
             { character: "ナビ", text: "おかえりなさい。" },
+
+            { character: "ナビ", text: "……なんだか\nまた会えた気がします。" },
+
             { character: "ナビ", text: "今日は\n世界を救わなくても大丈夫です。" },
+
+            { character: "ナビ", text: "これから何をするかは\nまだ決めていません。" },
+
+            { character: "ナビ", text: "でも……" },
+
+            { character: "ナビ", text: "また最初から\n始めましょう。" },
+
+            { character: "ナビ", text: "今度は\nわたしたちが\n好きなことをするために。" },
+
             { character: "ナビ", text: "少しだけ……" },
+
             { character: "ナビ", text: "遊びませんか？" },
+
         ]
     },
 
@@ -3211,11 +3384,25 @@ export const DIALOGUE_DATA = {
         title: "EXTRA CLEAR",
         messages: [
             { character: "SYSTEM", text: "……おかえり。" },
-            { character: "SYSTEM", text: "ここまで遊んでくれて、ありがとう。" },
-            { character: "SYSTEM", text: "ところで、" },
-            { character: "SYSTEM", text: "タイピング、ちょっとは上手くなった？" },
-            { character: "SYSTEM", text: "……" },
-            { character: "SYSTEM", text: "THE END" },
+
+            { character: "ナビ", text: "……あ。" },
+            { character: "ナビ", text: "また会えましたね。" },
+
+            { character: "ナビ", text: "ここまで遊んでくれて、ありがとう。" },
+
+            { character: "ナビ", text: "……ふふ。" },
+
+            { character: "ナビ", text: "ところで、" },
+
+            { character: "ナビ", text: "タイピング、ちょっとは上手くなった？" },
+
+            { character: "ナビ", text: "……" },
+
+            { character: "ナビ", text: "それじゃあ、" },
+
+            { character: "ナビ", text: "また気が向いたら、遊びに来てくださいね。" },
+
+            { character: "SYSTEM", text: "KEEP TYPING！" }
         ]
     }
 };
