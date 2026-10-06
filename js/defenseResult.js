@@ -53,6 +53,7 @@ export function showDefenseResult(defenseStats, modeInfo = {}, rankingInfo = {})
         if (retryBtn) {
             retryBtn.style.display = stats.failed ? "inline-block" : "none";
             retryBtn.onclick = () => {
+                document.removeEventListener("keydown", container._defenseKeyHandler);
                 container.style.display = "none";
                 restartDefenseMode();
             };
@@ -61,11 +62,39 @@ export function showDefenseResult(defenseStats, modeInfo = {}, rankingInfo = {})
         if (backBtn) {
             backBtn.style.display = "inline-block";
             backBtn.onclick = () => {
+                document.removeEventListener("keydown", container._defenseKeyHandler);
                 container.style.display = "none";
                 fullResetGame();
                 backToQuestMap();
             };
         }
+
+        // ★クエスト防衛結果の b / r ショートカットを登録
+        const handleDefenseQuestResultKey = (e) => {
+            if (!container || container.style.display === "none") return;
+
+            const tag = document.activeElement?.tagName;
+            if (tag === "INPUT" || tag === "TEXTAREA") return;
+            if (e.repeat) return;
+
+            const retryVisible = retryBtn && retryBtn.offsetParent !== null;
+            if ((e.key === "r" || e.key === "Enter") && retryVisible) {
+                e.preventDefault();
+                retryBtn.click();
+                return;
+            }
+
+            if (e.key === "b") {
+                e.preventDefault();
+                backBtn?.click();
+            }
+        };
+
+        if (container._defenseKeyHandler) {
+            document.removeEventListener("keydown", container._defenseKeyHandler);
+        }
+        document.addEventListener("keydown", handleDefenseQuestResultKey);
+        container._defenseKeyHandler = handleDefenseQuestResultKey;
 
         // ★クエストモードの場合、アニメーションを再生
         window._lastQuestStats = stats;
