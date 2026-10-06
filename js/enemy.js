@@ -7,7 +7,7 @@ import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect,
     playSE} from "./effectManager.js";
 import { getSoundSettings, getSoundEnabled } from "./gameCore.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { getRandomWordForType, getWordForBehavior, getLabelBox, getEnemyLabelBox, boxesOverlap, getUniqueWordForState } from "./enemySpawner.js";
+import { getRandomWordForType, getLabelBox, getEnemyLabelBox, boxesOverlap, getUniqueWordForState } from "./enemySpawner.js";
 import { devOverride } from "../dev/devOverride.js";
 import { addQuestItemPickup } from "./questPlayerStats.js";
 import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
@@ -2021,7 +2021,7 @@ Object.assign(EnemyTypes, {
         killSound: 3, killedEffect: "midboss1", damageSound: 1,
         hitCount: 4, knockback: 45,
         behaviors: [
-            { type: "spawn", interval: 20, preDelay: 2, spawnType: "gray_circle_small", count: 1 },
+            { type: "spawn", interval: 15, preDelay: 2, spawnType: "gray_circle_small", count: 1 },
         ]
     },
 
@@ -2033,7 +2033,7 @@ Object.assign(EnemyTypes, {
         killSound: 3, damageSound: 1,
         hitCount: 5, knockback: 45,
         behaviors:[
-            { type: "attack", interval: 25, preDelay: 10, tags: ["","英語"], minLen: 3, maxLen: 6, damage: 20 },
+            { type: "attack", interval: 20, preDelay: 10, tags: ["","英語"], minLen: 3, maxLen: 6, damage: 20 },
         ]
     },
 

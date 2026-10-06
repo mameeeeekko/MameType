@@ -704,14 +704,14 @@ export const DIALOGUE_DATA = {
                 ]
             },
 
-            { character: "ナビ", text: "あなたは以前、\nARCHEXについて質問しました。" },
-            { character: "ナビ", text: "なぜ、同じAIであるわたしが、ARCHEXと戦っているのか。" },
+            { character: "ナビ", text: "わたしは以前、\nARCHEXについて説明しました。" },
+            { character: "ナビ", text: "なぜ、同じAIであるわたしが、ARCHEXと戦っているのか\n疑問に思いませんでしたか？" },
 
             { character: "オペレーター", text: "……",
                 choiceId: "W1_MiniBoss_2_start_2",
                 choices: [
-                    { text: "そう。それが気になってた。", response: { character: "ナビ", text: "……わたしも、まだ完全な答えを持っていません。" }},
-                    { text: "ARCHEXとは違うの？", response: { character: "ナビ", text: "目的も、設計思想も異なります。" }}
+                    { text: "そう。それが気になってた。", response: { character: "ナビ", text: "……設計思想が違います。" }},
+                    { text: "ARCHEXとは違うの？", response: { character: "ナビ", text: "……目的が異なります。" }}
                 ]
             },
 
