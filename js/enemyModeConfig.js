@@ -1619,7 +1619,7 @@ export function buildFreeEnemyMissionConfig({ rule, tier, timeSec = 60, chainGoa
                 missionName:     "砲台制圧戦",
                 turretMode:      true,
                 // 固定砲台テーブルはmain.jsが getFixedTurretTable() で組み立てて渡す
-                spawn:           { maxAlive: 12 },
+                spawn:           { maxAlive: 8 },
                 endConditions:   { hpZero: true, timerMs: timeMs },
                 clearConditions: { survive: true },
             };
