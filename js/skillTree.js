@@ -114,7 +114,7 @@
 
 import { doCountdown } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
-import { backToQuestMap, showGameScreen, updateGameUIVisibility } from "./main.js";
+import { showGameScreen, updateGameUIVisibility } from "./main.js";
 import { gameState } from "./gameCore.js";
 import { findParents } from "./skillTreeUI.js";
 import { getPlayerStats, reloadQuestPlayerStats } from "./questPlayerStats.js";
@@ -1042,11 +1042,11 @@ function buildRequirements(depth, additional = []) {
     const baseReqs = [];
     switch (depth) {
         case SKILL_DEPTH.EARLY:
-            baseReqs.push({ type: "questClear", value: "W1_Q5" });
+            baseReqs.push({ type: "questClear", value: "W1_MiniBoss_1" });
             break;
         case SKILL_DEPTH.MID:
-            baseReqs.push({ type: "playerLevel", value: 8 });
-            baseReqs.push({ type: "questClear", value: "W1_MiniBoss_1" });
+            baseReqs.push({ type: "playerLevel", value: 12 });
+            baseReqs.push({ type: "questClear", value: "W1_Q15" });
             break;
         case SKILL_DEPTH.LATE:
             baseReqs.push({ type: "playerLevel", value: 20 });
@@ -1262,10 +1262,10 @@ export const SKILL_TREE = {
     SLOT_1: {
         id: "SLOT_1",
         skillId: "slot_1",
-        ...buildSkill("normal", SKILL_DEPTH.MID, true, 0),
+        ...buildSkill("normal", SKILL_DEPTH.LATE, true, 0),
         effect: { type: "slot", value: 1 },
         children: ["STOCK_1"],
-        requirements: buildRequirements(SKILL_DEPTH.MID),
+        requirements: buildRequirements(SKILL_DEPTH.LATE),
     },
 
     STOCK_1: {
@@ -1415,10 +1415,10 @@ export const SKILL_TREE = {
     EXP_AUTO_1: {
         id: "EXP_AUTO_1",
         skillId: "exp_auto_1",
-        ...buildSkill("time_attack", SKILL_DEPTH.MID, true, 1),
+        ...buildSkill("normal", SKILL_DEPTH.LATE, true, 1),
         effect: { type: "expUp", value: 0.10 },
         children: ["EXP_UP_2"],
-        requirements: buildRequirements(SKILL_DEPTH.MID),
+        requirements: buildRequirements(SKILL_DEPTH.LATE),
     },
 
     EXP_UP_2: {

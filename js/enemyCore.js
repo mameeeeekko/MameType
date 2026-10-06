@@ -1602,7 +1602,7 @@ export function handleEnemyKey(e) {
 
         const diff = now - gameState.enemyStats.lastKeyTime;
         // 2秒以内なら入力時間として加算
-        if (diff < 2000) {
+        if (diff > 0 && diff < 2000) { // ignore negative diffs (clock rollback)
             gameState.enemyStats.typingActiveTime += diff;
         }
 

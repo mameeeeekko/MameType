@@ -1943,28 +1943,28 @@ export const STAGES = {
 
         phases: [
             {
-                name: "phase1",
+                name: "PHASE 1",
                 bgm:  "bgm_harunosuisou",
                 spawn: { interval: 2500, limit: null, maxAlive: 4, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T2", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 30000 }
             },
             {
-                name: "phase2",
+                name: "PHASE 2",
                 bgm:  "bgm_rojiura",
                 spawn: { interval: 2500, limit: null, maxAlive: 5, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T4", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 30000 }
             },
             {
-                name: "phase3",
+                name: "PHASE 3",
                 bgm:  "bgm_yamiyo",
                 spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T6", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 30000 }
             },
             {
-                name: "phase4",
+                name: "PHASE 4",
                 bgm:  "bgm_reflectable",
                 spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T8", ENEMY_TIER_BALANCED),
@@ -1995,14 +1995,14 @@ export const STAGES = {
     W1_MID_BOSS_1: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 4, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T1", ENEMY_TIER_BALANCED),
                 immediateOnClear: true,
                 phaseConditions: { killCount: 10 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_1", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2018,13 +2018,13 @@ export const STAGES = {
     W1_MID_BOSS_2: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: 15, maxAlive: 5, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T2", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 15 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_2", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2039,17 +2039,17 @@ export const STAGES = {
     W1_MID_BOSS_3: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 5 },
                 enemyTable:      getTierEnemies("T3", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 40000 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_3", weight: 100, pos: { x: 830, y: 150 } }],
-                phaseConditions: { killcount: 1 }
+                phaseConditions: { killCount: 1 }
             }
         ],
         endConditions:   { hpZero: true },
@@ -2061,13 +2061,13 @@ export const STAGES = {
     W2_MID_BOSS_4: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T4", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 15 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_4", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2082,13 +2082,13 @@ export const STAGES = {
     W2_MID_BOSS_5: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T5", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 20 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_5", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2103,13 +2103,13 @@ export const STAGES = {
     W2_MID_BOSS_6: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T6", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 50000 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_6", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2125,13 +2125,13 @@ export const STAGES = {
     W3_MID_BOSS_7: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T7", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 25 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_7", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2146,13 +2146,13 @@ export const STAGES = {
     W3_MID_BOSS_8: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T8", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 28 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_8", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2167,13 +2167,13 @@ export const STAGES = {
     W3_MID_BOSS_9: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T8", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 60000 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_9", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2189,13 +2189,13 @@ export const STAGES = {
     WEX_MID_BOSS_10: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T9", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 70000 }
             },
             {
-                name: "mid boss",
+                name: "MID BOSS",
                 bgm:             "bgm_reflectable",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "MID_BOSS_10", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2215,13 +2215,13 @@ export const STAGES = {
     W1_WORLD_BOSS: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T3", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 20 }
             },
             {
-                name: "boss",
+                name: "BOSS",
                 bgm:             "bgm_boss1",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "BOSS_1", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2237,19 +2237,19 @@ export const STAGES = {
     W2_WORLD_BOSS: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T6", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 25 }
             },
             {
-                name: "phase 2",
+                name: "PHASE 2",
                 spawn:           { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T6", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 50000 }
             },
             {
-                name: "boss",
+                name: "BOSS",
                 bgm:             "bgm_boss1",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "BOSS_2", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2265,25 +2265,25 @@ export const STAGES = {
     W3_WORLD_BOSS: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T8", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 30 }
             },
             {
-                name: "phase 2",
+                name: "PHASE 2",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T9", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 60000 }
             },
             {
-                name: "phase 3",
+                name: "PHASE 3",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T9", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 30 }
             },
             {
-                name: "boss",
+                name: "BOSS",
                 bgm:             "bgm_boss1",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "BOSS_3", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2295,29 +2295,36 @@ export const STAGES = {
         star:            { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
     },
 
+
+    // ★ビット連動型ボス(EXTRA_BOSS LAST_BOSS)
+    // 本体(BOSS_4)と左右のビット(BIT_LEFT / BIT_RIGHT)が電磁波ラインで薄く連結。
+    // ビットはプレイヤーには向かわず、本体周囲を楕円軌道で不規則に漂う。
+    // ビットは普通の敵と同じ設定(hitCount / tags / behaviors等)で倒せる。
+    // 撃破されると本体が bitReviveTime 秒後に復活させ、本体が死ねばビットも消える。
+
     // Worldend ラストボス
     LAST_BOSS: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T8", ENEMY_TIER_ENGLISH_HEAVY),
                 phaseConditions: { killCount: 30 }
             },
             {
-                name: "phase 2",
+                name: "PHASE 2",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T9", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 65000 }
             },
             {
-                name: "phase 3",
+                name: "PHASE 3",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T9", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 35 }
             },
             {
-                name: "last boss",
+                name: "LAST BOSS",
                 bgm:             "bgm_boss2",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "LAST_BOSS", weight: 100, pos: { x: 830, y: 150 } }],
@@ -2333,54 +2340,28 @@ export const STAGES = {
     WEX_BOSS: {
         phases: [
             {
-                name: "phase 1",
+                name: "PHASE 1",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T9", ENEMY_TIER_ENGLISH_HEAVY),
                 phaseConditions: { killCount: 30 }
             },
             {
-                name: "phase 2",
+                name: "PHASE 2",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T10", ENEMY_TIER_BALANCED),
                 phaseConditions: { timerMs: 65000 }
             },
             {
-                name: "phase 3",
+                name: "PHASE 3",
                 spawn:           { interval: 2500, limit: null, maxAlive: 8, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T10", ENEMY_TIER_BALANCED),
                 phaseConditions: { killCount: 35 }
             },
             {
-                name: "extra boss",
+                name: "EXTRA BOSS",
                 bgm:             "bgm_vampire",
                 spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
                 enemyTable:      [{ type: "EX_BOSS", weight: 100, pos: { x: 830, y: 150 } }],
-                phaseConditions: { killCount: 1 }
-            }
-        ],
-        endConditions:   { hpZero: true },
-        clearConditions: { survive: true },
-        star:            { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
-    },
-
-    // ★ビット連動型ボス(BOSS_4)
-    // 本体(BOSS_4)と左右のビット(BIT_LEFT / BIT_RIGHT)が電磁波ラインで薄く連結。
-    // ビットはプレイヤーには向かわず、本体周囲を楕円軌道で不規則に漂う。
-    // ビットは普通の敵と同じ設定(hitCount / tags / behaviors等)で倒せる。
-    // 撃破されると本体が bitReviveTime 秒後に復活させ、本体が死ねばビットも消える。
-    W4_WORLD_BOSS: {
-        phases: [
-            {
-                name: "phase 1",
-                spawn:           { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
-                enemyTable:      getTierEnemies("T6", ENEMY_TIER_BALANCED),
-                phaseConditions: { killCount: 20 }
-            },
-            {
-                name: "boss",
-                bgm:             "bgm_boss1",
-                spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
-                enemyTable:      [{ type: "BOSS_4", weight: 100, pos: { x: 800, y: 200 } }],
                 phaseConditions: { killCount: 1 }
             }
         ],
@@ -2575,6 +2556,32 @@ export const STAGES = {
         missionDescription: "時間内に、指定された文字数を入力せよ。",
         defenseConfig: { totalCharsToType: 50, timeLimit: 30, genres: ['empty'], minLength: 4, maxLength: 8 },
         star: { type: "defenseSurplus", thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], weights: { surplus: 0.4, accuracy: 0.6 } }
+    },
+
+    // ★ビット連動型ボス(BOSS_4)
+    // 本体(BOSS_4)と左右のビット(BIT_LEFT / BIT_RIGHT)が電磁波ラインで薄く連結。
+    // ビットはプレイヤーには向かわず、本体周囲を楕円軌道で不規則に漂う。
+    // ビットは普通の敵と同じ設定(hitCount / tags / behaviors等)で倒せる。
+    // 撃破されると本体が bitReviveTime 秒後に復活させ、本体が死ねばビットも消える。
+    W4_WORLD_BOSS: {
+        phases: [
+            {
+                name: "phase 1",
+                spawn:           { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
+                enemyTable:      getTierEnemies("T6", ENEMY_TIER_BALANCED),
+                phaseConditions: { killCount: 20 }
+            },
+            {
+                name: "boss",
+                bgm:             "bgm_boss1",
+                spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
+                enemyTable:      [{ type: "BOSS_4", weight: 100, pos: { x: 800, y: 200 } }],
+                phaseConditions: { killCount: 1 }
+            }
+        ],
+        endConditions:   { hpZero: true },
+        clearConditions: { survive: true },
+        star:            { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
     },
 
     // =====================================================

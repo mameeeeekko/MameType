@@ -11,7 +11,7 @@ import { getKana, getRomajiCandidates, getSokuonCandidates, toHalfWidthAlpha,
 // safePlayTypeSound: タイプ音、safePlayMissSound: ミス音、safeFlashMiss: フラッシュ
 // renderState: 画面更新、checkGameEnd: 次の問題チェック
 // correctCount, mistakeCount, inputedRomaji, typed, pos, text は状態変数
-import { gameState, renderState, checkGameEnd, safePlayTypeSound, safePlayMissSound, safeFlashMiss, smoothKPM, calcKPM} from './gameCore.js';
+import { gameState, getNow, renderState, checkGameEnd, safePlayTypeSound, safePlayMissSound, safeFlashMiss, smoothKPM, calcKPM} from './gameCore.js';
 import { updateSpeedBar } from './renderer.js';
 import { ENEMY_MODE_CONFIG } from "./enemyModeConfig.js";
 import { devOverride } from '../dev/devOverride.js';
@@ -99,7 +99,7 @@ function onCorrectType(count = 1, state = gameState) {
 
     gameState.speedCorrectChars += count;
 
-    const now = performance.now();
+    const now = getNow(); // same clock as speedStartTime (pause-adjusted)
     const elapsed =
         now - gameState.speedStartTime;
 

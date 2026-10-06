@@ -549,7 +549,7 @@ export async function startGame(config={mode:GameModes.NORMAL,isFreeMode:false})
   initSpeedBar();
  
 
-  gameState.speedStartTime=performance.now(); 
+  gameState.speedStartTime=getNow(); // getNow clock (pause-adjusted), matches speedTick 
   gameState.speedCorrectChars=0; 
   kpmHistory.length=0; 
   lastSpeedUpdate=0;
@@ -1186,7 +1186,19 @@ export function onPauseStart() {
 }
 
 export function onPauseEnd() {
-    totalPauseTime += performance.now() - pauseStart;
+    if (pauseStart <= 0) return; // Guard: pauseStart cleared (e.g. fullResetGame during pause)
+    const pausedMs = performance.now() - pauseStart;
+    totalPauseTime += pausedMs;
+    pauseStart = 0; // consumed: prevents double credit
+
+    // ★タイムアタックの終了判定（gameModes.TIME_ATTACK.shouldContinue / isFinished）は
+    //   performance.now()（ポーズ補正なし）で経過時間を計算しているため、ポーズ中の時間も
+    //   経過に加算されてしまう。表示タイマーは getNow()（ポーズ補正済み）を使っているので、
+    //   ずれを残すと「残り時間があるのに問題を打った瞬間に終了」する不具合になる。
+    //   enemyCore / defenseCore と同じ流儀で、ポーズ時間分だけ開始時刻を後ろへずらして一致させる。
+    if (typeof modeData.startTime === "number" && modeData.startTime > 0) {
+        modeData.startTime += pausedMs;
+    }
 }
 
 export function getNow() {

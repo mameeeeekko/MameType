@@ -591,7 +591,7 @@ export function handleDefenseKey(e, isRecursiveCall = false) {
     if (gameState.enemyStats.lastKeyTime > 0) {
         const diff = now - gameState.enemyStats.lastKeyTime;
 
-        if (diff < 2000) {
+        if (diff > 0 && diff < 2000) { // ignore negative diffs (clock rollback)
             gameState.enemyStats.typingActiveTime += diff;
         }
     }
