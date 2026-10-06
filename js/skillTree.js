@@ -618,7 +618,7 @@ export const LONG_TEXT_UNLOCK_TABLE = {
     1: [
         [
             { type:"time", value:160 },
-            { type:"accuracy", value:90 }
+            { type:"accuracy", value:92 }
         ],
         [
             { type:"time", value:160 },
@@ -1049,11 +1049,11 @@ function buildRequirements(depth, additional = []) {
             baseReqs.push({ type: "questClear", value: "W1_Q15" });
             break;
         case SKILL_DEPTH.LATE:
-            baseReqs.push({ type: "playerLevel", value: 20 });
+            baseReqs.push({ type: "playerLevel", value: 25 });
             baseReqs.push({ type: "questClear", value: "W1_BOSS" });
             break;
         case SKILL_DEPTH.END:
-            baseReqs.push({ type: "playerLevel", value: 30 });
+            baseReqs.push({ type: "playerLevel", value: 35 });
             baseReqs.push({ type: "questClear", value: "W2_DEFENSE_3" });
             break;
     }

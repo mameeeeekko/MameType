@@ -18,7 +18,7 @@ import { spawnTimeBonusPopup, renderTimeBonusPopups } from "./effectManager.js";
 import { STAR_EVALUATORS } from "./starEvaluator.js";
 import { markCleared, setStar, hasDialogueBeenPlayed, hasSeenTrueEnding } from "./questProgress.js";
 import { getPlayerStats, updatePlayerStats } from "./playerStats.js";
-import { scoreToExp, addExp, getPlayerStatsForEnemy, updateQuestStats } from "./questPlayerStats.js";
+import { scoreToExp, addExp, getPlayerStatsForEnemy, updateQuestStats, addQuestStageAttempt } from "./questPlayerStats.js";
 import { addRankingEntry } from "./storage.js";
 import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "./version.js";
@@ -98,6 +98,17 @@ export const DEFENSE_SCORE_CONFIG = {
 
 // コンボティアの閾値
 const COMBO_THRESHOLDS = DEFENSE_COMBO_TIERS.map(t => t.max);
+
+// ============================================================
+// 防衛モード専用: スコア → EXP 換算レート
+// ------------------------------------------------------------
+// 防衛モードのgScoreはコンボ倍率(最大3.0)×難易度倍率で
+// ゆっくりと膨れ上がりやすく、scoreToExp(スコア×0.4)へ
+// そのまま通すとEXPが過剰になるため、換算前に0.7倍へ抑制する。
+// ・スコア表示 / 記録 / ランキング / 実績は gScore を使うため影響しない
+// ・scoreToExp本体はエネミーモードと共用のため変更していない
+// ============================================================
+export const DEFENSE_EXP_RATE = 0.7;
 
 export function startDefenseMode(config = {}) {
   closeDialogue();
@@ -1128,7 +1139,8 @@ async function endDefenseMode(isAbort = false) {
       const playerBefore = getPlayerStatsForEnemy("quest");
       let gainedExp = 0;
       if (!stats.isInvalidRun) {
-        const baseExp = scoreToExp(stats.gScore);
+        // ★防衛モード専用レートでEXP量を制御（スコア表示には反映しない）
+        const baseExp = scoreToExp(Math.floor(stats.gScore * DEFENSE_EXP_RATE));
         const failMultiplier = stats.failed ? 0.5 : 1.0;
         const starMultiplierTable = {
             0: 0.5, 1: 1.0, 2: 1.05, 3: 1.1, 4: 1.2, 5: 1.3
@@ -1186,6 +1198,15 @@ async function endDefenseMode(isAbort = false) {
         gScore: questStats.gScore,
       });
       // ★★★ ここまで ★★★
+
+      // ===============================
+      // 挑戦回数記録（PROGRESSIONタブのSTAGE LOG用）
+      // ※通常ステージ側（enemyCore.js）と同様、失敗時も計上する。
+      //   ESC中断時はこのブロック自体（!isAbort内）に到達しないため計上されない。
+      // ===============================
+      if (node?.id) {
+        addQuestStageAttempt(node.id);
+      }
       
       const introText = stats.failed ? "FAILED" : "MISSION COMPLETE";
       const endDialogueId = `${node.id}_end`;

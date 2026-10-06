@@ -466,12 +466,6 @@ export function spawnEnemy(
     // ★ ステージ別 敵速度倍率（例: 圧倒 = 0.6 で低速化し、画面に敵が滞留する）
     let stageSpeedMult = config?.enemySpeedMultiplier ?? 1;
 
-    // ★ 電撃戦(berserk): 残りHPが少ないほど敵が加速する
-    if (config?.berserk && player.maxHp > 0) {
-        const hpRatio = Math.max(0, Math.min(1, player.hp / player.maxHp));
-        stageSpeedMult *= 1 + (1 - hpRatio) * (config.berserk.maxBoost ?? 0.6);
-    }
-
     // 文字数に応じた最低入力時間を確保するための速度調整
     // 0.25 に設定すると、10文字の単語に対して 2.5秒 の到達時間が保証
     const SECONDS_PER_CHAR = SECONDS_PER_CHAR_BASE;

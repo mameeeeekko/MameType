@@ -79,7 +79,6 @@ const FREE_MISSION_STAGE_KEYS = [
     "missionName",           // ミッション名（HUD・記録・spawner判定用）
     "interceptMode",         // 迎撃: 通常敵の湧きを止め、弾のスポーンに切替える
     "interceptSpec",         // 迎撃: Tier別の弾仕様（速度・発数・ダメージ・総弾数）
-    "berserk",               // 電撃戦: 残りHPが少ないほど敵が加速する
     "saturation",            // 圧倒: 画面内の敵密度（飽和度）上限
     "turretMode",            // 砲台制圧戦: 固定砲台主体
     "maxWordLength",         // 圧倒: 出題文字数の上限
@@ -2337,7 +2336,7 @@ export async function startEnemyMode(config = {}) {
             }
 
             // 4.5 ミッション固有設定をステージへ引き継ぐ
-            //     （迎撃の弾仕様・電撃戦の加速・圧倒の飽和度/低速化など）
+            //     （迎撃の弾仕様・圧倒の飽和度/低速化など）
             for (const key of FREE_MISSION_STAGE_KEYS) {
                 if (custom[key] !== undefined) {
                     stage[key] = custom[key];

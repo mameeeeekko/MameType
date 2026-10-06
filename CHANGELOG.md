@@ -2,6 +2,30 @@
 
 ---
 
+## [1.0.74] - 2026-10-06
+
+### Removed
+- **電撃戦の berserk（残りHPが少ないほど敵が加速）を完全に削除**
+  - フリーモードの Rule Settings【電撃戦】にだけ `berserk: { maxBoost: 0.6 }` が残っており、被ダメージ中に敵が最大 +60% 加速していた（クエスト case3 はコメントアウト済みで未使用）。
+  - `js/enemyModeConfig.js` … `buildFreeEnemyMissionConfig()` の `blitz` から `berserk` を削除。
+    クエスト case3 のコメントアウト行と `generateStage()` の JSDoc（「HP減少で敵が加速するberserk戦」）も削除し、
+    説明を実態どおり「制限時間内にチェインを指定数までつなげる」に修正。
+  - `js/enemySpawner.js` … `config.berserk` を読む速度加算ブロックを削除（今後誰も設定しないため死にコード）。
+  - `js/enemyCore.js` … `FREE_MISSION_STAGE_KEYS` から `berserk` を削除し、引き継ぎコメントも更新。
+  - 影響範囲: フリーモード【電撃戦】のみ。クエストは元々 berserk が無効のため挙動変化なし。
+
+### Changed
+- **フリーモード【圧倒】の saturation をクエストモードと同じ値に揃えた**
+  - `capacity` の倍率が `maxAlive * 1.25`（フリーモード）と `config.spawn.maxAlive * 1.2`（クエスト case7）で食い違っており、
+    フリーモードだけ飽和ゲージが上がりにくい状態だった。
+  - `js/enemyModeConfig.js` に `buildOverwhelmSaturation(maxAlive)` を新設し、
+    クエスト case7 と `buildFreeEnemyMissionConfig()` の `overwhelm` の双方から呼ぶよう変更（単一ソース化）。
+    クエスト側の生成値は従来と完全に同一。
+  - フリーモードの同時出現上限は 14 固定のため `capacity` は 16.8（14 × 1.2）になる。
+- **アプリケーションバージョンを `1.0.74` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.74` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.74` に更新（1.0.73 で未更新のため `APP_VERSION` と不一致だった）。
+
 ## [1.0.73] - 2026-10-06
 
 ### Added

@@ -102,6 +102,27 @@ export const INTERCEPT_MISSION_NAME = "迎撃";
 // ======================================================
 
 /**
+ * 【圧倒】の飽和度（saturation）設定を組み立てる。
+ * クエスト generateStage() case7 とフリーモード【圧倒】プリセットが
+ * 必ず同じ値を返すよう、ここを単一ソースとして扱う。
+ * @param {number} maxAlive 同時出現上限（config.spawn.maxAlive）
+ * @returns {Object} stage.saturation 相当の設定
+ */
+function buildOverwhelmSaturation(maxAlive) {
+    return {
+        // 敵数だけでなく画面全体の余白も容量に含め、上限に到達しにくいようにする。
+        capacity:           maxAlive * 1.2,
+        limit:              75,
+        // 弾は飽和度の計算への寄与を小さくする。
+        bulletWeight:       0.1,
+        // 上がりは遅く、下がりは速くする。
+        riseRate:           0.25,
+        fallRate:           2.0,
+        overloadDurationMs: 5000
+    };
+}
+
+/**
  * Tier文字列 or 数値を 1〜10 の整数に正規化する。
  * "T3", 3, "3" のいずれでも動作する。
  */
@@ -150,16 +171,16 @@ export function isInterceptStage(stage) {
 // ・score    : 弾1発の撃ち落としスコア（チェイン倍率が乗る）
 // ======================================================
 export const INTERCEPT_TIER_SPEC = {
-    T1:  { charType: "alphabet", speed: 1.8, variance: 0.05, count: 1, maxAlive: 4, interval: 2000, damage: 15, size: 10, goal: 20, score: 30 },
-    T2:  { charType: "alphabet", speed: 1.8, variance: 0.10, count: 2, maxAlive: 4, interval: 1900, damage: 20, size: 10, goal: 30, score: 35 },
-    T3:  { charType: "alphabet", speed: 1.9, variance: 0.15, count: 2, maxAlive: 5, interval: 1900, damage: 25, size: 11, goal: 40, score: 40 },
-    T4:  { charType: "alphabet", speed: 1.9, variance: 0.20, count: 2, maxAlive: 6, interval: 1800, damage: 30, size: 11, goal: 50, score: 45 },
-    T5:  { charType: "alphabet", speed: 2.0, variance: 0.25, count: 3, maxAlive: 7, interval: 1800, damage: 35, size: 12, goal: 60, score: 50 },
-    T6:  { charType: "alphabet", speed: 2.0, variance: 0.30, count: 3, maxAlive: 7, interval: 1700, damage: 40, size: 12, goal: 65, score: 55 },
-    T7:  { charType: "alphabet", speed: 2.1, variance: 0.35, count: 4, maxAlive: 8, interval: 1700, damage: 45, size: 13, goal: 70, score: 60 },
-    T8:  { charType: "alphabet", speed: 2.1, variance: 0.35, count: 4, maxAlive: 9, interval: 1700, damage: 50, size: 13, goal: 75, score: 70 },
-    T9:  { charType: "all",      speed: 1.8, variance: 0.45, count: 3, maxAlive: 7, interval: 1900, damage: 55, size: 14, goal: 80, score: 80 },
-    T10: { charType: "all",      speed: 1.9, variance: 0.45, count: 3, maxAlive: 8, interval: 1900, damage: 60, size: 14, goal: 85, score: 90 },
+    T1:  { charType: "alphabet", speed: 1.8, variance: 0.05, count: 1, maxAlive: 4, interval: 2000, damage: 15, size: 10, goal: 20, score: 15 },
+    T2:  { charType: "alphabet", speed: 1.8, variance: 0.10, count: 2, maxAlive: 4, interval: 1900, damage: 20, size: 10, goal: 30, score: 20 },
+    T3:  { charType: "alphabet", speed: 1.9, variance: 0.15, count: 2, maxAlive: 5, interval: 1900, damage: 25, size: 11, goal: 40, score: 25 },
+    T4:  { charType: "alphabet", speed: 1.9, variance: 0.20, count: 2, maxAlive: 6, interval: 1800, damage: 30, size: 11, goal: 50, score: 30 },
+    T5:  { charType: "alphabet", speed: 2.0, variance: 0.25, count: 3, maxAlive: 7, interval: 1800, damage: 35, size: 12, goal: 60, score: 35 },
+    T6:  { charType: "alphabet", speed: 2.0, variance: 0.30, count: 3, maxAlive: 7, interval: 1700, damage: 40, size: 12, goal: 65, score: 40 },
+    T7:  { charType: "alphabet", speed: 2.1, variance: 0.35, count: 4, maxAlive: 8, interval: 1700, damage: 45, size: 13, goal: 70, score: 45 },
+    T8:  { charType: "alphabet", speed: 2.1, variance: 0.35, count: 4, maxAlive: 9, interval: 1700, damage: 50, size: 13, goal: 75, score: 50 },
+    T9:  { charType: "all",      speed: 1.8, variance: 0.45, count: 3, maxAlive: 7, interval: 1900, damage: 55, size: 14, goal: 80, score: 60 },
+    T10: { charType: "all",      speed: 1.9, variance: 0.45, count: 3, maxAlive: 8, interval: 1900, damage: 60, size: 14, goal: 85, score: 70 },
 };
 
 // ======================================================
@@ -271,7 +292,7 @@ export function getInterceptBulletColor(speed, spec) {
 // この時間のあいだ弾は移動せず、出現演出だけを描く。
 // ※ enemySpawner（生成時）と enemyRenderer（描画時）で共有する。
 // ======================================================
-export const INTERCEPT_WARP_DURATION = 1.0;
+export const INTERCEPT_WARP_DURATION = 0.8;
 
 // ======================================================
 // Tier別 通常敵ダメージ倍率
@@ -1025,7 +1046,7 @@ export function getStageConfig(stageId) {
  *    0: 【撃破目標】   - 標準。指定数撃破でクリア。
  *    1: 【生存目標】   - 制限時間まで生存。無限湧き。
  *    2: 【迎撃】       - 敵は一体も出ず、飛んでくる弾を撃ち落とす。出現総数を処理しきればクリア。
- *    3: 【電撃戦】     - 短い制限時間 + HP減少で敵が加速するberserk戦。
+ *    3: 【電撃戦】     - 制限時間内にチェインを指定数までつなげる。
  *    4: 【砲台制圧戦】 - 固定砲台を主体に出現させ、倒しながら攻撃に耐える。
  *    5: 【タイムアタック】- 時間内に通常より多いノルマを達成。
  *    6: 【サボタージュ】- HP継続減少デバフ + 撃破目標。
@@ -1303,9 +1324,6 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             config.spawn.multiCount    = i >= 40 ? 2 : 2;
             config.spawn.multiInterval = i >= 40 ? 3 : 3;
 
-            // ★ berserk: 残りHPが少ないほど敵が加速（最大 +60%、ステージ進行で最大+100%まで強化）
-            //config.berserk = { maxBoost: 0.6 + Math.min(0.4, i * 0.005) };
-
             // スター：タイピング速度(KPM)
             config.star = {
                 type: "typingSpeed",
@@ -1428,17 +1446,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             config.spawn.multiCount       = 3;
             config.spawn.multiInterval    = 3;
             config.spawn.limit            = null; // 無限湧き
-            config.saturation = {
-                // 敵数だけでなく画面全体の余白も容量に含め、上限に到達しにくいようにする。
-                capacity:           config.spawn.maxAlive * 1.2,
-                limit:              75,
-                // 弾は飽和度の計算への寄与を小さくする。
-                bulletWeight:       0.1,
-                // 上がりは遅く、下がりは速くする。
-                riseRate:           0.25,
-                fallRate:           2.0,
-                overloadDurationMs: 5000
-            };
+            // 飽和度はフリーモード【圧倒】と同一値（buildOverwhelmSaturation）を使う。
+            config.saturation = buildOverwhelmSaturation(config.spawn.maxAlive);
             config.endConditions   = { hpZero: true, timerMs: overwhelmTime };
             config.clearConditions = { survive: true };
 
@@ -1570,7 +1579,7 @@ export function buildFreeEnemyMissionConfig({ rule, tier, timeSec = 60, chainGoa
 
     switch (ruleId) {
 
-        case "blitz": { // 【電撃戦】制限時間内にチェインを達成。HPが減ると敵が加速する
+        case "blitz": { // 【電撃戦】制限時間内にチェインを達成。
             return {
                 missionName:     "電撃戦",
                 endConditions:   { hpZero: true, timerMs: timeMs },
@@ -1580,7 +1589,6 @@ export function buildFreeEnemyMissionConfig({ rule, tier, timeSec = 60, chainGoa
                 // チェインを保つには常に討伐対象が居る必要があるため、即時湧きは有効にする
                 // （出現間隔・同時出現数はユーザー設定を優先するためここでは触らない）
                 spawn:           { immediateOnClear: true },
-                berserk:         { maxBoost: 0.6 },
             };
         }
 
@@ -1634,15 +1642,8 @@ export function buildFreeEnemyMissionConfig({ rule, tier, timeSec = 60, chainGoa
                 // ★出題8文字以内：大量の低速の敵を捌きやすくする
                 maxWordLength:        OVERWHELM_MAX_WORD_LENGTH,
                 spawn:                { maxAlive, limit: null },
-                saturation: {
-                    // 敵数だけでなく画面全体の余白も容量に含め、上限に到達しにくいようにする
-                    capacity:           maxAlive * 1.25,
-                    limit:              75,
-                    bulletWeight:       0.1,
-                    riseRate:           0.25,
-                    fallRate:           2.0,
-                    overloadDurationMs: 5000,
-                },
+                // 飽和度はクエスト【圧倒】と同一値（buildOverwhelmSaturation）を使う
+                saturation: buildOverwhelmSaturation(maxAlive),
                 endConditions:   { hpZero: true, timerMs: timeMs },
                 clearConditions: { survive: true },
             };
@@ -2379,7 +2380,7 @@ export const STAGES = {
         bgm:                "bgm_universe",
         missionName:        "コア防衛戦線",
         missionDescription: "時間内に、指定された文字数を入力せよ。",
-        defenseConfig: { totalCharsToType: 100, timeLimit: 60,  genres: ['empty'], minLength: 4, maxLength: 8  },
+        defenseConfig: { totalCharsToType: 110, timeLimit: 60,  genres: ['empty'], minLength: 4, maxLength: 8  },
         star: { type: "defenseSurplus", thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], weights: { surplus: 0.4, accuracy: 0.6 } }
     },
 
@@ -2388,7 +2389,7 @@ export const STAGES = {
         bgm:                "bgm_universe",
         missionName:        "コア防衛戦線",
         missionDescription: "時間内に、指定された文字数を入力せよ。",
-        defenseConfig: { totalCharsToType: 170, timeLimit: 90,  genres: ['empty'], minLength: 4, maxLength: 8  },
+        defenseConfig: { totalCharsToType: 180, timeLimit: 90,  genres: ['empty'], minLength: 4, maxLength: 8  },
         star: { type: "defenseSurplus", thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], weights: { surplus: 0.4, accuracy: 0.6 } }
     },
 

@@ -3988,6 +3988,17 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   font-weight: 700;
 }
 
+/* クエスト詳細ページ内のカードタイトル：
+   カードが flex-direction: column のflexアイテムであり、
+   行高が逼迫する条件（リストが長くスクロールが出る等）で
+   flex収縮によりグリフの下部が欠けて見えるのを防ぐ */
+.quest-page .quest-bottom-title {
+  flex: 0 0 auto;
+  line-height: 1.6;
+  padding-bottom: 2px;
+  overflow: visible;
+}
+
 /* 各行 */
 .quest-bottom-row {
   display: flex;
