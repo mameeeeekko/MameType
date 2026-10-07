@@ -9,7 +9,7 @@ import { getCurrentDifficulty, setCurrentDifficulty, getAvailableDifficulties } 
 import { backToQuestMenu, backToQuestMap, showHud, openKeybindConfigModal } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
-import { getSkillById, ACTIVE_SKILLS } from "./questSkills.js";
+import { getSkillById, ACTIVE_SKILLS, getSkillEffectPower } from "./questSkills.js";
 import {
     equipSkill,
     unequipSkill,
@@ -1461,13 +1461,15 @@ export function openQuestMenuModal(type = "difficulty") {
                     skillsByType[type]?.push(nodeId);
                 });
 
-                // 各タイプ内で名前順でソート
+                // 各タイプ内で効果の弱い順にソート（同値は名前順）
                 Object.keys(skillsByType).forEach(type => {
                     skillsByType[type].sort((a, b) => {
                         const skillA = getSkillById(SKILL_TREE[a]?.skillId);
                         const skillB = getSkillById(SKILL_TREE[b]?.skillId);
                         if (!skillA || !skillB) return 0;
-                        return (skillA.name || '').localeCompare((skillB.name || ''), 'ja');
+                        const powerDiff = getSkillEffectPower(skillA) - getSkillEffectPower(skillB);
+                        if (powerDiff !== 0) return powerDiff;
+                        return (skillA.name || "").localeCompare((skillB.name || ""), "ja");
                     });
                 });
 

@@ -7,6 +7,34 @@ export function getSkillById(skillId) {
   return PASSIVE_SKILLS[skillId] || ACTIVE_SKILLS[skillId];
 }
 
+// ============================================
+// スキルの効果強度（一覧の並び替え用）
+// -------------------------------------------------
+// EQUIP SKILLS の一覧を「ジャンルごと → 効果の弱い順」に並べ替えるための数値。
+// HP・%・秒・体数など単位は効果ごとに異なるため厳密な強さではないが、
+// 同じ系統内での相対順位（弱い → 強い）として使う。
+//   1. value が数値      → その値（ヒール30 / フリーズ5秒 など）
+//   2. value が object   → count（撃破数）。mode: all は最強として 999
+//   3. それ以外（パッシブ）→ desc 内の最初の数値（+10% / 最大HP+50 など）
+//   4. 数値なし          → Infinity（一覧の末尾に配置）
+// ============================================
+export function getSkillEffectPower(skill) {
+    if (!skill) return 0;
+
+    const v = skill.value;
+
+    if (typeof v === "number") return v;
+
+    if (v && typeof v === "object") {
+        if (typeof v.count === "number") return v.count;
+        if (v.mode === "all") return 999;
+        return Infinity; // knockback など数値のない特殊効果は末尾
+    }
+
+    const m = /-?[0-9]+(?:[.][0-9]+)?/.exec(skill.desc || "");
+    return m ? Number(m[0]) : Infinity;
+}
+
 // アクティブスキル。
 //   装備して使う。ゲーム中に発動できる。
 //   effectも対応

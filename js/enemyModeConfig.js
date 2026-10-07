@@ -1220,8 +1220,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
                         90  + (i * 0.7),
                         110 + (i * 0.7),
                         140 + (i * 0.7),
-                        160 + (i * 0.7),
-                        180 + (i * 0.7)
+                        160 + (i * 0.75),
+                        180 + (i * 0.8)
                     ]
                 };
             } else {
@@ -1331,8 +1331,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
                     90  + (i * 0.7),
                     110 + (i * 0.7),
                     140 + (i * 0.7),
-                    160 + (i * 0.7),
-                    180 + (i * 0.7)
+                    160 + (i * 0.75),
+                    180 + (i * 0.8)
                 ]
             };
             break;
@@ -1392,8 +1392,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
                         90  + (i * 0.7),
                         110 + (i * 0.7),
                         140 + (i * 0.7),
-                        160 + (i * 0.7),
-                        180 + (i * 0.7)
+                        160 + (i * 0.75),
+                        180 + (i * 0.8)
                     ]
                 };
             }
@@ -1426,7 +1426,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
                     maxRatio * 0.4,
                     maxRatio * 0.6,
                     maxRatio * 0.8,
-                    maxRatio * 0.95
+                    maxRatio * 0.9
                 ]
             };
             break;
@@ -1458,8 +1458,8 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
                     90  + (i * 0.7),
                     110 + (i * 0.7),
                     140 + (i * 0.7),
-                    160 + (i * 0.7),
-                    180 + (i * 0.7)
+                    160 + (i * 0.75),
+                    180 + (i * 0.8)
                 ]
             };
             break;

@@ -2,6 +2,23 @@
 
 ---
 
+## [1.0.76] - 2026-10-07
+
+### Changed
+- **EQUIP SKILLS の右側一覧（PASSIVE / ACTIVE / AUTO）を「ジャンルごと → 効果の弱い順」に並べ替えた**
+  - 背景: 従来はジャンル（`skillTypeOrder`）ごとに **名前順** でソートされていたため、一覧の並びが効果の強さを表していなかった。
+  - `js/questSkills.js` … `getSkillEffectPower(skill)` を新規エクスポート。算出規則: `value` が数値ならその値 /
+    `value` が object なら `count`（`mode: all` は 999）/ パッシブは `desc` 内の最初の数値 / 数値が無ければ `Infinity`（末尾）。
+  - `js/questMapUI.js` … `renderList()` のソート comparator を「効果の弱い順（同値は名前順）」に差し替え。
+    ジャンル分類（`skillsByType` / `skillTypeOrder`）・装備／ホバー／クリック処理は従来どおり。
+  - 影響範囲: クエストの EQUIP SKILLS モーダルの PASSIVEタブ / ACTIVEタブ / AUTOボックス（同一のソート結果を共有）。
+  - 注意: HP・%・秒・体数など単位が異なるため、ジャンルをまたぐ順序は数値ベースの近似（同系列内は弱い→強いで正しく並ぶ）。
+- **アプリケーションバージョンを `1.0.76` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.76` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.76` に更新。
+
+---
+
 ## [1.0.75] - 2026-10-07
 
 ### Changed
