@@ -1423,9 +1423,52 @@ export function openQuestMenuModal(type = "difficulty") {
                 const equippedPassive = getEquipped();
                 const equippedActive = getEquippedActiveSkills();
 
- 
-                //処理
+                // =============================
+                // スキルを種類別に分類・ソート
+                // =============================
+                const skillsByType = {
+                    chain: [],      // チェイン系
+                    knockback: [],  // ノックバック系
+                    kill: [],       // キル系
+                    freeze: [],     // フリーズ系
+                    heal: [],       // ヒール系
+                    invincible: [], // 無敵系
+                    auto: [],       // 装備不可（自動）
+                    active: [],     // アクティブ
+                    other: []       // その他
+                };
+
+                const skillTypeOrder = ['chain', 'knockback', 'kill', 'freeze', 'heal', 'invincible', 'auto', 'active', 'other'];
+
                 unlockedNodes.forEach(nodeId => {
+                    const node = SKILL_TREE[nodeId];
+                    if (!node || !node.skillId) return;
+
+                    const skill = getSkillById(node.skillId);
+                    if (!skill) return;
+
+                    let type = 'other';
+
+                    // スキルの種類を判定
+                    if (ACTIVE_SKILLS[node.skillId]) {
+                        type = 'active';
+                    } else if (skill.equipable === false) {
+                        type = 'auto';
+                    } else if (skill.type) {
+                        type = skill.type;
+                    }
+
+                    skillsByType[type]?.push(nodeId);
+                });
+
+                // 種類別に配列を再構成
+                const sortedUnlockedNodes = [];
+                skillTypeOrder.forEach(type => {
+                    sortedUnlockedNodes.push(...(skillsByType[type] || []));
+                });
+
+                //処理
+                sortedUnlockedNodes.forEach(nodeId => {
 
                     const node = SKILL_TREE[nodeId];
                     if (!node || !node.skillId) return;

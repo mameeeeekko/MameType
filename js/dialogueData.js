@@ -1772,7 +1772,7 @@ export const DIALOGUE_DATA = {
                 ] 
             },
             { character: "ナビ", text: "ですが、以前とは少し違います。" }, 
-            { character: "オペレーター", text: "どう違う？", 
+            { character: "オペレーター", text: "……", 
                 choiceId: "W2_Q45_start_3", 
                 choices: [ { text: "どう違う？", response: { character: "ナビ", text: "あなたの状態を確認することが、\nミッションの一部ではなくなっています。" }}, 
                            { text: "何を確認してるの？", response: { character: "ナビ", text: "入力速度。\nミス率。\n操作間隔。\n……それから、あなたの反応です。" }} 

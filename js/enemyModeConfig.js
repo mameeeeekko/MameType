@@ -173,14 +173,14 @@ export function isInterceptStage(stage) {
 export const INTERCEPT_TIER_SPEC = {
     T1:  { charType: "alphabet", speed: 1.8, variance: 0.05, count: 1, maxAlive: 4, interval: 2000, damage: 15, size: 10, goal: 20, score: 15 },
     T2:  { charType: "alphabet", speed: 1.8, variance: 0.10, count: 2, maxAlive: 4, interval: 1900, damage: 20, size: 10, goal: 30, score: 20 },
-    T3:  { charType: "alphabet", speed: 1.9, variance: 0.15, count: 2, maxAlive: 5, interval: 1900, damage: 25, size: 11, goal: 40, score: 25 },
-    T4:  { charType: "alphabet", speed: 1.9, variance: 0.20, count: 2, maxAlive: 6, interval: 1800, damage: 30, size: 11, goal: 50, score: 30 },
-    T5:  { charType: "alphabet", speed: 2.0, variance: 0.25, count: 3, maxAlive: 7, interval: 1800, damage: 35, size: 12, goal: 60, score: 35 },
-    T6:  { charType: "alphabet", speed: 2.0, variance: 0.30, count: 3, maxAlive: 7, interval: 1700, damage: 40, size: 12, goal: 65, score: 40 },
-    T7:  { charType: "alphabet", speed: 2.1, variance: 0.35, count: 4, maxAlive: 8, interval: 1700, damage: 45, size: 13, goal: 70, score: 45 },
-    T8:  { charType: "alphabet", speed: 2.1, variance: 0.35, count: 4, maxAlive: 9, interval: 1700, damage: 50, size: 13, goal: 75, score: 50 },
-    T9:  { charType: "all",      speed: 1.8, variance: 0.45, count: 3, maxAlive: 7, interval: 1900, damage: 55, size: 14, goal: 80, score: 60 },
-    T10: { charType: "all",      speed: 1.9, variance: 0.45, count: 3, maxAlive: 8, interval: 1900, damage: 60, size: 14, goal: 85, score: 70 },
+    T3:  { charType: "alphabet", speed: 1.9, variance: 0.15, count: 2, maxAlive: 5, interval: 1900, damage: 25, size: 11, goal: 40, score: 23 },
+    T4:  { charType: "alphabet", speed: 1.9, variance: 0.20, count: 2, maxAlive: 6, interval: 1800, damage: 30, size: 11, goal: 50, score: 25 },
+    T5:  { charType: "alphabet", speed: 2.0, variance: 0.25, count: 3, maxAlive: 7, interval: 1800, damage: 35, size: 12, goal: 60, score: 28 },
+    T6:  { charType: "alphabet", speed: 2.0, variance: 0.30, count: 3, maxAlive: 7, interval: 1700, damage: 40, size: 12, goal: 65, score: 30 },
+    T7:  { charType: "alphabet", speed: 2.1, variance: 0.35, count: 4, maxAlive: 8, interval: 1700, damage: 45, size: 13, goal: 70, score: 32 },
+    T8:  { charType: "alphabet", speed: 2.1, variance: 0.35, count: 4, maxAlive: 9, interval: 1700, damage: 50, size: 13, goal: 75, score: 35 },
+    T9:  { charType: "all",      speed: 1.8, variance: 0.45, count: 3, maxAlive: 7, interval: 1900, damage: 55, size: 14, goal: 80, score: 40 },
+    T10: { charType: "all",      speed: 1.9, variance: 0.45, count: 3, maxAlive: 8, interval: 1900, damage: 60, size: 14, goal: 85, score: 50 },
 };
 
 // ======================================================

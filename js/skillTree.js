@@ -458,19 +458,19 @@ export const NORMAL_UNLOCK_TABLE = {
 
     2: [
         [
-            { type:"time", value:150 },
+            { type:"time", value:165 },
             { type:"accuracy", value:95 }
         ],
         [
-            { type:"time", value:150 },
+            { type:"time", value:165 },
             { type:"miss", value:5 }
         ],
         [
-            { type:"time", value:150 },
+            { type:"time", value:165 },
             { type:"score", value:220 }
         ],
         [
-            { type:"time", value:140 }
+            { type:"time", value:155 }
         ]
     ],
 
@@ -541,19 +541,19 @@ export const TIME_ATTACK_UNLOCK_TABLE = {
 
     2: [
         [
-            { type:"target", value:24 },
+            { type:"target", value:26 },
             { type:"accuracy", value:95 }
         ],
         [
-            { type:"target", value:24 },
+            { type:"target", value:26},
             { type:"miss", value:5 }
         ],
         [
-            { type:"target", value:24 },
+            { type:"target", value:26 },
             { type:"score", value:220 }
         ],
         [
-            { type:"target", value:25 }
+            { type:"target", value:28 }
         ]
     ],
 
@@ -1053,8 +1053,8 @@ function buildRequirements(depth, additional = []) {
             baseReqs.push({ type: "questClear", value: "W1_BOSS" });
             break;
         case SKILL_DEPTH.END:
-            baseReqs.push({ type: "playerLevel", value: 35 });
-            baseReqs.push({ type: "questClear", value: "W2_DEFENSE_3" });
+            baseReqs.push({ type: "playerLevel", value: 40 });
+            baseReqs.push({ type: "questClear", value: "W2_DEFENSE_4" });
             break;
     }
     return [...baseReqs, ...additional];
