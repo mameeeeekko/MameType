@@ -24,13 +24,13 @@ style.css
   --dvw: 16px;   /* 1600px / 100 */
   --dvh: 9px;    /* 900px / 100 */
 
-  /* 英字UI（ラテン）用 */
-  --font-ui: 'Inter', 'Noto Sans JP', 'Hiragino Maru Gothic ProN',
-             'Yu Gothic UI', system-ui, sans-serif;
-  /* 日本語UI・タイピング表示用（丸ゴ寄りで統一） */
-  --font-ja: 'M PLUS Rounded 1c', 'Noto Sans JP', 'Hiragino Maru Gothic ProN',
-             'Yu Gothic UI', 'Meiryo', system-ui, sans-serif;
-  /* 数字・等幅表示用 */
+  /* 英字UI（ラテン）用: Inter を最優先、和文フォールバックは M PLUS Rounded 1c / BIZ UDPGothic / Meiryo */
+  --font-ui: 'Inter', 'M PLUS Rounded 1c', 'Noto Sans JP', 'BIZ UDPGothic',
+             'Meiryo', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+  /* 日本語UI・タイピング表示用（丸ゴ寄りで統一、Windowsでも文字が潰れないUDゴシック・Meiryoをフォールバック） */
+  --font-ja: 'M PLUS Rounded 1c', 'Noto Sans JP', 'BIZ UDPGothic', 'Meiryo',
+             'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+  /* 数字・等幅表示用: 和文フォールバックも含めてMSゴシックビットマップへの落下を防止 */
   --font-mono: 'Noto Sans Mono', 'Consolas', 'Courier New', monospace;
 
   /* =====================================================
@@ -111,24 +111,23 @@ body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  text-rendering: geometricPrecision;
 }
 
 /* =====================================================
-   Windows のみ: UI全体の文字のにじみ対策
-   ・丸ゴ自ホストはヒンティングが弱く、ClearType＋125%/150%
-     スケーリング＋ステージ transform でにじんで見えるため
-   ・小さいUI文字はヒンティング済みの Yu Gothic UI / Meiryo を
-     優先し、タイピング大文字のみ丸ゴ維持＋stroke で補正
-   ・描画コストは静的CSSのみ。renderer/毎フレーム描画は不変
+   Windows のみ: UI全体の文字のにじみ・潰れ対策
+   ・丸ゴおよびInterを最優先で維持しつつ、Windowsのフォールバックとして
+     文字が潰れない BIZ UDPGothic / Meiryo を指定
+   ・Yu Gothic UI のような極小サイズで線がくっついて潰れるフォントを排除
+   ・タイピング大文字のみ stroke で可読性を補正
    ===================================================== */
 body.win {
-  --font-ui: 'Yu Gothic UI', 'Meiryo', 'M PLUS Rounded 1c', 'Noto Sans JP', system-ui, sans-serif;
-  --font-ja: 'Yu Gothic UI', 'Meiryo', 'M PLUS Rounded 1c', 'Noto Sans JP', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+  --font-ui: 'Inter', 'M PLUS Rounded 1c', 'Noto Sans JP', 'BIZ UDPGothic', 'Meiryo', system-ui, sans-serif;
+  --font-ja: 'M PLUS Rounded 1c', 'Noto Sans JP', 'BIZ UDPGothic', 'Meiryo', system-ui, sans-serif;
 }
 body.win #word, body.win #word-long, body.win #jp,
 body.win #roma, body.win #kana-scroll, body.win #roma-scroll {
-  --font-ja: 'M PLUS Rounded 1c', 'Yu Gothic UI', 'Meiryo', 'Noto Sans JP', system-ui, sans-serif;
+  --font-ja: 'M PLUS Rounded 1c', 'BIZ UDPGothic', 'Meiryo', 'Noto Sans JP', system-ui, sans-serif;
   -webkit-text-stroke: 0.2px currentColor;
   font-weight: 500;
 }
@@ -3091,6 +3090,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   padding: 10px 14px;
   border-radius: 12px;
   font-size: 12px;
+  font-family: var(--font-ui);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
   width: 220px;
@@ -3106,6 +3106,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #82a4cb; /* メニュータイトルと同じサイバーブルー */
   text-transform: uppercase;
   font-size: 12px;
+  font-family: var(--font-ui);
 }
 
 .hud-row {
@@ -3115,6 +3116,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   margin-top: 6px;
   margin-bottom: 4px;
   gap: 8px;
+  font-family: var(--font-ui);
 }
 
 /* ラベル（KPM等）の色を薄く */
@@ -3126,6 +3128,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   font-size: 12px;
   color: #b0bdc8; /* ランクもアクセントブルーにしてタイトルと合わせる */
   margin-left: 4px; /* ラベルとの隙間 */
+  font-family: var(--font-ui);
+  font-weight: 600;
 }
 
 /* バーと数値を横に並べるコンテナ */
@@ -3174,6 +3178,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   font-size: 13px;
   min-width: 45px;
   text-align: left;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .hud-bar-fill {
@@ -3727,6 +3733,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   padding: 3px 0;
   font-size: 13px;
   color: #e6edf3;
+  font-family: var(--font-ui);
 }
 
 .quest-stats-row.sub {
@@ -3738,6 +3745,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 .quest-stats-row span:last-child {
   color: #9fe870;
   font-weight: 600;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .quest-stats-row:hover {
@@ -3837,8 +3846,9 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 .skill-desc {
-  font-size: 10px;
-  opacity: 0.7;
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0.85;
 }
 
 .skill-empty {
@@ -4231,6 +4241,7 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   gap: 8px;
   margin: 6px 0;
   font-size: 12px;
+  font-family: var(--font-ui);
 }
 
 /* ラベル（Chain増加など） */
@@ -4245,6 +4256,8 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #9fe870;
   font-weight: 600;
   text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .quest-skill-bar {

@@ -503,6 +503,13 @@ export function resetRendererState() {
   if (jp) jp.innerHTML = "";
 }
 
+// カタカナをひらがなに1対1変換するヘルパー（カタカナを固定点・ピンとして活用するため）
+function kataToHira(str) {
+  if (!str) return "";
+  return str.replace(/[\u30A1-\u30F6]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60))
+            .replace(/ヴ/g, 'ゔ');
+}
+
 /**
  * 表示用漢字と読みのリストを同期したセグメント配列に変換する
  * segments が空の場合は word と text の差分から自動生成する
@@ -511,6 +518,7 @@ function buildFinalSegments(displayWord, text, segments) {
   // ★重要：計算前に、表示用・読み用の両方で改行とインデントスペースをまとめて1文字スペースに統一する
   // これにより、空白の行は何もないものとして扱える
   const cleanedText = text.replace(/(\r?\n[ 　]*)+/g, ' ');
+  const kanjiBlockCache = new Map(); // 漢字ブロックDP結果キャッシュ（計算が漢字ブロック単位に一度だけ行われるように）
 
   const displayIndexMap = [];
   let cleanedDisplayWord = '';
@@ -543,11 +551,11 @@ function buildFinalSegments(displayWord, text, segments) {
     cleanedIndex += 1;
   }
 
-  // 漢字、々、〇、に加え、カタカナ（全角・半角）もマッピング対象に含める
-  const kanjiRegex = /[\u4E00-\u9FFF\u3005\u3007\u303B\uF900-\uFAFF\u30A0-\u30FF\uFF66-\uFF9F]+/g;
+  // 純粋な漢字・々・〇などのみ（カタカナはひらがなに1対1変換できるため、ピン＝固定点として活用する）
+  const kanjiRegex = /[\u4E00-\u9FFF\u3005\u3007\u303B\uF900-\uFAFF]+/g;
   const result = [];
 
-  // 1. 非漢字（ひらがな等）を「固定点（ピン）」として抽出
+  // 1. 非漢字（ひらがな、カタカナ、英数記号等）を「固定点（ピン）」として抽出
   const pins = [];
   let last = 0;
   for (const m of [...cleanedDisplayWord.matchAll(kanjiRegex)]) {
@@ -559,9 +567,11 @@ function buildFinalSegments(displayWord, text, segments) {
   // 2. 読みテキスト（text）側でのピンの正確な位置を特定
   let searchFrom = 0;
   pins.forEach(p => {
-    const cleanS = p.s.replace(/[、。，．,.？！?! ]/g, "");
-    let found = cleanedText.indexOf(p.s, searchFrom);
-    let matchedLen = p.s.length;
+    // カタカナが含まれるピンもひらがなに変換して読みテキスト側を検索
+    const hiraS = kataToHira(p.s);
+    const cleanS = hiraS.replace(/[、。，．,.？！?! ]/g, "");
+    let found = cleanedText.indexOf(hiraS, searchFrom);
+    let matchedLen = hiraS.length;
 
     if (found === -1) {
       if (cleanS !== "") {
@@ -609,23 +619,119 @@ function buildFinalSegments(displayWord, text, segments) {
       const bEndT = nextP ? nextP.t : cleanedText.length;
       const bRead = text.slice(bStartT, bEndT);
 
-      let r;
       const sub = cleanedPos - m.index;
       if (segments && segments[kIdx]) {
-        r = segments[kIdx];
+        // segments が明示的に与えられている場合はそれを使う
+        const r = segments[kIdx];
+        result.push({ w: char, t: r, start: bStartT });
+        if (cleanedPos === m.index + m[0].length - 1) kIdx += m[0].length;
       } else {
-        const rLen = bRead.length / m[0].length;
-        const sIdx = Math.floor(sub * rLen);
-        const eIdx = (sub === m[0].length - 1) ? bRead.length : Math.floor((sub + 1) * rLen);
-        r = bRead.slice(sIdx, eIdx);
+        // ★ 日本語の音韻規則を考慮したDPアライメントで漢字ブロックの読みを各漢字へ割り当て
+        // ブロック単位で一度だけDPを計算し、kanjiBlockCache に格納して再利用する
+        const blockKey = m.index + '_' + bStartT;
+        if (!kanjiBlockCache.has(blockKey)) {
+          const n = m[0].length; // 漢字の数
+          const L = bRead.length; // 読みの総文字数
+          let offsets;
+
+          if (L < n) {
+            // フォールバック: 各漢字に1文字ずつ割り当て（不足分は末尾にまとめる）
+            offsets = [];
+            for (let k = 0; k <= n; k++) offsets.push(Math.min(k, L));
+          } else {
+            // 日本語音韻規則ペナルティテーブル構築
+            const INVALID_START = new Set('んっーぁぃぅぇぉゃゅょゎァィゥェォャュョヮンッー');
+            const ODAN = new Set('おこそとのほもよろをごぞどぼぽ');
+            const UDAN = new Set('うくすつぬふむゆるぐずづぶぷ');
+            const EDAN = new Set('えけせてねへめれげぜでべぺ');
+
+            const splitPenalty = new Array(L + 1).fill(0);
+            for (let p = 1; p < L; p++) {
+              // 1. 漢字頭に来てはいけない文字（ん、っ、ー、小書き文字）は厳禁
+              if (INVALID_START.has(bRead[p])) {
+                splitPenalty[p] += 100000;
+              }
+              // 2. 拗音(小書き文字)直後の長音 'う' や 'い' (例: きょ|う, じょ|う) は分割厳禁
+              if (p >= 2 && 'ゃゅょャュョ'.includes(bRead[p - 1]) && 'ういウイ'.includes(bRead[p])) {
+                splitPenalty[p] += 50000;
+              }
+              // 3. お段/う段+'う'、え段+'い' の長音・二重母音の結合ペナルティ
+              if (bRead[p] === 'う' && (ODAN.has(bRead[p - 1]) || UDAN.has(bRead[p - 1]))) {
+                splitPenalty[p] += 3.0;
+              }
+              if (bRead[p] === 'い' && EDAN.has(bRead[p - 1])) {
+                splitPenalty[p] += 3.0;
+              }
+            }
+
+            const target = L / n;
+            const maxPerK = Math.min(L - n + 1, 6); // 漢字1文字の読みは最大6文字程度
+            const INF = 1e18;
+            let prev = new Array(L + 1).fill(INF);
+            prev[0] = 0;
+            const parentTable = [];
+
+            for (let i = 1; i <= n; i++) {
+              const cur = new Array(L + 1).fill(INF);
+              const parent = new Array(L + 1).fill(-1);
+              for (let j = i; j <= L - (n - i); j++) {
+                const lo = Math.max(i - 1, j - maxPerK);
+                const hi = j - 1;
+                for (let k = lo; k <= hi; k++) {
+                  if (prev[k] === INF) continue;
+                  const len = j - k;
+                  const segment = bRead.slice(k, j);
+                  const pCut = k > 0 ? splitPenalty[k] : 0;
+
+                  // 漢字1文字あたりの自然な読み文字数重み付け（音読みは2文字または拗音含む3文字が最頻出）
+                  let lenCost = 0.0;
+                  if (len === 2) {
+                    lenCost = 0.0;
+                  } else if (len === 3 && /[ゃゅょぁぃぅぇぉ]/.test(segment)) {
+                    lenCost = 0.0;
+                  } else if (len === 1) {
+                    lenCost = 0.4;
+                  } else if (len === 3) {
+                    lenCost = 0.6;
+                  } else if (len === 4) {
+                    lenCost = 2.0;
+                  } else {
+                    lenCost = 6.0;
+                  }
+
+                  const cost = prev[k] + (len - target) * (len - target) * 0.5 + lenCost + pCut;
+                  if (cost < cur[j]) {
+                    cur[j] = cost;
+                    parent[j] = k;
+                  }
+                }
+              }
+              parentTable.push(parent);
+              prev = cur;
+            }
+
+            offsets = new Array(n + 1);
+            offsets[n] = L;
+            let j = L;
+            for (let i = n - 1; i >= 0; i--) {
+              j = parentTable[i][j];
+              offsets[i] = j;
+            }
+            offsets[0] = 0;
+          }
+          kanjiBlockCache.set(blockKey, offsets);
+        }
+
+        const offsets = kanjiBlockCache.get(blockKey);
+        const r = bRead.slice(offsets[sub], offsets[sub + 1]);
+        result.push({ w: char, t: r, start: bStartT + offsets[sub] });
+        if (cleanedPos === m.index + m[0].length - 1) kIdx += m[0].length;
       }
-      const rLen = bRead.length / m[0].length;
-      result.push({ w: char, t: r, start: bStartT + Math.floor(sub * rLen) });
-      if (cleanedPos === m.index + m[0].length - 1) kIdx += m[0].length;
     } else {
-      // 非漢字の場合：特定したピンの座標をそのまま使う
+      // 非漢字の場合（ひらがな、カタカナ、英数記号等）：特定したピンの座標をそのまま使う
       const p = pins.find(x => cleanedPos >= x.d && cleanedPos < x.d + x.s.length);
-      result.push({ w: char, t: char, start: p.t + (cleanedPos - p.d) });
+      const readChar = kataToHira(char);
+      result.push({ w: char, t: readChar, start: p.t + (cleanedPos - p.d) });
     }
   }
   return result;
@@ -765,13 +871,20 @@ function renderLongText(state) {
 
       // ★改行と、改行直後のスペースを1文字スペースに統一 (ローマ字表示とロジックを統一)
       const cleanedText = text.replace(/(\r?\n[ 　]*)+/g, ' ');
-      const textIndexMap = [];
+      // text[i] → cleanedText上のインデックスのマッピングを构築
+      // \r は単独では無視するが、textIndexMap[i] を undefined にするとgetVisiblePos()が
+      // 壊れるため、直前の有効インデックスを引き継ぐ形で明示的にセットする
+      const textIndexMap = new Array(text.length).fill(-2); // -2 = 未設定のセンチネル
       let cleanedTextIndex = 0;
       let inNewlineGroup = false;
 
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        if (char === '\r') continue;
+        if (char === '\r') {
+          // \r は cleanedText には反映されないため直前の値を引き継ぐ
+          textIndexMap[i] = i > 0 ? textIndexMap[i - 1] : 0;
+          continue;
+        }
         if (char === '\n') {
           if (!inNewlineGroup) {
             textIndexMap[i] = cleanedTextIndex;
@@ -784,7 +897,7 @@ function renderLongText(state) {
         }
 
         if (inNewlineGroup && (char === ' ' || char === '　')) {
-          textIndexMap[i] = -1;
+          textIndexMap[i] = -1; // -1 = cleanedText上では1スペースとして合算済みのインデント空白
           continue;
         }
 
@@ -798,10 +911,12 @@ function renderLongText(state) {
       const getVisiblePos = position => {
         if (position >= textIndexMap.length) return cleanedTextIndex;
         const mapped = textIndexMap[position];
-        if (mapped !== -1) return mapped;
+        // mapped が -1（インデント空白）または -2（未設定）の場合は次の有効な位置を探す
+        if (mapped !== undefined && mapped !== -1 && mapped !== -2) return mapped;
 
         for (let j = position + 1; j < textIndexMap.length; j++) {
-          if (textIndexMap[j] !== -1) return textIndexMap[j];
+          const m = textIndexMap[j];
+          if (m !== undefined && m !== -1 && m !== -2) return m;
         }
         return cleanedTextIndex;
       };

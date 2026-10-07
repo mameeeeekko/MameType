@@ -311,7 +311,7 @@ function setupStatsModal(options = {}) {
 }
 
 // ★全クリア（C）／EXTRA全クリア（Ex）バッジの共通スタイル（C と同じUI・同じ色）
-const CLEAR_BADGE_STYLE = "display: inline-block; background-color: #fadb14; color: #1c1c1c; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: bold; margin-left: 4px; vertical-align: middle;";
+const CLEAR_BADGE_STYLE = "display: inline-block; background-color: #fadb14; color: #1c1c1c; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: bold; margin-left: 4px; vertical-align: middle; font-family: var(--font-ui);";
 
 function updateQuestHud() {
   const s = getPlayerStatsForEnemy("quest") || {};
@@ -337,21 +337,27 @@ function updateQuestHud() {
     levelEl.style.setProperty("color", "#f0f6fc", "important");
     levelEl.style.fontWeight = "bold";
     levelEl.style.fontSize = "13px";
+    levelEl.style.fontFamily = "var(--font-mono)";
   }
   if (hpEl) {
     hpEl.textContent = maxHp;
     hpEl.style.setProperty("color", "#f0f6fc", "important");
     hpEl.style.fontWeight = "bold";
     hpEl.style.fontSize = "13px";
+    hpEl.style.fontFamily = "var(--font-mono)";
   }
   if (defEl) {
     defEl.textContent = defense;
     defEl.style.setProperty("color", "#f0f6fc", "important");
     defEl.style.fontWeight = "bold";
     defEl.style.fontSize = "13px";
+    defEl.style.fontFamily = "var(--font-mono)";
   }
   
-  if (expEl)   expEl.textContent   = `${exp} / ${nextExp}`;
+  if (expEl) {
+    expEl.textContent = `${exp} / ${nextExp}`;
+    expEl.style.fontFamily = "var(--font-mono)";
+  }
 
   const expPercent = Math.min(exp / nextExp, 1) * 100;
   const bar = document.getElementById("hudExpBar");
@@ -824,13 +830,13 @@ function renderQuestRing(s) {
 
   /* Lvラベル */
   ctx.fillStyle = "rgba(130,220,255,0.75)";
-  ctx.font = "14px 'Noto Sans Mono', monospace";
+  ctx.font = "14px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = "right";
   ctx.fillText("Lv", cx - 4, levelY);
 
   /* 数字 */
   ctx.fillStyle = "rgba(180,255,255,0.98)";
-  ctx.font = "bold 22px 'Noto Sans Mono', monospace";
+  ctx.font = "bold 22px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = "left";
   ctx.fillText(String(level), cx + 4, levelY);
 

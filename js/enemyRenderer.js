@@ -2779,7 +2779,7 @@ export function renderScore(ctx, gameState, now) {
     // =========================
     // ① ラベル（小さく）
     // =========================
-    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     // 本体
     ctx.fillStyle = "#f0f6fc"; // 左右HUDの文字を明るい白系に統一
     ctx.fillText("SCORE", x, y);
@@ -2789,7 +2789,7 @@ export function renderScore(ctx, gameState, now) {
     // =========================
     const valueY = y + 14;
 
-    ctx.font = "bold 30px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 30px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
 
     // 本体
     ctx.fillStyle = "#f0f6fc";
@@ -2801,10 +2801,10 @@ export function renderScore(ctx, gameState, now) {
     // =========================
     const infoY = valueY + 40;
 
-    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText("KILL", x, infoY);
-    ctx.font = "bold 20px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 20px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText(`${stats.defeatedCount}`, x, infoY + 16);
 
@@ -2813,10 +2813,10 @@ export function renderScore(ctx, gameState, now) {
 
     const infoY2 = infoY + 42;
 
-    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText("TIME", x, infoY2);
-    ctx.font = "bold 20px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 20px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText(`${elapsedSec}s`, x, infoY2 + 16);
 
@@ -2849,7 +2849,7 @@ function drawSaturationGauge(ctx, stats, x, y) {
     ctx.save();
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText("SATURATION", x, y - 20);
 
@@ -2868,10 +2868,10 @@ function drawSaturationGauge(ctx, stats, x, y) {
     ctx.lineTo(x + width + 4, limitY);
     ctx.stroke();
 
-    ctx.font = "bold 14px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 14px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = color;
     ctx.fillText(`${Math.round(value)}%`, x + width + 8, y + height / 2 - 10);
-    ctx.font = "11px 'Noto Sans Mono', monospace";
+    ctx.font = "11px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText(`LIMIT ${Math.round(limit)}%`, x + width + 8, y + height / 2 + 10);
 
@@ -3061,7 +3061,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     let y = 12;
     
     // 🔥 難易度 & フェーズ表示
-    ctx.font = "bold 10px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 10px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc";
     const diff = getDifficulty(stats.difficulty);
     
@@ -3075,7 +3075,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     y += 25
 
     // SPAWN（単独描画）
-    ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#f0f6fc";
     ctx.fillText("SPAWN", x, y);
 
@@ -3084,7 +3084,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     if (spawnDots) {
         drawSpawnDots(ctx, x, y, spawnDots.remaining, spawnAnimState, now);
     } else {
-        ctx.font = "bold 24px 'Noto Sans Mono', monospace";
+        ctx.font = "bold 24px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
         ctx.fillStyle = "#f0f6fc"; // ♾️を白く表示
         ctx.fillText(spawnText, x, y);
     }
@@ -3093,7 +3093,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
     
     // タイトル
     if (lines.length > 0) {
-        ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+        ctx.font = "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
         ctx.fillStyle = "#f0f6fc";
         ctx.fillText("OBJECTIVE", x, y);
 
@@ -3105,19 +3105,19 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
             const baseY = y + i * 26;
             // ラベル（小）
             if (item.label) {
-                ctx.font = "bold 16px 'Noto Sans Mono', monospace";
+                ctx.font = "bold 16px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
                 ctx.fillStyle = "#f0f6fc";
                 ctx.fillText(item.label + ":", x, baseY + 5);
             }
             // ラベル（中）
             if (item.label2) {
-                ctx.font = "16px 'Noto Sans Mono', monospace";
+                ctx.font = "16px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
                 ctx.fillStyle = "#f0f6fc";
                 ctx.fillText(item.label2, x, baseY);
             }
             // 値（大）
             if (item.value) {
-                ctx.font = "bold 24px 'Noto Sans Mono', monospace";
+                ctx.font = "bold 24px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
                 ctx.fillStyle = "#f0f6fc";
                 ctx.fillText(item.value, x + 70, baseY);
             }
@@ -3135,7 +3135,7 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
 
     // タイトル
     if (lines2.length > 0) {
-        ctx.font = "bold 12px 'Noto Sans Mono', monospace";
+        ctx.font = "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
         ctx.fillStyle = "#e4e4e4";
         ctx.fillText("CLEAR", x, y);
 
@@ -3148,21 +3148,21 @@ export function renderEndCondition(ctx, gameState, stage, now, startTime) {
 
             // ラベル（小）
             if (item.label) {
-                ctx.font = "bold 16px 'Noto Sans Mono', monospace";
+                ctx.font = "bold 16px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
                 ctx.fillStyle = "#e4e4e4";
                 ctx.fillStyle = itemColor;
                 ctx.fillText(item.label + ":", x, baseY+5);
             }
             // ラベル（中）
             if (item.label2) {
-                ctx.font = "16px 'Noto Sans Mono', monospace";
+                ctx.font = "16px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
                 ctx.fillStyle = "#e4e4e4";
                 ctx.fillStyle = itemColor;
                 ctx.fillText(item.label2, x, baseY);
             }
             // 値（大）
             if (item.value) {
-                ctx.font = "bold 24px 'Noto Sans Mono', monospace";
+                ctx.font = "bold 24px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
                 ctx.fillStyle = item.color ?? "#e4e4e4";
                 ctx.fillStyle = itemColor;
                 ctx.fillText(item.value, x + 70, baseY);
@@ -3403,10 +3403,10 @@ function drawCooldownSpeedPopup(ctx, canvas, deltaTime = 1 / 60) {
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
 
-    ctx.font = "bold 9px 'M PLUS Rounded 1c', sans-serif";
+    ctx.font = "10px 'Inter', 'M PLUS Rounded 1c', sans-serif";
     const labelWidth = ctx.measureText(labelText).width;
 
-    ctx.font = "bold 14px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 14px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     const valueWidth = ctx.measureText(valueText).width;
 
     const gap = 5;
@@ -3427,12 +3427,12 @@ function drawCooldownSpeedPopup(ctx, canvas, deltaTime = 1 / 60) {
     ctx.stroke();
 
     // ラベル
-    ctx.font = "bold 9px 'M PLUS Rounded 1c', sans-serif";
+    ctx.font = "10px 'Inter', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "rgba(160, 200, 235, 0.85)";
     ctx.fillText(labelText, x + padX, centerY + 0.5 - riseOffset);
 
     // 倍率
-    ctx.font = "bold 14px 'Noto Sans Mono', monospace";
+    ctx.font = "bold 14px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif";
     ctx.fillStyle = "#bfe3ff";
     ctx.fillText(valueText, x + padX + labelWidth + gap, centerY - riseOffset);
 

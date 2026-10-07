@@ -431,7 +431,7 @@ function renderDefenseStats(ctx, state) {
     _statsCache.comboText = (state.currentCombo || 0).toLocaleString();
   }
 
-  setFontCached(ctx, "bold 18px 'Noto Sans Mono', monospace");
+  setFontCached(ctx, "bold 18px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif");
   ctx.textAlign = "center";
 
   // 残り時間
@@ -454,19 +454,19 @@ function renderDefenseStats(ctx, state) {
   ctx.save();
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
-  setFontCached(ctx, "bold 12px 'Noto Sans Mono', monospace");
+  setFontCached(ctx, "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif");
   ctx.fillStyle = "#f0f6fc";
   ctx.fillText("SCORE", scoreX, scoreY + 25);
-  setFontCached(ctx, "bold 30px 'Noto Sans Mono', monospace");
+  setFontCached(ctx, "bold 30px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif");
   ctx.fillText(_statsCache.scoreText, scoreX, scoreY + 25 + 14);
 
   // --- 右上のコンボ数表示 ---
   const comboY = scoreY + 25 + 14 + 45; // スコアの下に配置（さらに距離を離す）
 
-  setFontCached(ctx, "bold 12px 'Noto Sans Mono', monospace");
+  setFontCached(ctx, "bold 12px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif");
   ctx.fillStyle = "#f0f6fc";
   ctx.fillText("COMBO", scoreX, comboY);
-  setFontCached(ctx, "bold 30px 'Noto Sans Mono', monospace");
+  setFontCached(ctx, "bold 30px 'Noto Sans Mono', 'M PLUS Rounded 1c', sans-serif");
   ctx.fillText(_statsCache.comboText, scoreX, comboY + 14);
 
   ctx.restore();
