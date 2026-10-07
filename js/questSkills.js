@@ -669,30 +669,30 @@ export const PASSIVE_SKILLS = {
   item_spawn_1: {
     name: "幸運Ⅰ",
     icon: "item_1",
-    desc: "アイテム出現率が20%上昇",
+    desc: "アイテム出現率が5%上昇",
     equipable: true,
     apply: (p) => {
-      p.itemSpawnMultiplier = (p.itemSpawnMultiplier || 1) + 0.20;
+      p.itemSpawnMultiplier = (p.itemSpawnMultiplier || 1) + 0.05;
     }
   },
 
   item_spawn_2: {
     name: "幸運Ⅱ",
     icon: "item_2",
-    desc: "アイテム出現率が25%上昇",
+    desc: "アイテム出現率が8%上昇",
     equipable: true,
     apply: (p) => {
-      p.itemSpawnMultiplier = (p.itemSpawnMultiplier || 1) + 0.25;
+      p.itemSpawnMultiplier = (p.itemSpawnMultiplier || 1) + 0.08;
     }
   },
 
   item_spawn_3: {
     name: "幸運Ⅲ",
     icon: "item_3",
-    desc: "アイテム出現率が30%上昇",
+    desc: "アイテム出現率が12%上昇",
     equipable: true,
     apply: (p) => {
-      p.itemSpawnMultiplier = (p.itemSpawnMultiplier || 1) + 0.30;
+      p.itemSpawnMultiplier = (p.itemSpawnMultiplier || 1) + 0.12;
     }
   },
 
