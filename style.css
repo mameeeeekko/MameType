@@ -4186,7 +4186,9 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
   margin: 56px 14px 18px;
 
-  border: 1px solid rgba(0, 255, 255, 0.18);
+  background: rgba(10,10,15,0.97);
+  border: 1px solid rgba(0,255,255,0.15);
+  box-shadow: 0 0 30px rgba(0,255,255,0.1);
   border-radius: 12px;
 }
 
