@@ -1461,6 +1461,16 @@ export function openQuestMenuModal(type = "difficulty") {
                     skillsByType[type]?.push(nodeId);
                 });
 
+                // 各タイプ内で名前順でソート
+                Object.keys(skillsByType).forEach(type => {
+                    skillsByType[type].sort((a, b) => {
+                        const skillA = getSkillById(SKILL_TREE[a]?.skillId);
+                        const skillB = getSkillById(SKILL_TREE[b]?.skillId);
+                        if (!skillA || !skillB) return 0;
+                        return (skillA.name || '').localeCompare((skillB.name || ''), 'ja');
+                    });
+                });
+
                 // 種類別に配列を再構成
                 const sortedUnlockedNodes = [];
                 skillTypeOrder.forEach(type => {
