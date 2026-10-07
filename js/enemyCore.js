@@ -3,7 +3,7 @@ import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,
 import { fitCanvasToContainerFill } from "./canvasUtil.js";
 import { stageRect } from "./stageScale.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { initAudio, playEnemyKillSound, stopBGM, playBGM, ensureSound, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
+import { initAudio, playEnemyKillSound, stopBGM, playBGM, ensureSound, isSoundReady, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
     renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBreakEffect, playLoopSE, stopLoopSE,
     renderChainBreakEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
     renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, spawnItemSkillEffect,
@@ -2207,6 +2207,58 @@ function isEnemyVisible(enemy) {
     );
 }
 
+// =====================================================
+// モード開始時のローディング表示（英語）
+// -----------------------------------------------------
+// v1.0.42 以降、BGM/SE は「モード開始時にその場で読み込む」方式のため、
+// 未取得の音源があると開始直後に待ちが発生する（初回やキャッシュミス時）。
+// 待ちが発生する場合だけ、開始アナウンス（QUEST START 等）の前に
+// "NOW LOADING..." を英語表示し、読み込み完了後に隠してから
+// アナウンス → スタート、という順番にする。
+// 取得済み（キャッシュ済み）なら表示しないので従来どおり即開始になる。
+// =====================================================
+const MODE_START_LOADING_TEXT = "NOW LOADING...";
+const MODE_START_LOADING_DEFAULT_TEXT = "Loading...";
+// 一瞬で終わる読み込みでも点滅させないための最短表示時間（ms）
+const MODE_START_LOADING_MIN_MS = 300;
+let modeStartLoadingActive = false;
+let modeStartLoadingShownAt = 0;
+
+/**
+ * 開始前に読み込み待ちが発生する可能性があるとき、
+ * ローディング画面（#loadingScreen）へ "NOW LOADING..." を英語表示する。
+ */
+function showModeStartLoading() {
+    const el = document.getElementById("loadingScreen");
+    if (!el) return;
+    modeStartLoadingActive = true;
+    modeStartLoadingShownAt = performance.now();
+    const text = el.querySelector(".loading-text");
+    if (text) text.textContent = MODE_START_LOADING_TEXT;
+    el.style.display = "flex";
+}
+
+/**
+ * ローディング画面を隠す。
+ * 最短表示時間を満たすまで待ってから消すことで、
+ * 一瞬で終わる読み込みによる点滅（チカチカ）を防ぐ。
+ */
+async function hideModeStartLoading() {
+    if (!modeStartLoadingActive) return;
+    modeStartLoadingActive = false;
+
+    const remain = MODE_START_LOADING_MIN_MS - (performance.now() - modeStartLoadingShownAt);
+    if (remain > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remain));
+    }
+
+    const el = document.getElementById("loadingScreen");
+    if (!el) return;
+    el.style.display = "none";
+    const text = el.querySelector(".loading-text");
+    if (text) text.textContent = MODE_START_LOADING_DEFAULT_TEXT;
+}
+
 export async function startEnemyMode(config = {}) {
 
     // ★ ゲーム開始時に会話モーダルを強制的に閉じる
@@ -2736,14 +2788,29 @@ export async function startEnemyMode(config = {}) {
         stockIncreaseCount: 0,
     };
     
-    await initAudio();   // ← 音読み込み
-    if (getSoundEnabled() && getSoundSettings().bgm) {
-        // ★v1.0.42: モード開始時にBGMを読み込む（起動時の一括デコード廃止のため）
-        await ensureSound(resolvedBgm);
-        playBGM(resolvedBgm, 1.0);
-        gameState.startTime = getNow(); // BGM表示のために開始時間をセット
-    } else {
-        stopBGM(); // ★ BGM設定がOFFでも、マップBGM等が鳴り続けないように停止
+    // ★v1.0.42: BGM/SE はモード開始時にその場で読み込む方式のため、
+    //   未取得の音源だとここで待ちが発生する（初回やキャッシュミス時）。
+    //   待ちが発生する場合は開始アナウンス（QUEST START 等）の前に
+    //   読み込みを済ませ、その間だけ "NOW LOADING..." を英語表示する。
+    //   取得済みなら表示せず、従来どおり即アナウンス → スタート。
+    const bgmEnabled = getSoundEnabled() && getSoundSettings().bgm;
+    const needModeStartLoad = bgmEnabled && !isSoundReady(resolvedBgm);
+    if (needModeStartLoad) showModeStartLoading();
+
+    try {
+        await initAudio();   // ← 音読み込み
+        if (bgmEnabled) {
+            // ★v1.0.42: モード開始時にBGMを読み込む（起動時の一括デコード廃止のため）
+            await ensureSound(resolvedBgm);
+            playBGM(resolvedBgm, 1.0);
+            gameState.startTime = getNow(); // BGM表示のために開始時間をセット
+        } else {
+            stopBGM(); // ★ BGM設定がOFFでも、マップBGM等が鳴り続けないように停止
+        }
+    } finally {
+        // 読み込み完了後（例外時も同様）にローディング表示を閉じてから、
+        // 従来どおりキャンバス表示 → 開始アナウンス → スタートへ進む
+        if (needModeStartLoad) await hideModeStartLoading();
     }
 
     const canvas = document.getElementById("enemyModeCanvas");
