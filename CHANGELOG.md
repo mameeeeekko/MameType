@@ -2,6 +2,24 @@
 
 ---
 
+## [1.0.77] - 2026-10-07
+
+### Changed
+- **EQUIP SKILLS の右側一覧（PASSIVE / ACTIVE / AUTO）を「系統（ジャンル）ごと → 効果の弱い順」に並べ替えた**
+  - 1.0.76 は効果の弱い順のみで、系統によるグルーピングが実質効いていなかった（パッシブは全件 other・アクティブは全件 active に集約）。
+  - `js/questSkills.js` … `SKILL_GENRE_ORDER`（系統の表示順・単一ソース）と `getSkillGenre(skillId, skill)`（ID接頭辞＋`skill.type` から系統を導出。スキル定義の変更はなし）を新規エクスポート。
+  - `js/questMapUI.js` … 分類を `getSkillGenre()` に、系統順を `SKILL_GENRE_ORDER` に置き換え（`skillTypeOrder` は削除）。
+    - パッシブ: 連鎖 → 反発 → 体力 → 防御 → 修練 → 高速詠唱 → 幸運 → ブロック → 復活 → 事前充填
+    - アクティブ: 撃破 → 停止 → 回復 → 無敵 → ノックバック
+    - 系統内の並びは 1.0.76 の「効果の弱い順（同値は名前順）」をそのまま使用。
+  - 影響範囲: クエストの EQUIP SKILLS モーダルの PASSIVEタブ / ACTIVEタブ / AUTOボックス。装備／ホバー／クリック処理は従来どおり。
+  - 未定義の新スキルIDは other（最後尾）に振り分けられる。
+- **アプリケーションバージョンを `1.0.77` に更新**
+  - `js/version.js` の `APP_VERSION` を `1.0.77` に更新。
+  - Service Worker のキャッシュ名を `mametype-v1.0.77` に更新。
+
+---
+
 ## [1.0.76] - 2026-10-07
 
 ### Changed

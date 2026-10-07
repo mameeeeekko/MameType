@@ -35,6 +35,66 @@ export function getSkillEffectPower(skill) {
     return m ? Number(m[0]) : Infinity;
 }
 
+// ============================================
+// スキルの系統（ジャンル）
+// -------------------------------------------------
+// EQUIP SKILLS の一覧は「系統ごと → 効果の弱い順」に並べる。
+//   ・系統の並び順 … SKILL_GENRE_ORDER（単一ソース）
+//   ・系統内の並び … getSkillEffectPower() の昇順（同値は名前順）
+// スキル定義には手を加えず、ID接頭辞と skill.type から導出する。
+// 未定義のIDは other（一覧の最後尾）に振り分けられる。
+// ============================================
+export const SKILL_GENRE_ORDER = [
+    "chain",       // 連鎖（連鎖増強/維持/獲得・集中）
+    "kb",          // 反発（パッシブ）
+    "hp",          // 体力
+    "def",         // 防御
+    "exp",         // 修練
+    "cooldown",    // 高速詠唱
+    "item",        // 幸運
+    "block",       // ブロック
+    "revive",      // 復活
+    "stock",       // 事前充填
+    "kill",        // 撃破（アクティブ）
+    "freeze",      // 停止（アクティブ）
+    "heal",        // 回復（アクティブ）
+    "invincible",  // 無敵（アクティブ）
+    "knockback",   // ノックバック（アクティブ）
+    "auto",        // 装備不可（AUTO）
+    "other",       // その他
+];
+
+/**
+ * スキルの系統（ジャンル）を返す。
+ * @param {string} skillId
+ * @param {object} skill getSkillById() の結果
+ * @returns {string} SKILL_GENRE_ORDER のいずれか
+ */
+export function getSkillGenre(skillId, skill) {
+    if (!skill) return "other";
+
+    // アクティブスキル → 効果タイプ（kill / freeze / heal / knockback / invincible）
+    if (ACTIVE_SKILLS[skillId]) return skill.type || "other";
+
+    // 装備不可（AUTO）
+    if (skill.equipable === false) return "auto";
+
+    // パッシブ → ID接頭辞で系統判定
+    const id = String(skillId || "");
+    if (id.startsWith("chain_") || id.startsWith("glass_chain_")) return "chain";
+    if (id.startsWith("kb_up")) return "kb";
+    if (id.startsWith("max_hp")) return "hp";
+    if (id.startsWith("defense_up")) return "def";
+    if (id.startsWith("exp_up")) return "exp";
+    if (id.startsWith("cooldown_speed")) return "cooldown";
+    if (id.startsWith("item_spawn")) return "item";
+    if (id.startsWith("damage_negate")) return "block";
+    if (id.startsWith("revive_once")) return "revive";
+    if (id.startsWith("stock_start")) return "stock";
+
+    return "other";
+}
+
 // アクティブスキル。
 //   装備して使う。ゲーム中に発動できる。
 //   effectも対応

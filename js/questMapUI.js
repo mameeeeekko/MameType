@@ -9,7 +9,7 @@ import { getCurrentDifficulty, setCurrentDifficulty, getAvailableDifficulties } 
 import { backToQuestMenu, backToQuestMap, showHud, openKeybindConfigModal } from "./main.js";
 import { renderSkillTreeUI } from "./skillTreeUI.js";
 import { SKILL_TREE } from "./skillTree.js";
-import { getSkillById, ACTIVE_SKILLS, getSkillEffectPower } from "./questSkills.js";
+import { getSkillById, ACTIVE_SKILLS, getSkillEffectPower, SKILL_GENRE_ORDER, getSkillGenre } from "./questSkills.js";
 import {
     equipSkill,
     unequipSkill,
@@ -1424,21 +1424,12 @@ export function openQuestMenuModal(type = "difficulty") {
                 const equippedActive = getEquippedActiveSkills();
 
                 // =============================
-                // スキルを種類別に分類・ソート
+                // スキルを系統（ジャンル）別に分類・ソート
+                //   ・系統の並び順 … SKILL_GENRE_ORDER（questSkills.js）
+                //   ・系統内の並び … 効果の弱い順（getSkillEffectPower）
                 // =============================
-                const skillsByType = {
-                    chain: [],      // チェイン系
-                    knockback: [],  // ノックバック系
-                    kill: [],       // キル系
-                    freeze: [],     // フリーズ系
-                    heal: [],       // ヒール系
-                    invincible: [], // 無敵系
-                    auto: [],       // 装備不可（自動）
-                    active: [],     // アクティブ
-                    other: []       // その他
-                };
-
-                const skillTypeOrder = ['chain', 'knockback', 'kill', 'freeze', 'heal', 'invincible', 'auto', 'active', 'other'];
+                const skillsByType = {};
+                SKILL_GENRE_ORDER.forEach(t => { skillsByType[t] = []; });
 
                 unlockedNodes.forEach(nodeId => {
                     const node = SKILL_TREE[nodeId];
@@ -1447,35 +1438,27 @@ export function openQuestMenuModal(type = "difficulty") {
                     const skill = getSkillById(node.skillId);
                     if (!skill) return;
 
-                    let type = 'other';
-
-                    // スキルの種類を判定
-                    if (ACTIVE_SKILLS[node.skillId]) {
-                        type = 'active';
-                    } else if (skill.equipable === false) {
-                        type = 'auto';
-                    } else if (skill.type) {
-                        type = skill.type;
-                    }
+                    // 系統（ジャンル）を判定
+                    const type = getSkillGenre(node.skillId, skill);
 
                     skillsByType[type]?.push(nodeId);
                 });
 
-                // 各タイプ内で効果の弱い順にソート（同値は名前順）
+                // 各系統内で効果の弱い順にソート（同値は名前順）
                 Object.keys(skillsByType).forEach(type => {
                     skillsByType[type].sort((a, b) => {
                         const skillA = getSkillById(SKILL_TREE[a]?.skillId);
                         const skillB = getSkillById(SKILL_TREE[b]?.skillId);
                         if (!skillA || !skillB) return 0;
                         const powerDiff = getSkillEffectPower(skillA) - getSkillEffectPower(skillB);
-                        if (powerDiff !== 0) return powerDiff;
+                        if (powerDiff !== 0 && !Number.isNaN(powerDiff)) return powerDiff;
                         return (skillA.name || "").localeCompare((skillB.name || ""), "ja");
                     });
                 });
 
-                // 種類別に配列を再構成
+                // 系統別に配列を再構成
                 const sortedUnlockedNodes = [];
-                skillTypeOrder.forEach(type => {
+                SKILL_GENRE_ORDER.forEach(type => {
                     sortedUnlockedNodes.push(...(skillsByType[type] || []));
                 });
 
