@@ -1053,8 +1053,8 @@ function buildRequirements(depth, additional = []) {
             baseReqs.push({ type: "questClear", value: "W1_BOSS" });
             break;
         case SKILL_DEPTH.END:
-            baseReqs.push({ type: "playerLevel", value: 40 });
-            baseReqs.push({ type: "questClear", value: "W2_DEFENSE_4" });
+            baseReqs.push({ type: "playerLevel", value: 45 });
+            baseReqs.push({ type: "questClear", value: "W2_BOSS" });
             break;
     }
     return [...baseReqs, ...additional];
