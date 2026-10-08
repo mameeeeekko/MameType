@@ -2,6 +2,26 @@
 
 ---
 
+## [1.0.79] - 2026-10-07
+
+### Fixed
+- **Windows で UI 文字（メニュー / HUD / ボタンなどの DOM 文字）に残っていた「ギザギザ感」を解消**
+  - 原因は3点（すべて Windows のみ発生。Mac は Retina 2x のため目立たなかった）:
+    1. **`text-rendering: geometricPrecision` がヒンティングを切っていた**（`style.css` の `body`）。DPR 1.0〜1.5 の Windows では輪郭がデバイスピクセルのグリッドに吸着せず、丸ゴの画が段差として見えていた
+    2. **`-webkit-font-smoothing: antialiased` は macOS 専用で Windows では無効**（＝Mac 向け設定しか入っておらず、Windows への補正は空白だった）
+    3. **Webフォント＋`transform: scale()` 層のため Windows は常にグレースケールAA**（ClearType＝サブピクセルAAは効かない。Chromium の既知仕様 [issue 40199005](https://issues.chromium.org/issues/40199005)）。グレースケールAAは解像度が低いと階段が目立つ
+  - **`style.css` の `body.win`（Windows 判定クラス・`js/main.js` が付与）に以下を追加**
+    - `text-rendering: auto` … ヒンティングを有効化して輪郭をデバイスpxグリッドに吸着（本命）
+    - `-webkit-font-smoothing: auto` / `-moz-osx-font-smoothing: auto` … macOS 向け指定を打ち消し
+    - `text-shadow: 0 0 0.5px currentColor` … グレースケールAAの階段を微小な同色影で補間して滑らかに。glow 用 `text-shadow` を持つ要素（33箇所）は個別指定が優先されるため変化なし
+    - `body.win.win-text-heavy`（**既定は無効**）… 輪郭を太くする追加オプション。DevTools の Console で `document.body.classList.add('win-text-heavy')` により有効化可、`-webkit-text-stroke` の `0.15px` を 0.1〜0.2px で調整可
+  - Mac（`body` 直下）の指定・見た目は変更なし。タイピング大文字の `0.2px` stroke ＋ `weight: 500` も従来どおり
+  - **アプリケーションバージョンを `1.0.79` に更新**
+    - `js/version.js` の `APP_VERSION` を `1.0.79` に更新。
+    - Service Worker のキャッシュ名を `mametype-v1.0.79` に更新（キャッシュ優先方式のため、これ以外では Windows に更新が届かない）。
+
+---
+
 ## [1.0.77] - 2026-10-07
 
 ### Changed

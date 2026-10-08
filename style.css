@@ -115,16 +115,42 @@ body {
 }
 
 /* =====================================================
-   Windows のみ: UI全体の文字のにじみ・潰れ対策
+   Windows のみ: UI全体の文字のにじみ・潰れ・ギザギザ対策
    ・丸ゴおよびInterを最優先で維持しつつ、Windowsのフォールバックとして
      文字が潰れない BIZ UDPGothic / Meiryo を指定
    ・Yu Gothic UI のような極小サイズで線がくっついて潰れるフォントを排除
    ・タイピング大文字のみ stroke で可読性を補正
+   ・「ギザギザ感」対策（下記3点。body の指定を Windows でのみ上書き）:
+     1) text-rendering を auto に戻してヒンティングを有効化
+        body の geometricPrecision はヒンティングを切り、DPR 1.0〜1.5 の
+        Windows では輪郭がデバイスピクセルのグリッドに吸着せず、
+        丸ゴの画が段差として目立っていた（Mac は Retina 2x のため目立たない）
+     2) -webkit-font-smoothing を auto で打ち消す
+        この指定は macOS 専用で Windows では無効（＝何も効いていなかった）。
+        なお Webフォント＋transform 層のため Windows は常にグレースケールAA
+        （ClearType＝サブピクセルAAは効かない。Chromium の既知仕様）
+     3) 0.5px の同色 text-shadow でグレースケールAAの階段を補間し滑らかに
+        glow 用の text-shadow を持つ要素は個別指定が優先されるため変化なし
    ===================================================== */
 body.win {
   --font-ui: 'Inter', 'M PLUS Rounded 1c', 'Noto Sans JP', 'BIZ UDPGothic', 'Meiryo', system-ui, sans-serif;
   --font-ja: 'M PLUS Rounded 1c', 'Noto Sans JP', 'BIZ UDPGothic', 'Meiryo', system-ui, sans-serif;
+
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: auto;
+  text-shadow: 0 0 0.5px currentColor;
 }
+
+/* 【調整用・既定は無効】さらに文字の輪郭をわずかに太くして段差を目立たなくする。
+   有効化は DevTools の Console から:
+     document.body.classList.add('win-text-heavy')
+   （強すぎ/弱すぎなら -webkit-text-stroke の 0.15px を 0.1〜0.2px で調整。
+     タイピング大文字は下の #word 側の 0.2px が id 指定のため優先され不変） */
+body.win.win-text-heavy {
+  -webkit-text-stroke: 0.15px currentColor;
+}
+
 body.win #word, body.win #word-long, body.win #jp,
 body.win #roma, body.win #kana-scroll, body.win #roma-scroll {
   --font-ja: 'M PLUS Rounded 1c', 'BIZ UDPGothic', 'Meiryo', 'Noto Sans JP', system-ui, sans-serif;
