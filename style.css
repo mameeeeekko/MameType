@@ -81,8 +81,11 @@ html {
    ステージ：アプリ全体をデザインサイズ 1600×900（16:9）に固定し、
    --stage-scale でフルスクリーン / 大 / 中 / 小 に合わせて等倍拡大縮小する。
    16:9 モニターのフルスクリーンでは余白ゼロで表示される。
-   ※ body が transform を持つため、position: fixed の各画面は
-     ビューポートではなくステージ（1600×900）を基準に配置される。
+   ※ スケール適用は2モード（js/stageScale.js が決定）:
+      transform モード … body が transform を持つため position: fixed の各画面は
+        ビューポートではなくステージ（1600×900）を基準に配置される（従来方式）。
+      zoom モード（Windows 既定）… zoom は包含ブロックを作らないため fixed は
+        ビューポート基準になる。16:9 ウィンドウではステージと一致するため実害なし。
    ※ container-type により body がサイズクエリのコンテナになり、
      下記の @container（旧 @media）は常に 1600×900 基準で評価される
      （= 小さいウィンドウでもレイアウトが切り替わらない）。
@@ -112,6 +115,18 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
+}
+
+/* =====================================================
+   zoom ステージモード（js/stageScale.js が Windows で付与）
+   body の transform を無効化し、CSS zoom で拡大縮小する。
+   理由: Chromium は「Webフォント＋transform 合成レイヤー」上の文字を常に
+   グレースケールAAで描画し ClearType（サブピクセルAA）を無効にする
+   （既知仕様 issues.chromium.org/issues/40199005）。zoom はレイヤー合成を
+   起こさないため、LCD AA ＋ ヒンティングが効いた描画に戻すのが目的。
+   ===================================================== */
+body.zoom-stage {
+  transform: none;
 }
 
 /* =====================================================

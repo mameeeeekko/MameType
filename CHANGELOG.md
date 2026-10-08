@@ -2,6 +2,27 @@
 
 ---
 
+## [1.0.80] - 2026-10-08
+
+### Fixed
+- **Windows の UI 文字ギザギザ対策・第2弾: `body` のスケール方式を `transform` → `zoom` に切替（Windows のみ既定）**
+  - v1.0.79 の CSS 修正（`text-rendering: auto` 等）は適用済みと確認されたが改善せず ⇒ 残る主犯は **`transform: scale()` の合成レイヤー** と判定
+  - Chromium は「Webフォント＋`transform: scale()` 合成レイヤー」上の文字を**常にグレースケールAA**で描画し、ClearType（サブピクセルAA）＋フォントヒンティングを無効にする（既知仕様 [issues.chromium.org/issues/40199005](https://issues.chromium.org/issues/40199005)）。DPR=1.0 の Windows ではこれが段差として目に見える
+  - **`js/stageScale.js`**: スケール適用を2モード化
+    - `'transform'` … 従来方式（Mac / 非対応ブラウザの既定。**Mac の見た目・挙動は不変**）
+    - `'zoom'` … CSS `zoom` 方式（**Windows ＋ zoom 対応ブラウザの既定**）。レイヤー合成を起こさないため LCD AA ＋ ヒンティングが効く描画に戻ると期待
+    - 検証・フォールバック: 適用後に `getComputedStyle(zoom)` と表示サイズを実測し、不一致なら即 `transform` へ自動切り戻し
+    - 強制切替（A/B確認用）: URL パラメータ `?stage=zoom` / `?stage=transform`
+    - `getStageMode()` を新規エクスポート。起動ログに `[MameType] v1.0.80 stage-mode: zoom|transform` を出力（`js/main.js`）
+    - **座標変換コードはモード共通で不変**（`zoom` 下でも `clientWidth` は論理値・`getBoundingClientRect` は表示値を返すことを Chrome headless で実測済み）。`clientToStage()` / `stageRect()` / `@container` 評価サイズ（1600×900）も両モードで同一
+  - **`style.css`**: `body.zoom-stage { transform: none; }` を追加（`stageScale.js` が zoom モード時のみ付与）。ステージ設定コメントを2モード体制に更新
+  - **既知のトレードオフ**: `zoom` は `position: fixed` の包含ブロックを作らないため、オーバーレイ（モーダル等）の基準がステージ→ビューポートになる。**16:9 ウィンドウでは両者は一致し実害なし**。レターボックス発生時のみオーバーレイが画面全体基準になる
+  - **アプリケーションバージョンを `1.0.80` に更新**
+    - `js/version.js` の `APP_VERSION` → `1.0.80`
+    - Service Worker のキャッシュ名 → `mametype-v1.0.80`（キャッシュ優先方式のため、これ以外では Windows に更新が届かない）
+
+---
+
 ## [1.0.79] - 2026-10-07
 
 ### Fixed

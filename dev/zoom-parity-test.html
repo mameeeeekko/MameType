@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>stage scale parity test</title>
+<!-- style.css の実体（body ステージ設定・@container・--dvw を含む）をそのまま使う -->
+<link rel="stylesheet" href="../style.css">
+<style>
+  /* テスト専用の追加スタイルのみ */
+  #stageItem { position: absolute; left: 100px; top: 50px; width: 300px; height: 100px; }
+  #fixedCenter { position: fixed; left: 50%; top: 50%; width: 800px; height: 400px; }
+  #fixedEdge { position: fixed; inset: 0; }
+  #dvwFont { font-size: calc(var(--dvw) * 5.5); }
+  #cqwBox { width: 100cqw; height: 10cqh; }
+</style>
+</head>
+<body>
+  <div id="stageItem">stage</div>
+  <div id="fixedCenter">modal</div>
+  <div id="fixedEdge"></div>
+  <div id="dvwFont">A</div>
+  <div id="cqwBox">c</div>
+  <div id="out">pending</div>
+  <script type="module">
+    import { getStageScale, getStageMode, clientToStage, stageRect, STAGE_W, STAGE_H }
+      from "../js/stageScale.js";
+
+    function rect(id) {
+      const r = document.getElementById(id).getBoundingClientRect();
+      return [r.left, r.top, r.width, r.height].map(v => Math.round(v * 100) / 100);
+    }
+    const cts = clientToStage(window.innerWidth / 2, window.innerHeight / 2);
+    const result = {
+      mode: getStageMode(),
+      scale: Math.round(getStageScale() * 1e6) / 1e6,
+      vw: window.innerWidth,
+      vh: window.innerHeight,
+      stageItem: rect("stageItem"),
+      fixedCenter: rect("fixedCenter"),
+      fixedEdge: rect("fixedEdge"),
+      dvwFontPx: parseFloat(getComputedStyle(document.getElementById("dvwFont")).fontSize),
+      cqwBox: rect("cqwBox"),
+      clientToStageCenter: [Math.round(cts.x * 100) / 100, Math.round(cts.y * 100) / 100],
+      stageRectItem: (() => { const r = stageRect(document.getElementById("stageItem"));
+        return [r.left, r.top, r.width, r.height].map(v => Math.round(v * 100) / 100); })(),
+      stageW: STAGE_W, stageH: STAGE_H
+    };
+    document.getElementById("out").textContent = "JSON:" + JSON.stringify(result);
+  </script>
+</body>
+</html>

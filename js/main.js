@@ -46,7 +46,7 @@ import { loadCoreAssets, loadRemainingAssets, images, collectOfflineAssetUrls, g
 import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds.js";
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
-import { fitStage, getStageScale } from "./stageScale.js";
+import { fitStage, getStageScale, getStageMode } from "./stageScale.js";
 import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
 import { TIER_TABLES, getTierEnemies, STAGES, getFixedTurretTable, getInterceptTierSpec, INTERCEPT_CHAR_TYPES, buildFreeEnemyMissionConfig } from "./enemyModeConfig.js";
 // ★固定砲台の仕様は enemy.js の FIXED_TURRET_TIER_CONFIG が単一ソース。
@@ -1266,6 +1266,11 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.classList.add("win");
     }
   } catch (e) { /* 判定失敗時は無視 */ }
+
+  // ★スケール適用モードを表示（'transform' | 'zoom'）。
+  //   Windows の文字描画（ClearType）比較・デバッグ用。
+  //   強制切替は URL パラメータ: ?stage=zoom / ?stage=transform
+  console.log(`[MameType] v${APP_VERSION} stage-mode: ${getStageMode()} (scale: ${getStageScale().toFixed(4)})`);
 
   // ★描画品質に応じた「グロー影」の一括制御を有効化（起動時）
   enableAdaptiveShadowControl();
