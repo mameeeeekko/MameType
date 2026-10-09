@@ -199,7 +199,7 @@
     margin-top: 1px;
 }
 .log-chapter-locked .log-chapter-title {
-    opacity: 0.6;
+    color: rgba(139, 148, 158, 0.6);
     cursor: default;
 }
 .log-chapter-locked .log-chapter-status {

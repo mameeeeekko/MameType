@@ -226,9 +226,20 @@ body.win .quest-modal-box.quest-modal-skill .active-skill-desc-container .skill-
    ⇒ 設定画面・モード設定画面の説明文など灰色テキストに限定して無効化する。
    font-weight: 500 は維持（実ウェイトなので輪郭はクリスプなまま）。
    ===================================================== */
+/* v1.0.84: 上記に加え、Windows で見にくい全要素を一括で stroke 除外。
+   対象は opacity→色アルファ化・低コントラストグレー・背景透過テキスト。 */
 body.win .setting-description,
 body.win [style*="color: #8b949e"],
-body.win [style*="color:#8b949e"] {
+body.win [style*="color:#8b949e"],
+body.win .log-chapter-title,
+body.win .log-chapter-status,
+body.win .character-name,
+body.win .map-label,
+body.win .map-label.cleared,
+body.win .map-label.locked,
+body.win .dialogue-close-btn,
+body.win #dialogueSkipToEndBtn,
+body.win #dialogueSkipToChoiceBtn {
   -webkit-text-stroke: 0;
 }
 
@@ -5379,6 +5390,13 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #9a9a9a;
   white-space: nowrap;
   pointer-events: none;
+}
+
+/* v1.0.84: Windows でマップラベルが見にくい問題への対策。
+   背景透過テキストのため黒フチ（text-shadow）を追加して視認性を確保する。
+   body.win スコープで Mac の見た目は変更なし。 */
+body.win .map-label {
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.7);
 }
 
 /* クリア済み */

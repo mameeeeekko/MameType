@@ -2,6 +2,36 @@
 
 ---
 
+## [1.0.84] - 2026-10-10
+
+### Fixed
+- **Windows で見にくい全要素の共通原因を修正：合成レイヤー化による ClearType 無効化**
+
+  **原因特定**
+  - Windows で見にくいと報告された要素すべてに `opacity < 1` または半透明背景が設定されており、Chromium が独立した合成レイヤーを生成していた
+  - 合成レイヤー上のテキストは ClearType（サブピクセルAA）が使われずグレースケールAAにフォールバックする
+  - さらに `-webkit-text-stroke: 0.06px currentColor` が半透明レイヤー上の低コントラストグレー文字では霞として広がり「にじむ」効果を強めていた
+
+  **修正内容**
+  1. **`js/dialogue.css`** — `.log-chapter-locked .log-chapter-title` の `opacity: 0.6` を `color: rgba(139,148,158,0.6)` に置き換え（レイヤー化回避）
+  2. **`style.css`** — `body.win` スコープでグレー文字の stroke 除外を大幅拡大:
+     - 追加対象: `.log-chapter-title` / `.log-chapter-status` / `.character-name` / `.map-label` / `.map-label.cleared` / `.map-label.locked` / `.dialogue-close-btn` / `#dialogueSkipToEndBtn` / `#dialogueSkipToChoiceBtn`
+  3. **`js/defenseRenderer.js`** — 防衛モード非カレント行の色を `#6e7681` → `#9aa4b0` に変更（背景 `#020a17` とのコントラスト比を約4:1に向上）
+  4. **`style.css`** — `body.win .map-label` に `text-shadow: 0 0 4px rgba(0,0,0,0.9)` を追加（背景透過テキストの視認性確保。Mac は対象外）
+
+  **対象だった画面**
+  - 設定画面のグレー説明文（`.setting-description`）
+  - クエストモードのマップメニュー・ログ文字（`.log-chapter-title` 等）
+  - 会話ウィンドウ（`.character-name` / `.dialogue-close-btn` 等）
+  - マップノードラベル（`.map-label`）
+  - 防衛モードの入力日本語（`defenseRenderer renderWordList`）
+
+  - **アプリケーションバージョンを `1.0.84` に更新**
+    - `js/version.js` の `APP_VERSION` → `1.0.84`
+    - Service Worker のキャッシュ名 → `mametype-v1.0.84`
+
+---
+
 ## [1.0.83] - 2026-10-10
 
 ### Fixed
