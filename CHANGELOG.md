@@ -2,6 +2,36 @@
 
 ---
 
+## [1.0.83] - 2026-10-10
+
+### Fixed
+- **3点のWindows環境での不具合を一括修正**
+
+  **1. 設定のグレー文字のにじみ**
+  - `.setting-description`（#8b949e・11px）やモード設定画面のグレー説明文で、v1.0.81/82の `-webkit-text-stroke: 0.06px` がグレーの霞として広がり「にじむ」見た目になっていた
+  - `body.win` スコープで低コントラスト要素のストロークをゼロに: `.setting-description`、`[style*="color: #8b949e"]`（インライン説明文）
+  - `.setting-description` を B-2 の12px群に追加（インライン説明文と同じ12pxに統一）
+
+  **2. 防衛モードの入力文字の潰れ**
+  - `js/defenseRenderer.js renderWordList` のコントラスト不足と小さめサイズが原因。`body.win` のフォント・ストローク指定はCanvasに効かないため別対応が必要だった
+  - 非カレント行 `#4a4a4a` → `#6e7681`（背景 #020a17 でのコントラスト約2倍）
+  - ローマ字 `#888` → `#b8c2cc`、16px → **18px**
+  - 日本語カレント `bold 22px` → **bold 24px**、非カレント `18px` → **20px**
+  - `lineSpacing 40` → **44**（行の詰まり＝潰れ感を緩和）
+
+  **3. Windowsで防衛コンボバーが表示されない**
+  - 原因: `#defenseModeContainer`（`position:fixed`）の包含ブロックが zoom モード（Windows）ではビューポート基準になり、ステージ座標で配置される子要素（`#defenseComboTierWrapper`等）が画面外に出ていた
+  - `style.css`:
+    - `#defenseModeContainer` と `#enemyModeContainer` を `position:fixed` → `absolute` に変更。body が `position:fixed` でステージ位置にいるため Mac では見た目は完全に同一
+    - `#defense-ui-container` を新規追加: `position:absolute; inset:0; pointer-events:none` で子のコンボバーラッパーの包含ブロックをステージに統一
+  - `js/defenseCore.js:1340` リトライ再表示に `opacity:"1"` / `transition:""` のリセットを追加（終了演出後 `opacity:0` のままリトライするとバーが透明で見えないバグがあった）
+
+  - **アプリケーションバージョンを `1.0.83` に更新**
+    - `js/version.js` の `APP_VERSION` → `1.0.83`
+    - Service Worker のキャッシュ名 → `mametype-v1.0.83`（キャッシュ優先方式のため、これ以外では Windows に更新が届かない）
+
+---
+
 ## [1.0.82] - 2026-10-09
 
 ### Fixed

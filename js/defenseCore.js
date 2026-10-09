@@ -1337,7 +1337,12 @@ export function restartDefenseMode(isAbort = false) {
         // ★ UIコンテナも再表示する (今回の修正)
         const uiContainer = document.getElementById("defense-ui-container");
         if (uiContainer) {
+            // v1.0.83: opacity/transition も開始時（defenseCore.js:318-322）と
+            // 同じ状態に戻す。終了演出で opacity:0 にした後、リトライで
+            // display だけ block に戻すと透明のままバーが見えない問題があった。
             uiContainer.style.display = "block";
+            uiContainer.style.opacity = "1";
+            uiContainer.style.transition = "";
         }
         startDefenseMode(lastDefenseConfig);
     }

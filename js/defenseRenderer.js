@@ -808,7 +808,10 @@ function renderWordList(ctx, state) {
     charCount += wordLength + 1; // +1 for space
   }
 
-  const lineSpacing = 40; // 行間を広げる
+  // v1.0.83: Windows（DPR=1.0）で「潰れて見える」への可読化。
+  // 低コントラスト配色（#4a4a4a on #020a17）と小さめサイズが原因だったため、
+  // 色のコントラストを上げ、フォントサイズ・行間を+一段。ゲーム性への影響なし。
+  const lineSpacing = 44; // 行間を広げる（旧40 → 詰まり＝潰れ感を緩和）
   const displayCenterY = ch / 2; // 画面中央を基準にする
   const maxLinesAbove = Math.floor((displayCenterY - 50) / lineSpacing);
   const maxLinesBelow = Math.floor((ch - displayCenterY - 50) / lineSpacing);
@@ -832,11 +835,11 @@ function renderWordList(ctx, state) {
 
     // --- 日本語（漢字交じり）表示 ---
     const jpX = cw - 180; // 少し左にずらす
-    const jpFont = isCurrent ? "bold 22px 'M PLUS Rounded 1c', sans-serif" : "18px 'M PLUS Rounded 1c', sans-serif";
+    const jpFont = isCurrent ? "bold 24px 'M PLUS Rounded 1c', sans-serif" : "20px 'M PLUS Rounded 1c', sans-serif";
     setFontCached(ctx, jpFont);
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom"; // 下揃えにして、ローマ字との位置関係を安定させる
-    ctx.fillStyle = isCurrent ? "#e0e0e0" : "#4a4a4a";
+    ctx.fillStyle = isCurrent ? "#e0e0e0" : "#6e7681";
     ctx.fillText(word, jpX, y);
 
     // --- 現在の単語のみローマ字を表示 ---
@@ -853,7 +856,7 @@ function renderWordList(ctx, state) {
 
       // --- ローマ字表示 ---
       const romaX = jpX + 15;
-      setFontCached(ctx, "16px 'Noto Sans Mono', monospace");
+      setFontCached(ctx, "18px 'Noto Sans Mono', monospace");
       ctx.textAlign = "left";
       ctx.textBaseline = "bottom";
 
@@ -876,7 +879,7 @@ function renderWordList(ctx, state) {
       const fullRemainingRoma = _romaFullCache.value;
       const remainingRoma = fullRemainingRoma.substring(state.inputedRomaji.length + state.typed.length);
 
-      ctx.fillStyle = "#888";
+      ctx.fillStyle = "#b8c2cc";
       ctx.fillText(remainingRoma, romaX, y);
     }
   }

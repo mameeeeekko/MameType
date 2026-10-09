@@ -218,6 +218,20 @@ body.win .quest-modal-box.quest-modal-skill .active-skill-desc-container .skill-
   font-size: 11px;
 }
 
+/* =====================================================
+   Windows のみ: 低コントラスト「グレー系」文字の stroke 除外（v1.0.83）
+   body.win の -webkit-text-stroke: 0.06px は輪郭の両側に半透明フリンジを作る。
+   白系文字では「締まる」が、暗背景のグレー文字（#8b949e 等）では
+   フリンジ自体がグレーの霞として広がり「にじむ」見た目になる。
+   ⇒ 設定画面・モード設定画面の説明文など灰色テキストに限定して無効化する。
+   font-weight: 500 は維持（実ウェイトなので輪郭はクリスプなまま）。
+   ===================================================== */
+body.win .setting-description,
+body.win [style*="color: #8b949e"],
+body.win [style*="color:#8b949e"] {
+  -webkit-text-stroke: 0;
+}
+
 body.win .skill-equip h3,
 body.win .active-skill-desc-container .skill-desc,
 body.win .active-skill-desc-container .skill-cooldown,
@@ -235,6 +249,7 @@ body.win .star-upgrade-item-cooldown,
 body.win .star-upgrade-flash,
 body.win .star-upgrade-item-stats,
 body.win .star-upgrade-rebuild-tickets,
+body.win .setting-description,
 body.win #remainingLoadIndicator {
   font-size: 12px;
 }
@@ -4756,7 +4771,10 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
    ===================================================== */
 #enemyModeContainer{
   display:none;
-  position:fixed;
+  position:absolute;  /* v1.0.83: fixed→absolute。zoomモード（Windows）で
+     fixed の包含ブロックがビューポート基準になり、ステージ座標で配置される
+     子要素（chainUI・comboTierWrapper等）が画面外に出る問題の修正。
+     body が position:fixed でステージ位置にいるため見た目は同一。 */
   inset:0;
   align-items:center;
   justify-content:center;
@@ -4764,11 +4782,24 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 
 #defenseModeContainer{
   display:none;
-  position:fixed;
+  position:absolute;  /* v1.0.83: fixed→absolute。zoomモード（Windows）で
+     fixed の包含ブロックがビューポート基準になり、ステージ座標で配置される
+     子要素（コンボバー等）が画面外に出て表示されない問題の修正。
+     body 自身が position:fixed でステージ位置にいるため見た目は同一。 */
   inset:0;
   align-items:center;
   justify-content:center;
   background:#020a17;
+}
+
+/* v1.0.83: 防衛UIコンテナ（コンボバーラッパー）の包含ブロックをステージに統一。
+   定義が無いと子の #defenseComboTierWrapper（absolute）の基準が body の
+   座標系（zoomモードではビューポート）に依存し、コンボバーがズレる。
+   inset:0 でステージ全体を覆い、pointer-events:none でクリックを阻害しない。 */
+#defense-ui-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 #enemyModeCanvas{
