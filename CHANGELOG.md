@@ -2,6 +2,23 @@
 
 ---
 
+## [1.0.85] - 2026-10-10
+
+### Fixed
+- **オフラインでアプリ起動するとChromeの恐竜画面になる問題を修正（Windowsの「アプリで起動」対応）**
+  - 原因: v1.0.42でinstall時の自動キャッシュを廃止し、手動DLゼロだとキャッシュ空＋ナビゲーションへのフォールバック無しで起動ナビが失敗していた
+  - `service-worker.js` installで起動殻（`./ / index.html / css / js / manifest / icon`＝CORE_ASSETSの同一オリジン分）を`mametype-app`へ自動保存。1件ずつfetch→putで1件失敗でもinstall全体は成功、オフライン中のinstallはスキップして起動不能にしない
+  - `service-worker.js` fetchのナビゲーションは必ずResponseを返す（network → `index.html / ./`キャッシュ → 未DL案内の最小HTML）。絶対にthrowしない＝恐竜画面を出さない
+  - ナビゲーション以外はcache-first＋裏更新。`navigator.onLine`判定を廃止（SW内のonLineは不安定なため）
+  - `manifest.json`に`scope: "./"`と`id: "./index.html"`を追加（Windowsのアプリ起動の安定化）
+  - 設定からの「最新版をオフライン用にダウンロード」（193MBフルアセット用）は変更なし。1回DL完了でその版の間はオフライン完全版OK、版上げ後は再DL
+
+  - **アプリケーションバージョンを `1.0.85` に更新**
+    - `js/version.js` の `APP_VERSION` → `1.0.85`
+    - Service Worker のキャッシュ名 → `mametype-v1.0.85`
+
+---
+
 ## [1.0.84] - 2026-10-10
 
 ### Fixed

@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.84";
+const CACHE_NAME = "mametype-v1.0.85";
 
 // =====================================================
 // オフライン用キャッシュ（固定名）
@@ -373,17 +373,46 @@ async function notifyClients(message) {
 
 self.addEventListener("install", event => {
 
-  // ★v1.0.42: install 時のブートキャッシュを廃止。
-  //   オフライン環境で install がタイムアウト・失敗し
-  //   「ハードリフレッシュでしか起動できない」問題の根本修正。
-  //   オフライン用データはユーザーが明示的に
-  //   「最新版をオフライン用にダウンロード」を押したときに
-  //   ページ側（js/main.js の downloadOfflineData）が
-  //   Cache Storage へ直接書き込む。
+  // ★v1.0.85: 起動に必要な最小セット（App Shell）だけ自動キャッシュ。
+  //   ・オンライン初回訪問で ./ / index.html / css / js 等を mametype-app へ保存
+  //   ・1件ずつ fetch→put し、1件失敗でも install 全体は失敗させない
+  //   ・手動DL（193MBアセット）は従来通りページ側の downloadOfflineData が担当
+  //   ・オフライン中の install は何もせず成功扱い（起動不能にしない）
 
   console.log(
-    "Service Worker: Install (no boot cache)",
+    "Service Worker: Install (app-shell cache)",
     CACHE_NAME
+  );
+
+  event.waitUntil(
+    (async () => {
+      try {
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+          console.log("Service Worker: Install skipped (offline)");
+          return;
+        }
+        const cache = await caches.open(OFFLINE_APP_CACHE);
+        const targets = (typeof CORE_ASSETS !== "undefined" ? CORE_ASSETS : [])
+          .filter(u => {
+            try { return new URL(u, self.location.href).origin === self.location.origin; }
+            catch (e) { return false; }
+          });
+        for (const u of targets) {
+          try {
+            const url = new URL(u, self.location.href).href;
+            const res = await fetch(new Request(url, { cache: "no-cache" }));
+            if (res && res.ok) {
+              await cache.put(new Request(url), res.clone());
+            }
+          } catch (e) {
+            // 1件の失敗は無視（手動DL・次回更新で補完される）
+          }
+        }
+        console.log("Service Worker: Install app-shell done");
+      } catch (e) {
+        console.log("Service Worker: Install app-shell skipped:", e);
+      }
+    })()
   );
 
   // skipWaiting はしない（ユーザーが「更新を適用して再起動」を
@@ -481,27 +510,104 @@ self.addEventListener("fetch", event => {
   }
 
   // 同一オリジン以外は介入しない
-  const requestUrl = new URL(event.request.url);
+  let requestUrl = null;
+  try {
+    requestUrl = new URL(event.request.url);
+  } catch (e) {
+    return;
+  }
   if (requestUrl.origin !== self.location.origin) {
     return;
   }
 
   // ------------------------------------------------------
-  // オンライン中は一切介入しない（navigator.onLine が
-  // 未定義な環境では「オンライン扱い」にして介入しない）
-  if (navigator.onLine !== false) {
+  // ★v1.0.85: ナビゲーション（アプリ起動）は必ず Response を返す。
+  //   network → キャッシュ(index.html / ./) → 最小HTML の順。
+  //   絶対に throw しない＝Chromeの恐竜画面を出さない。
+  // ------------------------------------------------------
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      (async () => {
+        try {
+          const netRes = await fetch(event.request);
+          if (netRes && netRes.ok) {
+            // 起動殻は裏で最新化（次回オフライン起動用）
+            try {
+              const cache = await caches.open(OFFLINE_APP_CACHE);
+              cache.put(new Request(new URL("./index.html", self.location.href).href), netRes.clone()).catch(() => {});
+            } catch (e) { /* 裏更新の失敗は無視 */ }
+            return netRes;
+          }
+          // ネットワークは来たが ok でない → キャッシュへ
+          throw new Error("network-not-ok");
+        } catch (e) {
+          // オフライン時：キャッシュから index.html を返す
+          try {
+            const cached = await caches.match(event.request, { ignoreVary: true })
+              || await caches.match(new Request(new URL("./index.html", self.location.href).href), { ignoreVary: true })
+              || await caches.match(new Request(new URL("./", self.location.href).href), { ignoreVary: true });
+            if (cached) return cached;
+          } catch (err) { /* 下の最小HTMLへ */ }
+          // キャッシュも無い初回オフライン → 最小HTMLで起動だけさせる
+          return new Response(
+            "<!doctype html><html lang=\"ja\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>MameType</title></head>" +
+            "<body style=\"background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0\">" +
+            "<div style=\"text-align:center\"><h1>MameType</h1><p>オフライン用データが未ダウンロードです。<br>オンラインで開いて、設定から「最新版をオフライン用にダウンロード」してください。</p></div></body></html>",
+            { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } }
+          );
+        }
+      })()
+    );
     return;
   }
 
   // ------------------------------------------------------
-  // オフライン時のみキャッシュから配信する
+  // ★v1.0.85: ナビゲーション以外（JS/CSS/画像/音/フォント）は
+  //   cache-first → network（取得できたら保存して次回オフライン用に）。
+  //   navigator.onLine 判定は使わない（SW内の onLine は不安定なため）。
+  //   版更新は新SWの install が CORE_ASSETS を上書き＋手動DLで反映する。
   // ------------------------------------------------------
+  // 拡張子で保存先を振り分け（matchは全キャッシュを検索するので
+  // どちらに入っても動作するが、重複・分散を避けるため統一する）
+  const pickOfflineCache = (url) => {
+    try {
+      const path = new URL(url).pathname.toLowerCase();
+      if (
+        path.endsWith(".js") || path.endsWith(".css") ||
+        path.endsWith(".html") || path.endsWith(".json") ||
+        path.endsWith("/") || path.endsWith("mametype") ||
+        path.includes("icon-")
+      ) {
+        return OFFLINE_APP_CACHE;
+      }
+    } catch (e) { /* 判定不能はアセット側へ */ }
+    return OFFLINE_ASSET_CACHE;
+  };
   event.respondWith(
-    caches.match(event.request, { ignoreVary: true })
-      .then(cachedResponse => {
+    (async () => {
+      try {
+        const cachedResponse = await caches.match(event.request, { ignoreVary: true });
         if (cachedResponse) {
           return cachedResponse;
         }
+      } catch (e) { /* ネットワークへ進む */ }
+      try {
+        const netRes = await fetch(event.request);
+        // ok な同一オリジンGETは保存して次回オフライン用に
+        if (netRes && netRes.ok) {
+          try {
+            const cache = await caches.open(pickOfflineCache(event.request.url));
+            // navigation以外の静的物だけ保存（API等のPOSTは上で除外済み）
+            cache.put(event.request, netRes.clone()).catch(() => {});
+          } catch (e) { /* 保存失敗は無視 */ }
+        }
+        return netRes;
+      } catch (e) {
+        // ネット失敗時にキャッシュがあれば返す（再照会）
+        try {
+          const retry = await caches.match(event.request, { ignoreVary: true });
+          if (retry) return retry;
+        } catch (err) { /* 下の503へ */ }
         return new Response("MameType is offline", {
           status: 503,
           statusText: "Service Unavailable",
@@ -510,7 +616,8 @@ self.addEventListener("fetch", event => {
             "Cache-Control": "no-store",
           },
         });
-      })
+      }
+    })()
   );
 
 });
