@@ -4035,39 +4035,64 @@ export function renderPhaseWarning(ctx, stats, canvas) {
 // エネミーモードに表示されるUIの場所記録
 // ===========================================
 
+export function getActiveSkillIconCenter() {
+    try {
+        const canvas = document.getElementById("enemyModeCanvas");
+        const chainUI = document.getElementById("chainUI");
+        if (!canvas || !chainUI) return null;
+        const rect = stageRect(chainUI);
+        const canvasRect = stageRect(canvas);
+        if (!rect || !canvasRect) return null;
+        // renderActiveSkillUI と同一の定数・計算式（片方だけ変えるとズレるため）。
+        // stageRect() は両モード共通で要素のレイアウト座標（≒キャンバス描画座標系）を返すため、
+        // そのまま敵座標・エフェクト座標として使える。
+        const size = 36;
+        const OFFSET_X = 22;
+        const OFFSET_Y = 5;
+        const x = rect.right - canvasRect.left + OFFSET_X;
+        const y = rect.top - canvasRect.top + OFFSET_Y;
+        return { x: x + size / 2, y: y + size / 2 };
+    } catch (e) {
+        return null;
+    }
+}
+
 export function getUIAnchorPosition(type = "skill") {
 
+    // ======================================
+    // Skill UI（アクティブスキルアイコン中心）
+    // ======================================
+    if (type === "skill") {
+        const icon = getActiveSkillIconCenter();
+        if (icon) return icon;
+    }
+
     const canvas =
+        document.getElementById("enemyModeCanvas") ||
         document.getElementById("gameCanvas");
 
-    // fallback
+    // fallback（キャンバス基準のCSS px座標系＝敵座標系と一致させる）
     if (!canvas) {
 
         return {
-            x: STAGE_W * 0.5,      // ステージ中央
-            y: STAGE_H - 80        // ステージ下端 - 80
+            x: STAGE_W * 0.6,
+            y: 43
         };
     }
 
     // transform スケール下では rect が表示サイズを返すためステージ座標へ変換
+    // ※skill以外（hp/combo/default）の従来計算用。skillは上記アイコン中心を優先する
     const rect =
         stageRect(canvas);
 
-    // ======================================
-    // Skill UI
-    // ======================================
     if (type === "skill") {
-
-        return {
-
-            x:
-                rect.left +
-                rect.width * 0.5,
-
-            y:
-                rect.top +
-                rect.height - 90
-        };
+        try {
+            const cw = canvas.clientWidth || STAGE_W;
+            // アイコンが取れない時の推定位置：上部中央やや右（実アイコン≒x:960,y:43想定）
+            return { x: cw * 0.6, y: 43 };
+        } catch (e) {
+            return { x: STAGE_W * 0.6, y: 43 };
+        }
     }
 
     // ======================================

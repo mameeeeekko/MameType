@@ -131,54 +131,50 @@ body.zoom-stage {
 
 /* =====================================================
    Windows のみ: UI全体の文字のにじみ・潰れ・ギザギザ対策
-   ・丸ゴおよびInterを最優先で維持しつつ、Windowsのフォールバックとして
-     文字が潰れない BIZ UDPGothic / Meiryo を指定
-   ・Yu Gothic UI のような極小サイズで線がくっついて潰れるフォントを排除
-   ・タイピング大文字のみ stroke で可読性を補正
-   ・「ギザギザ感」対策（v1.0.81: ClearType は戻らないため「太さで殺す」方式へ刷新）:
-     1) text-rendering を auto に戻してヒンティングを有効化
-        body の geometricPrecision はヒンティングを切り、DPR 1.0〜1.5 の
-        Windows では輪郭がデバイスピクセルのグリッドに吸着せず、
-        丸ゴの画が段差として目立っていた（Mac は Retina 2x のため目立たない）
-     2) -webkit-font-smoothing を auto で打ち消す
-        この指定は macOS 専用で Windows では無効（＝何も効いていなかった）。
-        なお Webフォント＋transform 層のため Windows は常にグレースケールAA
-        （ClearType＝サブピクセルAAは効かない。Chromium の既知仕様）
-     3) v1.0.81: 「細くてギザギザ」が主症状と判明 ⇒ text-shadow の擬似平滑化を撤去し、
-        -webkit-text-stroke: 0.12px ＋ font-weight: 500 で段差を殺す太さを確保。
+   ・v1.0.86: OS標準のヒンティング済みUD系を最優先に切替。
+     M PLUS Rounded 1c(webfont)はClearTypeが効かずDPR 1.0で潰れるため
+     後方フォールバックへ。Mac(:root)は丸ゴのまま不変。
+     'Noto Sans JP' に @font-face が無い(死に指定)のも整理し、
+     実在する BIZ UDPGothic / Meiryo のみ指定する。
+   ・Yu Gothic UI のような極小サイズで線がくっついて潰れるフォントを排除(継続)
+   ・UD系は実ウェイト500が無い環境で疑似ボールド化＝汚れの元になるため
+     weight は 400 に戻し、stroke も 0 にする(ヒンティング済み素描が最鮮明)。
+     太さが必要な見出し・タイピング大文字は個別に bold で指定する。
+   ・手動ブースト body.win.win-text-heavy は残す(実機比較用)。
    ===================================================== */
 body.win {
-  --font-ui: 'Inter', 'M PLUS Rounded 1c', 'Noto Sans JP', 'BIZ UDPGothic', 'Meiryo', system-ui, sans-serif;
-  --font-ja: 'M PLUS Rounded 1c', 'Noto Sans JP', 'BIZ UDPGothic', 'Meiryo', system-ui, sans-serif;
+  --font-ui: 'Inter', 'BIZ UDPGothic', 'Meiryo', 'M PLUS Rounded 1c', system-ui, sans-serif;
+  --font-ja: 'BIZ UDPGothic', 'Meiryo', 'M PLUS Rounded 1c', system-ui, sans-serif;
 
   -webkit-font-smoothing: auto;
   -moz-osx-font-smoothing: auto;
-  /* v1.0.81: auto → optimizeLegibility。字間（カーニング）を効かせて
-     小さい文字の詰まり＝潰れ感を軽減（Windows の定番対策） */
-  text-rendering: optimizeLegibility;
-  /* v1.0.82: 「滲み・潰れ」対策 — 0.12px は輪郭両側に部分カバレッジの
-     半透明フリンジを生み「にじむ」見た目の主犯だったため 0.06px へ半減。
-     ギザギザ対効果は font-weight: 500（実ウェイト・クリスプ）が維持する。 */
-  -webkit-text-stroke: 0.06px currentColor;
-  /* v1.0.81: M PLUS Rounded 1c は実ウェイト500を同梱済み。日本語が一段太くなり
-     グレースケールAAの階段が目立たなくなる（Inter は実ウェイト400のまま） */
-  font-weight: 500;
+  /* v1.0.86: optimizeLegibility → auto。UD系はヒンティングで読ませるのが最優先で、
+     カーニング強制は小サイズの詰まりよりヒンティング無効化の害が大きいため戻す */
+  text-rendering: auto;
+  /* v1.0.86: ヒンティング済みUD素描が最鮮明。stroke はフリンジにしかならないため 0。
+     ギザギザ対策の太さは font-weight ではなく個別の bold 指定で確保する。 */
+  -webkit-text-stroke: 0;
+  /* v1.0.86: BIZ/Meiryo に500実ウェイトが無い環境での疑似ボールド(輪郭の二重描画＝汚れ)
+     を避けるため 400 に戻す。見出し・タイピング等の太字は個別 bold が効く。 */
+  font-weight: 400;
 }
 
 /* 【調整用・既定は無効】さらに文字の輪郭を太くして段差を目立たなくする。
    有効化は DevTools の Console から:
      document.body.classList.add('win-text-heavy')
-   （強すぎ/弱すぎなら -webkit-text-stroke の 0.2px を 0.15〜0.25px で調整。
-     タイピング大文字は下の #word 側の 0.2px が id 指定のため優先され不変） */
+   （v1.0.86: UD素描が既定のため通常は不要。強すぎ/弱すぎなら
+     -webkit-text-stroke の 0.2px を 0.15〜0.25px で調整） */
 body.win.win-text-heavy {
   -webkit-text-stroke: 0.2px currentColor;
 }
 
 body.win #word, body.win #word-long, body.win #jp,
 body.win #roma, body.win #kana-scroll, body.win #roma-scroll {
-  --font-ja: 'M PLUS Rounded 1c', 'BIZ UDPGothic', 'Meiryo', 'Noto Sans JP', system-ui, sans-serif;
-  -webkit-text-stroke: 0.2px currentColor;
-  font-weight: 500;
+  /* v1.0.86: タイピング大文字もUD優先に統一。太さはUD正規の bold で確保し、
+     stroke はヒンティングを殺すため 0(フリンジ防止)。 */
+  --font-ja: 'BIZ UDPGothic', 'Meiryo', 'M PLUS Rounded 1c', system-ui, sans-serif;
+  -webkit-text-stroke: 0;
+  font-weight: 700;
 }
 
 /* =====================================================

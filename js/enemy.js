@@ -1355,7 +1355,7 @@ export class ItemEnemy extends Enemy {
         // ★アイテム取得記録
         addQuestItemPickup(this.type.id);
 
-        applyItemEffect(this.type, player, state, enemies);
+        applyItemEffect(this.type, player, state, enemies, { x: this.x, y: this.y });
 
         this.isDead = true;
 
@@ -1364,7 +1364,11 @@ export class ItemEnemy extends Enemy {
 }
 
 
-function applyItemEffect(type, player, state = {}, enemies = []){
+function applyItemEffect(type, player, state = {}, enemies = [], pickupPos = null){
+
+    // クールダウン系の開始点（アイテム取得場所）。無ければUI付近扱い
+    const pickupX = Number.isFinite(pickupPos?.x) ? pickupPos.x : null;
+    const pickupY = Number.isFinite(pickupPos?.y) ? pickupPos.y : null;
 
     switch(type.effect){
 
@@ -1496,8 +1500,13 @@ function applyItemEffect(type, player, state = {}, enemies = []){
                 category: "cooldown",
                 source: "item",
 
-                level: "medium",
+                level:
+                    type.value >= 40 ? "large" :
+                    type.value >= 20 ? "medium" :
+                    "small",
 
+                sx: pickupX,
+                sy: pickupY,
                 uiX: uiPos.x,
                 uiY: uiPos.y
             });
@@ -1515,7 +1524,9 @@ function applyItemEffect(type, player, state = {}, enemies = []){
             spawnItemSkillEffect({
                 category: "cooldown",
                 source: "item",
-                level: "medium",
+                level: "large",
+                sx: pickupX,
+                sy: pickupY,
                 uiX: uiPosStock.x,
                 uiY: uiPosStock.y
             });

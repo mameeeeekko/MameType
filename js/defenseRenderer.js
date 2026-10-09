@@ -5,6 +5,7 @@ import { getSoundEnabled, gameState, getNow } from "./gameCore.js";
 import { DEFENSE_COMBO_TIERS, DEFENSE_OVERDRIVE_COMBO, DEFENSE_SCORE_CONFIG } from "./defenseCore.js";
 import { spawnComboTierUpEffect, playComboTierUpSound } from "./effectManager.js";
 import { stageRect } from "./stageScale.js";
+import { resolveCanvasFont } from "./winFont.js";
 
 // ============================================================
 // オフスクリーンキャッシュ（パフォーマンス最適化）
@@ -48,11 +49,13 @@ let _wordsCacheLength = 0; // ★ targets.length をキャッシュして補充�
 
 /** 単語の描画幅を取得（font + word でキャッシュ。表示結果は同一） */
 function getCachedWordWidth(ctx, font, word) {
-  const key = font + "|" + word;
+  // v1.0.86: 計測も解決後フォントで行う（描画と計測の書体不一致によるズレ防止）。
+  const rf = resolveCanvasFont(font);
+  const key = rf + "|" + word;
   let w = _wordWidthCache.get(key);
   if (w === undefined) {
-    ctx.font = font;
-    _lastFont = font;
+    ctx.font = rf;
+    _lastFont = rf;
     w = ctx.measureText(word).width;
     if (_wordWidthCache.size > 512) _wordWidthCache.clear();
     _wordWidthCache.set(key, w);
@@ -65,9 +68,12 @@ let _statsCache = { key: null, timeText: "", scoreText: "", typedText: "", corru
 // ★A: font設定のキャッシュ（同一fontの再設定を排除）
 let _lastFont = null;
 function setFontCached(ctx, f) {
-  if (_lastFont !== f) {
-    _lastFont = f;
-    ctx.font = f;
+  // v1.0.86: Windows は UD 優先に解決してから設定（DOM の body.win と対）。
+  // Mac/非Win は resolveCanvasFont が素通しするため見た目不変。
+  const rf = resolveCanvasFont(f);
+  if (_lastFont !== rf) {
+    _lastFont = rf;
+    ctx.font = rf;
   }
 }
 

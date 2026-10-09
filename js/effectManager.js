@@ -4310,29 +4310,137 @@ function spawnItemFreezeEffect({
 
 // ======================================
 // ITEM : COOLDOWN
-// 流線
+// 取得場所→クールダウンバーへ飛ぶ紫の光玉＋到着演出
+// 旧来の流線演出は到着時の余韻として残す
 // ======================================
 
 function spawnItemCooldownEffect({
     uiX,
     uiY,
+    sx = null,
+    sy = null,
     level = "small"
 }) {
 
-    const count =
-        level === "small" ? 8 :
-        level === "medium" ? 16 :
-        28;
+    // 終点が無ければ何もしない
+    if (!Number.isFinite(uiX) || !Number.isFinite(uiY)) return;
 
-    for (let i = 0; i < count; i++) {
+    // 開始点が無ければUI付近からの出現として扱う（後方互換）
+    const startX = Number.isFinite(sx) ? sx : uiX - 40;
+    const startY = Number.isFinite(sy) ? sy : uiY;
+
+    // levelで玉の数・大きさを変える（色は紫で統一）
+    // small: プチ系 / medium: 通常 / large: 大技・ストック系
+    const orbCount =
+        level === "small" ? 1 :
+        level === "large" ? 3 :
+        2;
+
+    const orbRadius =
+        level === "small" ? 7 :
+        level === "large" ? 11 :
+        9;
+
+    const flightFrames = 36; // 約0.6秒（60fps基準）
+
+    // 低品質設定でも玉本体は最低1個出す（軌跡・キラキラは削減OK）
+    const orbTotal = Math.max(1, scaledParticleCount(orbCount));
+    for (let i = 0; i < orbTotal; i++) {
+        // 複数玉は少しずつずらして弧を変える
+        const spread =
+            (i - (orbTotal - 1) / 2) * 36;
+
+        itemSkillEffects.push({
+
+            type: "item_cooldown_orb",
+
+            // ベジェ制御用
+            sx: startX + (Math.random() - 0.5) * 16,
+            sy: startY + (Math.random() - 0.5) * 16,
+            cx: (startX + uiX) / 2 + spread,
+            cy: Math.min(startY, uiY) - 90 - Math.random() * 40,
+            tx: uiX,
+            ty: uiY,
+
+            x: startX,
+            y: startY,
+
+            radius: orbRadius + (Math.random() - 0.5) * 2,
+
+            // 複数玉は少し遅延させて追いかける感じにする
+            delay: i * 5,
+            t: 0,
+            duration: flightFrames + i * 3,
+            arriveLevel: level,
+
+            trailTick: 0,
+
+            life: flightFrames + i * 3 + 30,
+            maxLife: flightFrames + i * 3 + 30
+        });
+    }
+}
+
+function spawnCooldownArriveBurst(x, y, level = "small") {
+
+    // 到着時のリング拡散
+    itemSkillEffects.push({
+
+        type: "item_cooldown_arrive",
+
+        x,
+        y,
+
+        radius: 6,
+        maxRadius: level === "large" ? 64 : 44,
+
+        life: 18,
+        maxLife: 18
+    });
+
+    // 到着時のキラキラ
+    const sparkCount =
+        level === "small" ? 6 :
+        level === "large" ? 16 :
+        10;
+
+    for (let i = 0; i < scaledParticleCount(sparkCount); i++) {
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 3.5;
+
+        itemSkillEffects.push({
+
+            type: "item_cooldown_spark",
+
+            x,
+            y,
+
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+
+            radius: 1.5 + Math.random() * 2.5,
+
+            life: 20 + Math.random() * 10,
+            maxLife: 30
+        });
+    }
+
+    // 旧来の流線を余韻として少しだけ残す
+    const lineCount =
+        level === "small" ? 4 :
+        level === "large" ? 12 :
+        8;
+
+    for (let i = 0; i < scaledParticleCount(lineCount); i++) {
 
         itemSkillEffects.push({
 
             type: "item_cooldown_line",
 
-            x: uiX - 40,
+            x: x - 40,
             y:
-                uiY +
+                y +
                 (Math.random() - 0.5) * 40,
 
             vx:
@@ -4905,6 +5013,159 @@ export function renderItemSkillEffects(ctx, deltaTime = 1 / 60) {
                 e.radius * 2,
                 e.radius * 2
             );
+        }
+
+        // ======================================
+        // Item Cooldown Orb（取得場所→バーへ飛ぶ紫の光玉）
+        // ======================================
+        else if (e.type === "item_cooldown_orb") {
+
+            // 遅延中はlifeを減らさず待機（先頭の e.life -= scale と相殺）
+            if ((e.delay || 0) > 0) {
+                e.life += scale;
+                e.delay -= scale;
+                e.x = e.sx;
+                e.y = e.sy;
+            } else {
+                e.t = Math.min((e.t || 0) + scale, e.duration || 36);
+                const p = Math.min(1, (e.t || 0) / (e.duration || 36));
+                // 最初ゆっくり→加速するイージング
+                const ease = p * p * (3 - 2 * p);
+                const easeIn = ease * ease;
+                const inv = 1 - easeIn;
+
+                e.x =
+                    inv * inv * e.sx +
+                    2 * inv * easeIn * e.cx +
+                    easeIn * easeIn * e.tx;
+                e.y =
+                    inv * inv * e.sy +
+                    2 * inv * easeIn * e.cy +
+                    easeIn * easeIn * e.ty;
+
+                // 軌跡を残す
+                e.trailTick = (e.trailTick || 0) + scale;
+                if (e.trailTick >= 2) {
+                    e.trailTick = 0;
+                    itemSkillEffects.push({
+                        type: "item_cooldown_trail",
+                        x: e.x + (Math.random() - 0.5) * 6,
+                        y: e.y + (Math.random() - 0.5) * 6,
+                        radius: (e.radius || 8) * 0.55,
+                        life: 16,
+                        maxLife: 16
+                    });
+                }
+
+                // 到着したら吸収バーストを出して消える
+                if (p >= 1) {
+                    spawnCooldownArriveBurst(e.tx, e.ty, e.arriveLevel || "medium");
+                    // 到着SE（小さめのキラキラ音）
+                    try {
+                        playTone(1560, 0.06, "triangle", 0.12);
+                        setTimeout(() => playTone(2080, 0.07, "sine", 0.10), 35);
+                    } catch (err) { /* 音が出なくても演出は続行 */ }
+                    e.life = 0;
+                }
+            }
+
+            // 本体の紫の光玉（外側グロー＋内側コアの二重描画）
+            // 遅延中はまだ出現させない
+            if ((e.delay || 0) <= 0 && e.life > 0) {
+            ctx.globalAlpha = 1;
+            const orbR = e.radius || 8;
+            ctx.globalCompositeOperation = "lighter";
+
+            const glow = ctx.createRadialGradient(
+                e.x, e.y, 0,
+                e.x, e.y, orbR * 2.2
+            );
+            glow.addColorStop(0, "rgba(216,180,254,0.95)");
+            glow.addColorStop(0.35, "rgba(168,85,247,0.75)");
+            glow.addColorStop(1, "rgba(168,85,247,0)");
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, orbR * 2.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            const core = ctx.createRadialGradient(
+                e.x, e.y, 0,
+                e.x, e.y, orbR
+            );
+            core.addColorStop(0, "#ffffff");
+            core.addColorStop(0.45, "#e9d5ff");
+            core.addColorStop(1, "#a855f7");
+            ctx.fillStyle = core;
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = "#a855f7";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, orbR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+            }
+        }
+
+        // ======================================
+        // Item Cooldown Trail（紫玉の残像）
+        // ======================================
+        else if (e.type === "item_cooldown_trail") {
+
+            const tRatio = Math.max(0, e.life / e.maxLife);
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.fillStyle = `rgba(192,132,252,${(0.55 * tRatio).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, (e.radius || 4) * (0.5 + 0.5 * tRatio), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Item Cooldown Arrive（バーへの吸収リング）
+        // ======================================
+        else if (e.type === "item_cooldown_arrive") {
+
+            const progress = 1 - Math.max(0, e.life / e.maxLife);
+            const r = 6 + ((e.maxRadius || 44) - 6) * progress;
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = `rgba(216,180,254,${(0.9 * (1 - progress)).toFixed(3)})`;
+            ctx.lineWidth = 3 * (1 - progress) + 1;
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = "#a855f7";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            // 中心フラッシュ
+            ctx.fillStyle = `rgba(233,213,255,${(0.8 * (1 - progress)).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, 8 * (1 - progress) + 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Item Cooldown Spark（到着時のキラキラ）
+        // ======================================
+        else if (e.type === "item_cooldown_spark") {
+
+            e.x += (e.vx || 0) * scale;
+            e.y += (e.vy || 0) * scale;
+            e.vx *= 0.96;
+            e.vy *= 0.96;
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.fillStyle = "#e9d5ff";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#c084fc";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.radius || 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
         }
 
         // ======================================

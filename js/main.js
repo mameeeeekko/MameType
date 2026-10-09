@@ -47,6 +47,7 @@ import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
 import { ensureFullscreenButton, bindFullscreenToggle, initGlobalUiBar } from "./fullscreenUtil.js";
 import { fitStage, getStageScale, getStageMode } from "./stageScale.js";
+import { installWinCanvasFontPatch } from "./winFont.js";
 import { enableAdaptiveShadowControl, getProfile } from "./performance.js";
 import { TIER_TABLES, getTierEnemies, STAGES, getFixedTurretTable, getInterceptTierSpec, INTERCEPT_CHAR_TYPES, buildFreeEnemyMissionConfig } from "./enemyModeConfig.js";
 // ★固定砲台の仕様は enemy.js の FIXED_TURRET_TIER_CONFIG が単一ソース。
@@ -551,6 +552,7 @@ const OFFLINE_APP_FILES = [
   "./js/defenseCore.js",
   "./js/inputCore.js",
   "./js/renderer.js",
+  "./js/winFont.js",
   "./js/assetsLoader.js",
   "./js/dialogue.js",
   "./js/dialogue.css",
@@ -1259,7 +1261,10 @@ export function applyTitleMenuBackground() {
 // =====================================================
 document.addEventListener("DOMContentLoaded", () => {
   // ★Windows のみ UI全体の文字にじみ対策クラスを付与（静的CSSのみ）
+  // v1.0.86: Canvas 文字もUD優先に解決する中央パッチを併せて適用。
+  // 非Windowsでは素通しのため見た目不変。
   try {
+    installWinCanvasFontPatch();
     const ua = navigator.userAgent || "";
     const pf = navigator.platform || "";
     if (/Windows/i.test(ua) || /^Win/i.test(pf)) {

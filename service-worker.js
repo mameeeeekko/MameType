@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.85";
+const CACHE_NAME = "mametype-v1.0.86";
 
 // =====================================================
 // オフライン用キャッシュ（固定名）
@@ -66,6 +66,7 @@ const CORE_ASSETS = [
   "./js/defenseCore.js",
   "./js/inputCore.js",
   "./js/renderer.js",
+  "./js/winFont.js",
   "./js/assetsLoader.js",
   "./js/dialogue.js",
   "./js/dialogue.css",

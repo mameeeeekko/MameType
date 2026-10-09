@@ -2,6 +2,30 @@
 
 ---
 
+## [1.0.86] - 2026-10-10
+
+### Fixed
+- **Windows のフォントを OS 標準のヒンティング済みUD系に切替（丸ゴwebfont起因の潰れ・ギザギザの根治療）**
+  - 原因: `M PLUS Rounded 1c` は self-host webfont のため Chromium が ClearType を適用せず、DPR 1.0 の Windows では中白が潰れてギザギザになっていた。`Noto Sans JP` に `@font-face` が無く死に指定だったのも整理
+  - **`style.css` — `body.win` のみ UD 優先に（Mac の `:root` は丸ゴのまま不変）**
+    - `--font-ja: 'BIZ UDPGothic', 'Meiryo', 'M PLUS Rounded 1c', ...` / `--font-ui: 'Inter', 'BIZ UDPGothic', 'Meiryo', ...`
+    - `font-weight: 500 → 400`（UD に無い500の疑似ボールド＝汚れ防止。太字は個別 bold で確保）
+    - `-webkit-text-stroke: 0.06px → 0`（ヒンティング済み素描が最鮮明。フリンジ防止）
+    - `text-rendering: optimizeLegibility → auto`（ヒンティング優先に戻す）
+    - タイピング大文字 `#word/#jp/#roma` 等も UD 統一＋ `weight:700 / stroke:0`（正規太字でクッキリ）
+  - **`js/winFont.js` 新設 — Canvas 側の UD 解決（DOM の `body.win` と対）**
+    - `resolveCanvasFont()` … 丸ゴ指定だけ UD スタックに置換（Inter/Noto Sans Mono のラテン・等幅は維持。Mac は素通し）
+    - `installWinCanvasFontPatch()` … `ctx.font` 代入を横取りする中央パッチで enemy/hud/effect/records/skillTree の51箇所を一括対応
+    - `js/defenseRenderer.js` の `setFontCached / getCachedWordWidth` は解決後フォントで設定・計測（描画と計測のズレ防止）
+    - `js/main.js` の起動時にパッチ適用＋ `body.win` 付与は従来どおり
+  - **オフライン対応**: `OFFLINE_APP_FILES` / `CORE_ASSETS` に `./js/winFont.js` を追加
+  - v1.0.82 の小文字サイズ底上げ（10→11/11→12）は維持（UD化と相乗効果）
+  - **アプリケーションバージョンを `1.0.86` に更新**
+    - `js/version.js` の `APP_VERSION` → `1.0.86`
+    - Service Worker のキャッシュ名 → `mametype-v1.0.86`
+
+---
+
 ## [1.0.85] - 2026-10-10
 
 ### Fixed
