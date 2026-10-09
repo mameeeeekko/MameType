@@ -156,10 +156,10 @@ body.win {
   /* v1.0.81: auto → optimizeLegibility。字間（カーニング）を効かせて
      小さい文字の詰まり＝潰れ感を軽減（Windows の定番対策） */
   text-rendering: optimizeLegibility;
-  /* v1.0.81: 「細くてギザギザ」対策 — 輪郭に沿う同色ストロークで最小限の太さを確保。
-     旧 text-shadow: 0 0 0.5px の擬似平滑化は撤去（にじみ＝潰れの元だったため）。
-     0.12px は控えめな値。強すぎ/弱すぎは win-text-heavy で調整。 */
-  -webkit-text-stroke: 0.12px currentColor;
+  /* v1.0.82: 「滲み・潰れ」対策 — 0.12px は輪郭両側に部分カバレッジの
+     半透明フリンジを生み「にじむ」見た目の主犯だったため 0.06px へ半減。
+     ギザギザ対効果は font-weight: 500（実ウェイト・クリスプ）が維持する。 */
+  -webkit-text-stroke: 0.06px currentColor;
   /* v1.0.81: M PLUS Rounded 1c は実ウェイト500を同梱済み。日本語が一段太くなり
      グレースケールAAの階段が目立たなくなる（Inter は実ウェイト400のまま） */
   font-weight: 500;
@@ -179,6 +179,64 @@ body.win #roma, body.win #kana-scroll, body.win #roma-scroll {
   --font-ja: 'M PLUS Rounded 1c', 'BIZ UDPGothic', 'Meiryo', 'Noto Sans JP', system-ui, sans-serif;
   -webkit-text-stroke: 0.2px currentColor;
   font-weight: 500;
+}
+
+/* =====================================================
+   Windows のみ: 小さいUI文字（10〜11px）のサイズ底上げ（v1.0.82）
+   症状「小さすぎて潰れる」への根治療。小さいグリッドに文字を詰め込むほど
+   グレースケールAAの階段と墨のへばりが目立つため、1段（+1px）持ち上げる。
+   ※ スタイルシートの !important はインライン style に勝つため、
+     index.html / js 内でインライン指定されている説明文も一括で対象になる。
+   ===================================================== */
+
+/* --- B-1: インライン指定の10px / 11px を一括で +1px --- */
+body.win [style*="font-size: 10px"] { font-size: 11px !important; }
+body.win [style*="font-size:10px"]  { font-size: 11px !important; }
+body.win [style*="font-size: 11px"] { font-size: 12px !important; }
+body.win [style*="font-size:11px"]  { font-size: 12px !important; }
+
+/* --- B-2: スタイルシート側（流動レイアウトのラベル・説明文のみを選定） ---
+   意図的に除外したもの:
+   ・border-radius:999px のピルバッジ / .skill-tag（幅が見た目に効く）
+   ・.ach-name（width:100% + white-space:nowrap ＝はみ出しリスク）
+   ・14px円の数字（固定サイズ）/ .map-label（absolute配置で隣接ノードと衝突）
+   ・.quest-side-menu::before（疑似要素）/ devPanel・dev-*（開発用）
+   ・.star-upgrade-rebuild-btn などのボタン（padding付きで横幅が変化） */
+body.win #time-circle .label,
+body.win #chainLabel,
+body.win .enemy-sound-toggle,
+body.win .global-fs-toggle,
+body.win .stock-label,
+body.win .active-stock-row,
+body.win .slot-title-detail,
+body.win .slot-breakdown,
+body.win .skill-grid-name,
+body.win .log-chapter-status,
+body.win .quest-modal-box.quest-modal-skill .skill-equip h3,
+body.win .quest-modal-box.quest-modal-skill .active-skill-desc-container .skill-desc,
+body.win .quest-modal-box.quest-modal-skill .active-skill-desc-container .skill-cooldown {
+  font-size: 11px;
+}
+
+body.win .skill-equip h3,
+body.win .active-skill-desc-container .skill-desc,
+body.win .active-skill-desc-container .skill-cooldown,
+body.win .skill-tag-note,
+body.win .slot-date,
+body.win .music-modal-note,
+body.win .music-progress-time,
+body.win .music-row-composer,
+body.win .calc-item .label,
+body.win .offline-dl-progress-text,
+body.win .offline-dl-note p,
+body.win .offline-dl-detail,
+body.win .star-upgrade-item-desc,
+body.win .star-upgrade-item-cooldown,
+body.win .star-upgrade-flash,
+body.win .star-upgrade-item-stats,
+body.win .star-upgrade-rebuild-tickets,
+body.win #remainingLoadIndicator {
+  font-size: 12px;
 }
 
 /* R-TYPE風タクティカル背景

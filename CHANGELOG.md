@@ -2,6 +2,28 @@
 
 ---
 
+## [1.0.82] - 2026-10-09
+
+### Fixed
+- **Windows の「少し滲んで潰れた感じ」への最終調整（v1.0.81 の太さ補正を微調整＋小さい文字のサイズ底上げ）**
+  - 実機報告「だいぶマシ（ギザギザ対策は効いた）だが、小さいUI文字に滲み・潰れが残る」への対処
+  - **症状の構造**: 「小さい（10〜12px）＋ 墨過多（stroke + weight500）」の合成 ⇒ **インク量を一段戻しつつサイズを1段上げる**のが最適解
+  - **`style.css` — Step A: インク量の半減**
+    - `body.win` の `-webkit-text-stroke: 0.12px → 0.06px`
+    - 0.12px は輪郭両側に部分カバレッジの「半透明フリンジ」を生み、それが「にじむ」見た目の主犯だった
+    - ギザギザ対効果は `font-weight: 500`（M PLUS 実ウェイト＝クリスプ）が維持
+  - **`style.css` — Step B: 小さいUI文字のサイズ底上げ（潰れへの根治療）**
+    - **B-1（インライン指定の一括対応）**: `body.win [style*="font-size: 10px"]` → 11px / `11px` → 12px（`!important` のためインライン style に勝つ。`index.html` の設定画面説明文・`js/hud.js` 生成の10px説明文まで網羅）
+    - **B-2（スタイルシート側・流動レイアウトのみ選定）** 10px→11px: `#time-circle .label` / `#chainLabel` / `.enemy-sound-toggle` / `.global-fs-toggle` / `.stock-label` / `.active-stock-row` / `.slot-title-detail` / `.slot-breakdown` / `.skill-grid-name` / `.log-chapter-status` / クエストスキルモーダルの `h3`・`skill-desc`・`skill-cooldown`
+    - **B-2** 11px→12px: `.skill-equip h3` / `.active-skill-desc-container .skill-desc` / `.skill-cooldown` / `.skill-tag-note` / `.slot-date` / `.music-modal-note` / `.music-progress-time` / `.music-row-composer` / `.calc-item .label` / `.offline-dl-*` / `.star-upgrade-item-desc` / `-cooldown` / `.star-upgrade-flash` / `.star-upgrade-item-stats` / `.star-upgrade-rebuild-tickets` / `#remainingLoadIndicator`
+    - **意図的な除外**: `border-radius:999px` のピルバッジ・`.skill-tag` / `.ach-name`（nowrap＋width:100%＝はみ出しリスク）/ 14px固定円の数字 / `.map-label`（absolute配置の衝突リスク）/ 疑似要素 / devPanel・dev-* / padding付きボタン群。崩れが出た箇所は個別に除外調整
+  - **実機での A/B（未確定事項）**: 同一版で `?stage=zoom` と `?stage=transform` を比較し、滲みが軽い方を Windows の既定に確定（非整数ラスタの影響切り分け。座標系は両モード検証済み）
+  - **アプリケーションバージョンを `1.0.82` に更新**
+    - `js/version.js` の `APP_VERSION` → `1.0.82`
+    - Service Worker のキャッシュ名 → `mametype-v1.0.82`（キャッシュ優先方式のため、これ以外では Windows に更新が届かない）
+
+---
+
 ## [1.0.81] - 2026-10-09
 
 ### Fixed
