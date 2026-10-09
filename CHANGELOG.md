@@ -2,6 +2,32 @@
 
 ---
 
+## [1.0.81] - 2026-10-09
+
+### Fixed
+- **Windows の「細くてギザギザ」対策を「太さで殺す」方式へ刷新（v1.0.79 / 1.0.80 の反省）**
+  - 新たな事実確認: **Chromium は Webフォントの文字に ClearType（サブピクセルAA）を適用しない**（[issue 40199005](https://issues.chromium.org/issues/40199005) / [41074070](https://issues.chromium.org/issues/41074070) とも未解決）。MameType はほぼ全文字が自己ホストWebフォントのため、**zoom 化（1.0.80）だけでは ClearType は戻らない**（zoom 自体は座標系の改良として維持）
+  - DPR=1.0 の Windows ではグレースケールAA＋10〜12pxの小ささで段差が構造的に避けられない ⇒ 「ClearType を戻す」戦略を断念し、**文字を太く・太く締めて段差を目立たせる**方針へ
+  - **`style.css` の `body.win`**:
+    - **`text-shadow: 0 0 0.5px currentColor` を撤去** … 擬似平滑化はにじみ＝「潰れた」印象の元だった
+    - **`-webkit-text-stroke: 0.12px currentColor` をデフォルト化** … 輪郭に沿う同色ストロークで最小限の太さを確保（にじまずに締まる）
+    - **`font-weight: 500` をデフォルト化** … M PLUS Rounded 1c は実ウェイト500同梱済みのため日本語が一段太くなる（Inter は実ウェイト400のまま＝英字は stroke で補完）
+    - **`text-rendering: auto` → `optimizeLegibility`** … カーニング有効で小さい文字の詰まりを軽減（Windows の定番対策）
+    - `body.win.win-text-heavy`（既定は無効）の stroke を 0.15px → **0.2px** に強化。DevTools で `document.body.classList.add('win-text-heavy')` により即時比較可能
+  - **OS／ブラウザ側で効果が大きい設定（コード不要・推奨）**:
+    - **ClearType テキストチューナー実行**（Win+R → `cttune`）→ Chrome 再起動
+    - **Windows の表示スケールを 125% に**（1グリッドのピクセル数が増え段差が消える）
+    - **ウィンドウを最大化／フルスクリーン**（stage scale が上がり、文字の実ラスタサイズが増える）
+    - Chrome を最新に。`chrome://flags` の `GPU rasterization` を切替えて比較
+  - **アプリケーションバージョンを `1.0.81` に更新**
+    - `js/version.js` の `APP_VERSION` → `1.0.81`
+    - Service Worker のキャッシュ名 → `mametype-v1.0.81`（キャッシュ優先方式のため、これ以外では Windows に更新が届かない）
+  - **残課題（未実施・実機スクリーンショット受領後に確定）**:
+    - 10〜11px の小UI文字の Windows 限定サイズ底上げ（+1〜2px）
+    - `opacity` による減衰（61箇所）を色アルファへ置換（opacity はグレースケールAA＋レイヤー化を強制し、zoom 化の効果を殺す）
+
+---
+
 ## [1.0.80] - 2026-10-08
 
 ### Fixed
