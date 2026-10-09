@@ -3589,7 +3589,12 @@ function tryUseActiveSkill() {
 
     // ===============================
     // ストック消費
+    // ★ストック溜まった状態で使うと裏のチャージ進捗が捨てられる不具合の修正：
+    //   満タン待機中（cooldown==0）からの消費時のみ新規チャージ開始し、
+    //   既にチャージ継続中（prev < max）の場合は残り時間を温存する。
     // ===============================
+    const prevStock = gameState.activeSkillStock;
+
     gameState.activeSkillStock--;
 
     const maxStock =
@@ -3597,14 +3602,30 @@ function tryUseActiveSkill() {
         gameState.activeSkillStockMax ??
         1;
 
-    // まだ満タンじゃないなら再チャージ開始
     if (gameState.activeSkillStock < maxStock) {
 
-        gameState.activeSkillCooldownMax =
-            (skill?.cooldown || 20);
+        // 満タンからの消費 → 新規チャージ開始
+        if (prevStock >= maxStock) {
+            gameState.activeSkillCooldownMax =
+                (skill?.cooldown || 20);
 
-        gameState.activeSkillCooldown =
-            gameState.activeSkillCooldownMax;
+            gameState.activeSkillCooldown =
+                gameState.activeSkillCooldownMax;
+        } else {
+            // チャージ継続中からの消費 → 進捗を温存（触らない）。
+            // 異常系（cooldownが0以下・未設定・Max未設定）のみフォールバックで新規開始。
+            const cur = gameState.activeSkillCooldown;
+            if (!(cur > 0)) {
+                gameState.activeSkillCooldownMax =
+                    (skill?.cooldown || 20);
+
+                gameState.activeSkillCooldown =
+                    gameState.activeSkillCooldownMax;
+            } else if (!(gameState.activeSkillCooldownMax > 0)) {
+                gameState.activeSkillCooldownMax =
+                    (skill?.cooldown || 20);
+            }
+        }
 
     } else {
         gameState.activeSkillCooldown = 0;

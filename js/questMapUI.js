@@ -468,7 +468,7 @@ export function renderQuestMapUI(){
             dialogueBadge.textContent = "!";
 
             const badgeAngle = secondBestAngle;
-            const badgeDist = 30; // ノードからの距離
+            const badgeDist = 24; // ノードからの距離
             const badgeX = center + Math.cos(badgeAngle) * badgeDist;
             const badgeY = center + Math.sin(badgeAngle) * badgeDist;
             dialogueBadge.style.left = `${badgeX}px`;

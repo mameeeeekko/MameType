@@ -5612,19 +5612,11 @@ body.win .map-label {
 
 .map-dialogue-badge {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55);
-  color: #333;
-  font-size: 10px;
-  font-weight: 700;
+  color: #b0b0b0;
+  font-size: 14px;
+  font-weight: 800;
   line-height: 1;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.08);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
   pointer-events: none;
 }
 
