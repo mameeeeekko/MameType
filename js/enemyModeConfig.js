@@ -1434,9 +1434,9 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
 
         case 7: { // 【圧倒】途方もない数の敵を捌き切れ！ (Overwhelm)
             const overwhelmTime = timeLimit; // 長めの生存時間
-            config.spawn.interval        *= 0.8; // 出現頻度を上げる
+            config.spawn.interval        *= 0.7; // 出現頻度を上げる
             config.spawn.maxAlive         = Math.min(14, maxAlive + 6); // 大幅増 → 画面に敵が溜まり続ける
-            config.enemySpeedMultiplier   = 0.6; // ★ 敵を低速化：到達が遅く、画面上に滞留して密度が上がる
+            config.enemySpeedMultiplier   = 0.5; // ★ 敵を低速化：到達が遅く、画面上に滞留して密度が上がる
             // ★ 出題文字数を10文字以内に制限：大量の低速の敵を捌きやすくする。
             //   敵の見た目・属性（タグ）・出現重みはそのままで、
             //   「そのタグの10文字以内の問題」に差し替えて出題する。
