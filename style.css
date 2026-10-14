@@ -3216,13 +3216,13 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   background: rgba(13, 17, 23, 0.92);
   border: 1px solid rgba(88, 166, 255, 0.3);
   color: #f0f6fc;
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-radius: 12px;
   font-size: 12px;
   font-family: var(--font-ui);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
-  width: 220px;
+  width: 232px;
   display: none; /* 初期状態は非表示（メインメニュー表示時にJSで解除） */
   transition: all 0.25s ease;
 }
@@ -3666,6 +3666,15 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 ================================ */
 #questHud {
   display: none; /* 初期状態だけ */
+}
+
+#hudClear {
+  white-space: nowrap;
+  font-size: 10.5px;
+  color: #8b949e;
+  line-height: 1.35;
+  font-family: var(--font-ui);
+  flex-shrink: 0;
 }
 
 .bar {

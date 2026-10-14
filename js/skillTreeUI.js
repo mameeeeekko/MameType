@@ -376,12 +376,24 @@ export function renderSkillTreeUI(container){
                     // DEV対応　skill all がONだったら全てクリック可能
                     if (!devOverride.unlockAllSkills && !n.canUnlock) {
 
-                        const requirementText =
-                            getRequirementText(node.requirements);
+                        // canUnlock=false ＝ 親ノードが未解放でまだ到達できない状態。
+                        // ロック解除条件（requirements）を満たしているかで表示を切り替える。
+                        const reqMet =
+                            devOverride.unlockAllSkills || checkSkillRequirements(node);
 
-                        showSkillTreeLockedFeedback(
-                            requirementText || "未解放ノード"
-                        );
+                        if (reqMet) {
+                            // 条件は満たしているが、先行ノードが未解放で到達できない
+                            showSkillTreeLockedFeedback(
+                                "先行ノードを解放してください"
+                            );
+                        } else {
+                            const requirementText =
+                                getRequirementText(node.requirements);
+
+                            showSkillTreeLockedFeedback(
+                                requirementText || "未解放ノード"
+                            );
+                        }
 
                         return;
                     }

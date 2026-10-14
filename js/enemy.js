@@ -222,7 +222,7 @@ function generateAllEnemyTypes() {
 
 // 同じ敵をださない。
 // ★迎撃モード（【迎撃】）では弾の一文字を抽選するため、他モジュールからも使う。
-export function getUnusedLetter(state, charType = 'alphabet') {
+export function getUnusedLetter(state, charType = 'alphabet', reserved = null) {
     const pools = {
         alphabet: "abcdefghijklmnopqrstuvwxyz".split(""),
         number: "0123456789".split(""),
@@ -261,16 +261,29 @@ export function getUnusedLetter(state, charType = 'alphabet') {
         }
     });
 
+    // ★呼び出し側が「この発射内で既に予約済み」の文字も除外対象にできる。
+    //   （fireBullet の同時発射で、まだ state.enemyBullets に push される前の
+    //     予約文字を弾くことで、count > available でも同じ文字を引き続けて
+    //     do-while が無限ループ化するのを防ぐ）
+    const notReserved = l => !(reserved && reserved.has(l));
+
     const available =
         letters.filter(
-            l => !usedLetters.has(l)
+            l => !usedLetters.has(l) && notReserved(l)
         );
 
     if (available.length === 0) {
-        return letters[
+        // 予約済みを避けられない場合のフォールバック。
+        // reserved を除外してから選ぶ（全て予約済みなら letters 全体から）。
+        const fallback =
+            letters.filter(notReserved);
+
+        const pool = fallback.length > 0 ? fallback : letters;
+
+        return pool[
             Math.floor(
                 Math.random()
-                * letters.length
+                * pool.length
             )
         ];
     }
@@ -952,12 +965,18 @@ export class Enemy {
 
             let letter;
 
+            // behavior.bullet 内に設定された charType を参照する
+            const charType = behavior.bullet.charType || 'alphabet';
+
+            // ★予約済み(reserved)を避けて抽選する。
+            //   getUnusedLetter に reserved を渡して発射内の予約文字を除外しつつ、
+            //   さらに安全のため試行上限を設ける
+            //   （文字プールが count を下回る状況でも絶対に無限ループしない）。
+            let tries = 0;
             do{
-                // behavior.bullet 内に設定された charType を参照する
-                const charType = behavior.bullet.charType || 'alphabet';
-                letter = getUnusedLetter(state, charType);
+                letter = getUnusedLetter(state, charType, reserved);
             }
-            while(reserved.has(letter));
+            while(reserved.has(letter) && ++tries < 64);
 
             reserved.add(letter);
 

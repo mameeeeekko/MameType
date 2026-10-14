@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.88";
+const CACHE_NAME = "mametype-v1.0.93";
 
 // =====================================================
 // オフライン用キャッシュ（固定名）
@@ -522,6 +522,19 @@ self.addEventListener("fetch", event => {
   }
 
   // ------------------------------------------------------
+  // ★v1.0.90: no-store / reload の要求はキャッシュを読まず
+  //   ネットワークへ直行する。
+  //   ページの「最新版をチェック」は version.js を no-store で
+  //   取得するが、これまで cache-first の caches.match() が
+  //   古い version.js を返していたため「最新です」と誤判定され、
+  //   最新版がいつまでも適用されなかった。
+  //   （クエリ付きURLもキャッシュ対象外にして汚染を防ぐ）
+  // ------------------------------------------------------
+  const bypassCache =
+    event.request.cache === "no-store" || event.request.cache === "reload";
+  const hasQuery = requestUrl.search.length > 0;
+
+  // ------------------------------------------------------
   // ★v1.0.85: ナビゲーション（アプリ起動）は必ず Response を返す。
   //   network → キャッシュ(index.html / ./) → 最小HTML の順。
   //   絶対に throw しない＝Chromeの恐竜画面を出さない。
@@ -586,6 +599,30 @@ self.addEventListener("fetch", event => {
   };
   event.respondWith(
     (async () => {
+      // ★v1.0.90: no-store / reload はネットワーク直行（キャッシュを信用しない）
+      if (bypassCache) {
+        try {
+          const fresh = await fetch(event.request);
+          if (fresh && fresh.ok) {
+            // 新鮮な内容でキャッシュも更新しておく（次回のオフライン用）
+            if (!hasQuery) {
+              try {
+                const cache = await caches.open(pickOfflineCache(event.request.url));
+                cache.put(event.request, fresh.clone()).catch(() => {});
+              } catch (e) { /* 保存失敗は無視 */ }
+            }
+            return fresh;
+          }
+        } catch (e) {
+          // ネットワーク失敗時のみキャッシュへフォールバック
+          try {
+            const retry = await caches.match(event.request, { ignoreVary: true });
+            if (retry) return retry;
+          } catch (err) { /* 下の503へ */ }
+          return new Response("", { status: 503, statusText: "offline" });
+        }
+      }
+
       try {
         const cachedResponse = await caches.match(event.request, { ignoreVary: true });
         if (cachedResponse) {

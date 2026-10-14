@@ -43,6 +43,24 @@ let currentTypingMessage = null; // ★ MODIFIED: 現在タイピング中のメ
 let dialogueState = 'IDLE'; 
 
 let waitingForMapReturn = false; // ★ マップに戻る待機フラグ
+// ポップアップに付随する document keydown リスナーの管理
+// （ポップ置き換え・外部からの remove 時に stale なハンドラを確実に外すため）
+const popupKeyHandlers = {};
+
+/** ポップの keydown ハンドラを登録（同IDの古いものを先に外す） */
+function trackPopupKeyHandler(popupId, handler) {
+    detachPopupKeyHandler(popupId);
+    if (handler) popupKeyHandlers[popupId] = handler;
+}
+
+/** ポップの keydown ハンドラを解除（残存リスナー対策） */
+export function detachPopupKeyHandler(popupId) {
+    const prev = popupKeyHandlers[popupId];
+    if (prev) {
+        document.removeEventListener('keydown', prev);
+        delete popupKeyHandlers[popupId];
+    }
+}
 // イベントリスナーを管理するための変数
 export const DIALOGUE_SPEED_LABELS = Object.freeze(["Slowest", "Slow", "Normal", "Fast", "Fastest"]);
 export const DIALOGUE_SPEED_CHANGED_EVENT = "mametype-dialogue-speed-changed";
@@ -158,6 +176,7 @@ export function showDisclaimer(message) {
 export function showDialoguePlaybackChoicePopup(message, onYes, onNo) {
     const existing = document.getElementById('dialoguePlaybackChoicePopup');
     if (existing) existing.remove();
+    detachPopupKeyHandler('dialoguePlaybackChoicePopup');
 
     const overlay = document.createElement('div');
     overlay.id = 'dialoguePlaybackChoicePopup';
@@ -186,7 +205,7 @@ export function showDialoguePlaybackChoicePopup(message, onYes, onNo) {
     const cleanup = () => {
         const existingPopup = document.getElementById('dialoguePlaybackChoicePopup');
         if (existingPopup) existingPopup.remove();
-        document.removeEventListener('keydown', handleKeyDown);
+        detachPopupKeyHandler('dialoguePlaybackChoicePopup');
     };
 
     const yesButton = overlay.querySelector('#dialoguePlaybackChoiceYes');
@@ -211,11 +230,13 @@ export function showDialoguePlaybackChoicePopup(message, onYes, onNo) {
 
     document.body.appendChild(overlay);
     document.addEventListener('keydown', handleKeyDown);
+    trackPopupKeyHandler('dialoguePlaybackChoicePopup', handleKeyDown);
 }
 
 export function showClearRewardPopup(htmlContent, onClose) {
     const existing = document.getElementById('clearRewardPopup');
     if (existing) existing.remove();
+    detachPopupKeyHandler('clearRewardPopup');
 
     const overlay = document.createElement('div');
     overlay.id = 'clearRewardPopup';
@@ -245,7 +266,7 @@ export function showClearRewardPopup(htmlContent, onClose) {
     const cleanup = () => {
         const existingPopup = document.getElementById('clearRewardPopup');
         if (existingPopup) existingPopup.remove();
-        document.removeEventListener('keydown', handleKeyDown);
+        detachPopupKeyHandler('clearRewardPopup');
     };
 
     const okButton = overlay.querySelector('#clearRewardOk');
@@ -264,11 +285,14 @@ export function showClearRewardPopup(htmlContent, onClose) {
 
     document.body.appendChild(overlay);
     document.addEventListener('keydown', handleKeyDown);
+    trackPopupKeyHandler('clearRewardPopup', handleKeyDown);
 }
+
 
 export function showSaveConfirmPopup(message, onYes, onNo) {
     const existing = document.getElementById('saveConfirmPopup');
     if (existing) existing.remove();
+    detachPopupKeyHandler('saveConfirmPopup');
 
     const overlay = document.createElement('div');
     overlay.id = 'saveConfirmPopup';
@@ -297,7 +321,7 @@ export function showSaveConfirmPopup(message, onYes, onNo) {
     const cleanup = () => {
         const existingPopup = document.getElementById('saveConfirmPopup');
         if (existingPopup) existingPopup.remove();
-        document.removeEventListener('keydown', handleKeyDown);
+        detachPopupKeyHandler('saveConfirmPopup');
     };
 
     const yes = overlay.querySelector('#saveConfirmYes');
@@ -322,6 +346,7 @@ export function showSaveConfirmPopup(message, onYes, onNo) {
 
     document.body.appendChild(overlay);
     document.addEventListener('keydown', handleKeyDown);
+    trackPopupKeyHandler('saveConfirmPopup', handleKeyDown);
 }
 
 let handleDialogueClick = null;

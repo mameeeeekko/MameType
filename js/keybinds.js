@@ -9,9 +9,17 @@ export const defaultKeybinds = {
 };
 
 export function loadKeybinds() {
+  let stored = {};
+  try {
+    stored = JSON.parse(localStorage.getItem("keybinds") || "{}");
+  } catch (e) {
+    // 壊れたキー設定は既定値に戻す（設定画面が操作不能になるのを防ぐ）
+    console.warn("[keybinds] 壊れたデータを検出（既定値を使用）", e);
+    stored = {};
+  }
   return {
     ...defaultKeybinds,
-    ...JSON.parse(localStorage.getItem("keybinds") || "{}")
+    ...stored
   };
 }
 

@@ -10,7 +10,7 @@ import {
   saveQuestSlot,
   loadQuestSlot,
 } from "./storage.js";
-import { startQuestSession, stopQuestSession, resetQuestSession, flushQuestSessionTime } from "./storage.js";
+import { startQuestSession, stopQuestSession, resetQuestSession, flushQuestSessionTime, readQuestStorage } from "./storage.js";
 import * as Game from "./gameCore.js";
 import { gameState, getLastSpecialModeInfo, getPaused, setPaused, backToMenu, getNow } from "./gameCore.js";
 import { GameModes } from "./gameModes.js";
@@ -41,6 +41,7 @@ import {
   DIALOGUE_SPEED_LABELS,
   DIALOGUE_SPEED_CHANGED_EVENT,
   showDisclaimer,
+  detachPopupKeyHandler,
 } from "./dialogue.js";
 import { loadCoreAssets, loadRemainingAssets, images, collectOfflineAssetUrls, getBgmAssets } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds.js";
@@ -411,6 +412,11 @@ function _getCacheVersion() {
 //    バージョンの状況は「設定を開いたときにこの文章で伝える」だけにする。
 // =====================================================
 let _onlineLatestVersion = "";
+// ★v1.0.90: 手動「最新版をチェック」用の状態
+//   _versionCheckRunning … チェック中の二重押しガード
+//   _versionCheckNote     … チェック結果の一言（ステータス文の末尾に足す）
+let _versionCheckRunning = false;
+let _versionCheckNote = "";
 
 function _setVersionStatus(text) {
   const el = document.getElementById("updateCheckStatus");
@@ -478,6 +484,10 @@ function _renderVersionStatus(cached) {
     parts.push("更新の適用待ち（再起動で反映できます）");
   }
 
+  if (_versionCheckNote) {
+    parts.push(_versionCheckNote);
+  }
+
   _setVersionStatus(parts.join(" ／ "));
   _updateOfflineVersionLabel(cached);
 }
@@ -505,6 +515,175 @@ function _initTitleVersionLabels() {
 
   // オフライン版バージョン（非同期で取得）
   _refreshVersionStatus();
+}
+
+// ============================================================
+// ★v1.0.90: 「最新版をチェック」ボタン（設定 → VERSION）
+// -----------------------------------------------------
+//  起動時の version.js 取得（1回だけ・取りこぼしあり）の穴を埋めるため、
+//  ユーザーが明示的に押したときだけ最新版を確認する。
+//  ・ページのコードはオンライン時にSW素通しで最新のため、ここで確認するのは
+//    「配信側に新しい版があるか」＋「Service Worker の更新が届いているか」
+//  ・自動更新チェック（registration.update()）は v1.0.25 で廃止済みのため、
+//    この関数の中だけ手動で走らせる（低スペックPC/Windowsへの負荷回避を維持）
+//  ・適用（再起動）はしない。待機SWが届いたら confirm で確認し、
+//    OK なら _applyWaitingUpdate() を呼んで適用・再起動する
+// ============================================================
+
+/** 配信側の version.js を no-store で取得し、APP_VERSION を取り出す */
+async function _fetchOnlineLatestVersion() {
+  // ★v1.0.90: クエリを付けて「キャッシュに存在しないURL」にする。
+  //   旧SWは fetch の no-store を無視して cache-first で古い version.js を
+  //   返していたため、このURLだけは確実にネットワークから引く。
+  //   （新SWは no-store を尊重するが、まだ更新前のSWが動いている間の保険）
+  const url = `./js/version.js?_v=${Date.now()}`;
+  const res = await fetch(url, { cache: "no-store" });
+  const text = res.ok ? await res.text() : "";
+  const m = text && text.match(/APP_VERSION\s*=\s*["']([^"']+)["']/);
+  return m && m[1] ? m[1] : "";
+}
+
+/** 待機中の Service Worker を、取り直してから返す（無ければ null） */
+async function _resolveServiceWorkerRegistration() {
+  if (currentServiceWorkerRegistration) return currentServiceWorkerRegistration;
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) currentServiceWorkerRegistration = reg;
+      return reg || null;
+    }
+  } catch (e) {
+    // file:// 等 SW 非対応オリジンでは getRegistration() が throw する
+    console.warn("[version] Service Worker 登録の取得に失敗:", e);
+  }
+  return null;
+}
+
+/** 待機中（waiting）の Service Worker が現れるまで待つ */
+function _waitForWaitingServiceWorker(seconds) {
+  return new Promise(resolve => {
+    let elapsed = 0;
+    const timer = setInterval(async () => {
+      elapsed += 1;
+      // 取りこぼし保険: 取り直してから waiting を見る（クロージャ陳腐化の防止）
+      try {
+        const fresh = await navigator.serviceWorker.getRegistration();
+        if (fresh) currentServiceWorkerRegistration = fresh;
+      } catch (e) {
+        // SW が使えないオリジンでは待っても waiting は立たないので、ここで打ち切る
+        clearInterval(timer);
+        resolve("unsupported");
+        return;
+      }
+
+      if (currentServiceWorkerRegistration && currentServiceWorkerRegistration.waiting) {
+        clearInterval(timer);
+        resolve("ready");
+        return;
+      }
+      if (elapsed >= seconds) {
+        clearInterval(timer);
+        resolve("timeout");
+      }
+    }, 1000);
+  });
+}
+
+/** 設定 → VERSION の「最新版をチェック」押下時 */
+async function _checkLatestVersion() {
+  if (_versionCheckRunning || _offlineDlRunning) return;
+
+  const checkBtn = document.getElementById("checkVersionBtn");
+  const downloadBtn = document.getElementById("checkUpdateBtn");
+
+  _versionCheckRunning = true;
+  if (checkBtn) checkBtn.disabled = true;
+  if (downloadBtn) downloadBtn.disabled = true;
+
+  _versionCheckNote = "確認中…";
+  _refreshVersionStatus();
+
+  try {
+    let latest = "";
+    try {
+      latest = await _fetchOnlineLatestVersion();
+    } catch (e) {
+      latest = "";
+    }
+
+    if (!latest) {
+      _versionCheckNote = "最新版の確認に失敗しました。ネットワーク接続を確認してください。";
+      _refreshVersionStatus();
+      return;
+    }
+
+    _onlineLatestVersion = latest;
+
+    if (latest === APP_VERSION) {
+      _versionCheckNote = `最新です（v${APP_VERSION}）`;
+      _refreshVersionStatus();
+      return;
+    }
+
+    // 新しい版がある → SW に更新を見に行かせる（ここは手動チェック時のみ）
+    _versionCheckNote = `新しいバージョン v${latest} があります。更新を確認しています…`;
+    _refreshVersionStatus();
+
+    const reg = await _resolveServiceWorkerRegistration();
+
+    if (!reg) {
+      _versionCheckNote = "Service Workerが未登録です。ページを再読み込みしてから再度お試しください。";
+      _refreshVersionStatus();
+      return;
+    }
+
+    try { await reg.update(); } catch (e) { /* 無視（待機SWが既にあれば十分） */ }
+
+    // すでに待機中なら即・無ければ最大30秒ポーリング
+    const result = await _waitForWaitingServiceWorker(30);
+
+    if (result === "unsupported") {
+      _versionCheckNote =
+        `新しいバージョン v${latest} があります。この実行環境では Service Worker が使えないため、` +
+        `ページの再読み込み（Ctrl+Shift+R / Cmd+Shift+R）で最新版が読み込まれます。`;
+      _refreshVersionStatus();
+      return;
+    }
+
+    if (result !== "ready") {
+      _versionCheckNote =
+        `新しいバージョン v${latest} は見つかりましたが、更新の取得に時間がかかっています。` +
+        `しばらくしてから再度チェックしてください。`;
+      _refreshVersionStatus();
+      return;
+    }
+
+    // -----------------------------------------------------
+    // 適用できる更新が揃った。確認してから適用・再起動する。
+    //   ★キャンセルしても waiting SW は残るため、
+    //     もう一度このボタンを押せば即座に適用できる（詰まらない）
+    // -----------------------------------------------------
+    const confirmed = confirm(
+      `新しいバージョン v${latest} に更新します。\n` +
+      `ページが自動で再読み込みされ、最新版が反映されます。\n\n` +
+      `（ゲーム中のデータは保存されません。更新してよろしいですか？）`
+    );
+
+    if (!confirmed) {
+      _versionCheckNote =
+        `v${latest} への更新を中止しました。もう一度「最新版をチェック」を押すと適用できます。`;
+      _refreshVersionStatus();
+      return;
+    }
+
+    // 適用（SKIP_WAITING → controllerchange → 自動リロード）
+    _applyWaitingUpdate();
+
+  } finally {
+    _versionCheckRunning = false;
+    if (checkBtn) checkBtn.disabled = false;
+    if (downloadBtn) downloadBtn.disabled = false;
+  }
 }
 // ============================================================
 // オフライン用データの手動ダウンロード
@@ -1082,13 +1261,18 @@ async function downloadOfflineData(options = {}) {
 // =====================================================
 // 待機中の Service Worker へ更新適用（再起動）を指示する
 // -----------------------------------------------------
-//  ★自動では実行しない。ユーザーが「更新を適用して再起動」を
-//  押したときだけ動く（勝手な再起動を避けるため）。
+//  ★自動では実行しない。「最新版をチェック」で新しい版を検知し、
+//    confirm でユーザーが OK したときだけ動く
+//    （勝手な再起動を避けるため）。
 // =====================================================
 let _applyReloading = false;
 
 function _applyWaitingUpdate() {
   if (_applyReloading || isApplyingUpdate) return;
+
+  // ★チェック結果の一文は適用を始めたら無意味になるので破棄する
+  //   （この後の _setVersionStatus を他の経路の _refreshVersionStatus で上書きされないように）
+  _versionCheckNote = "";
 
   const reg = currentServiceWorkerRegistration;
 
@@ -1635,7 +1819,8 @@ document.addEventListener("DOMContentLoaded", () => {
   //    ゲーム起動・描画ループには介入しない。
   // -----------------------------------------------
   try {
-    fetch("./js/version.js", { cache: "no-store" })
+    // ★v1.0.90: クエリ付きURLで取得（旧SWの cache-first で古い版を掴まないため）
+    fetch(`./js/version.js?_v=${Date.now()}`, { cache: "no-store" })
       .then(res => res.ok ? res.text() : "")
       .then(text => {
         const m = text && text.match(/APP_VERSION\s*=\s*["']([^"']+)["']/);
@@ -1656,6 +1841,11 @@ document.addEventListener("DOMContentLoaded", () => {
   //   ★自動では走らない。このボタンを押したときだけダウンロードする
   checkUpdateBtn?.addEventListener("click", () => {
     downloadOfflineData();
+  });
+
+  // ★v1.0.90: 最新版をチェック（確認 → 適用 → 再起動までこの1ボタンで完結）
+  document.getElementById("checkVersionBtn")?.addEventListener("click", () => {
+    _checkLatestVersion();
   });
 });
 
@@ -2016,11 +2206,20 @@ function initSettingsUI() {
     if (settingsDiv) settingsDiv.style.display = "block";
     applySoundSettingsToUI();
     applyKeybindsToUI();
+    // ★前回開いたときの「最新版をチェック」結果は持ち越さない（古い情報での誤解防止）
+    _versionCheckNote = "";
     _refreshVersionStatus();
 
     // Player IDを表示
     if (playerIdDisplay) {
       playerIdDisplay.textContent = getPlayerId() || "（IDがありません）";
+    }
+
+    // ★プレイヤー名は「保存」を押した値のみを表示する。
+    //   保存せずに設定画面を閉じて開き直した場合、
+    //   入力途中の値を破棄して前回保存した名前に戻す。
+    if (playerNameInput) {
+      playerNameInput.value = getPlayerName();
     }
   });
 
@@ -3522,8 +3721,8 @@ function showQuestMenu() {
   fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (questMenuDiv) questMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示
 
-  // オートセーブデータの有無をチェック
-  const auto = JSON.parse(localStorage.getItem("quest_auto_save"));
+  // オートセーブデータの有無をチェック（壊れたデータでもクラッシュしない）
+  const auto = readQuestStorage("quest_auto_save");
   const hasSave =
     auto &&
     auto.progress &&
@@ -3767,7 +3966,30 @@ function bindModeSwitchEvents() {
   });
 }
 
+// ================================
+// 🔹イベント登録の冪等化（二重登録防止）
+//   bindModeStartEvents / bindResultEvents は起動シーケンス内で
+//   2回呼ばれる経路があるため、2回目以降は no-op とする。
+//   （addEventListener を2重に積むと doCountdown 等が2回発火する）
+// ================================
+let _modeStartEventsBound = false;
+let _resultEventsBound = false;
+
+/** 指定キーの登録が未実施なら true を返し、以降は false（登録済み）を返す */
+function bindOnce(key) {
+  if (key === "modeStart") {
+    if (_modeStartEventsBound) return false;
+    _modeStartEventsBound = true;
+  } else if (key === "result") {
+    if (_resultEventsBound) return false;
+    _resultEventsBound = true;
+  }
+  return true;
+}
+
 function bindModeStartEvents() {
+  // ★二重登録防止（同じ内容を2回目以降は無視する）
+  if (!bindOnce("modeStart")) return;
 
   // イベントリスナーの重複登録を防ぐため、要素をクローンして置き換える
   questStartBtn = questStartBtn.replaceWith(questStartBtn.cloneNode(true)) || questStartBtn;
@@ -3783,7 +4005,7 @@ function bindModeStartEvents() {
   
   questStartBtnFromBeginning?.addEventListener("click", async () => {
       //データがない場合は警告を出さないようにするため
-      const auto = JSON.parse(localStorage.getItem("quest_auto_save"));
+      const auto = readQuestStorage("quest_auto_save");
       const hasSave =
           auto &&
           auto.progress &&
@@ -3909,6 +4131,8 @@ function bindModeStartEvents() {
 }
 
 function bindResultEvents() {
+  // ★二重登録防止（同じ内容を2回目以降は無視する）
+  if (!bindOnce("result")) return;
 
   playAgainBtn?.addEventListener("click", () => {
     const modal = document.querySelector(".game-modal");
@@ -3995,7 +4219,7 @@ function bindResultEvents() {
     const defenseContainer = document.getElementById("defenseModeContainer");
     const canvasDef = document.getElementById("defenseModeCanvas");
     if (defenseContainer) defenseContainer.style.display = "none";
-    if (canvasDef) canvas.style.display = "none";
+    if (canvasDef) canvasDef.style.display = "none";
     const defenseUiContainer = document.getElementById("defense-ui-container");
     if (defenseUiContainer) defenseUiContainer.style.display = "none";
 
@@ -4106,6 +4330,19 @@ function bindKeyEvents() {
       return;
     }
 
+    // ★テキスト入力中（プレイヤー名入力・検索欄など）はメニューショートカットを無効化。
+    //   （"b" などが e.preventDefault() で文字入力として奪われる問題を防ぐ。
+    //     モーダル操作系ハンドラより後に置くことで、キー取得モーダル等の挙動は不変）
+    const activeEl = document.activeElement;
+    const activeTag = activeEl?.tagName;
+    if (
+      (activeTag === "INPUT" || activeTag === "TEXTAREA" || activeEl?.isContentEditable) &&
+      activeEl?.type !== "range" &&
+      activeEl?.type !== "checkbox"
+    ) {
+      return;
+    }
+
     if (handleResultKey(e)) return;
     if (handlePauseKey(e)) return;
     if (await handleGameKey(e)) return;
@@ -4191,12 +4428,14 @@ function handleQuestSaveClearModalKey(e) {
       e.preventDefault();
       const popup = document.getElementById("clearRewardPopup");
       if (popup) popup.remove();
+      detachPopupKeyHandler("clearRewardPopup");
       return true;
     }
     if (active.id === "saveConfirmPopup") {
       e.preventDefault();
       const popup = document.getElementById("saveConfirmPopup");
       if (popup) popup.remove();
+      detachPopupKeyHandler("saveConfirmPopup");
       return true;
     }
   }
@@ -4402,7 +4641,9 @@ async function handleGameKey(e) {
         return true; // ★追加: 処理をここで終了させる
       } else {
         // エネミーモードの中断処理
-        const isQuest = gameState.isQuestMode || true;
+        // ★この分岐自体が「クエスト中（currentQuestNode あり）」の配下なので、
+        //   常にクエストマップへ戻す（|| true は dead code のため整理）
+        const isQuest = gameState.isQuestMode || currentQuestNode;
         gameState.enemyStats.failed = true;
         endEnemyMode(true); // ★ESC中断: 記録を残さない
         Game.fullResetGame();

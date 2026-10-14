@@ -527,9 +527,42 @@ export function killEnemy(enemy, state, options = {}) {
 
 
 // ===============================
-// ゲームループ
+// ゲームループ（安全ラッパー）
+//   描画中の予期せぬ例外（例: canvas に不正な値を渡す等）で
+//   rAF ループが停止＝「フリーズ」するのを防ぐため、
+//   本体 gameLoopImpl を try/catch で包み、finally で必ず次フレームを予約する。
+//   ※ 通常の早期 return は gameLoopImpl 側で requestAnimationFrame を呼ぶため二重予約にはならず、
+//     finally は「例外で return 前に落ちた場合」の保険として働く。
 // ===============================
 function gameLoop(timestamp) {
+
+    if (!enemyLoopActive) return;
+
+    // このフレームの実行に使われた予約IDは消費済み。クリアしておく。
+    // （gameLoopImpl が正常に末尾で次フレームを予約すれば loopId に新しいIDが入り、
+    //   finally では二重予約しない。途中で例外落ちした場合は loopId が null のままなので
+    //   finally が必ず次フレームを予約してループを継続させる。）
+    loopId = null;
+
+    try {
+        gameLoopImpl(timestamp);
+    } catch (e) {
+        // 例外でフレームが落ちてもループを継続させる（フリーズ防止）
+        try {
+            console.error("[gameLoop] frame error (recovered):", e);
+        } catch (_) { /* noop */ }
+    } finally {
+        // 次フレームをまだ予約していなければ必ず予約（フリーズ防止の保険）
+        if (enemyLoopActive && !loopId) {
+            loopId = requestAnimationFrame(gameLoop);
+        }
+    }
+}
+
+// ===============================
+// ゲームループ（本体）
+// ===============================
+function gameLoopImpl(timestamp) {
 
     // NOTE: do not early-return when `endingSequence` is true.
     // We want to continue rendering remaining effects (enemy kill effects,
@@ -1186,7 +1219,7 @@ function gameLoop(timestamp) {
                 endingSequence = false;
 
                 // ★追加（これが重要）
-                gameState.enemyStats.mistakeCount = 0;
+                //gameState.enemyStats.mistakeCount = 0;
                 gameState.enemyStats.lastKeyTime = getNow();
 
                 // ★追加：HP0判定再発防止用フラグ
@@ -1828,6 +1861,7 @@ export function handleEnemyKey(e) {
             const stats = gameState.enemyStats;
             if (lockedEnemy.isAttack) {
                 stats.mistakeCount++; // 防御ワードのミス
+                gameState.mistakeCount++; // ★防御ワードのミスもグローバルに計上（終了集計と一致させる）
             } else {
                 stats.mistakeCount++; // 通常敵のミス
                 gameState.mistakeCount++; // グローバルミスカウント
@@ -2986,9 +3020,11 @@ export function onEnemyRemovedByDamage(isObjective = false) {
     }
 }
 
-export function restartEnemyMode() {
+export async function restartEnemyMode() {
     if (!lastEnemyConfig) return;
-    endEnemyMode();
+    // ★終了処理（オンライン送信等の await を含む）を完了させてから再開する。
+    //   以前は await せず並行していたため、送信中に次ステージが始まる競合があった。
+    await endEnemyMode();
     startEnemyMode(lastEnemyConfig);
 }
 

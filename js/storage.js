@@ -217,7 +217,7 @@ export async function importRecords(file) {
 // Ranking（mode別）
 // ================================
 function loadRankingMap() {
-  return JSON.parse(localStorage.getItem(RANKING_KEY) || "{}");
+  return readJsonStorage(RANKING_KEY, {});
 }
 
 function saveRankingMap(map) {
@@ -483,7 +483,7 @@ export function exportAllData(stats = null) {
 
     records: loadRecords(),
     ranking: loadRankingMap(),
-    playerStats: stats ?? JSON.parse(localStorage.getItem(STATS_KEY) || "null")
+    playerStats: stats ?? readJsonStorage(STATS_KEY, null)
   };
 
   const blob = new Blob(
@@ -593,11 +593,7 @@ let questSessionStart = null;
 const QUEST_SESSION_FLUSH_CAP_SEC = 1800;
 
 function readQuestPlayerStatsRaw() {
-  try {
-    return JSON.parse(localStorage.getItem("questPlayerStats") || "null");
-  } catch {
-    return null;
-  }
+  return readQuestStorage("questPlayerStats", null);
 }
 
 function writeQuestPlayerStatsRaw(stats) {
@@ -655,18 +651,41 @@ export function resetQuestSession() {
   questSessionStart = null;
 }
 
+// ================================================================
+// 安全な JSON 読み取り（壊れたセーブデータで起動不能・セーブ不能に
+// しないためのフォールバック。正常時は挙動不変）
+// ================================================================
+/** localStorage から JSON を安全に読む。失敗時は fallback を返す */
+export function readJsonStorage(key, fallback = null) {
+  const raw = localStorage.getItem(key);
+  if (raw === null || raw === undefined) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed === undefined ? fallback : parsed;
+  } catch (e) {
+    console.warn(`[storage] 壊れたデータを検出: ${key}（フォールバックを使用）`, e);
+    return fallback;
+  }
+}
+
+/** quest 系キー専用（デフォルトは null）。readJsonStorage の別名 */
+export function readQuestStorage(key, fallback = null) {
+  return readJsonStorage(key, fallback);
+}
+
+
 function getQuestSnapshot() {
   return {
-    progress: JSON.parse(localStorage.getItem("questProgress")),
-    playerStats: JSON.parse(localStorage.getItem("questPlayerStats")),
-    stars: JSON.parse(localStorage.getItem("questStars")),
+    progress: readQuestStorage("questProgress"),
+    playerStats: readQuestStorage("questPlayerStats"),
+    stars: readQuestStorage("questStars"),
   };
 }
 // ================================
 // 🔹スロット一覧取得
 // ================================
 export function loadQuestSlots() {
-  return JSON.parse(localStorage.getItem(QUEST_SLOTS_KEY) || "[]");
+  return readQuestStorage(QUEST_SLOTS_KEY, []);
 }
 
 // ================================
@@ -687,7 +706,7 @@ export function saveQuestSlot(slotIndex) {
   autoSaveQuest();
 
   const slots = loadQuestSlots(); // 既存データ取得
-  const data = JSON.parse(localStorage.getItem(QUEST_AUTO_KEY) || "{}"); // ★オートセーブから読み込む
+  const data = readQuestStorage(QUEST_AUTO_KEY, {}); // ★オートセーブから読み込む
 
   const stats = data.playerStats || {};
   const progress = data.progress || {};
@@ -790,10 +809,11 @@ export function loadQuestSlot(slotIndex) {
 }
 
 export function loadQuestAuto() {
-  const json = localStorage.getItem(QUEST_AUTO_KEY);
-  if (!json) return false;
+  // 壊れたオートセーブは「セーブ無し」扱いにして Continue でクラッシュしない
+  const data = readQuestStorage(QUEST_AUTO_KEY);
+  if (!data) return false;
 
-  return applyQuestData(JSON.parse(json));
+  return applyQuestData(data);
 }
 
 // ================================
@@ -837,11 +857,11 @@ export function exportQuestData() {
     version: 1,
     exportedAt: Date.now(),
 
-    questProgress: JSON.parse(localStorage.getItem("questProgress") || "null"),
-    questPlayerStats: JSON.parse(localStorage.getItem("questPlayerStats") || "null"),
-    questStars: JSON.parse(localStorage.getItem("questStars") || "null"),
-    questSlots: JSON.parse(localStorage.getItem(QUEST_SLOTS_KEY) || "[]"),
-    questAutoSave: JSON.parse(localStorage.getItem(QUEST_AUTO_KEY) || "null"),
+    questProgress: readQuestStorage("questProgress", null),
+    questPlayerStats: readQuestStorage("questPlayerStats", null),
+    questStars: readQuestStorage("questStars", null),
+    questSlots: readQuestStorage(QUEST_SLOTS_KEY, []),
+    questAutoSave: readQuestStorage(QUEST_AUTO_KEY, null),
   };
 
   const blob = new Blob(

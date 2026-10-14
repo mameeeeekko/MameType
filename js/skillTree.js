@@ -213,7 +213,54 @@ export function checkUnlockByResult(cond, result){
     }
 }
 
-export function getUnlockText(unlock) {
+let lastHintMissCount = -1;
+let lastHintNodeId = null;
+
+export function hasMissUnlockCondition(unlock) {
+    if (!unlock) return false;
+    const list = Array.isArray(unlock) ? unlock : [unlock];
+    return list.some(cond => cond && cond.type === "miss");
+}
+
+export function resetSkillUnlockHintCache() {
+    lastHintMissCount = -1;
+    lastHintNodeId = null;
+}
+
+export function updateSkillUnlockHint(currentMiss = 0) {
+    const challenge = gameState?.currentChallenge;
+    if (!challenge?.isSkillMode) return;
+
+    const nodeId = challenge.nodeId || gameState.currentSkillNodeId;
+    if (!nodeId) return;
+
+    const node = SKILL_TREE[nodeId];
+    if (!node) return;
+
+    const hasMiss = hasMissUnlockCondition(node.unlock);
+
+    // ミス条件がない場合、一度初期描画済みならスキップ
+    if (!hasMiss && nodeId === lastHintNodeId) return;
+
+    // ミス条件がある場合、ミス数もノードIDも変わっていなければスキップ
+    if (currentMiss === lastHintMissCount && nodeId === lastHintNodeId) return;
+
+    lastHintMissCount = currentMiss;
+    lastHintNodeId = nodeId;
+
+    const hint = document.getElementById("skillUnlockHint");
+    if (!hint) return;
+
+    const unlockText = getUnlockTextForChallenge(node.unlock, challenge, hasMiss ? currentMiss : null, "現在");
+
+    hint.style.display = "block";
+    hint.innerHTML = `
+        <div class="label">CLEAR</div>
+        <div class="value">${unlockText || "-"}</div>
+    `;
+}
+
+export function getUnlockText(unlock, currentMiss = null, label = "現在") {
 
     if (!unlock) return "";
 
@@ -222,11 +269,11 @@ export function getUnlockText(unlock) {
         : [unlock];
 
     return unlocks
-        .map(u => getSingleUnlockText(u))
+        .map(u => getSingleUnlockText(u, currentMiss, label))
         .join("<br>");
 }
 
-export function getSingleUnlockText(cond) {
+export function getSingleUnlockText(cond, currentMiss = null, label = "現在") {
     if (!cond) return "";
 
     switch (cond.type) {
@@ -239,8 +286,14 @@ export function getSingleUnlockText(cond) {
         case "time":
             return `${cond.value}秒以内にクリア`;
 
-        case "miss":
+        case "miss": {
+            if (currentMiss !== null && currentMiss !== undefined) {
+                const isOver = currentMiss > cond.value;
+                const missStyle = isOver ? ' style="color:#ff6b6b; font-weight:bold;"' : '';
+                return `<span${missStyle}>ミス ${cond.value} 回以下 (${label}: ${currentMiss}回)</span>`;
+            }
             return `ミス ${cond.value} 回以下`;
+        }
 
         case "target":
             return `${cond.value} 問クリア`;
@@ -305,13 +358,20 @@ export function startSkillMode(challenge, nodeId){
     // 解放条件の固定表示
     // =========================
     requestAnimationFrame(() => {
+        resetSkillUnlockHintCache();
         const node = SKILL_TREE[nodeId];
         const hint = document.getElementById("skillUnlockHint");
 
         if (node && hint) {
             // ★長文「プログラミング」が出題された場合は補正後の秒数を表示する
             //   （クリア判定と同じ補正を通さないと表示と判定がずれる）
-            const unlockText = getUnlockTextForChallenge(node.unlock, runtimeChallenge);
+            const hasMiss = hasMissUnlockCondition(node.unlock);
+            const unlockText = getUnlockTextForChallenge(
+                node.unlock,
+                runtimeChallenge,
+                hasMiss ? 0 : null,
+                "現在"
+            );
 
             hint.style.display = "block";
             hint.innerHTML = `
@@ -481,7 +541,7 @@ export const NORMAL_UNLOCK_TABLE = {
         ],
         [
             { type:"time", value:275 },
-            { type:"miss", value:5 }
+            { type:"miss", value:8 }
         ],
         [
             { type:"time", value:270 },
@@ -559,19 +619,19 @@ export const TIME_ATTACK_UNLOCK_TABLE = {
 
     3: [
         [
-            { type:"target", value:42 },
+            { type:"target", value:43 },
             { type:"accuracy", value:97 }
         ],
         [
-            { type:"target", value:41 },
-            { type:"miss", value:5 }
+            { type:"target", value:42 },
+            { type:"miss", value:8 }
         ],
         [
-            { type:"target", value:42 },
+            { type:"target", value:43 },
             { type:"score", value:240 }
         ],
         [
-            { type:"target", value:43 }
+            { type:"target", value:44 }
         ]
     ]
 };
@@ -604,7 +664,7 @@ export const LONG_TEXT_UNLOCK_TABLE = {
         ],
         [
             { type:"time", value:210 },
-            { type:"miss", value:20 }
+            { type:"miss", value:30 }
         ],
         [
             { type:"time", value:210 },
@@ -658,7 +718,7 @@ export const LONG_TEXT_UNLOCK_TABLE = {
         ],
         [
             { type:"time", value:155 },
-            { type:"miss", value:8 }
+            { type:"miss", value:10 }
         ],
         [
             { type:"time", value:150 },
@@ -1027,8 +1087,8 @@ export function getChallengeTagNote(challenge) {
  * @param {object} challenge 開始時点の challenge（tags 確定済み）
  * @returns {string} 表示用テキスト
  */
-export function getUnlockTextForChallenge(unlock, challenge) {
-    return getUnlockText(adjustUnlockForChallengeTags(unlock, challenge));
+export function getUnlockTextForChallenge(unlock, challenge, currentMiss = null, label = "現在") {
+    return getUnlockText(adjustUnlockForChallengeTags(unlock, challenge), currentMiss, label);
 }
 
 // =====================================================

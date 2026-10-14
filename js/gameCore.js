@@ -23,7 +23,8 @@ import { updateHud, showHud } from "./hud.js";
 import { resetCandidates, candidates, fullResetInput } from './inputCore.js';
 import { showResult } from "./resultView.js";
 import { getCurrentDifficulty, getDifficultyById } from "./difficulties.js";
-import { handleSkillModeResult } from "./skillTreeResult.js"
+import { handleSkillModeResult } from "./skillTreeResult.js";
+import { updateSkillUnlockHint } from "./skillTree.js";
 import { initTimeCircle, stopTimeCircle } from "./renderer.js";
 import { submitScore } from "../online/submitScore.js";
 import { RANKING_VERSION } from "./version.js";
@@ -386,6 +387,12 @@ export function renderState() {
     isFreeMode: currentIsFreeMode,
     isMissPractice: gameState.currentMode === GameModes.MISS_PRACTICE
   });
+
+  // ★スキルモード挑戦中：ミスの数が条件になっているノードで現在ミス数を表示・更新
+  if (gameState.currentChallenge?.isSkillMode) {
+    const currentMiss = (gameState.totalMistake || 0) + (gameState.mistakeCount || 0);
+    updateSkillUnlockHint(currentMiss);
+  }
 }
 
 // =====================================================
@@ -403,6 +410,9 @@ export function shuffleArray(array){
 // =====================================================
 // 10. 問題ロード
 // =====================================================
+// ★注意: 本ファイルの candidateCache は未使用（入力候補キャッシュは inputCore.js 側）。
+//   以前はここでリセットしていた名残。挙動変更を避けるため宣言のみ残す。
+
 let candidateCache = {};
 
 export async function loadText(index) {

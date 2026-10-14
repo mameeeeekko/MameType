@@ -7,7 +7,7 @@
 // Lv99 / HP999上限
 // ===============================
 
-import { autoSaveQuest } from "./storage.js";
+import { autoSaveQuest, readQuestStorage } from "./storage.js";
 import { PASSIVE_SKILLS } from "./questSkills.js";
 import { getTotalStars } from "./questProgress.js";
 import { devOverride } from "../dev/devOverride.js";
@@ -261,11 +261,10 @@ let playerStats = loadStats();
 // 読み込み / 保存
 // ===============================
 function loadStats() {
-    const data = localStorage.getItem("questPlayerStats");
+    // 壊れたセーブでも起動不能にならないよう安全に読み取る（正常時は挙動不変）
+    const parsed = readQuestStorage("questPlayerStats");
 
-    if (!data) return { ...DEFAULT_STATS };
-
-    const parsed = JSON.parse(data);
+    if (!parsed || typeof parsed !== "object") return { ...DEFAULT_STATS };
 
     if (parsed.skillSlotMax !== undefined) {
         parsed.bonusSkillSlot =
@@ -300,11 +299,10 @@ function loadStats() {
 
 
 export function reloadQuestPlayerStats() {
-    const data = localStorage.getItem("questPlayerStats");
+    // 壊れたセーブの場合は現メモリを維持（全損・起動不能を防ぐ）
+    const parsed = readQuestStorage("questPlayerStats");
 
-    if (!data) return;
-
-    const parsed = JSON.parse(data);
+    if (!parsed || typeof parsed !== "object") return;
 
     playerStats = {
         ...DEFAULT_STATS,
@@ -333,7 +331,7 @@ export function reloadQuestPlayerStats() {
 function saveStats() {
     // ★セッションflushでstorage側が進んでいる場合、メモリ側で上書き消ししないよう同期する
     try {
-        const raw = JSON.parse(localStorage.getItem("questPlayerStats") || "null");
+        const raw = readQuestStorage("questPlayerStats");
         const storedPlay = raw?.questRecord?.totalPlayTime;
         if (typeof storedPlay === "number" && storedPlay > (playerStats.questRecord?.totalPlayTime || 0)) {
             playerStats.questRecord.totalPlayTime = storedPlay;
@@ -352,7 +350,7 @@ function saveStats() {
 // ===============================
 export function getPlayerStatsForEnemy(mode = "enemy", levelOverride = null) {
 
-  const data = JSON.parse(localStorage.getItem("questPlayerStats"));
+  const data = readQuestStorage("questPlayerStats");
 
   let base = {
     ...DEFAULT_STATS,

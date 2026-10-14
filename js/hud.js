@@ -311,7 +311,8 @@ function setupStatsModal(options = {}) {
 }
 
 // ★全クリア（C）／EXTRA全クリア（Ex）バッジの共通スタイル（C と同じUI・同じ色）
-const CLEAR_BADGE_STYLE = "display: inline-block; background-color: #fadb14; color: #1c1c1c; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: bold; margin-left: 4px; vertical-align: middle; font-family: var(--font-ui);";
+// 星の数が大きくなっても同じ行に収まるようパディング・マージンを最適化
+const CLEAR_BADGE_STYLE = "display: inline-block; background-color: #fadb14; color: #1c1c1c; border-radius: 3px; padding: 1px 4px; font-size: 9.5px; font-weight: bold; margin-left: 3px; line-height: 1.2; vertical-align: middle; font-family: var(--font-ui);";
 
 function updateQuestHud() {
   const s = getPlayerStatsForEnemy("quest") || {};
@@ -369,9 +370,12 @@ function updateQuestHud() {
 
   if (clearEl) {
     // ★全クリアマーク「C」の右隣に、EXTRA全クリアマーク「Ex」を同じ見た目（CLEAR_BADGE_STYLE）で表示する
+    // 星の数が大きくなっても下に改行されないよう半角スペースでスマートに配置
     const clearBadge = hasSeenTrueEnding() ? `<span style="${CLEAR_BADGE_STYLE}">C</span>` : '';
     const extraBadge = hasExtraCleared()  ? `<span style="${CLEAR_BADGE_STYLE}">Ex</span>` : '';
-    clearEl.innerHTML = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%) 　 ${clearBadge}${extraBadge}`;
+    const badges = `${clearBadge}${extraBadge}`;
+    const badgeHtml = badges ? ` 　 ${badges}` : '';
+    clearEl.innerHTML = `CLEAR ${cleared} 　 ★${totalStars}/${maxStars} (${percent}%)${badgeHtml}`;
   }
 }
 
@@ -632,7 +636,7 @@ function renderQuestEquipmentSkills() {
   `);
 
   if (equipped.length === 0) {
-    el.innerHTML += `<div class="skill-empty">NO EQUIP</div>`;
+    el.insertAdjacentHTML('beforeend', `<div class="skill-empty">NO EQUIP</div>`);
     return;
   }
 
@@ -680,7 +684,7 @@ function renderQuestActiveSkills() {
   `);
 
   if (equipped.length === 0) {
-    el.innerHTML += `<div class="skill-empty">NO EQUIP</div>`;
+    el.insertAdjacentHTML('beforeend', `<div class="skill-empty">NO EQUIP</div>`);
     return;
   }
 

@@ -9,6 +9,21 @@ let currentOffset = 0;
 let hasMore = true;
 const PAGE_SIZE = 50;
 
+/**
+ * 外部入力（他プレイヤー名）をHTML表示用にエスケープする。
+ * ランキングは全プレイヤーが書き込めるため、名前経由のXSSを防ぐ。
+ * （表示内容は変わらない。HTMLタグとして解釈されないだけ）
+ */
+function escapeHtml(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function openOnlineRanking() {
 
   const screen = document.getElementById("onlineRankingScreen");
@@ -78,7 +93,7 @@ async function renderRanking(reset = false) {
       return `
       <div class="rank-row ${myRankClass}">
         <span>${currentOffset + i + 1}</span>
-        <span>${row.player_name}</span>
+        <span>${escapeHtml(row.player_name)}</span>
         <span>
             ${
                 currentMode === "time_attack"

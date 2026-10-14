@@ -2,6 +2,82 @@
 
 ---
 
+## [1.0.90] - 2026-10-14
+
+### Added
+- **設定 → VERSION に「最新版をチェック」ボタンを追加**
+  - 背景: 配信側の `js/version.js` は起動時に `no-store` で**1回だけ**取得しており、
+    取りこぼしや「SW の `waiting` が立ったが適用する操作が無い」ケースで
+    最新バージョンが適用されないことがあった。VERSION 欄には
+    「最新版をオフライン用にダウンロード」しかなく、確認だけの導線が無かった
+  - 追加: `#checkVersionBtn`（最新版をチェック）。`#checkUpdateBtn` は従来どおり
+  - **確認 → 適用 → 再起動まで1ボタンで完結**（独立した「更新を適用して再起動」ボタンは設けない）
+  - **`js/main.js`** — 手動チェック処理を新設
+    - `_checkLatestVersion()`: `_offlineDlRunning` / `_versionCheckRunning` で二重実行をガードし、
+      確認中は2ボタンを disable・ステータス文に「確認中…」を表示
+    - `_fetchOnlineLatestVersion()`: `./js/version.js?_v=${Date.now()}` を `no-store` で取得し
+      `APP_VERSION` を正規表現抽出
+    - 最新と同じ → `最新です（vX）`。新しい版あり → `registration.update()` を実行し、
+      **最大30秒・1秒間隔で `waiting` SW をポーリング**（`_waitForWaitingServiceWorker()`。
+      取得は `getRegistration()` で取り直してから判定＝クロージャ陳腐化の防止）
+    - `waiting` 到達 → **`confirm()` で確認してから適用**。OK なら
+      `アップデートを適用しています…自動で再起動します` を表示し `_applyWaitingUpdate()` を実行。
+      キャンセルなら `vX への更新を中止しました。もう一度「最新版をチェック」を押すと適用できます`
+    - タイムアウト → `更新の取得に時間がかかっています…`／ネットワーク失敗・解析失敗 → それぞれ専用の文言
+    - SW が使えない実行環境（`file://` 等で `getRegistration()` が throw するケア含む）では、
+      30秒待たずに即座に `Service Worker が使えないためページの再読み込みで最新版が読み込まれます` を表示
+      （`_resolveServiceWorkerRegistration()` / `_waitForWaitingServiceWorker()` が `unsupported` を返す）
+    - `finally` でボタンを再有効化
+  - **適用は確認後のワンボタン完結**: 独立した「更新を適用して再起動」ボタンは設けず、
+    既存の `_applyWaitingUpdate()`（`SKIP_WAITING` → `controllerchange` → リロード、
+    8秒保険タイマー・`isApplyingUpdate` ガード済み）をそのまま呼ぶ
+  - キャンセルしても `waiting` SW は残るため、もう一度このボタンを押せば即座に適用できる（詰まらない）
+  - 自動 `registration.update()` は v1.0.25 の廃止方針を維持（低スペックPC / Windows の負荷回避）。
+    `update()` は手動チェック時の中だけ走る
+  - 影響範囲: 設定 VERSION 欄の表示と手動導線のみ。オフライン用DL（`downloadOfflineData()`）と
+    起動時の軽量チェックは不変
+
+### Changed
+- **アプリケーションバージョンを `1.0.90` に更新**
+  - `js/version.js` の `APP_VERSION` → `1.0.90`
+  - Service Worker のキャッシュ名 → `mametype-v1.0.90`
+
+### Fixed
+- **「最新版をチェック」を押しても最新版にならない問題を修正（Service Worker のキャッシュ優先が原因）**
+  - 原因: `service-worker.js` の fetch ハンドラは「ナビゲーション以外は cache-first」で、
+    ページからの `fetch("./js/version.js", { cache: "no-store" })` の **`no-store` を無視**して
+    古い `version.js` を返していた。そのため実行中の `APP_VERSION` と配信側の版が
+    常に一致して見え、「最新です」と誤判定され、更新が永遠に検知できなかった
+  - 一度 `mametype-app` キャッシュへ入った `version.js` は cache-first で**永久に新鮮にならない**ため、
+    手動ダウンロードでも解消しなかった
+  - **修正1（`service-worker.js`）**: `event.request.cache` が `no-store` / `reload` の要求は
+    `caches.match` をスキップして**ネットワーク直行**。取得できたら内容でキャッシュも更新する。
+    クエリ付きURLはキャッシュ保存対象外（キャッシュ汚染防止）。ナビゲーションは従来どおり network-first で不変
+  - **修正2（`js/main.js`）**: 手動チェックと起動時チェックの両方で `./js/version.js?_v=${Date.now()}`
+    を取得するよう変更。キャッシュに存在しないURLになるため、**まだ新SWが有効化される前の旧SWが
+    動いている間も**確実にネットワークから最新の版を読める（旧環境での取りこぼしを根絶）
+  - 影響範囲: `no-store` / `reload` 指定のリクエストのみ挙動変更。通常のゲームアセット読み込みは
+    cache-first のまま不変（オフライン対応・タイピング遅延の回帰なし）
+
+---
+
+## [1.0.88] - 2026-10-14
+
+### Fixed
+- **設定画面のプレイヤー名欄に、保存していない入力が残る問題を修正**
+  - 背景: `playerNameInput` の値更新は起動時の1回（`js/main.js` の `playerNameInput.value = getPlayerName();`）だけだった。
+    `<input>` は DOM 上に残り続けるため、名前を入力して「保存」を押さずに設定画面を閉じ、
+    再度 SETTING を開くと**未保存の入力値がそのまま表示されていた**（前回保存した名前に戻らなかった）
+  - 修正: `js/main.js` の `initSettingsUI()` 内 SETTING ボタンハンドラで、
+    Player ID 表示と同じタイミングで `playerNameInput.value = getPlayerName();` を再実行。
+    設定画面を開くたびに保存済みの名前（`localStorage` の `typing_player_profile.playerName`）へ初期化する
+  - 設定画面の表示入口は `settingsDiv.style.display = "block"` の1箇所のみのため、
+    「閉じる時」ではなく「開く時」にリセットすることで全経路（×ボタン / `b` / `Esc`）を網羅
+  - 影響範囲: 表示値のリセットのみ。保存処理（`setPlayerName`）および
+    スコア送信時の名前取得（`online/submitScore.js` の `getPlayerName()`）の挙動は不変
+
+---
+
 ## [1.0.86] - 2026-10-10
 
 ### Fixed

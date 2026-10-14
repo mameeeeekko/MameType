@@ -1,5 +1,5 @@
 // questProgress.js
-import { autoSaveQuest } from "./storage.js";
+import { autoSaveQuest, readQuestStorage } from "./storage.js";
 import { QUEST_MAP } from "./questMap.js";
 import { grantRebuildTicket, setRebuildUnlimited } from "./questPlayerStats.js";
 
@@ -70,9 +70,9 @@ export function getMaxClearedStageNumber() {
 }
 
 function load(){
-    const data = localStorage.getItem("questProgress");
-    if (!data) return { ...DEFAULT_PROGRESS };
-    const parsed = JSON.parse(data);
+    // 壊れたセーブの場合は既定値で起動（進行データの全損・起動不能を防ぐ）
+    const parsed = readQuestStorage("questProgress");
+    if (!parsed || typeof parsed !== "object") return { ...DEFAULT_PROGRESS };
     // playedDialoguesプロパティがない古いセーブデータのための後方互換性
     if (!parsed.playedDialogues) {
         parsed.playedDialogues = {};
@@ -118,7 +118,8 @@ function getGlobalClearFlags() {
 }
 
 export function reloadQuestProgress() {
-  const data = JSON.parse(localStorage.getItem("questProgress"));
+  // 壊れたセーブの場合は現メモリを維持（全損・起動不能を防ぐ）
+  const data = readQuestStorage("questProgress");
 
   if (!data) return;
 
@@ -566,7 +567,7 @@ export function setSelectedWorldId(id) {
 const KEY = "questStars";
 
 export function getStarData() {
-  return JSON.parse(localStorage.getItem(KEY) || "{}");
+  return readQuestStorage(KEY, {});
 }
 
 export function getStar(nodeId) {

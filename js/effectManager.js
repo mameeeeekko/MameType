@@ -4675,7 +4675,7 @@ export function renderItemSkillEffects(ctx, deltaTime = 1 / 60) {
         ){
 
             const t =
-                1 - (e.life / e.maxLife);
+                Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
 
             const radius =
                 e.radius +
@@ -4712,8 +4712,10 @@ export function renderItemSkillEffects(ctx, deltaTime = 1 / 60) {
             ctx.stroke();
 
             // 中心フラッシュ
+            // ★t を 0〜1 にクランプ済みだが、二重安全で半径も非負にクランプする。
+            //   （負半径を ctx.arc に渡すと IndexSizeError で gameLoop が停止＝フリーズする）
             const flashRadius =
-                120 * (1 - t);
+                Math.max(0, 120 * (1 - t));
 
             ctx.fillStyle =
                 `rgba(
@@ -4771,8 +4773,15 @@ export function renderItemSkillEffects(ctx, deltaTime = 1 / 60) {
 
             // 終了判定
             if (remaining <= 0) {
-                e.life = 0;
-                return;
+                // ★重要: ここで関数 return してはならない。
+                //   for ループ内の return は関数全体を終了させ、
+                //   ループ末尾の itemSkillEffects.splice(i, 1) に到達できず、
+                //   バリアが配列に永続に残る。その結果 areAllEffectsDone() の
+                //   itemSkillEffects.length === 0 が永遠に false になり、
+                //   終了後の結果画面へ遷移しない不具合の原因になっていた。
+                ctx.restore();                  // save/restore の整合性を保つ（従来の return は restore も飛ばしていた）
+                itemSkillEffects.splice(i, 1);  // 直接削除（逆順ループなので安全）
+                continue;                       // 次の要素へ
             }
 
             const t = Math.max(0, Math.min(1, remaining / duration));
