@@ -426,11 +426,11 @@ export const NORMAL_UNLOCK_TABLE = {
             { type:"accuracy", value:90 }
         ],
         [
-            { type:"time", value:75 },
+            { type:"time", value:80 },
             { type:"miss", value:8 }
         ],
         [
-            { type:"time", value:80 },
+            { type:"time", value:75 },
             { type:"score", value:140 }
         ],
         [
@@ -444,7 +444,7 @@ export const NORMAL_UNLOCK_TABLE = {
             { type:"accuracy", value:93 }
         ],
         [
-            { type:"time", value:85 },
+            { type:"time", value:90 },
             { type:"miss", value:5 }
         ],
         [
@@ -462,7 +462,7 @@ export const NORMAL_UNLOCK_TABLE = {
             { type:"accuracy", value:95 }
         ],
         [
-            { type:"time", value:165 },
+            { type:"time", value:170 },
             { type:"miss", value:5 }
         ],
         [
@@ -480,7 +480,7 @@ export const NORMAL_UNLOCK_TABLE = {
             { type:"accuracy", value:97 }
         ],
         [
-            { type:"time", value:270 },
+            { type:"time", value:275 },
             { type:"miss", value:5 }
         ],
         [
@@ -527,7 +527,7 @@ export const TIME_ATTACK_UNLOCK_TABLE = {
             { type:"accuracy", value:93 }
         ],
         [
-            { type:"target", value:21 },
+            { type:"target", value:20 },
             { type:"miss", value:5 }
         ],
         [
@@ -545,7 +545,7 @@ export const TIME_ATTACK_UNLOCK_TABLE = {
             { type:"accuracy", value:95 }
         ],
         [
-            { type:"target", value:26},
+            { type:"target", value:25},
             { type:"miss", value:5 }
         ],
         [
@@ -563,7 +563,7 @@ export const TIME_ATTACK_UNLOCK_TABLE = {
             { type:"accuracy", value:97 }
         ],
         [
-            { type:"target", value:42 },
+            { type:"target", value:41 },
             { type:"miss", value:5 }
         ],
         [
