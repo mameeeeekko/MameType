@@ -621,7 +621,7 @@ export const LONG_TEXT_UNLOCK_TABLE = {
             { type:"accuracy", value:92 }
         ],
         [
-            { type:"time", value:160 },
+            { type:"time", value:165 },
             { type:"miss", value:25 }
         ],
         [
@@ -635,37 +635,37 @@ export const LONG_TEXT_UNLOCK_TABLE = {
 
     2: [
         [
-            { type:"time", value:150 },
+            { type:"time", value:155 },
             { type:"accuracy", value:95 }
         ],
         [
-            { type:"time", value:150 },
+            { type:"time", value:160 },
             { type:"miss", value:15 }
         ],
         [
-            { type:"time", value:150 },
+            { type:"time", value:155 },
             { type:"score", value:220 }
         ],
         [
-            { type:"time", value:140 }
+            { type:"time", value:145 }
         ]
     ],
 
     3: [
         [
-            { type:"time", value:145 },
+            { type:"time", value:150 },
             { type:"accuracy", value:97 }
         ],
         [
-            { type:"time", value:145 },
+            { type:"time", value:155 },
             { type:"miss", value:8 }
         ],
         [
-            { type:"time", value:145 },
+            { type:"time", value:150 },
             { type:"score", value:240 }
         ],
         [
-            { type:"time", value:130 }
+            { type:"time", value:135 }
         ]
     ]
 };
