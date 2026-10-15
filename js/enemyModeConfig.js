@@ -308,9 +308,9 @@ export const TIER_DAMAGE_MULTIPLIERS = Object.freeze({
     T5:  2.90,
     T6:  3.20,
     T7:  3.50,
-    T8:  3.70,
-    T9:  4.00,
-    T10: 4.50
+    T8:  4.00,
+    T9:  4.50,
+    T10: 5.00
 });
 
 /**
@@ -1511,7 +1511,7 @@ function generateStage(i, tierTable = ENEMY_TIER_BALANCED, explicitPattern = nul
             config.itemSpawn              = null; // アイテム出現禁止
             config.player                 = { ...ENEMY_MODE_CONFIG.player, disableActiveSkill: true }; // アクティブスキル禁止
             config.spawn.multiCount    = i >= 40 ? 2 : 2;
-            config.spawn.multiInterval = i >= 60 ? 3 : 2;
+            config.spawn.multiInterval = i >= 60 ? 2 : 2;
 
             // スター：総合評価 (Composite) - アイテム・スキルなしでの総合力を評価
             config.star = {

@@ -1,7 +1,7 @@
 // freeSkillUI.js
 // =====================================================
 // フリーモード（ENEMY / QUEST BOSS）専用のアクティブスキル設定UI
-// ・スキル選択モーダル（全アクティブスキルから1枠選択／なしも可）
+// ・スキル選択モーダル（全アクティブスキルから1枠選択／なしも可・選択で自動クローズ）
 // ・星強化モーダル（フリー専用の単一レベル。コストなしで自由設定）
 // ・クエストのスキル/星強化データとは完全に独立（値は main.js 側が保持する）
 //
@@ -170,7 +170,8 @@ function showFreeSkillTooltip(skill, event) {
  * @param {object} opts
  * @param {string} [opts.title] - モーダルのタイトル
  * @param {string|null} [opts.currentSkillId] - 現在選択中のスキルID（null = なし）
- * @param {(skillId: string|null) => void} [opts.onSelect] - 選択時に呼ばれる
+ * 選択肢（スキル／なし）をクリックすると選択を確定し、モーダルを自動で閉じます。
+ * @param {(skillId: string|null) => void} [opts.onSelect] - 選択確定時に呼ばれる（値が変更された場合のみ）
  */
 export function openFreeSkillSelectModal({ title = "SKILL SELECT", currentSkillId = null, onSelect } = {}) {
   playSE("questmenu");
@@ -185,7 +186,8 @@ export function openFreeSkillSelectModal({ title = "SKILL SELECT", currentSkillI
   desc.innerHTML = `
     フリーモードで使用するアクティブスキルを1つ選択してください。<br>
     全スキルから自由に選択できます（クエストのスキルツリー解放状況は不要です）。<br>
-    ※ 「なし」を選ぶとスキルを使用しません。
+    ※ 「なし」を選ぶとスキルを使用しません。<br>
+    ※ スキルを選ぶとこの画面を閉じます。
   `;
 
   const grid = document.createElement("div");
@@ -193,6 +195,20 @@ export function openFreeSkillSelectModal({ title = "SKILL SELECT", currentSkillI
 
   content.appendChild(desc);
   content.appendChild(grid);
+
+  /**
+   * スキルを選択確定として扱い、コールバック実行後にモーダルを閉じます。
+   * @param {string|null} nextId - 選択するスキルID（null = なし）
+   * @param {string} seName - 選択時に鳴らすSE名
+   */
+  function selectAndClose(nextId, seName) {
+    const changed = selectedId !== nextId;
+    selectedId = nextId;
+    playSE(seName);
+    // 値の変更があった場合のみ保存用コールバックを呼ぶ（同値の再選択は閉じるだけ）
+    if (changed) onSelect?.(nextId);
+    closeFreeSkillModal();
+  }
 
   function render() {
     grid.innerHTML = "";
@@ -206,13 +222,7 @@ export function openFreeSkillSelectModal({ title = "SKILL SELECT", currentSkillI
       </div>
       <div class="skill-grid-name">なし</div>
     `;
-    noneItem.onclick = () => {
-      if (selectedId === null) return;
-      playSE("skill_off");
-      selectedId = null;
-      render();
-      onSelect?.(null);
-    };
+    noneItem.onclick = () => selectAndClose(null, "skill_off");
     noneItem.onmouseleave = () => hideFreeSkillTooltip();
     grid.appendChild(noneItem);
 
@@ -228,13 +238,7 @@ export function openFreeSkillSelectModal({ title = "SKILL SELECT", currentSkillI
         <div class="skill-grid-name">${skill.name}</div>
       `;
 
-      item.onclick = () => {
-        if (selectedId === skillId) return;
-        playSE("skill_on");
-        selectedId = skillId;
-        render();
-        onSelect?.(skillId);
-      };
+      item.onclick = () => selectAndClose(skillId, "skill_on");
 
       item.onmousemove = (e) => showFreeSkillTooltip(skill, e);
       item.onmouseleave = () => hideFreeSkillTooltip();

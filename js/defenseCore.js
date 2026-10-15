@@ -104,11 +104,11 @@ const COMBO_THRESHOLDS = DEFENSE_COMBO_TIERS.map(t => t.max);
 // ------------------------------------------------------------
 // 防衛モードのgScoreはコンボ倍率(最大3.0)×難易度倍率で
 // ゆっくりと膨れ上がりやすく、scoreToExp(スコア×0.4)へ
-// そのまま通すとEXPが過剰になるため、換算前に0.85倍へ抑制する。
+// そのまま通すとEXPが過剰になるため、換算前に0.9倍へ抑制する。
 // ・スコア表示 / 記録 / ランキング / 実績は gScore を使うため影響しない
 // ・scoreToExp本体はエネミーモードと共用のため変更していない
 // ============================================================
-export const DEFENSE_EXP_RATE = 0.85;
+export const DEFENSE_EXP_RATE = 0.9;
 
 export function startDefenseMode(config = {}) {
   closeDialogue();
