@@ -1,9 +1,10 @@
 // enemyCore.js
-import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI, showGameMessage,renderSystemMessage, updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI, resetSpawnDotState, updateEnemyTextOffsets} from "./enemyRenderer.js";
+import { dbg } from "./debugLog.js";
+import {renderEnemies,renderPlayer,renderChainUI,renderScore,renderEndCondition,renderActiveSkillUI, showGameMessage,renderSystemMessage, updateComboTierBar, initComboTierBar, renderQuestBackground, renderPhaseWarning, renderActiveAttackUI, resetSpawnDotState, updateEnemyTextOffsets, getUIAnchorPosition} from "./enemyRenderer.js";
 import { fitCanvasToContainerFill } from "./canvasUtil.js";
 import { stageRect } from "./stageScale.js";
 import { buildBaseRomaji } from "./typingLogic.js";
-import { initAudio, playEnemyKillSound, stopBGM, playBGM, ensureSound, isSoundReady, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
+import { initAudio, playSE, playEnemyKillSound, stopBGM, playBGM, ensureSound, isSoundReady, spawnEnemyEffect, renderEnemyEffects, areAllEffectsDone, renderComboTierUpEffects, playChainBreakSound,
     renderHitWaveEffects, renderKnockbackEffects, spawnKnockbackEffect,spawnChainBreakEffect, playLoopSE, stopLoopSE,
     renderChainBreakEffects, spawnLockOnEffect, renderLockOnEffects, spawnScorePopup, renderScorePopups,
     renderDamagePopups, playHitEffect, renderHitParticles, renderShotEffects, spawnShotEffect, spawnItemSkillEffect,
@@ -727,12 +728,24 @@ function gameLoopImpl(timestamp) {
                     gameState.activeSkillStock = maxStock;
                 }
 
-                console.log(
+                dbg(
                     "CHARGE COMPLETE:",
                     gameState.activeSkillStock,
                     "/",
                     maxStock
                 );
+
+                // ★チャージ完了の告知：SE＋スキルアイコン位置のバースト＋READYラベル
+                //   （スキル有効・禁止されていない・フェーズ移行中でないときのみ通過する）
+                const skillReadyPos = getUIAnchorPosition("skill");
+                spawnItemSkillEffect({
+                    category: "ready",
+                    source: "skill",
+                    x: skillReadyPos.x,
+                    y: skillReadyPos.y,
+                    level: gameState.activeSkillStock >= maxStock ? "large" : "medium"
+                });
+                showGameMessage(gameState, "SKILL READY", 90);
 
                 // まだ満タンじゃないなら次チャージ
                 if (gameState.activeSkillStock < maxStock) {
@@ -899,7 +912,7 @@ function gameLoopImpl(timestamp) {
             gameState.enemyStats.startTime = now;
             gameState.enemyStats.phaseStartTime = now;
 
-            console.log("TIMER START (VISIBLE)");
+            dbg("TIMER START (VISIBLE)");
         }
     }
 
@@ -1599,7 +1612,7 @@ function transitionToNextPhase(now) {
         stats.transitionMsg = null;
         stats.nextPhaseGoal = null;
         
-        console.log("PHASE TRANSITION COMPLETE:", nextIndex);
+        dbg("PHASE TRANSITION COMPLETE:", nextIndex);
     }, 2500); // 2.5秒の猶予
 }
 
@@ -1772,6 +1785,7 @@ export function handleEnemyKey(e) {
 
         // ★新しい敵にロック
         lockedEnemy = nearest;
+        playSE("lockon"); // ★TAB(autolockon)によるロックオンSE
 
         gameState.text = lockedEnemy.text;
         gameState.pos = 0;
@@ -1819,6 +1833,7 @@ export function handleEnemyKey(e) {
             enemy.inputedRomaji = "";
 
             lockedEnemy = null;
+            playSE("lockoncancel"); // ★明示的なロック解除SE(Delete等)
             resetCandidates();
             return;
         }
@@ -1906,7 +1921,7 @@ export function handleEnemyKey(e) {
                 const chainRate = stats.chainRate ?? 1;
                 const inc = gainOnType * chainRate;
                 if (inc === 0) {
-                    console.log("[DEBUG] Chain type add zero:", { gainOnType, chainRate, chainBar: stats.chainBar });
+                    dbg("[DEBUG] Chain type add zero:", { gainOnType, chainRate, chainBar: stats.chainBar });
                 }
                 stats.chainBar += inc;
             } catch (e) {
@@ -2137,6 +2152,7 @@ export function handleEnemyKey(e) {
 
         lockedEnemy = candidateEnemies[0];
         spawnLockOnEffect(lockedEnemy);
+        playSE("lockon"); // ★候補1体確定によるロックオンSE
         enemies.forEach(enemy=>{
         enemy.progress = 0;
         });
@@ -2316,7 +2332,7 @@ export async function startEnemyMode(config = {}) {
         // ★EXTRA CLEAR 特典：フリーモードのBGM選択（RESTART / PLAY AGAIN / フェーズ移行でも維持する）
         bgm: config.bgm ?? null,
     };
-    console.log("[startEnemyMode] config.bossOnly:", config.bossOnly, "lastEnemyConfig.bossOnly:", lastEnemyConfig.bossOnly);
+    dbg("[startEnemyMode] config.bossOnly:", config.bossOnly, "lastEnemyConfig.bossOnly:", lastEnemyConfig.bossOnly);
 
     // === Dev 用 ===================
     // フリーモード時はDevのステージ固定を無視して、選択されたステージ(DAILY)を優先する
@@ -2360,9 +2376,9 @@ export async function startEnemyMode(config = {}) {
             stage.spawn.limit = stage.spawn.limit ?? 1;
             stage.spawn.maxAlive = stage.spawn.maxAlive ?? 1;
 
-            console.log("FREE MODE BOSS-ONLY: Applied boss phase", { stageId: currentStage, bossPhaseIndex });
+            dbg("FREE MODE BOSS-ONLY: Applied boss phase", { stageId: currentStage, bossPhaseIndex });
         } else {
-            console.log("[startEnemyMode] NOT entering boss-only branch. config.bossOnly:", config.bossOnly, "baseStage:", !!baseStage, "phases:", baseStage?.phases?.length);
+            dbg("[startEnemyMode] NOT entering boss-only branch. config.bossOnly:", config.bossOnly, "baseStage:", !!baseStage, "phases:", baseStage?.phases?.length);
             const firstPhase = (baseStage.phases && baseStage.phases[0]) ? baseStage.phases[0] : {};
 
             // 1. DAILYの設定を継承しつつ、フェーズ構造をフラット化
@@ -2433,7 +2449,7 @@ export async function startEnemyMode(config = {}) {
             //    ※迎撃だけは「送り切る弾の総数」が進行そのものなので custom の指定を尊重する
             stage.spawn.limit = custom.spawn?.limit ?? null;
 
-            console.log("FREE MODE: MODE APPLIED", {
+            dbg("FREE MODE: MODE APPLIED", {
                 mode: stage.clearConditions.endless ? "endless" : (stage.clearConditions.killCount ? "count" : "time"),
                 timer: stage.endConditions.timerMs,
                 kill: stage.clearConditions.killCount,
@@ -2833,6 +2849,11 @@ export async function startEnemyMode(config = {}) {
 
     try {
         await initAudio();   // ← 音読み込み
+        // ★ロックオンSEは未取得値だと初回1回だけ無音になるため、モード開始時に先読みする（待機はしない）
+        ensureSound("lockon");
+        ensureSound("lockoncancel");
+        // ★スキルチャージ完了SEも同様に先読みする
+        ensureSound("skillcharge");
         if (bgmEnabled) {
             // ★v1.0.42: モード開始時にBGMを読み込む（起動時の一括デコード廃止のため）
             await ensureSound(resolvedBgm);
@@ -3031,7 +3052,7 @@ export async function restartEnemyMode() {
 // ★直前のエネミーモードがboss-only（ボス戦のみ）だったかを返す
 export function wasLastModeBossOnly() {
     const result = lastEnemyConfig?.bossOnly === true;
-    console.log("[wasLastModeBossOnly]", { lastEnemyConfig, result });
+    dbg("[wasLastModeBossOnly]", { lastEnemyConfig, result });
     return result;
 }
 
@@ -3251,7 +3272,7 @@ export async function endEnemyMode(isAbort = false) {
             // ★ 最終ボス撃破後、エンディングフラグを立てる
             if (node.stage === "LAST_BOSS") {
                 gameState.isTrueEnding = true;
-                console.log("TRUE ENDING FLAG SET");
+                dbg("TRUE ENDING FLAG SET");
             }
 
             // ★ EXTRAワールド最終ボス（ExB）撃破後、EXTRAクリア演出フラグを立てる
@@ -3259,7 +3280,7 @@ export async function endEnemyMode(isAbort = false) {
             if (node.id === "WEX_BOSS") {
                 markExtraCleared();
                 gameState.isExtraEnding = true;
-                console.log("EXTRA CLEAR FLAG SET");
+                dbg("EXTRA CLEAR FLAG SET");
             }
 
             // ★ステージ報酬（slot + stock）
@@ -3536,7 +3557,7 @@ function tryUseActiveSkill() {
         return;
     }
 
-    console.log("TRY STOCK:", gameState.activeSkillStock);
+    dbg("TRY STOCK:", gameState.activeSkillStock);
 
     // ★フリーモードは専用設定のスキルを使用（クエストは従来どおり装備スキル）
     const skillId = gameState.freeSkillId ?? getEquippedActiveSkills()?.[0];
@@ -3552,7 +3573,7 @@ function tryUseActiveSkill() {
 
         if (player && player.hp >= player.maxHp) {
 
-            console.log("HP FULL");
+            dbg("HP FULL");
 
             playErrorSound();
             showGameMessage(
@@ -3578,7 +3599,7 @@ function tryUseActiveSkill() {
     if (!devOverride.skill?.infinite &&
         ((bossAlive && !hasEffectTargets) || noEffectTargets)) {
 
-        console.log(
+        dbg(
             noEffectTargets
                 ? "NO KNOCKBACK TARGET"
                 : "NO EFFECT ON BOSS"
@@ -3594,7 +3615,7 @@ function tryUseActiveSkill() {
 
     if (!devOverride.skill?.infinite && (gameState.activeSkillStock ?? 0) <= 0) {
 
-        console.log("NO STOCK");
+        dbg("NO STOCK");
 
         playErrorSound();
         showGameMessage(
@@ -3611,7 +3632,7 @@ function tryUseActiveSkill() {
 
     // DEVモードで無限スキルが有効なら、ここで処理を終了
     if (devOverride.skill?.infinite) {
-        console.log("[DEV] Infinite skill used. Stock and cooldown not affected.");
+        dbg("[DEV] Infinite skill used. Stock and cooldown not affected.");
         return;
     }
 
@@ -3667,7 +3688,7 @@ function tryUseActiveSkill() {
         gameState.activeSkillCooldown = 0;
     }
 
-    console.log(
+    dbg(
         "ACTIVE USED:",
         gameState.activeSkillStock,
         "/",

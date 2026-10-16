@@ -7,6 +7,7 @@
 // =====================================================
 // 1. 外部モジュールの import
 // =====================================================
+import { dbg } from "./debugLog.js";
 import { addRankingEntry } from "./storage.js";
 import { TARGETS, TARGETS_LONG } from './target.js';
 import {
@@ -865,7 +866,7 @@ async function finishGame(config = {}) {
           console.error("Online ranking submit failed:", err);
       }
 
-      console.log("submit result:", submitResult);
+      dbg("submit result:", submitResult);
   }
 
     // ================================

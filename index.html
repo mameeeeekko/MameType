@@ -7,6 +7,20 @@
 
   <title>MameType</title>
 
+  <meta name="description" content="ブラウザで遊べる本格派タイピングゲーム『MameType』。デイリーモード、クエスト、エネミー・防衛戦など多彩なモードを搭載。">
+  <link rel="icon" type="image/png" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+
+  <!-- OGP / SNS Card -->
+  <meta property="og:title" content="MameType">
+  <meta property="og:description" content="ブラウザで遊べる本格派タイピングゲーム『MameType』。デイリーモード、クエスト、エネミー・防衛戦など多彩なモードを搭載。">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="./icon-512.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="MameType">
+  <meta name="twitter:description" content="ブラウザで遊べる本格派タイピングゲーム『MameType』。">
+  <meta name="twitter:image" content="./icon-512.png">
+
   <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./assets/fonts/fonts.css">
@@ -1332,6 +1346,7 @@
   <!-- QUICK -->
   <div class="dev-quick">
     <button id="devStarMaxBtn" onclick="dev.toggleStarMax(this)">STARS MAX: OFF</button>
+    <button id="devLogBtn" onclick="dev.toggleDebugLog(this)">LOG: OFF</button>
     <div class="dev-quick-info">★ <span id="viewStarCount"></span></div>
   </div>
 

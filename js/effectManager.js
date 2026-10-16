@@ -3717,6 +3717,7 @@ export function renderComboTierUpEffects(ctx, deltaTime = 1 / 60) {
 // "heal" 回復系演出
 // "freeze" 凍結・拘束系演出
 // "cooldown" クールダウン短縮系演出 itemのみ
+// "ready" チャージ完了（スキル溜まり）演出 skillのみ
 // ---------------------------------
 // source : 演出ソース
 // ---------------------------------
@@ -3802,6 +3803,11 @@ export function spawnItemSkillEffect(opts = {}) {
             spawnSkillReviveEffect(opts);
         }
 
+        // チャージ完了（スキル溜まり）
+        else if (category === "ready") {
+            spawnSkillReadyEffect(opts);
+        }
+
     }
 
     // item
@@ -3822,6 +3828,74 @@ export function spawnItemSkillEffect(opts = {}) {
         else if (category === "cooldown") {
             spawnItemCooldownEffect(opts);
         }
+    }
+}
+
+// ======================================
+// SKILL : READY（チャージ完了バースト）
+// アクティブスキルアイコン位置でフラッシュ＋リング2段＋放射スパーク
+// ======================================
+function spawnSkillReadyEffect({ x, y, level = "medium" }) {
+
+    // 座標が取得できなければ演出は省略（SEは playEffectSound 側で鳴ら済み）
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
+    const isMax = level === "large";
+    const maxRadius = isMax ? 90 : 70;
+
+    // 中心フラッシュ（白〜金）
+    itemSkillEffects.push({
+        type: "skill_ready_flash",
+        x: x,
+        y: y,
+        maxRadius: isMax ? 60 : 46,
+        life: 14,
+        maxLife: 14
+    });
+
+    // 拡大リング2段（2段目はディレイ）
+    itemSkillEffects.push({
+        type: "skill_ready_ring",
+        x: x,
+        y: y,
+        radius: 16,
+        maxRadius: maxRadius,
+        color: "255, 215, 106", // 金（強調）
+        life: 26,
+        maxLife: 26,
+        delay: 0
+    });
+    itemSkillEffects.push({
+        type: "skill_ready_ring",
+        x: x,
+        y: y,
+        radius: 16,
+        maxRadius: maxRadius * 0.78,
+        color: "206, 224, 255", // スキルUIの白青
+        life: 24,
+        maxLife: 24,
+        delay: 6
+    });
+
+    // 放射スパーク（低品質設定では減量）
+    const sparkTotal = Math.max(4, scaledParticleCount(isMax ? 14 : 10));
+    for (let i = 0; i < sparkTotal; i++) {
+        const angle =
+            (Math.PI * 2 * i) / sparkTotal +
+            (Math.random() - 0.5) * 0.35;
+        const speed = 2.6 + Math.random() * 2.4 + (isMax ? 1.2 : 0);
+        const life = 22 + Math.random() * 8;
+        itemSkillEffects.push({
+            type: "skill_ready_spark",
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: 1.6 + Math.random() * 1.8,
+            color: i % 2 === 0 ? "#ffe9a8" : "#dff0ff",
+            life: life,
+            maxLife: life
+        });
     }
 }
 
@@ -3917,6 +3991,11 @@ export function playEffectSound(
                 0.12
             );
         }, 30);
+    }
+
+    // ready（スキルチャージ完了）
+    else if (category === "ready") {
+        playSE("skillcharge");
     }
 }
 
@@ -5194,6 +5273,90 @@ export function renderItemSkillEffects(ctx, deltaTime = 1 / 60) {
                 e.y
             );
             ctx.stroke();
+        }
+
+        // ======================================
+        // Skill Ready Flash（チャージ完了の中心フラッシュ）
+        // ======================================
+        else if (e.type === "skill_ready_flash") {
+
+            const p = Math.min(1, 1 - Math.max(0, e.life / e.maxLife));
+            const r = (e.maxRadius || 46) * (0.35 + 0.65 * p);
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+
+            const glow = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, r);
+            glow.addColorStop(0, `rgba(255, 255, 255, ${(0.95 * (1 - p)).toFixed(3)})`);
+            glow.addColorStop(0.45, `rgba(255, 226, 150, ${(0.75 * (1 - p)).toFixed(3)})`);
+            glow.addColorStop(1, "rgba(255, 205, 90, 0)");
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Ready Ring（拡大するリング・2段）
+        // ======================================
+        else if (e.type === "skill_ready_ring") {
+
+            // 遅延中はlifeを減らさず待機（先頭の e.life -= scale と相殺）
+            if ((e.delay || 0) > 0) {
+                e.life += scale;
+                e.delay -= scale;
+            } else {
+                const p = Math.min(1, 1 - Math.max(0, e.life / e.maxLife));
+                const ease = 1 - Math.pow(1 - p, 2); // easeOut
+                const r =
+                    (e.radius || 16) +
+                    ((e.maxRadius || 70) - (e.radius || 16)) * ease;
+                const rgb = e.color || "206, 224, 255";
+
+                ctx.globalAlpha = 1;
+                ctx.globalCompositeOperation = "lighter";
+                ctx.strokeStyle = `rgba(${rgb}, ${((1 - p) * 0.95).toFixed(3)})`;
+                ctx.lineWidth = Math.max(1, 4 * (1 - p));
+                ctx.shadowBlur = 14;
+                ctx.shadowColor = `rgba(${rgb}, 0.9)`;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.globalCompositeOperation = "source-over";
+            }
+        }
+
+        // ======================================
+        // Skill Ready Spark（放射スパーク）
+        // ======================================
+        else if (e.type === "skill_ready_spark") {
+
+            e.x += (e.vx || 0) * scale;
+            e.y += (e.vy || 0) * scale;
+            e.vx *= 0.92;
+            e.vy *= 0.92;
+
+            const len = 3 + 6 * Math.max(0, e.life / e.maxLife);
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = e.color || "#dff0ff";
+            ctx.lineWidth = e.radius || 2;
+            ctx.lineCap = "round";
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = e.color || "#dff0ff";
+            ctx.beginPath();
+            ctx.moveTo(e.x, e.y);
+            ctx.lineTo(
+                e.x - (e.vx || 0) * len * 0.35,
+                e.y - (e.vy || 0) * len * 0.35
+            );
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
         }
 
         ctx.restore();

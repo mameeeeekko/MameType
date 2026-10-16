@@ -6,7 +6,19 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.0.93";
+const CACHE_NAME = "mametype-v1.0.94";
+
+// -----------------------------------------------------
+// デバッグログ（SW用）
+//   Service Worker はアプリ側モジュール（js/debugLog.js）を
+//   import できず localStorage も使えないため、ここだけの
+//   定数で ON/OFF する（ページ側の LOG トグルとは独立）
+// -----------------------------------------------------
+const DEBUG_LOG = false;
+
+function dbg(...args) {
+  if (DEBUG_LOG) console.log(...args);
+}
 
 // =====================================================
 // オフライン用キャッシュ（固定名）
@@ -58,6 +70,8 @@ const CORE_ASSETS = [
   // ---------------------------------------------------
 
   "./js/main.js",
+  "./js/debugLog.js",
+  "./js/devGate.js",
   "./js/saveDataNotice.js",
   "./js/fullscreenUtil.js",
   "./js/stageScale.js",
@@ -101,6 +115,7 @@ const CORE_ASSETS = [
   "./js/skillTree.js",
   "./js/skillTreeUI.js",
   "./js/skillTreeResult.js",
+  "./js/freeSkillUI.js",
 
   // ---------------------------------------------------
   // 敵 / 描画 / エフェクト関連JS
@@ -124,6 +139,7 @@ const CORE_ASSETS = [
   // 読み込まれるため、JSファイル自体はキャッシュ必須）
   // ---------------------------------------------------
 
+  "./online/loadSupabase.js",
   "./online/supabase.js",
   "./online/playerProfile.js",
   "./online/submitScore.js",
@@ -213,6 +229,10 @@ const DYNAMIC_ASSETS = [
   "./assets/pic/skill/revive_2.png",
   "./assets/pic/skill/revive_3.png",
 
+  "./assets/pic/skill/cooldown_1.png",
+  "./assets/pic/skill/cooldown_2.png",
+  "./assets/pic/skill/cooldown_3.png",
+
   "./assets/pic/skill/item_1.png",
   "./assets/pic/skill/item_2.png",
   "./assets/pic/skill/item_3.png",
@@ -267,6 +287,8 @@ const DYNAMIC_ASSETS = [
 
   "./assets/sound/se/questmenu.mp3",
   "./assets/sound/se/mapmove.mp3",
+  "./assets/sound/se/lockon.mp3",
+  "./assets/sound/se/lockoncancel.mp3",
   "./assets/sound/se/kill1.mp3",
   "./assets/sound/se/kill2.mp3",
   "./assets/sound/se/kill3.mp3",
@@ -288,6 +310,7 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/se/trophy.mp3",
   "./assets/sound/se/skillon.mp3",
   "./assets/sound/se/skilloff.mp3",
+  "./assets/sound/se/skillcharge.mp3",
   "./assets/sound/se/bitspawn.mp3",
 
   // ---------------------------------------------------
@@ -303,6 +326,7 @@ const DYNAMIC_ASSETS = [
   "./assets/sound/bgm/dance_in_the_sun.mp3",
   "./assets/sound/bgm/dream.mp3",
   "./assets/sound/bgm/cracker.mp3",
+  "./assets/sound/bgm/dive.mp3",
   "./assets/sound/bgm/yakanhikou.mp3",
   "./assets/sound/bgm/harunosuisou.mp3",
   "./assets/sound/bgm/edm_club_music.mp3",
@@ -380,7 +404,7 @@ self.addEventListener("install", event => {
   //   ・手動DL（193MBアセット）は従来通りページ側の downloadOfflineData が担当
   //   ・オフライン中の install は何もせず成功扱い（起動不能にしない）
 
-  console.log(
+  dbg(
     "Service Worker: Install (app-shell cache)",
     CACHE_NAME
   );
@@ -389,7 +413,7 @@ self.addEventListener("install", event => {
     (async () => {
       try {
         if (typeof navigator !== "undefined" && navigator.onLine === false) {
-          console.log("Service Worker: Install skipped (offline)");
+          dbg("Service Worker: Install skipped (offline)");
           return;
         }
         const cache = await caches.open(OFFLINE_APP_CACHE);
@@ -409,9 +433,9 @@ self.addEventListener("install", event => {
             // 1件の失敗は無視（手動DL・次回更新で補完される）
           }
         }
-        console.log("Service Worker: Install app-shell done");
+        dbg("Service Worker: Install app-shell done");
       } catch (e) {
-        console.log("Service Worker: Install app-shell skipped:", e);
+        dbg("Service Worker: Install app-shell skipped:", e);
       }
     })()
   );
@@ -427,7 +451,7 @@ self.addEventListener("install", event => {
 
 self.addEventListener("activate", event => {
 
-  console.log(
+  dbg(
     "Service Worker: Activate",
     CACHE_NAME
   );
@@ -451,7 +475,7 @@ self.addEventListener("activate", event => {
               name !== OFFLINE_ASSET_CACHE
             )
             .map(name => {
-              console.log(
+              dbg(
                 "Service Worker: Deleting old cache:",
                 name
               );
@@ -677,7 +701,7 @@ self.addEventListener("message", async event => {
     event.data.type === "SKIP_WAITING"
   ) {
 
-    console.log(
+    dbg(
       "Service Worker: SKIP_WAITING received"
     );
 

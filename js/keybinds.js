@@ -1,5 +1,6 @@
 // keybinds.js
 
+import { dbg } from "./debugLog.js";
 
 export const defaultKeybinds = {
   unlock: "Delete",
@@ -38,7 +39,7 @@ export function initKeybinds() {
 
   const keybinds = loadKeybinds();
 
-  console.log("keybind loaded:", keybinds);
+  dbg("keybind loaded:", keybinds);
 
   // 必要ならここで他初期化にも使える
 }

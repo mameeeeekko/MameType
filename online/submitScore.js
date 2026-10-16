@@ -1,3 +1,4 @@
+import { dbg } from "../js/debugLog.js";
 import { loadSupabase } from "./loadSupabase.js";
 import {
   isOnlineEnabled,  getPlayerName,
@@ -11,7 +12,7 @@ export async function submitScore(scoreData) {
   // オンラインランキングOFFなら送信しない
   // ================================
   if (!isOnlineEnabled()) {
-    console.log("オンラインランキングOFF");
+    dbg("オンラインランキングOFF");
     return { success: false, skipped: true };
   }
 
@@ -32,7 +33,7 @@ export async function submitScore(scoreData) {
   //   （Supabaseクライアントの読み込みもネットワーク必須のため）
   // ================================
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
-    console.log("[online] オフラインのためスコア送信をスキップ");
+    dbg("[online] オフラインのためスコア送信をスキップ");
     return { success: false, offline: true };
   }
 

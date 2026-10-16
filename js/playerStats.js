@@ -928,8 +928,8 @@ export const ACHIEVEMENTS = [
   //{ id: "play_english_50", name: "英語マスター", desc: "英語モードを50回プレイ" },
 
   // --- エネミーモード ---
-  { id: "play_daily_enemy_30", name: "エネミーチャレンジャー30", desc: "デイリーのエネミーモードを30回プレイ" }, //ok
-  { id: "play_daily_enemy_100", name: "デイリーチャレンジャー100", desc: "デイリーのエネミーモードを100回プレイ" },
+  { id: "play_daily_enemy_30", name: "エネミー30", desc: "デイリーのエネミーモードを30回プレイ" }, //ok
+  { id: "play_daily_enemy_100", name: "エネミー100", desc: "デイリーのエネミーモードを100回プレイ" },
   //{ id: "play_daily_enemy_1", name: "デイリーチャレンジャー1", desc: "デイリーのエネミーモードを1回プレイ" },
   { id: "enemy_kill_1000", name: "撃墜王", desc: "エネミーモードで1000体撃破" },
   { id: "gscore_10k", name: "スコアマスター", desc: "gScore 1万点到達" },//ok

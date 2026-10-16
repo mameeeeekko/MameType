@@ -1,5 +1,6 @@
 // dialogue.js
 
+import { dbg } from "./debugLog.js";
 import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasStageBeenEntered, hasSeenTrueEnding, markTrueEndingSeen, markChoicePlayed, haveAllChoicesBeenPlayed, isChoicePlayed, getMaxClearedStageNumber, hasExtraCleared } from './questProgress.js'; // ★ MODIFIED: Import new functions
 import { gameState } from './gameCore.js';
 import { playBGM, stopBGM, fadeOutBGM, fadeBGMTo, BGM_CONFIG, playDialogueSound, playSystemDialogueSound, playSE } from './effectManager.js';
@@ -1764,7 +1765,7 @@ function displayNextMessage(messageOverride, onComplete, noType = false) {
  * @param {string} dialogueId - 次の会話のID
  */
 function continueDialogue(dialogueId) {
-    console.log(`[DEBUG] continueDialogue: Calling startDialogue for ID: "${dialogueId}" with isContinuation = true`);
+    dbg(`[DEBUG] continueDialogue: Calling startDialogue for ID: "${dialogueId}" with isContinuation = true`);
     startDialogue(dialogueId, onCompleteCallback, true);
 }
 /**
@@ -2217,7 +2218,7 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
         }
 
         // ランダム会話も再生できなかった場合
-        console.log(`Dialogue with id "${dialogueId}" not found, and no random dialogue available.`);
+        dbg(`Dialogue with id "${dialogueId}" not found, and no random dialogue available.`);
         if (onComplete && !isContinuation) {
             onComplete(); // そのままコールバックを呼んで次の処理へ
         }
@@ -2241,7 +2242,7 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
     dialogueModal.querySelector('.dialogue-container')?.classList.remove('log-view-mode');
     // 会話が継続している場合はチャット内容をクリアしない
     if (!isContinuation) {
-        console.log(`[DEBUG] startDialogue: Clearing chatContent for dialogue ID: "${dialogueId}" (isContinuation: ${isContinuation})`);
+        dbg(`[DEBUG] startDialogue: Clearing chatContent for dialogue ID: "${dialogueId}" (isContinuation: ${isContinuation})`);
         chatContent.innerHTML = '';
     }
     if (dialogueModal) {
@@ -2365,7 +2366,7 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
         if (dialogue && canSkip) {
              const hasChoices = dialogue.messages.some(m => m.choices && m.choiceId);
              const choiceMessages = dialogue.messages.filter(m => m.choices?.length > 0 && m.choiceId);
-             console.log(`[DEBUG] hasChoices: ${hasChoices}`);
+             dbg(`[DEBUG] hasChoices: ${hasChoices}`);
 
              if (hasChoices) {
                 // ★ MODIFIED: 会話内の全選択肢を走査し、1つでも既読のものがあるか判定
@@ -2378,8 +2379,8 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
                     haveAllChoicesBeenPlayed(message.choiceId, message.choices.length)
                 );
 
-                console.log(`[DEBUG] hasAnyPlayedChoice: ${hasAnyPlayedChoice}`);
-                console.log(`[DEBUG] allChoicesPlayed: ${allChoicesPlayed}`);
+                dbg(`[DEBUG] hasAnyPlayedChoice: ${hasAnyPlayedChoice}`);
+                dbg(`[DEBUG] allChoicesPlayed: ${allChoicesPlayed}`);
                 // 「選択肢までスキップ」: 1つでも既読の選択肢があれば表示
                 if (hasAnyPlayedChoice || allChoicesPlayed) {
                     skipToChoiceButton.style.display = 'block';

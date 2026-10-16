@@ -4,6 +4,7 @@
 // メニュー遷移・ゲーム開始・設定・記録・プレイヤーステータス管理
 // =====================================================
 
+import { dbg } from "./debugLog.js";
 import { showRecordsView } from "./recordsView.js";
 import {
   loadQuestSlots,
@@ -56,6 +57,7 @@ import { TIER_TABLES, getTierEnemies, STAGES, getFixedTurretTable, getInterceptT
 //   （enemy.js → enemyCore.js → enemyModeConfig.js という下向き依存があるため、
 //     enemyModeConfig.js 側からは enemy.js を参照できず、main.js で受けている）
 import { FIXED_TURRET_TIER_CONFIG } from "./enemy.js";
+import { isDevUnlocked } from "./devGate.js";
 import "../dev/devTools.js";
 import {
   getCurrentDifficulty,
@@ -723,6 +725,8 @@ const OFFLINE_APP_FILES = [
 
   // コアJS
   "./js/main.js",
+  "./js/debugLog.js",
+  "./js/devGate.js",
   "./js/saveDataNotice.js",
   "./js/fullscreenUtil.js",
   "./js/stageScale.js",
@@ -763,6 +767,7 @@ const OFFLINE_APP_FILES = [
   "./js/skillTree.js",
   "./js/skillTreeUI.js",
   "./js/skillTreeResult.js",
+  "./js/freeSkillUI.js",
 
   // 敵 / 描画 / エフェクト
   "./js/enemy.js",
@@ -1296,7 +1301,7 @@ function _applyWaitingUpdate() {
     _applyReloading = true;
     // ★オフライン用キャッシュ版として今回の版を記録
     _markCacheVersion(APP_VERSION);
-    console.log("Service Worker: Controller changed. Reloading...");
+    dbg("Service Worker: Controller changed. Reloading...");
     setTimeout(() => window.location.reload(), 300);
   };
 
@@ -1433,7 +1438,7 @@ export function showMenuBackground(imageKeyOrVisible) {
 // タイトル画面表示関数
 // =====================================================
 export function applyTitleMenuBackground() {
-  console.log(images.title_menu);
+  dbg(images.title_menu);
   if (!menuBackground || !images.title_menu) return;
 
   menuBackground.style.backgroundImage =
@@ -1459,7 +1464,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ★スケール適用モードを表示（'transform' | 'zoom'）。
   //   Windows の文字描画（ClearType）比較・デバッグ用。
   //   強制切替は URL パラメータ: ?stage=zoom / ?stage=transform
-  console.log(`[MameType] v${APP_VERSION} stage-mode: ${getStageMode()} (scale: ${getStageScale().toFixed(4)})`);
+  dbg(`[MameType] v${APP_VERSION} stage-mode: ${getStageMode()} (scale: ${getStageScale().toFixed(4)})`);
 
   // ★描画品質に応じた「グロー影」の一括制御を有効化（起動時）
   enableAdaptiveShadowControl();
@@ -1870,7 +1875,7 @@ if ("serviceWorker" in navigator) {
 
       currentServiceWorkerRegistration = registration;
 
-      console.log("Service Worker registered with scope:", registration.scope);
+      dbg("Service Worker registered with scope:", registration.scope);
 
       // -----------------------------------------------
       // 新しいService Workerが見つかった
@@ -1887,7 +1892,7 @@ if ("serviceWorker" in navigator) {
 
         installingWorker.onstatechange = () => {
 
-          console.log("Service Worker state:", installingWorker.state);
+          dbg("Service Worker state:", installingWorker.state);
 
           // ★自動モーダルは出さない。設定のVERSION欄の文章だけ更新する
           try { _refreshVersionStatus(); } catch (e) { /* 無視 */ }
@@ -1928,7 +1933,7 @@ if ("serviceWorker" in navigator) {
 
       _applyReloading = true;
       _markCacheVersion(APP_VERSION);
-      console.log("Service Worker: update applied. Reloading...");
+      dbg("Service Worker: update applied. Reloading...");
       window.location.reload();
       return;
     }
@@ -3050,7 +3055,7 @@ function startFreeEnemyMode() {
   const enemyTable = getTierEnemies(`T${selectedTier}`, selectedTable);
 
   // デバッグ用ログ: 選択した条件でテーブルが正しく取得できているか確認
-  console.log("Enemy Table Selection Check:", {
+  dbg("Enemy Table Selection Check:", {
     selectedTier: `T${selectedTier}`,
     selectedTypeSetKey: selectedTypeSetKey,
     hasTable: !!selectedTable,
@@ -3139,7 +3144,7 @@ function startFreeEnemyMode() {
     };
   }
 
-  console.log("START ENEMY FREE MODE:", { activePattern, customConditions });
+  dbg("START ENEMY FREE MODE:", { activePattern, customConditions });
 
   hideAllScreens();
   showMenuBackground(false);
@@ -4150,16 +4155,16 @@ function bindResultEvents() {
       } else { // "enemy_mode" or null (legacy)
         // フリーモードのエネミーモードの場合、UIの設定（Tier等）を反映し直して開始する
         // ★直前のモードがboss-only（ボス戦のみ）だった場合は、ボスフェーズから再開する
-        console.log("[PLAY AGAIN] wasLastModeBossOnly():", wasLastModeBossOnly());
-        console.log("[PLAY AGAIN] gameState.isFreeMode:", gameState.isFreeMode);
+        dbg("[PLAY AGAIN] wasLastModeBossOnly():", wasLastModeBossOnly());
+        dbg("[PLAY AGAIN] gameState.isFreeMode:", gameState.isFreeMode);
         if (wasLastModeBossOnly()) {
-          console.log("[PLAY AGAIN] -> restartEnemyMode (boss only)");
+          dbg("[PLAY AGAIN] -> restartEnemyMode (boss only)");
           restartEnemyMode();
         } else if (gameState.isFreeMode) {
-          console.log("[PLAY AGAIN] -> startFreeEnemyMode");
+          dbg("[PLAY AGAIN] -> startFreeEnemyMode");
           startFreeEnemyMode();
         } else {
-          console.log("[PLAY AGAIN] -> restartEnemyMode");
+          dbg("[PLAY AGAIN] -> restartEnemyMode");
           restartEnemyMode();
         }
       }
@@ -4318,7 +4323,10 @@ function bindKeyEvents() {
     if (!e.ctrlKey && !e.metaKey && handleQuestKeybindConfigModalKey(e)) return;
 
     // 管理者用DEVツール（Shift+Oで開閉）
+    // ※ リリース時はロック中。解放は unlockDev("パスフレーズ") のみ
     if (e.shiftKey && e.key.toLowerCase() === "o") {
+      if (!isDevUnlocked()) return; // ロック中は無反応（入力も奪わない）
+
       const panel = document.getElementById("devPanel");
       if (!panel) return;
 

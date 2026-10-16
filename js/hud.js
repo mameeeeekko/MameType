@@ -1,3 +1,4 @@
+import { dbg } from "./debugLog.js";
 import { getPlayerStats, getSpeedRank, getAccuracyRank, formatPlayTime, ACHIEVEMENTS, getAchievementProgress } from "./playerStats.js";
 import { savePlayerStats } from "./storage.js";
 import { getPlayerStatsForEnemy, getStarUpgradeLevel, getStarUpgradeTimeFactor, STAR_UPGRADE_MAX_LEVEL } from "./questPlayerStats.js";
@@ -10,6 +11,7 @@ import { handleGlobalSoundToggle } from "./main.js";
 import { getSoundEnabled } from "./gameCore.js";
 import { images } from "./assetsLoader.js";
 import { devOverride } from "../dev/devOverride.js";
+import { isDevUnlocked, onDevAccessChange } from "./devGate.js";
 import { applyCanvasDPR } from "./canvasUtil.js";
 import { playSE } from "./effectManager.js";
 
@@ -128,8 +130,27 @@ function renderAchievements(container) {
   `;
 
   // devToolsから呼び出せるようにグローバルに公開
-  window.renderAchievements = renderAchievements;
+  // ※ リリース時はDEVロック中なので公開しない（js/devGate.js）
+  _renderAchievementsFn = renderAchievements;
+  if (isDevUnlocked()) {
+    window.renderAchievements = renderAchievements;
+  }
 }
+
+// 解放状態の変化に合わせて window.renderAchievements を開閉する
+let _renderAchievementsFn = null;
+onDevAccessChange((unlocked) => {
+  if (unlocked) {
+    // renderAchievements は関数宣言のため巻き上げ可能（未描画でも即公開できる）
+    window.renderAchievements = _renderAchievementsFn || renderAchievements;
+  } else {
+    try {
+      delete window.renderAchievements;
+    } catch (e) {
+      window.renderAchievements = undefined;
+    }
+  }
+});
 
 function markAchievementsSeen(s) {
   if (!s) return;
@@ -1059,7 +1080,7 @@ function calcQuestSkillStats() {
   const stats = getPlayerStatsForEnemy("quest") || {};
   const equipped = stats.equippedSkills || [];
 
-  console.log("equippedSkills =", equipped);
+  dbg("equippedSkills =", equipped);
 
   const result = {
     chainRate: 1,
@@ -1080,17 +1101,17 @@ function calcQuestSkillStats() {
   equipped.forEach(id => {
     const skill = PASSIVE_SKILLS?.[id];
 
-    console.log("skill =", id, skill);
+    dbg("skill =", id, skill);
 
     if (!skill) return;
 
     if (typeof skill.apply === "function") {
       skill.apply(result);
-      console.log("after apply", id, structuredClone(result));
+      dbg("after apply", id, structuredClone(result));
     }
   });
 
-  console.log("final result =", result);
+  dbg("final result =", result);
 
   return {
     equipped,

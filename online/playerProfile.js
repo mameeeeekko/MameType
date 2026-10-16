@@ -1,5 +1,7 @@
 // playerProfile.js
 
+import { dbg } from "../js/debugLog.js";
+
 const PLAYER_PROFILE_KEY = "typing_player_profile";
 
 const PLAYER_ID_KEY = "player_id";
@@ -77,7 +79,7 @@ export function resetPlayerAndRecoveryId() {
   localStorage.removeItem(RECOVERY_CODE_KEY);
   cachedPlayerId = null;
   cachedRecoveryCode = null;
-  console.log("Player ID and Recovery Code have been reset.");
+  dbg("Player ID and Recovery Code have been reset.");
 }
 
 

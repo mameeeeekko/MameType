@@ -1,3 +1,4 @@
+import { dbg } from "../js/debugLog.js";
 import { loadSupabase } from "./loadSupabase.js";
 import { isOnlineEnabled } from "../online/playerProfile.js";
 import { RANKING_VERSION } from "../js/version.js";
@@ -62,7 +63,7 @@ export async function renderOnlineRanking(
   currentSolvedCount = 0,
   currentMode
 ) {
-  console.log("ranking start");
+  dbg("ranking start");
 
   try {
     const el = document.getElementById("onlineRanking");
@@ -84,7 +85,7 @@ export async function renderOnlineRanking(
     // ランキング取得
     // ================================
     const ranking = await getRanking(currentMode, 0, 99);
-    console.log("ranking:", ranking);
+    dbg("ranking:", ranking);
 
     if (!ranking || !ranking.length) {
       el.innerHTML = `

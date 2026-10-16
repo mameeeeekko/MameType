@@ -1,5 +1,7 @@
 // devTools.js
 import { devOverride } from "./devOverride.js";
+import { dbg, isDebugLogEnabled, toggleDebugLog, onDebugLogChange } from "../js/debugLog.js";
+import { isDevUnlocked, onDevAccessChange } from "../js/devGate.js";
 import { getPlayerStats, updateAchievements } from "../js/playerStats.js";
 import { savePlayerStats } from "../js/storage.js";
 import { gameState } from "../js/gameCore.js";
@@ -899,6 +901,19 @@ export const dev = {
         const el = document.getElementById(id);
         if (el) el.textContent = "";
     },
+
+    // =========================
+    // デバッグログ一括ON/OFF（js/debugLog.js）
+    // =========================
+    toggleDebugLog(btn) {
+        const next = toggleDebugLog();
+
+        if (btn) {
+            btn.textContent = `LOG: ${next ? "ON" : "OFF"}`;
+        }
+
+        log("debug log:", next ? "ON" : "OFF");
+    },
 };
 
 
@@ -909,7 +924,7 @@ export const dev = {
 
 // ログ
 function log(...args) {
-    console.log("[DEV]", ...args);
+    dbg("[DEV]", ...args);
 }
 
 // DEVパネル移動可能（ヘッダーのみ）
@@ -992,16 +1007,56 @@ function getDefaultValue() {
 // 初期画面ロード
 // ==========================================================
 
-// 初期同期
-window.QUEST_MAP_ADMIN_SHOW_ALL = devOverride.map.showAll;
+// 初期同期 … ロック中は出さないため onDevAccessChange 内で同期する
 
-// コンソール用公開
-window.dev = dev;
-
-//初期化
-window.addEventListener("DOMContentLoaded", () => {
+// コンソール用公開 … ロック中は公開しない（js/devGate.js）
+// 初期化 … 同じくロック中はスキップし、解放されたときだけ実行する
+function initDevPanelUi() {
   initDevStageSelector();
   enableDevPanelDrag();
+
+  // クエストマップ全表示フラグを現在の override 値と同期
+  window.QUEST_MAP_ADMIN_SHOW_ALL = devOverride.map.showAll;
+
+  // LOGトグルボタン: 保存されたON/OFF状態を初期表示へ反映
+  const logBtn = document.getElementById("devLogBtn");
+  if (logBtn) {
+    logBtn.textContent = `LOG: ${isDebugLogEnabled() ? "ON" : "OFF"}`;
+    onDebugLogChange((on) => {
+      logBtn.textContent = `LOG: ${on ? "ON" : "OFF"}`;
+    });
+  }
   getDefaultValue();
   dev.updateStarCountView();
+}
+
+let _devPanelUiInitialized = false;
+
+onDevAccessChange((unlocked) => {
+  if (unlocked) {
+    window.dev = dev;
+
+    if (!_devPanelUiInitialized) {
+      _devPanelUiInitialized = true;
+
+      if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", initDevPanelUi, { once: true });
+      } else {
+        initDevPanelUi();
+      }
+    }
+  } else {
+    try {
+      delete window.dev;
+    } catch (e) {
+      window.dev = undefined;
+    }
+
+    // クエストマップ全表示フラグも落とす（questMapUI は falsy 扱いで動作）
+    try {
+      delete window.QUEST_MAP_ADMIN_SHOW_ALL;
+    } catch (e) {
+      window.QUEST_MAP_ADMIN_SHOW_ALL = undefined;
+    }
+  }
 });

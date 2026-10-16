@@ -1,3 +1,4 @@
+import { dbg } from "./debugLog.js";
 import { initAudio, loadSound, registerSoundAssets } from "./effectManager.js";
 
 export const images = {};
@@ -127,6 +128,9 @@ const remainingAssets = [
   // 音源
   // SE
   { type: "sound", name: "mapmove", src: "./assets/sound/se/mapmove.mp3", composer: "", title: "", volume: 1.0 },
+
+  { type: "sound", name: "lockon", src: "./assets/sound/se/lockon.mp3", composer: "", title: "", volume: 1.3 },
+  { type: "sound", name: "lockoncancel", src: "./assets/sound/se/lockoncancel.mp3", composer: "", title: "", volume: 1.3 },
   { type: "sound", name: "kill1", src: "./assets/sound/se/kill1.mp3", composer: "", title: "", volume: 0.8 },
   { type: "sound", name: "kill2", src: "./assets/sound/se/kill2.mp3", composer: "", title: "", volume: 0.8 },
   { type: "sound", name: "kill3", src: "./assets/sound/se/kill3.mp3", composer: "", title: "", volume: 0.8 },
@@ -151,6 +155,7 @@ const remainingAssets = [
   { type: "sound", name: "trophy", src: "./assets/sound/se/trophy.mp3", composer: "", title: "", volume: 1.0 },
   { type: "sound", name: "skill_on", src: "./assets/sound/se/skillon.mp3", composer: "", title: "", volume: 1.0 },
   { type: "sound", name: "skill_off", src: "./assets/sound/se/skilloff.mp3", composer: "", title: "", volume: 1.0 },
+  { type: "sound", name: "skillcharge", src: "./assets/sound/se/skillcharge.mp3", composer: "", title: "", volume: 1.2 },
 
   { type: "sound", name: "bitspawn", src: "./assets/sound/se/bitspawn.mp3", composer: "", title: "", volume: 1.0 },
 
@@ -439,7 +444,7 @@ async function loadRemainingAssets(onProgress) {
   await Promise.all([fontPromise, imagePromise]);
 
   try { onProgress?.(total, total); } catch (e) { /* 無視 */ }
-  console.log("All remaining assets loaded in background.");
+  dbg("All remaining assets loaded in background.");
 }
 
 // ======================================================================
