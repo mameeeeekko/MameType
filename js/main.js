@@ -749,6 +749,14 @@ const OFFLINE_APP_FILES = [
   "./js/target.js",
   "./js/romaUtils.js",
   "./js/typingLogic.js",
+  // 独立ライブラリ @mametype/roma-engine
+  "./packages/mame-roma-engine/src/index.js",
+  "./packages/mame-roma-engine/src/table.js",
+  "./packages/mame-roma-engine/src/normalizer.js",
+  "./packages/mame-roma-engine/src/kana.js",
+  "./packages/mame-roma-engine/src/candidates.js",
+  "./packages/mame-roma-engine/src/display.js",
+  "./packages/mame-roma-engine/src/engine.js",
   "./js/version.js",
   "./js/analytics.js",
   // ★EXTRA CLEAR 特典：ミュージックプレイヤー

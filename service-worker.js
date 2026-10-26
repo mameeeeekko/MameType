@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.1.0";
+const CACHE_NAME = "mametype-v1.1.1";
 
 // -----------------------------------------------------
 // デバッグログ（SW用）
@@ -94,6 +94,14 @@ const CORE_ASSETS = [
   "./js/target.js",
   "./js/romaUtils.js",
   "./js/typingLogic.js",
+  // 独立ライブラリ @mametype/roma-engine
+  "./packages/mame-roma-engine/src/index.js",
+  "./packages/mame-roma-engine/src/table.js",
+  "./packages/mame-roma-engine/src/normalizer.js",
+  "./packages/mame-roma-engine/src/kana.js",
+  "./packages/mame-roma-engine/src/candidates.js",
+  "./packages/mame-roma-engine/src/display.js",
+  "./packages/mame-roma-engine/src/engine.js",
   "./js/version.js",
   "./js/analytics.js",
   // ★EXTRA CLEAR 特典：ミュージックプレイヤー

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>@mametype/roma-engine Test Runner</title>
+  <style>
+    body { font-family: monospace; background: #1a1a1a; color: #f0f0f0; padding: 20px; }
+    h1 { color: #58a6ff; }
+    .pass { color: #7ee787; }
+    .fail { color: #ff7b72; font-weight: bold; }
+    .summary { margin-top: 20px; padding: 10px; background: #262626; border-radius: 6px; }
+    pre { line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <h1>@mametype/roma-engine Unit Tests</h1>
+  <div id="output"><pre></pre></div>
+  <script type="module">
+    const output = document.querySelector('pre');
+    const log = (msg, cls) => {
+      const span = document.createElement('span');
+      if (cls) span.className = cls;
+      span.textContent = msg + '\n';
+      output.appendChild(span);
+    };
+
+    // Override console to print to DOM
+    console.log = (msg) => {
+      if (msg.startsWith('✅')) log(msg, 'pass');
+      else if (msg.startsWith('❌')) log(msg, 'fail');
+      else log(msg);
+    };
+    console.error = (msg) => log(msg, 'fail');
+
+    import('./run-tests.js').then(() => {
+      log('\nAll tests completed successfully!', 'pass');
+    }).catch(err => {
+      log('\nTest suite execution failed: ' + err.message, 'fail');
+    });
+  </script>
+</body>
+</html>
+
