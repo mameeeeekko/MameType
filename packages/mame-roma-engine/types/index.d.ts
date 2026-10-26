@@ -29,6 +29,7 @@ export interface TypingState {
   inputedRomaji: string;
 }
 
+export declare const VERSION: string;
 export declare const ROMA_TABLE: Record<string, string[]>;
 export declare const SYMBOL_TABLE: Record<string, string>;
 

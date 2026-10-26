@@ -5,6 +5,7 @@
  */
 
 import {
+  VERSION,
   TypingSession,
   evaluateKey,
   getKana,
@@ -271,6 +272,14 @@ test('Miss typing preserves buffer', () => {
   assert(session.typed === 't', 'buffer "t" is preserved after miss');
   assert(session.input('o').success, 'typing "o" completes "to"');
   assert(session.inputedRomaji === 'to', 'confirmed "to"');
+});
+
+// =========================================================
+// 8. Version Management
+// =========================================================
+test('Version Constant', () => {
+  assert(typeof VERSION === 'string', 'VERSION is exported as string');
+  assert(VERSION === '1.0.0', 'VERSION equals "1.0.0"');
 });
 
 console.log(`\n========================================`);

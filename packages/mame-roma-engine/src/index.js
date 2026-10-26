@@ -4,6 +4,8 @@
  * Extracted from MameType.
  */
 
+export const VERSION = '1.0.0';
+
 export { ROMA_TABLE, SYMBOL_TABLE } from './table.js';
 export { toHalfWidthAlpha, normalizeInputKey } from './normalizer.js';
 export { getKana, isSmallTsu, isSymbol, isN, isNaRow } from './kana.js';
