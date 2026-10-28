@@ -9038,3 +9038,24 @@ body.win .map-label {
   transition: width 0.2s linear;
 }
 
+
+/* =====================================================
+   モード説明エリア（startMenu ボタン下の説明文）
+===================================================== */
+.mode-desc-area {
+  margin-top: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: #c9d1d9;
+  line-height: 1.7;
+  text-align: left;
+  border-left: 2px solid #30363d;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0 4px 4px 0;
+  animation: modeDescFadeIn 0.15s ease;
+}
+
+@keyframes modeDescFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

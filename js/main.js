@@ -138,6 +138,7 @@ let settingsBtn, settingsBackBtn;
 
 let bgmToggle, typeSoundToggle, missSoundToggle;
 let flashToggle, SEToggle, soundToggle, soundIcon;
+let modeDescToggle;
 let bgmVolSlider, typeVolSlider, missVolSlider, seVolSlider;
 let dialogueSpeedSlider;
 let resetBgmVolumeBtn, resetSeVolumeBtn, resetTypeVolumeBtn, resetMissVolumeBtn;
@@ -254,6 +255,7 @@ function cacheDOM() {
   SEToggle = document.getElementById("SEToggle");
   soundToggle = document.getElementById("soundToggle");
   soundIcon = document.getElementById("soundIcon");
+  modeDescToggle = document.getElementById("modeDescToggle");
   bgmVolSlider = document.getElementById("bgmVolSlider");
   typeVolSlider = document.getElementById("typeVolSlider");
   missVolSlider = document.getElementById("missVolSlider");
@@ -2293,6 +2295,16 @@ function initSettingsUI() {
     });
   });
 
+  // ★ モード説明トグル
+  modeDescToggle?.addEventListener("change", () => {
+    saveSettings();
+    // OFFにした瞬間は説明エリアを隠す
+    if (!modeDescToggle.checked) {
+      const descEl = document.getElementById("startMenuModeDesc");
+      if (descEl) descEl.style.display = "none";
+    }
+  });
+
   [
     [bgmVolSlider, 'bgm'],
     [typeVolSlider, 'type'],
@@ -3705,6 +3717,10 @@ function showMainMenu() {
   updateHud(); // メインメニューが表示されたタイミングでHUDのデータを同期
   const hud = document.getElementById("playerHud");
   if (hud) hud.style.display = "block";
+
+  // ★ メインメニューの説明エリアをリセット
+  const descEl = document.getElementById("mainMenuModeDesc");
+  if (descEl) descEl.style.display = "none";
 }
 
 function openClearRewardModal() {
@@ -3759,6 +3775,9 @@ function showStartMenu() {
   fadeOutBGM(1000); // ★ メニューに戻るときはBGMをフェードアウト（クエストマップBGM等を停止）
   if (startMenuDiv) startMenuDiv.style.display = "flex"; // 縦flex+内部スクロールのためflexで表示 
   showMenuBackground("title_menu");
+  // ★ モード説明エリアをリセット
+  const descEl = document.getElementById("startMenuModeDesc");
+  if (descEl) descEl.style.display = "none";
 }
 function showFreeStartMenu() {
   stopQuestSession(); // ★クエスト滞在を確定して計測停止
@@ -3840,6 +3859,53 @@ function validateKeybinds(bind) {
   return unique.size === values.length;
 }
 
+// =====================================================
+// モード説明の定義と表示ロジック
+// =====================================================
+const START_MENU_MODE_DESCS = {
+  startBtn:      "決められた問題数をクリアする基本モード。",
+  timeAttackBtn: "制限時間内にできるだけ多くの問題を解くモード。タイム切れで終了します。",
+  longTextBtn:   "1問の長文を最後まで打ち切るモード。",
+  enemyModeBtn:  "敵キャラクターを倒しながらタイピングするモード。",
+  defenseModeBtn:"タイピングで敵の侵攻を食い止めます。間違えると残り時間が減りますが、コンボを繋げると、残り時間やスコアにボーナスがつきます。",
+};
+
+const MAIN_MENU_MODE_DESCS = {
+  questMenuBtn:     "ストーリー形式でステージを攻略するモード。スキルやアイテムを駆使して、物語を進めましょう。",
+  startMenuBtn:     "毎日のプレイを記録する基本のモード。さまざまなゲームに挑戦して成績を積み重ねましょう。設定すれば、オンラインにも記録を残せます。",
+  freeModeBtn:      "ルールを自由にカスタマイズして練習できるモード。記録を気にせず、自分のペースでタイピングを楽しめます。",
+  recordsMenuBtn:   "過去のプレイ記録を確認します。モードごとにスコアや正確率などを閲覧できます。",
+  onlineRankingBtn: "現在のオンラインランキングの閲覧ができます。各モードで保存されるのは、プレイヤーごとの最高記録1件のみ。自己ベストを更新すると、記録が更新されます。",
+  musicMenuBtn:     "収録BGMを自由に再生できるミュージックプレイヤーです。（EXTRAクリア特典）",
+  settingsBtn:      "サウンド・キーバインド・グラフィックなど各種設定を変更します。データのバックアップや移行、オンラインランキングへの参加もここから設定します。",
+};
+
+/** モード説明を表示する（設定がOFFならなにもしない）*/
+function showModeDesc(descElId, descMap, btnId) {
+  const el = document.getElementById(descElId);
+  if (!el) return;
+
+  const showDesc = modeDescToggle ? modeDescToggle.checked : true;
+  const text = descMap[btnId];
+  if (!showDesc || !text) {
+    el.style.display = "none";
+    return;
+  }
+
+  el.textContent = text;
+  el.style.display = "block";
+}
+
+/** startMenu の各ボタンにホバー/フォーカスで説明を表示 */
+function showStartMenuModeDesc(btnId) {
+  showModeDesc("startMenuModeDesc", START_MENU_MODE_DESCS, btnId);
+}
+
+/** メインメニューの各ボタンにホバー/フォーカスで説明を表示 */
+function showMainMenuModeDesc(btnId) {
+  showModeDesc("mainMenuModeDesc", MAIN_MENU_MODE_DESCS, btnId);
+}
+
 function bindMenuEvents() {
 
   questMenuBtn?.addEventListener("click", () => {
@@ -3884,6 +3950,25 @@ function bindMenuEvents() {
     if (_offlineModalActive) return;
     playSE("select");
     openMusicModal();
+  });
+
+  // ★ モード説明表示：メインメニューの各ボタンにホバー/フォーカスで説明を表示
+  [
+    "questMenuBtn", "startMenuBtn", "freeModeBtn",
+    "recordsMenuBtn", "onlineRankingBtn", "musicMenuBtn", "settingsBtn",
+  ].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener("mouseenter", () => showMainMenuModeDesc(id));
+    btn.addEventListener("focus",      () => showMainMenuModeDesc(id));
+    btn.addEventListener("mouseleave", () => {
+      const el = document.getElementById("mainMenuModeDesc");
+      if (el) el.style.display = "none";
+    });
+    btn.addEventListener("blur", () => {
+      const el = document.getElementById("mainMenuModeDesc");
+      if (el) el.style.display = "none";
+    });
   });
 
   // 「戻る」ボタンは、すべてshowMainMenuを呼び出すように統一する
@@ -4120,6 +4205,22 @@ function bindModeStartEvents() {
     gameState.isQuestMode = false;
     // ★ defenseCore.js の関数を呼び出す
     startDefenseMode({ isFreeMode: false }); // Pass isFreeMode
+  });
+
+  // ★ モード説明表示：startMenu の各ボタンにホバー/フォーカスで説明を表示
+  ["startBtn", "timeAttackBtn", "longTextBtn", "enemyModeBtn", "defenseModeBtn"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener("mouseenter", () => showStartMenuModeDesc(id));
+    btn.addEventListener("focus",      () => showStartMenuModeDesc(id));
+    btn.addEventListener("mouseleave", () => {
+      const el = document.getElementById("startMenuModeDesc");
+      if (el) el.style.display = "none";
+    });
+    btn.addEventListener("blur", () => {
+      const el = document.getElementById("startMenuModeDesc");
+      if (el) el.style.display = "none";
+    });
   });
 
   freeStartBtn?.addEventListener("click", () => {
@@ -5085,6 +5186,11 @@ function applySoundSettingsToUI() {
   if (missSoundToggle) missSoundToggle.checked = current.miss;
   if (flashToggle) flashToggle.checked = current.flash;
   if (SEToggle) SEToggle.checked = current.soundeffect;
+  // ★ modeDescToggle はデフォルト ON（loadSettings で上書きされるが、
+  //   設定が保存されていない初回はここで ON に設定する）
+  if (modeDescToggle && modeDescToggle.dataset.loaded !== "1") {
+    modeDescToggle.checked = true;
+  }
 
   const vols = Game.getSoundVolumes();
   if (bgmVolSlider) {
@@ -5139,6 +5245,7 @@ function saveSettings() {
     soundSettings: Game.getSoundSettings(),
     soundVolumes: Game.getSoundVolumes(),
     dialogueSpeed: getDialogueSpeedLevel(),
+    showModeDesc: modeDescToggle ? modeDescToggle.checked : true,
   }));
 }
 
@@ -5160,6 +5267,10 @@ function loadSettings() {
     }
     if (settings.dialogueSpeed !== undefined) {
       setDialogueSpeed(settings.dialogueSpeed);
+    }
+    if (settings.showModeDesc !== undefined && modeDescToggle) {
+      modeDescToggle.checked = settings.showModeDesc;
+      modeDescToggle.dataset.loaded = "1";
     }
     applySoundSettingsToUI();
   } catch (err) {

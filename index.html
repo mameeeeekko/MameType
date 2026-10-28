@@ -119,6 +119,8 @@
         <button id="musicMenuBtn" style="display:none;">MUSIC</button>
         <button id="settingsBtn">SETTING</button>
       </div>
+      <!-- メインメニュー モード説明エリア -->
+      <div id="mainMenuModeDesc" class="mode-desc-area" style="display:none;"></div>
     </div>
 
 </div>
@@ -232,6 +234,9 @@
     <button id="defenseModeBtn">DEFENCE</button>
     <button id="startMenuBackBtn">BACK</button>
   </div>
+
+  <!-- モード説明エリア（選択したボタンの下に表示） -->
+  <div id="startMenuModeDesc" class="mode-desc-area" style="display:none;"></div>
 
 </div>
 
@@ -806,6 +811,15 @@
           <input type="range" id="dialogueSpeedSlider" min="0" max="4" step="1" value="3">
           <span id="dialogueSpeedValue" class="sound-value">Fast</span>
         </div>
+      </fieldset>
+
+      <!-- モード説明表示設定 -->
+      <fieldset>
+        <legend>UI</legend>
+        <label>
+          <input type="checkbox" id="modeDescToggle">
+          メニューでモードの説明を表示する
+        </label>
       </fieldset>
 
       <!-- 暗号化された通常セーブ（Daily / Quest / 共通設定の1ファイル） -->

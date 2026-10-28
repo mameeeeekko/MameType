@@ -1962,14 +1962,21 @@ export const STAGES = {
                 bgm:  "bgm_yamiyo",
                 spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T6", ENEMY_TIER_BALANCED),
-                phaseConditions: { timerMs: 30000 }
+                phaseConditions: { timerMs: 45000 }
             },
             {
                 name: "PHASE 4",
                 bgm:  "bgm_reflectable",
                 spawn: { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
                 enemyTable:      getTierEnemies("T8", ENEMY_TIER_BALANCED),
-                //phaseConditions: { allSpawnedDefeated: true }
+                phaseConditions: { timerMs: 60000 }
+            },
+          {
+                name: "PHASE 5",
+                bgm:  "bgm_free",
+                spawn: { interval: 2500, limit: null, maxAlive: 7, immediateOnClear: true },
+                enemyTable:      getTierEnemies("T10", ENEMY_TIER_BALANCED),
+                phaseConditions: { timerMs: 90000 }
             },
         ],
         endConditions: { hpZero: true },

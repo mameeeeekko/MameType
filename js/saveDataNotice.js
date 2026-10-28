@@ -53,7 +53,7 @@ function showSaveDataNotice() {
       "【セーブデータの保存場所について】",
       "このゲームのセーブデータは、開き方・ブラウザごとに独立して保存されます。\n",
       "特に Safari で「Dockに追加」してインストールしたアプリと、Safari のタブ（GitHub Pages など）で開いた場合は保存領域が別々のため、お互いにセーブデータは共有されません。\n",
-      "データを移したい場合は、メニューの「データ管理」から書き出し／読み込みで移行してください。",
+      "データを移したい場合は、Settingの「BACKUP DATA」からEXPORT／IMPORTで移行してください。",
     ].join("\n");
 
     overlay.innerHTML = `
