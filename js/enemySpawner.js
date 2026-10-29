@@ -3,6 +3,7 @@ import { getPlayerStatsForEnemy } from "./questPlayerStats.js";
 import { getUISafeMinEnemyY } from "./enemyCore.js";
 import { getWord, resolveWordLengthRange } from "./target.js";
 import { buildBaseRomaji } from "./typingLogic.js";
+import { getEnemyFontSize } from "./enemyFontSize.js";
 import { OVERWHELM_MISSION_NAME, OVERWHELM_MAX_WORD_LENGTH, INTERCEPT_WARP_DURATION, getInterceptBulletColor } from "./enemyModeConfig.js";
 import { STAGE_W, STAGE_H } from "./stageScale.js";
 
@@ -246,22 +247,25 @@ function getTextBox(x, y, radius, text, word = "", baseRomaji = "") {
 
     // 漢字/日本語: 1文字約17px、かな: 約14px、モノスペースローマ字: 約11px（概算）
     // 英数字のみの単語は文字幅が狭い（約10px/文字）ため、誤検出を避けて縮めて見積もる
+    // フォントサイズ設定（小17px基準）に合わせて幅をスケールする
+    const scale = getEnemyFontSize() / 17;
     const isAsciiWord = /^[a-zA-Z0-9\s.,!?-]*$/.test(word || "");
     const wordCharW = isAsciiWord ? 10 : 17;
 
-    const textW = textLen * 14;
-    const wordW = wordLen * wordCharW;
-    const romaW = romaLen * 11;
+    const textW = textLen * 14 * scale;
+    const wordW = wordLen * wordCharW * scale;
+    const romaW = romaLen * 11 * scale;
     const contentW = Math.max(textW, wordW, romaW);
 
     const padding = 6; // 左右の余白
     const w = contentW + padding * 2;
 
     // Y方向（本体を含まない・文字2行分のみ）:
-    // 上段（word）: ベースライン y - radius - 15 → 上端は約 y - radius - 29
+    // 上段（word）: ベースライン y - radius - textGap → 上端は約 y - radius - textGap - 14
     // 下段（roma）: ベースライン y - radius → 下端は約 y - radius + 5
-    const top = y - radius - 29;
-    const bottom = y - radius + 5;
+    // フォントサイズに応じて縦方向のマージンをスケール（重なり防止）
+    const top = y - radius - Math.ceil(29 * scale);
+    const bottom = y - radius + Math.ceil(5 * scale);
     return { x: x - w / 2, y: top, w, h: bottom - top };
 }
 

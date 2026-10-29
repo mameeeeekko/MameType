@@ -3313,25 +3313,9 @@ export function renderFreezeAura(
     );
     ctx.stroke();
 
-    // 中央の薄い氷色
-    ctx.globalAlpha =
-        alpha * 0.12;
-
-    ctx.fillStyle = "#d8f4ff";
-
-    ctx.beginPath();
-    ctx.arc(
-        enemy.x,
-        enemy.y,
-        radius - 2,
-        0,
-        Math.PI * 2
-    );
-    ctx.fill();
-
-    // ===============
+    // ===============================
     // 残り時間表示
-    // ===============
+    // ===============================
     // ★ここより上の「中央の薄い氷色」で globalAlpha を alpha*0.12（≒0.02〜0.07）まで
     //   落としているため、秒数表示の前に必ず 1 へ戻す。
     //   （戻し忘れるとBOX・文字がほぼ透明になり「秒数が出ない」ように見える）

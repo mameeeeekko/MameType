@@ -1,6 +1,23 @@
 # Changelog
 
 
+## [1.1.3] - 2026-10-30
+
+### Added
+- **設定に敵の文字サイズ（小・中・大・特大）を追加**
+  - `js/enemyFontSize.js` 新設。ENEMY セクションに `enemyFontSizeSelect` を追加し、敵のワード・ローマ字・ひらがなの文字サイズを4段階で変更可能に。
+- **設定に敵の下行表示モード（ローマ字 / ひらがな）を追加**
+  - `js/enemyDisplayMode.js` 新設。ENEMY DISPLAY セクションに `enemyDisplayModeSelect` を追加し、敵の下行表示を「ローマ字表示」または「ひらがな表示」に切り替え可能に。`localStorage` の `typing_game_settings.enemyDisplayMode` に保存・復元。
+- **敵の姿を変更**
+  - 敵の見た目を刷新。
+
+### Changed
+- **アプリケーションバージョンを `1.1.3` に更新**
+  - `js/version.js` の `APP_VERSION` → `1.1.3`
+  - Service Worker のキャッシュ名 → `mametype-v1.1.3`
+
+---
+
 ## [1.1.2] - 2026-10-28
 
 ### Changed

@@ -44,6 +44,19 @@ import {
   showDisclaimer,
   detachPopupKeyHandler,
 } from "./dialogue.js";
+import {
+  getEnemyFontSizeKey,
+  getEnemyFontSizeForSave,
+  loadEnemyFontSize,
+  setEnemyFontSize,
+  ENEMY_FONT_SIZE_CHANGED_EVENT,
+} from "./enemyFontSize.js";
+import {
+  getEnemyDisplayModeKey,
+  getEnemyDisplayModeForSave,
+  loadEnemyDisplayMode,
+  setEnemyDisplayMode,
+} from "./enemyDisplayMode.js";
 import { loadCoreAssets, loadRemainingAssets, images, collectOfflineAssetUrls, getBgmAssets } from "./assetsLoader.js";
 import { loadKeybinds, saveKeybinds, initKeybinds, isBoundKey } from "./keybinds.js";
 import { getRenderQuality, setRenderQuality } from "./canvasUtil.js";
@@ -2278,6 +2291,28 @@ function initSettingsUI() {
   settingsBackBtn?.addEventListener("click", (e) => {
     showMainMenu();
   });
+
+  // 敵の文字サイズ選択
+  const enemyFontSizeSelect = document.getElementById("enemyFontSizeSelect");
+  if (enemyFontSizeSelect) {
+    enemyFontSizeSelect.value = getEnemyFontSizeKey();
+    enemyFontSizeSelect.addEventListener("change", (e) => {
+      setEnemyFontSize(e.target.value);
+      saveSettings();
+      playSE("select");
+    });
+  }
+
+  // 敵の下行表示モード選択（ローマ字 / ひらがな）
+  const enemyDisplayModeSelect = document.getElementById("enemyDisplayModeSelect");
+  if (enemyDisplayModeSelect) {
+    enemyDisplayModeSelect.value = getEnemyDisplayModeKey();
+    enemyDisplayModeSelect.addEventListener("change", (e) => {
+      setEnemyDisplayMode(e.target.value);
+      saveSettings();
+      playSE("select");
+    });
+  }
 
   [
     [bgmToggle, 'bgm'],
@@ -5246,6 +5281,8 @@ function saveSettings() {
     soundVolumes: Game.getSoundVolumes(),
     dialogueSpeed: getDialogueSpeedLevel(),
     showModeDesc: modeDescToggle ? modeDescToggle.checked : true,
+    enemyFontSize: getEnemyFontSizeForSave(),
+    enemyDisplayMode: getEnemyDisplayModeForSave(),
   }));
 }
 
@@ -5271,6 +5308,16 @@ function loadSettings() {
     if (settings.showModeDesc !== undefined && modeDescToggle) {
       modeDescToggle.checked = settings.showModeDesc;
       modeDescToggle.dataset.loaded = "1";
+    }
+    if (settings.enemyFontSize !== undefined) {
+      loadEnemyFontSize(settings.enemyFontSize);
+      const enemyFontSizeSelect = document.getElementById("enemyFontSizeSelect");
+      if (enemyFontSizeSelect) enemyFontSizeSelect.value = settings.enemyFontSize;
+    }
+    if (settings.enemyDisplayMode !== undefined) {
+      loadEnemyDisplayMode(settings.enemyDisplayMode);
+      const enemyDisplayModeSelect = document.getElementById("enemyDisplayModeSelect");
+      if (enemyDisplayModeSelect) enemyDisplayModeSelect.value = settings.enemyDisplayMode;
     }
     applySoundSettingsToUI();
   } catch (err) {

@@ -822,6 +822,42 @@
         </label>
       </fieldset>
 
+      <!-- 敵の文字サイズ設定 -->
+      <fieldset>
+        <legend>ENEMY</legend>
+        <div class="config-row">
+          <label>敵の文字サイズ</label>
+          <select id="enemyFontSizeSelect" class="quality-select">
+            <option value="small">小（17px）</option>
+            <option value="medium">中（19px）</option>
+            <option value="large">大（21px）</option>
+            <option value="xlarge">特大（23px）</option>
+          </select>
+        </div>
+        <div class="setting-description">
+          エネミーモードで表示される敵のワード・ローマ字の文字サイズを変更します。
+          <br>
+          変更は次にゲームを開始したときから反映されます。
+        </div>
+      </fieldset>
+
+      <!-- 敵の下行表示モード設定 -->
+      <fieldset>
+        <legend>ENEMY DISPLAY</legend>
+        <div class="config-row">
+          <label>敵の下行表示</label>
+          <select id="enemyDisplayModeSelect" class="quality-select">
+            <option value="roma">ローマ字表示</option>
+            <option value="hiragana">ひらがな表示</option>
+          </select>
+        </div>
+        <div class="setting-description">
+          エネミーモードで敵の下に表示される残り文字を、<br>
+          「ローマ字」か「ひらがな」かで切り替えます。<br>
+          変更は次にゲームを開始したときから反映されます。
+        </div>
+      </fieldset>
+
       <!-- 暗号化された通常セーブ（Daily / Quest / 共通設定の1ファイル） -->
       <fieldset>
         <legend>BACKUP DATA</legend>

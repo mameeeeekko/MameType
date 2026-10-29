@@ -2566,32 +2566,6 @@ export const STAGES = {
         star: { type: "defenseSurplus", thresholds: [0.4, 0.45, 0.5, 0.6, 0.7], weights: { surplus: 0.4, accuracy: 0.6 } }
     },
 
-    // ★ビット連動型ボス(BOSS_4)
-    // 本体(BOSS_4)と左右のビット(BIT_LEFT / BIT_RIGHT)が電磁波ラインで薄く連結。
-    // ビットはプレイヤーには向かわず、本体周囲を楕円軌道で不規則に漂う。
-    // ビットは普通の敵と同じ設定(hitCount / tags / behaviors等)で倒せる。
-    // 撃破されると本体が bitReviveTime 秒後に復活させ、本体が死ねばビットも消える。
-    W4_WORLD_BOSS: {
-        phases: [
-            {
-                name: "phase 1",
-                spawn:           { interval: 2500, limit: null, maxAlive: 6, immediateOnClear: true },
-                enemyTable:      getTierEnemies("T6", ENEMY_TIER_BALANCED),
-                phaseConditions: { killCount: 20 }
-            },
-            {
-                name: "boss",
-                bgm:             "bgm_boss1",
-                spawn:           { interval: 1000, limit: 1, maxAlive: 1 },
-                enemyTable:      [{ type: "BOSS_4", weight: 100, pos: { x: 800, y: 200 } }],
-                phaseConditions: { killCount: 1 }
-            }
-        ],
-        endConditions:   { hpZero: true },
-        clearConditions: { survive: true },
-        star:            { type: "composite", thresholds: [0.5, 0.6, 0.7, 0.8, 0.9] }
-    },
-
     // =====================================================
     // EXTRA WORLD テストステージ
     // ※ ここから自由にステージを追加・変更できます

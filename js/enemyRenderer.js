@@ -3,6 +3,8 @@
 import { getDisplayFullRoma, getDisplayRomaForEnemy } from "./typingLogic.js";
 import { getDifficulty } from "./difficulties.js";
 import { getNow } from "./gameCore.js";
+import { getEnemyFontSize } from "./enemyFontSize.js";
+import { getEnemyDisplayModeKey } from "./enemyDisplayMode.js";
 import { getChainMultiplier } from "./enemyCore.js";
 import { spawnComboTierUpEffect, playComboTierUpSound } from "./effectManager.js";
 import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, OVERDRIVE_SPEED, } from "./questPlayerStats.js";
@@ -771,7 +773,6 @@ function drawEnemyText(ctx, enemy, lockedEnemy, candidateEnemies){
     }
 
     const word = enemy.word || "";
-    const displayFull = getDisplayRomaForEnemy(enemy, getDisplayFullRoma);
 
     // ロックまたは候補状態の判定（本体またはその攻撃が対象の場合）
     const isLocked = lockedEnemy && (lockedEnemy === enemy || lockedEnemy.ref === enemy);
@@ -781,8 +782,18 @@ function drawEnemyText(ctx, enemy, lockedEnemy, candidateEnemies){
         (enemy.inputedRomaji || "").length +
         (enemy.typed || "").length;
 
-    const remainPartRaw = displayFull.slice(typedLen);
-    const remainPart = remainPartRaw.replace(/ /g, '␣');
+    const displayMode = getEnemyDisplayModeKey();
+
+    let remainPart;
+    if (displayMode === "hiragana") {
+        // ひらがな表示: 残りのひらがなを表示
+        remainPart = (enemy.text || "").slice(enemy.pos || 0);
+    } else {
+        // ローマ字表示: 現在どおり
+        const displayFull = getDisplayRomaForEnemy(enemy, getDisplayFullRoma);
+        const remainPartRaw = displayFull.slice(typedLen);
+        remainPart = remainPartRaw.replace(/ /g, '␣');
+    }
 
     const radius = enemy.radius || 15;
 
@@ -813,14 +824,17 @@ function drawEnemyText(ctx, enemy, lockedEnemy, candidateEnemies){
         ctx.stroke();
     }
 
-    ctx.font = "17px 'Inter', 'M PLUS Rounded 1c', sans-serif";
+    const enemyFontSizePx = getEnemyFontSize();
+    // ワードとローマ字の間隔をフォントサイズに応じて広げる（重なり防止）
+    const textGap = Math.max(18, enemyFontSizePx + 6);
+    ctx.font = `${enemyFontSizePx}px 'Inter', 'M PLUS Rounded 1c', sans-serif`;
     ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
     ctx.lineWidth = 3;
-    ctx.strokeText(word, enemy.x, enemy.y - radius - 15 + labelOffsetY);
+    ctx.strokeText(word, enemy.x, enemy.y - radius - textGap + labelOffsetY);
     ctx.fillStyle = "#f0f6fc"; // 白系
-    ctx.fillText(word, enemy.x, enemy.y - radius - 15 + labelOffsetY);
+    ctx.fillText(word, enemy.x, enemy.y - radius - textGap + labelOffsetY);
 
-    ctx.font = "bold 17px 'Noto Sans Mono', monospace";
+    ctx.font = `bold ${enemyFontSizePx}px 'Noto Sans Mono', monospace`;
     //入力文字の色
     let remainColor = "#a3c8e4"; // より鮮明なシアンに変更
 
@@ -1063,15 +1077,17 @@ function drawShape(ctx, x, y, type, color) {
     const light = adjustColor(color, 55);
     const mid   = adjustColor(color, 10);
     const dark  = adjustColor(color, -65);
+    const bevel = adjustColor(color, -100); // 3Dベベル用の暗い側面色
 
     const size = type.size;
+    const bevelOffset = Math.max(1.5, size * 0.10); // ベベル厚（3D側面）
 
     const grad = ctx.createRadialGradient(
-        x - size * 0.35,
-        y - size * 0.4,
+        - size * 0.35,
+        - size * 0.4,
         size * 0.12,
-        x,
-        y,
+        0,
+        0,
         size
     );
 
@@ -1079,89 +1095,136 @@ function drawShape(ctx, x, y, type, color) {
     grad.addColorStop(0.45, mid);
     grad.addColorStop(1, dark);
 
-    switch(type.shape){
+    // ============================================
+    // 共通ヘルパ：指定座標・塗り色で図形パスを描画（fill済み）
+    // pinwheel は独自描画のため fillStyle 無視
+    // ============================================
+    function drawFilledShape(dx, dy, fillStyle) {
+        ctx.save();
+        ctx.translate(x + dx, y + dy);
+        let handled = false;
+        switch(type.shape){
 
-        case "circle":
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fillStyle = grad;
-            ctx.fill();
+            case "circle":
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.strokeStyle = fillStyle;
+                ctx.lineWidth = Math.max(2, size * 0.15);
+                ctx.shadowBlur = size * 0.4;
+                ctx.shadowColor = typeof fillStyle === "string" && fillStyle.startsWith("rgba") ? fillStyle : color;
+                ctx.stroke();
+                handled = true;
+                break;
 
-            // ハイライト
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
+            case "hexagon":
+                ctx.beginPath();
+                defineShapePath(ctx, 0, 0, "hexagon", size);
+                ctx.strokeStyle = fillStyle;
+                ctx.lineWidth = Math.max(2, size * 0.15);
+                ctx.shadowBlur = size * 0.4;
+                ctx.shadowColor = typeof fillStyle === "string" && fillStyle.startsWith("rgba") ? fillStyle : color;
+                ctx.stroke();
+                handled = true;
+                break;
 
-            const shine = ctx.createRadialGradient(
-                x - size * 0.45,
-                y - size * 0.45,
-                0,
-                x - size * 0.45,
-                y - size * 0.45,
-                size * 0.75
-            );
+            case "turret":
+                // タレットは専用の装甲描画関数を使用（fillStyleは無視）
+                drawTurretShape(ctx, 0, 0, size, color);
+                handled = true;
+                break;
 
-            shine.addColorStop(0, "rgba(255,255,255,0.32)");
-            shine.addColorStop(0.4, "rgba(255,255,255,0.08)");
-            shine.addColorStop(1, "rgba(255,255,255,0)");
+            case "diamond":
+                ctx.beginPath();
+                defineShapePath(ctx, 0, 0, "diamond", size);
+                ctx.strokeStyle = fillStyle;
+                ctx.lineWidth = Math.max(2, size * 0.15);
+                ctx.shadowBlur = size * 0.4;
+                ctx.shadowColor = typeof fillStyle === "string" && fillStyle.startsWith("rgba") ? fillStyle : color;
+                ctx.stroke();
+                handled = true;
+                break;
 
-            ctx.fillStyle = shine;
-            ctx.fill();
+            case "square":
+                ctx.beginPath();
+                defineShapePath(ctx, 0, 0, "square", size);
+                ctx.strokeStyle = fillStyle;
+                ctx.lineWidth = Math.max(2, size * 0.15);
+                ctx.shadowBlur = size * 0.4;
+                ctx.shadowColor = typeof fillStyle === "string" && fillStyle.startsWith("rgba") ? fillStyle : color;
+                ctx.stroke();
+                handled = true;
+                break;
 
-            // 外周
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.strokeStyle = "rgba(255,255,255,0.15)";
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            break;
+            case "arrow":
+                ctx.beginPath();
+                defineShapePath(ctx, 0, 0, "arrow", size);
+                ctx.strokeStyle = fillStyle;
+                ctx.lineWidth = Math.max(2, size * 0.15);
+                ctx.shadowBlur = size * 0.4;
+                ctx.shadowColor = typeof fillStyle === "string" && fillStyle.startsWith("rgba") ? fillStyle : color;
+                ctx.stroke();
+                handled = true;
+                break;
 
-        case "hexagon":
-            drawHexagon(ctx, x, y, size, grad, color);
-            break;
+            default:
+                ctx.beginPath();
+                defineShapePath(ctx, 0, 0, type.shape, size);
+                if (type.shape === "pinwheel") {
+                    // Pinwheelは独自描画（translate済み前提）。fillStyleは無視。
+                    drawPinwheelShape(ctx, 0, 0, type, color);
+                    handled = true;
+                } else {
+                    ctx.strokeStyle = fillStyle;
+                    ctx.lineWidth = Math.max(2, size * 0.15);
+                    ctx.shadowBlur = size * 0.4;
+                    ctx.shadowColor = typeof fillStyle === "string" && fillStyle.startsWith("rgba") ? fillStyle : color;
+                    ctx.stroke();
+                    handled = true;
+                }
+        }
+        ctx.restore();
+        return handled;
+    }
 
-        case "turret":
-            drawTurretShape(ctx, x, y, size, color);
-            break;
+    // ============================================
+    // ① ベベル側面（暗い色、右下にオフセット）→ 3D立体感
+    // pinwheel・turret は専用描画のためベベルを適用しない
+    // ============================================
+    if (type.shape !== "pinwheel" && type.shape !== "turret") {
+        drawFilledShape(bevelOffset, bevelOffset, bevel);
+    }
 
-        case "diamond":
-            drawDiamond(ctx, x, y, size, color);
-            break;
+    // ============================================
+    // ② メイン上面（グラデーション、本来位置）
+    // ============================================
+    drawFilledShape(0, 0, grad);
 
-        case "square":
-            ctx.beginPath();
-            defineShapePath(ctx, x, y, "square", size);
-            ctx.fillStyle = grad;
-            ctx.fill();
-
-            ctx.strokeStyle = "rgba(255,255,255,0.14)";
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            break;
-
-        case "arrow":
-            ctx.beginPath();
-            defineShapePath(ctx, x, y, "arrow", size);
-            
-            ctx.fillStyle = grad;
-            ctx.fill();
-
-            ctx.strokeStyle = "rgba(255,255,255,0.2)";
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            break;
-
-        default:
-            ctx.beginPath();
-            defineShapePath(ctx, x, y, type.shape, size);
-            
-            if (type.shape === "pinwheel") {
-                // Pinwheelは独自描画を維持
-                drawPinwheelShape(ctx, x, y, type, color);
-                return;
-            }
-
-            ctx.fillStyle = grad;
-            ctx.fill();
+    // ============================================
+    // ③ エッジハイライト（白い細い線で金属感・エッジ強調）
+    //    pinwheel・turret は独自描画済みのためスキップ
+    // ============================================
+    if (type.shape !== "pinwheel" && type.shape !== "turret") {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        switch(type.shape){
+            case "circle":
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                break;
+            case "hexagon":
+            case "turret":
+            case "diamond":
+            case "square":
+            case "arrow":
+            default:
+                defineShapePath(ctx, 0, 0, type.shape, size);
+                break;
+        }
+        ctx.closePath();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
     }
 }
 
@@ -1193,17 +1256,19 @@ function drawTurretShape(ctx, x, y, size, color) {
     // ① 外壁：発光グローを付けてから本体を重ねる
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = size * 0.35;
+    ctx.shadowBlur = size * 0.5;
     ctx.beginPath();
     defineShapePath(ctx, x, y, "turret", size);
-    ctx.fillStyle = bodyGrad;
-    ctx.fill();
+    ctx.strokeStyle = bodyGrad;
+    ctx.lineWidth = Math.max(2, size * 0.15);
+    ctx.stroke();
     ctx.restore();
 
     ctx.beginPath();
     defineShapePath(ctx, x, y, "turret", size);
-    ctx.fillStyle = bodyGrad;
-    ctx.fill();
+    ctx.strokeStyle = bodyGrad;
+    ctx.lineWidth = Math.max(2, size * 0.15);
+    ctx.stroke();
 
     // ② 内部装甲：外壁と同じ向きで内接する小六角形
     const armorR = size * 0.66;
@@ -1216,10 +1281,10 @@ function drawTurretShape(ctx, x, y, size, color) {
         else ctx.lineTo(px, py);
     }
     ctx.closePath();
-    ctx.fillStyle = dark;
-    ctx.fill();
-    ctx.strokeStyle = light;
-    ctx.lineWidth = 1.6;
+    ctx.shadowBlur = size * 0.2;
+    ctx.shadowColor = dark;
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = Math.max(2, size * 0.12);
     ctx.stroke();
 
     // ③ 装甲パネル線：小六角形の各頂点から外壁の同じ頂点へ放射状に戻す6本
@@ -1241,21 +1306,23 @@ function drawTurretShape(ctx, x, y, size, color) {
         ctx.stroke();
     }
     ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
 
     // ④ 中心コア（この一点だけが白いアクセント）
     const coreR = size * 0.22;
     ctx.beginPath();
     ctx.arc(x, y, coreR, 0, Math.PI * 2);
-    ctx.fillStyle = color;
     ctx.shadowColor = color;
-    ctx.shadowBlur = 10;
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = size * 0.5;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(2, size * 0.15);
+    ctx.stroke();
 
     ctx.beginPath();
     ctx.arc(x, y, coreR * 0.42, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.92)";
+    ctx.lineWidth = Math.max(1, size * 0.08);
+    ctx.stroke();
 }
 
 // ===============================
@@ -1280,31 +1347,47 @@ function drawDiamond(ctx, x, y, size, color) {
     };
 
     // 各面を描画
+    ctx.shadowBlur = size * 0.4;
+    ctx.shadowColor = color;
+    
     // Top-Left
     ctx.beginPath();
     ctx.moveTo(pTop.x, pTop.y); ctx.lineTo(pLeft.x, pLeft.y); ctx.lineTo(pCenter.x, pCenter.y);
-    ctx.fillStyle = colors.topLeft; ctx.fill();
+    ctx.strokeStyle = colors.topLeft;
+    ctx.lineWidth = Math.max(2, size * 0.15);
+    ctx.stroke();
 
     // Top-Right
     ctx.beginPath();
     ctx.moveTo(pTop.x, pTop.y); ctx.lineTo(pRight.x, pRight.y); ctx.lineTo(pCenter.x, pCenter.y);
-    ctx.fillStyle = colors.topRight; ctx.fill();
+    ctx.strokeStyle = colors.topRight;
+    ctx.lineWidth = Math.max(2, size * 0.15);
+    ctx.stroke();
 
     // Bottom-Left
     ctx.beginPath();
     ctx.moveTo(pBottom.x, pBottom.y); ctx.lineTo(pLeft.x, pLeft.y); ctx.lineTo(pCenter.x, pCenter.y);
-    ctx.fillStyle = colors.bottomLeft; ctx.fill();
+    ctx.strokeStyle = colors.bottomLeft;
+    ctx.lineWidth = Math.max(2, size * 0.15);
+    ctx.stroke();
 
     // Bottom-Right
     ctx.beginPath();
     ctx.moveTo(pBottom.x, pBottom.y); ctx.lineTo(pRight.x, pRight.y); ctx.lineTo(pCenter.x, pCenter.y);
-    ctx.fillStyle = colors.bottomRight; ctx.fill();
+    ctx.strokeStyle = colors.bottomRight;
+    ctx.lineWidth = Math.max(2, size * 0.15);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
 
     // 輪郭線
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    ctx.lineWidth = Math.max(2, size * 0.12);
+    ctx.shadowBlur = size * 0.3;
+    ctx.shadowColor = color;
     defineShapePath(ctx, x, y, "diamond", size);
     ctx.stroke();
+    ctx.shadowBlur = 0;
 }
 
 // ===============================
@@ -1314,14 +1397,20 @@ function drawHexagon(ctx, x, y, size, grad, color) {
     ctx.beginPath();
     defineShapePath(ctx, x, y, "hexagon", size);
 
-    ctx.fillStyle = grad;
-    ctx.fill();
+    ctx.shadowBlur = size * 0.4;
+    ctx.shadowColor = color;
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = Math.max(2, size * 0.15);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
 
     const sw = size * 0.7;
     const sh = size * 1.3;
 
     // 内部のカットライン（クリスタル感の演出）
-    ctx.strokeStyle = "rgba(255,255,255,0.3)";
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.shadowBlur = size * 0.2;
+    ctx.shadowColor = "rgba(255,255,255,0.8)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     // 縦のセンターライン
@@ -1330,15 +1419,20 @@ function drawHexagon(ctx, x, y, size, grad, color) {
     ctx.moveTo(x - sw, y - sh * 0.4); ctx.lineTo(x + sw, y + sh * 0.4);
     ctx.moveTo(x + sw, y - sh * 0.4); ctx.lineTo(x - sw, y + sh * 0.4);
     ctx.stroke();
+    ctx.shadowBlur = 0;
 
     // 上部の反射（ハイライト）
-    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.shadowBlur = size * 0.2;
+    ctx.shadowColor = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = Math.max(2, size * 0.12);
     ctx.beginPath();
     ctx.moveTo(x, y - sh);
     ctx.lineTo(x + sw, y - sh * 0.4);
     ctx.lineTo(x, y);
     ctx.lineTo(x - sw, y - sh * 0.4);
-    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
 
 
     // 外枠の輝き
@@ -1355,9 +1449,6 @@ function drawPinwheelShape(ctx, x, y, type, color){
     const r = type.size;
 
     ctx.save();
-
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 14;
 
     for(let i = 0; i < 4; i++){
 
@@ -1385,33 +1476,23 @@ function drawPinwheelShape(ctx, x, y, type, color){
 
         ctx.closePath();
 
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        grad.addColorStop(0, "rgba(255,255,255,0.15)");
-        grad.addColorStop(0.5, color);
-        grad.addColorStop(1, "rgba(0,0,0,0)");
-
-        ctx.fillStyle = grad;
-        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, r * 0.15);
+        ctx.shadowBlur = r * 0.3;
+        ctx.shadowColor = color;
+        ctx.stroke();
     }
+
+    ctx.shadowBlur = 0;
 
     ctx.beginPath();
     ctx.arc(x, y, r * 0.22, 0, Math.PI * 2);
 
-    const coreGrad = ctx.createRadialGradient(
-        x - r * 0.08,
-        y - r * 0.08,
-        0,
-        x,
-        y,
-        r * 0.22
-    );
-
-    coreGrad.addColorStop(0, "rgba(255,255,255,0.5)");
-    coreGrad.addColorStop(0.5, adjustColor(color, 20));
-    coreGrad.addColorStop(1, adjustColor(color, -40));
-
-    ctx.fillStyle = coreGrad;
-    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(2, r * 0.12);
+    ctx.shadowBlur = r * 0.4;
+    ctx.shadowColor = color;
+    ctx.stroke();
 
     ctx.restore();
 }
@@ -1437,6 +1518,19 @@ function drawPattern(ctx, x, y, type){
             drawHoneycomb(ctx, x, y, type);
             break;
     }
+
+    // パターンなし（null）の敵にも中心コアを追加しサイバー感を付与
+    if (!type.pattern) {
+        const coreR = Math.max(2, type.size * 0.18);
+        ctx.beginPath();
+        ctx.arc(x, y, coreR, 0, Math.PI * 2);
+        ctx.strokeStyle = type.color || "#ffffff";
+        ctx.lineWidth = Math.max(2, type.size * 0.12);
+        ctx.shadowBlur = type.size * 0.4;
+        ctx.shadowColor = type.color || "#ffffff";
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
 }
 
 function drawStripe(ctx, x, y, type){
@@ -1451,8 +1545,9 @@ function drawStripe(ctx, x, y, type){
     defineShapePath(ctx, x, y, type.shape, size);
     ctx.clip();
 
-    ctx.strokeStyle = "rgba(255,255,255,0.7)";
-    ctx.lineWidth = 3;
+    const color = type.color || "#ffffff";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
 
     for(let i = -diag; i < diag; i += 8){
         ctx.beginPath();
@@ -1480,9 +1575,11 @@ function drawRing(ctx, x, y, type){
         ctx.beginPath();
         defineShapePath(ctx, x, y, type.shape, radius);
 
+        const ringColor = type.color || "#ffffff";
+        const ringDark = adjustColor(ringColor, -70);
         ctx.strokeStyle = i % 2 === 0
-            ? "rgba(255,255,255,0.45)"
-            : "rgba(0,0,0,0.22)";
+            ? ringColor
+            : ringDark;
 
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -1506,8 +1603,13 @@ function drawCircuit(ctx, x, y, type) {
         const startX = x - size;
         const startY = y - size;
 
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 + layer * 0.15})`;
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + layer * 0.1})`;
+        const circColor = type.color || "#ffffff";
+        const circAlpha = 0.2 + layer * 0.15;
+        const circFillAlpha = 0.4 + layer * 0.1;
+        ctx.strokeStyle = circColor;
+        ctx.globalAlpha = circAlpha;
+        ctx.fillStyle = circColor;
+        ctx.globalAlpha = circFillAlpha;
         ctx.lineWidth = 1.0 + layer * 0.5;
 
         for (let i = 0; i < numX; i++) {
@@ -1557,7 +1659,9 @@ function drawHoneycomb(ctx, x, y, type) {
     const horizDist = hexWidth * 3 / 4;
     const vertDist = hexHeight;
 
-    ctx.strokeStyle = "rgba(255, 160, 122, 0.4)"; // イロウル風のオレンジ色
+    const honeyColor = type.color || "#ffa500";
+    ctx.strokeStyle = honeyColor;
+    ctx.globalAlpha = 0.35;
     ctx.lineWidth = 1.5;
 
     const startX = x - size * 1.5;

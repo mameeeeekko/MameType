@@ -101,13 +101,13 @@ export function applyActiveFreezeToEnemy(enemy, state) {
 // =====================================================
 
 const COLOR_PROPS = {
-    RED:    { name: "Red",    color: "#ff4d4f", tags: ["記号", "数字"], baseScore: 60 },
-    GREEN:  { name: "Green",  color: "#73d13d", tags: ["句読点"],       baseScore: 55 },
-    YELLOW: { name: "Yellow", color: "#fadb14", tags: ["ことわざ"],     baseScore: 50 },
-    PINK:   { name: "Pink",   color: "#ff85c0", tags: ["擬音"],         baseScore: 45 },
-    PURPLE: { name: "Purple", color: "#b37feb", tags: ["英語"],         baseScore: 40 },
-    BLUE:   { name: "Blue",   color: "#40a9ff", tags: ["促音"],         baseScore: 35 },
-    GRAY:   { name: "Gray",   color: "#a4a4a4", tags: [],               baseScore: 30 },
+    RED:    { name: "Red",    color: "#ff0055", tags: ["記号", "数字"], baseScore: 60 },    // ネオンレッド
+    GREEN:  { name: "Green",  color: "#00ff88", tags: ["句読点"],       baseScore: 55 },    // ネオングリーン
+    YELLOW: { name: "Yellow", color: "#ffea00", tags: ["ことわざ"],     baseScore: 50 },    // ネオンイエロー
+    PINK:   { name: "Pink",   color: "#ff00ff", tags: ["擬音"],         baseScore: 45 },    // ネオンマジェンタ
+    PURPLE: { name: "Purple", color: "#aa00ff", tags: ["英語"],         baseScore: 40 },    // ネオンパープル
+    BLUE:   { name: "Blue",   color: "#00ccff", tags: ["促音"],         baseScore: 35 },    // ネオンシアン
+    GRAY:   { name: "Gray",   color: "#a4a4a4", tags: [],               baseScore: 30 },    // サイバーグレー
 };
 
 const SHAPE_PROPS = {
@@ -2252,7 +2252,7 @@ Object.assign(EnemyTypes, {
 
     LAST_BOSS: {
         id: "last_boss", name: "ラスボス: Singularity",
-        color: "#000000", shape: "knot5", pattern: "honeycomb", size: 40,
+        color: "#36c9cf", shape: "ring", pattern: "circuit", size: 50,
         speed: 0.08, rotationSpeed: 0.08, damage: 99,
         tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 25, maxLen: 100, score: 10000, killedEffect: "boss2",
         killSound: 5, damageSound: 1,
@@ -2328,7 +2328,7 @@ Object.assign(EnemyTypes, {
 
     EX_BOSS: {
         id: "extra_boss", name: "Ex Boss",
-        color: "#000000", shape: "circle", size: 50,
+        color: "#a1a1a1", shape: "circle", pattern: "circuit", size: 50,
         speed: 0.08, rotationSpeed: 0.04, damage: 99,
         tags: ["", "英語", "記号", "句読点", "ことわざ", "擬音", "促音"], minLen: 25, maxLen: 100, score: 50000, killedEffect: "boss2",
         killSound: 5, damageSound: 1,
