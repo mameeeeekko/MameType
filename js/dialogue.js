@@ -5,6 +5,7 @@ import { isCleared, markDialoguePlayed, hasDialogueBeenPlayed, hasStageBeenEnter
 import { gameState } from './gameCore.js';
 import { playBGM, stopBGM, fadeOutBGM, fadeBGMTo, BGM_CONFIG, playDialogueSound, playSystemDialogueSound, playSE } from './effectManager.js';
 import { showHud } from './enemyCore.js';
+import { getEnemyColorImage, getItemTypeImage, getEnemyTypeImage } from './enemyRenderer.js';
 import { DIALOGUE_DATA, CHARACTERS, RANDOM_DIALOGUES } from './dialogueData.js';
 import { QUEST_MAP } from './questMap.js';
 import { showQuestMap } from './main.js';
@@ -20,6 +21,7 @@ let closeButton = null;
 let skipToEndButton = null; // 最後までスキップ
 let skipToChoiceButton = null; // 選択肢までスキップ
 let choicesContainer = null; // 選択肢コンテナ用の変数を追加
+let dialogueChoiceSelectedIndex = 0; // ダイアログ選択肢のキーボード選択インデックス
 let dialogueSpeedControl = null;
 let dialogueSpeedButton = null;
 let dialogueSpeedLabel = null;
@@ -212,6 +214,23 @@ export function showDialoguePlaybackChoicePopup(message, onYes, onNo) {
     const yesButton = overlay.querySelector('#dialoguePlaybackChoiceYes');
     const noButton = overlay.querySelector('#dialoguePlaybackChoiceNo');
 
+    let selected = 0; // 0 = yes, 1 = no
+
+    const updateHighlight = () => {
+        if (selected === 0) {
+            yesButton.style.outline = '3px solid #fff';
+            yesButton.style.outlineOffset = '2px';
+            noButton.style.outline = '';
+            noButton.style.outlineOffset = '';
+        } else {
+            noButton.style.outline = '3px solid #fff';
+            noButton.style.outlineOffset = '2px';
+            yesButton.style.outline = '';
+            yesButton.style.outlineOffset = '';
+        }
+    };
+    updateHighlight();
+
     yesButton.addEventListener('click', () => {
         cleanup();
         onYes();
@@ -220,8 +239,28 @@ export function showDialoguePlaybackChoicePopup(message, onYes, onNo) {
         cleanup();
         onNo();
     });
+    // マウスホバーでも選択状態を同期
+    yesButton.addEventListener('mouseenter', () => { selected = 0; updateHighlight(); });
+    noButton.addEventListener('mouseenter', () => { selected = 1; updateHighlight(); });
 
     const handleKeyDown = (event) => {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.preventDefault();
+            selected = (selected === 0) ? 1 : 0;
+            updateHighlight();
+            return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            if (selected === 0) {
+                cleanup();
+                onYes();
+            } else {
+                cleanup();
+                onNo();
+            }
+            return;
+        }
         if (event.key === 'Escape') {
             event.preventDefault();
             cleanup();
@@ -588,6 +627,27 @@ function appendBubble(msg) {
         const textElement = bubble.querySelector('.message-text');
         if (textElement) {
             textElement.innerHTML = msg.text.replace(/\n/g, '<br>');
+            if (msg.enemyColor) {
+                const img = document.createElement('img');
+                img.className = 'dialogue-enemy-thumb';
+                img.src = getEnemyColorImage(msg.enemyColor);
+                img.alt = msg.enemyColor;
+                textElement.appendChild(img);
+            }
+            if (msg.itemType) {
+                const img = document.createElement('img');
+                img.className = 'dialogue-enemy-thumb';
+                img.src = getItemTypeImage(msg.itemType);
+                img.alt = msg.itemType;
+                textElement.appendChild(img);
+            }
+            if (msg.enemyType) {
+                const img = document.createElement('img');
+                img.className = 'dialogue-enemy-thumb';
+                img.src = getEnemyTypeImage(msg.enemyType);
+                img.alt = msg.enemyType;
+                textElement.appendChild(img);
+            }
         }
 
         const iconElement = bubble.querySelector('.character-icon');
@@ -1735,6 +1795,27 @@ function displayNextMessage(messageOverride, onComplete, noType = false) {
 
     // ★ 選択肢がある場合のコールバックを定義
     const onTypingFinished = () => {
+        if (message.enemyColor && messageTextElement) {
+            const img = document.createElement('img');
+            img.className = 'dialogue-enemy-thumb';
+            img.src = getEnemyColorImage(message.enemyColor);
+            img.alt = message.enemyColor;
+            messageTextElement.appendChild(img);
+        }
+        if (message.itemType && messageTextElement) {
+            const img = document.createElement('img');
+            img.className = 'dialogue-enemy-thumb';
+            img.src = getItemTypeImage(message.itemType);
+            img.alt = message.itemType;
+            messageTextElement.appendChild(img);
+        }
+        if (message.enemyType && messageTextElement) {
+            const img = document.createElement('img');
+            img.className = 'dialogue-enemy-thumb';
+            img.src = getEnemyTypeImage(message.enemyType);
+            img.alt = message.enemyType;
+            messageTextElement.appendChild(img);
+        }
         if (message.choices) {
             // ★★★ 修正: すぐに選択肢を表示せず、ユーザーの入力を待つ状態にする
             // このメッセージが現在タイピング中のメッセージであることを保持
@@ -1942,10 +2023,34 @@ function displayChoices(choices) {
         };
         choicesContainer.appendChild(button);
     });
+    // ★ キーボード選択の初期化
+    dialogueChoiceSelectedIndex = 0;
+    updateDialogueChoiceHighlight();
 }
 
 /**
+ * ダイアログ選択肢のキーボード選択ハイライトを更新します。
+ */
+function updateDialogueChoiceHighlight() {
+    if (!choicesContainer) return;
+    const buttons = choicesContainer.querySelectorAll('.dialogue-choice-btn');
+    buttons.forEach((btn, idx) => {
+        if (idx === dialogueChoiceSelectedIndex) {
+            btn.classList.add('is-selected');
+            btn.style.outline = '2px solid #58a6ff';
+            btn.style.outlineOffset = '2px';
+            btn.style.background = '#3a4049';
+        } else {
+            btn.classList.remove('is-selected');
+            btn.style.outline = '';
+            btn.style.outlineOffset = '';
+            btn.style.background = '';
+        }
+    });
+}
+/**
  * 選択肢が選ばれたときの処理
+
  * @param {object} choice - 選択されたchoiceオブジェクト
  * @param {number} choiceIndex - 選択された選択肢のインデックス
  * @param {string} choiceId - 選択肢グループのID
@@ -2283,8 +2388,34 @@ export function startDialogue(dialogueId, onComplete, isContinuation = false, bg
             }
 
             if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                advanceDialogue();
+                if (dialogueState !== 'CHOOSING') {
+                    e.preventDefault();
+                    advanceDialogue();
+                    return;
+                }
+            }
+            // ★ ダイアログ選択肢のキーボード操作
+            if (dialogueState === 'CHOOSING') {
+                const choiceButtons = choicesContainer ? choicesContainer.querySelectorAll('.dialogue-choice-btn') : [];
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    if (choiceButtons.length > 0) {
+                        if (e.key === 'ArrowRight') {
+                            dialogueChoiceSelectedIndex = (dialogueChoiceSelectedIndex + 1) % choiceButtons.length;
+                        } else {
+                            dialogueChoiceSelectedIndex = (dialogueChoiceSelectedIndex - 1 + choiceButtons.length) % choiceButtons.length;
+                        }
+                        updateDialogueChoiceHighlight();
+                    }
+                    return;
+                }
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (choiceButtons[dialogueChoiceSelectedIndex]) {
+                        choiceButtons[dialogueChoiceSelectedIndex].click();
+                    }
+                    return;
+                }
             }
             // 'E'キーで最後までスキップ
             if (e.key.toLowerCase() === 'e') {

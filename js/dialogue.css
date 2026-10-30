@@ -347,6 +347,13 @@
     transition: background 0.2s, border-color 0.2s, transform 0.2s ease-in-out;
 }
 
+.dialogue-choice-btn.is-selected {
+    background: #3a4049;
+    border-color: #58a6ff;
+    outline: 2px solid #58a6ff;
+    outline-offset: 2px;
+}
+
 .dialogue-choice-btn:hover {
     background: #3a4049;
     border-color: #58a6ff;

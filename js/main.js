@@ -1,3 +1,117 @@
+
+// =====================================================
+// メニューキーボードナビゲーション（矢印キー・Space/Enter）
+// 全メニュー階層で共通に動作。既存の h,d,q,f,r,o,m,s,a ショートカットには影響しない。
+// =====================================================
+let _menuNavEnabled = false;
+let _menuNavButtons = [];
+let _menuNavIndex = -1;
+let _menuInputMode = "mouse"; // "mouse" | "keyboard"
+
+function _getVisibleMenuScreen() {
+  const ids = ["menu", "questMenu", "startMenu", "freeStartMenu", "settings", "records"];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && el.style.display !== "none") return el;
+  }
+  return null;
+}
+
+function _getMenuButtons(screen) {
+  if (!screen) return [];
+  return Array.from(screen.querySelectorAll("button:not([disabled])"));
+}
+
+function _isMenuNavBlocked() {
+  if (isMusicModalOpen()) return true;
+  const ids = ["saveModal", "clearRewardModal", "clearRewardPopup", "saveConfirmPopup",
+               "achModal", "playerStatsModal", "questStatsModal", "freeSkillModal"];
+  return ids.some(id => {
+    const el = document.getElementById(id);
+    return !!el && window.getComputedStyle(el).display !== "none";
+  });
+}
+
+function _updateMenuNavFocus() {
+  // 既存のフォーカスマークをクリア
+  document.querySelectorAll(".menu-nav-focus").forEach(el => el.classList.remove("menu-nav-focus"));
+  
+  if (_menuNavButtons.length === 0) {
+    _menuNavIndex = -1;
+    return;
+  }
+  if (_menuNavIndex < 0) _menuNavIndex = 0;
+  if (_menuNavIndex >= _menuNavButtons.length) _menuNavIndex = _menuNavButtons.length - 1;
+  
+  const btn = _menuNavButtons[_menuNavIndex];
+  if (btn) {
+    btn.classList.add("menu-nav-focus");
+    btn.focus({ preventScroll: true });
+  }
+}
+
+function initMenuKeyboardNav() {
+  if (_menuNavEnabled) return;
+  _menuNavEnabled = true;
+  
+  document.addEventListener("keydown", (e) => {
+    if (_isMenuNavBlocked()) return;
+    const screen = _getVisibleMenuScreen();
+    if (!screen) {
+      _menuNavButtons = [];
+      _menuNavIndex = -1;
+      return;
+    }
+    
+    // 矢印キーでナビゲート（上下左右すべて同じリスト内で循環移動）
+    if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      _menuInputMode = "keyboard";
+      document.body.classList.add("menu-keyboard-nav");
+      _menuNavButtons = _getMenuButtons(screen);
+      if (_menuNavButtons.length === 0) return;
+      
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        _menuNavIndex = (_menuNavIndex + 1) % _menuNavButtons.length;
+      } else {
+        _menuNavIndex = (_menuNavIndex - 1 + _menuNavButtons.length) % _menuNavButtons.length;
+      }
+      _updateMenuNavFocus();
+      return;
+    }
+    
+    // Space/Enter でフォーカス中のボタンをクリック
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      _menuInputMode = "keyboard";
+      document.body.classList.add("menu-keyboard-nav");
+      _menuNavButtons = _getMenuButtons(screen);
+      if (_menuNavButtons.length === 0) return;
+      if (_menuNavIndex < 0) _menuNavIndex = 0;
+      const btn = _menuNavButtons[_menuNavIndex];
+      if (btn) {
+        btn.classList.add("menu-nav-focus");
+        btn.click();
+      }
+    }
+  });
+  const syncMouseNav = (target) => {
+    if (!(target instanceof HTMLElement)) return;
+    const screen = _getVisibleMenuScreen();
+    if (!screen || !screen.contains(target) || !target.matches("button")) return;
+    _menuInputMode = "mouse";
+    document.body.classList.remove("menu-keyboard-nav");
+    _menuNavButtons = _getMenuButtons(screen);
+    const idx = _menuNavButtons.indexOf(target);
+    if (idx >= 0) _menuNavIndex = idx;
+    document.querySelectorAll(".menu-nav-focus").forEach(el => el.classList.remove("menu-nav-focus"));
+    try { document.activeElement?.blur(); } catch (e) { /* ignore */ }
+  };
+  document.addEventListener("mouseover", (e) => syncMouseNav(e.target));
+
+
+}
+
 // main.js
 // =====================================================
 // タイピングゲーム メインスクリプト
@@ -29,7 +143,7 @@ import { openFreeSkillSelectModal, openFreeStarUpgradeModal, handleFreeSkillModa
 import { reloadQuestPlayerStats } from "./questPlayerStats.js";
 import { getClearRewardHtml, getExtraClearRewardHtml } from "./questResult.js";
 // ★EXTRA CLEAR 特典：ミュージックプレイヤー（トップメニューの MUSIC）
-import { initMusicPlayer, openMusicModal, closeMusicModal, handleMusicModalKey } from "./musicPlayer.js";
+import { initMusicPlayer, openMusicModal, closeMusicModal, handleMusicModalKey, isMusicModalOpen } from "./musicPlayer.js";
 import { getPlayerId, getPlayerName, setPlayerName, isOnlineEnabled, setOnlineEnabled, setPlayerId, getRecoveryCode, setRecoveryCode } from "../online/playerProfile.js";
 import { openOnlineRanking, closeOnlineRanking } from "../online/onlineRankingRenderer.js";
 import { APP_VERSION } from "./version.js";
@@ -798,6 +912,8 @@ const OFFLINE_APP_FILES = [
   "./js/enemyRenderer.js",
   "./js/enemyResult.js",
   "./js/enemyModeConfig.js",
+  "./js/enemyFontSize.js",
+  "./js/enemyDisplayMode.js",
   "./js/effectManager.js",
   "./js/defenseRenderer.js",
   "./js/defenseResult.js",
@@ -1652,6 +1768,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ★UIイベント紐付け
   bindMenuEvents();
+  initMenuKeyboardNav();
   bindModeStartEvents();
   bindResultEvents();
   bindGameMenuEvents();
@@ -3915,6 +4032,24 @@ const MAIN_MENU_MODE_DESCS = {
   settingsBtn:      "サウンド・キーバインド・グラフィックなど各種設定を変更します。データのバックアップや移行、オンラインランキングへの参加もここから設定します。",
 };
 
+// ★ タイトル（MAMETYPE）ホバー時に表示する操作説明
+const TITLE_HELP_DESC = "タイピング入力は si / shi / ci など複数の入力形式に対応。入力に応じて候補が自動で変化します。メニューは矢印キーで選択、Enter / Space で決定。頭文字のキーで直接選択も可能で、基本的にb キーで戻れます。a キーで勲章、i キーで詳細ステータス（もしくは右上のHUD内アイコン）を表示します。";
+
+/** タイトル（MAMETYPE）ホバー/フォーカス時に操作説明を表示 */
+function showTitleHelpDesc() {
+  const el = document.getElementById("mainMenuModeDesc");
+  if (!el) return;
+  const showDesc = modeDescToggle ? modeDescToggle.checked : true;
+  if (!showDesc) { el.style.display = "none"; return; }
+  el.textContent = TITLE_HELP_DESC;
+  el.style.display = "block";
+}
+/** タイトル（MAMETYPE）から離れたら説明を隠す */
+function hideTitleHelpDesc() {
+  const el = document.getElementById("mainMenuModeDesc");
+  if (el) el.style.display = "none";
+}
+
 /** モード説明を表示する（設定がOFFならなにもしない）*/
 function showModeDesc(descElId, descMap, btnId) {
   const el = document.getElementById(descElId);
@@ -4005,6 +4140,17 @@ function bindMenuEvents() {
       if (el) el.style.display = "none";
     });
   });
+
+  // ★ タイトル（MAMETYPE）ホバー/フォーカスで操作説明を表示
+  const gameTitleEl = document.getElementById("gameTitle");
+  if (gameTitleEl) {
+    gameTitleEl.tabIndex = 0;
+    gameTitleEl.style.cursor = "help";
+    gameTitleEl.addEventListener("mouseenter", showTitleHelpDesc);
+    gameTitleEl.addEventListener("focus", showTitleHelpDesc);
+    gameTitleEl.addEventListener("mouseleave", hideTitleHelpDesc);
+    gameTitleEl.addEventListener("blur", hideTitleHelpDesc);
+  }
 
   // 「戻る」ボタンは、すべてshowMainMenuを呼び出すように統一する
   startMenuBackBtn?.addEventListener("click", () => { playSE("select"); showMainMenu(); });
@@ -5122,6 +5268,20 @@ function handleMenuKey(e) {
         break;
       case "b": freeStartMenuBackBtn?.click(); break;
       case "n": switchToNormalBtn?.click(); break;
+      case "g": // 現在選択中のモードの GAME START を実行
+        {
+          const freeStartBtnMap = {
+            'Standard': document.getElementById("startStandardFree"),
+            'TimeAttack': document.getElementById("startTimeAttackFree"),
+            'Long': document.getElementById("startLongFree"),
+            'Enemy': document.getElementById("startEnemyFree"),
+            'Defense': document.getElementById("startDefenseFree"),
+            'Boss': document.getElementById("startBossFree"),
+          };
+          const _gBtn = freeStartBtnMap[currentFreeModeId];
+          if (_gBtn) { _gBtn.click(); e.preventDefault(); }
+        }
+        break;
       case "a": // Achievements
         document.getElementById("hudAchievementsBtn")?.click();
         break;

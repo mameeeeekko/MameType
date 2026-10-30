@@ -1,5 +1,6 @@
         //questMapUI.js
 
+
 import { QUEST_MAP } from "./questMap.js";
 import { isCleared, markStageEntered, getStar, getUnlockedWorlds, getSelectedWorldId, setSelectedWorldId, hasSeenTrueEnding, getTotalStars } from "./questProgress.js";
 import { startEnemyMode } from "./enemyCore.js";
@@ -39,6 +40,289 @@ import { playSE } from "./effectManager.js";
 import { hideAllScreens, showMenuBackground } from "./main.js";
 import { getEffectiveDPR } from "./canvasUtil.js";
 import { getStageScale, stageRect, clientToStage, STAGE_W, STAGE_H } from "./stageScale.js";
+
+// =====================================================
+// クエストマップ キーボードナビゲーション
+// 左右: ノード移動 / 上下: ノードとワールドセレクター切り替え
+// スペース/エンター: ノード選択（クリックと同じ効果）
+// =====================================================
+let _questMapNavEnabled = false;
+let _questMapSelectedNodeIdx = -1;
+let _questMapNavMode = "node"; // "node" | "world"
+
+function _getQuestMapNodes() {
+  const nodeLayer = document.getElementById("mapNodes");
+  if (!nodeLayer) return [];
+  return Array.from(nodeLayer.querySelectorAll(".map-node"));
+}
+
+function _getQuestMapWorldBtns() {
+  const prev = document.querySelector("#worldSelector .world-nav-btn:first-child");
+  const next = document.querySelector("#worldSelector .world-nav-btn:last-child");
+  return { prev, next };
+}
+
+function _clearQuestMapSelection() {
+  document.querySelectorAll(".quest-map-node-selected").forEach(el =>
+    el.classList.remove("quest-map-node-selected")
+  );
+  document.querySelectorAll(".quest-map-world-focus").forEach(el =>
+    el.classList.remove("quest-map-world-focus")
+  );
+  hideQuestTooltip();
+}
+
+function _showQuestNodeHoverTooltip(qNode, el) {
+  const stage = STAGES[qNode.stage];
+  if (!stage) return;
+
+  const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
+  const clearText = buildClearText(stage.clearConditions, getQuestAdjustedDefenseConfig(stage.defenseConfig));
+  const endText   = buildEndText(endConditions, stage.player, stage.defenseConfig);
+  const starText  = buildStarText(stage.star);
+
+  const rewardText = [];
+  if (qNode.reward) {
+    if (qNode.reward.type === "slot") rewardText.push(`スロット +${qNode.reward.value ?? 1}`);
+    else if (qNode.reward.type === "activeStock") rewardText.push(`アクティブスキルストック +${qNode.reward.value ?? 1}`);
+    else rewardText.push("報酬あり");
+  }
+
+  const tooltipLines = [];
+  if (qNode.stage) {
+    tooltipLines.push(`<span class="tooltip-title" style="font-size: 0.9em; color: #888;">${qNode.stage}</span>`);
+    tooltipLines.push("");
+  }
+  if (stage.missionName) {
+    tooltipLines.push(`<span class="tooltip-mission-title">${stage.missionName}</span>`);
+    tooltipLines.push(`<span style="font-size:0.9em; color:#ddd;">${stage.missionDescription || ""}</span>`);
+    tooltipLines.push("");
+  }
+  if (stage.enemyVariationDescription) {
+    tooltipLines.push('<span class="tooltip-title">[エネミー構成]</span>');
+    tooltipLines.push(stage.enemyVariationDescription);
+    tooltipLines.push("");
+  }
+  if (stage.isDefenseMode) {
+    tooltipLines.push('<span class="tooltip-title">[出題ジャンル]</span>');
+    tooltipLines.push(formatDefenseGenres(stage.defenseConfig?.genres));
+    tooltipLines.push("");
+  }
+  tooltipLines.push(
+    '<span class="tooltip-title">[終了条件]</span>', ...endText, "",
+    '<span class="tooltip-title">[クリア条件]</span>', ...clearText, "",
+    '<span class="tooltip-title">[★条件]</span>', ...starText
+  );
+  if (rewardText.length) {
+    tooltipLines.push("", '<span class="tooltip-title">[報酬]</span>', ...rewardText);
+  }
+  showQuestTooltip(tooltipLines, el);
+}
+
+function _findQuestNodeById(id) {
+  if (!id) return null;
+  for (const w of Object.values(QUEST_MAP)) {
+    const n = (w.nodes || []).find(n => n.id === id);
+    if (n) return n;
+  }
+  return null;
+}
+
+
+function _updateQuestMapSelection() {
+  _clearQuestMapSelection();
+  const nodes = _getQuestMapNodes();
+  if (nodes.length === 0) {
+    _questMapSelectedNodeIdx = -1;
+    return;
+  }
+  if (_questMapSelectedNodeIdx < 0) _questMapSelectedNodeIdx = 0;
+  if (_questMapSelectedNodeIdx >= nodes.length) _questMapSelectedNodeIdx = nodes.length - 1;
+  
+  const node = nodes[_questMapSelectedNodeIdx];
+  if (node) {
+    node.classList.add("quest-map-node-selected");
+    if (!node.classList.contains("locked")) {
+      const qNode = _findQuestNodeById(node.dataset?.nodeId);
+      if (qNode) _showQuestNodeHoverTooltip(qNode, node);
+      else hideQuestTooltip();
+    } else {
+      hideQuestTooltip();
+    }
+    // ステージ説明を表示（オンマウスと同じ効果）
+    _showQuestMapNodeDesc(node);
+  }
+}
+
+function _showQuestMapNodeDesc(nodeEl) {
+  // 既存のステージ説明エリアを探す（なければ作成）
+  let descEl = document.getElementById("questMapNodeDesc");
+  if (!descEl) {
+    descEl = document.createElement("div");
+    descEl.id = "questMapNodeDesc";
+    descEl.className = "quest-map-node-desc";
+    const mapContainer = document.getElementById("mapContainer");
+    if (mapContainer) mapContainer.appendChild(descEl);
+  }
+  if (!descEl || !nodeEl) return;
+  
+  // ノード要素からステージ情報を取得（data-stage 属性を優先）
+  let stageId = nodeEl.dataset?.stage || "";
+  let descText = "";
+  
+  if (stageId && typeof STAGES !== "undefined" && STAGES[stageId]) {
+    const stage = STAGES[stageId];
+    descText = stage.name || stageId;
+    if (stage.desc) descText += ` - ${stage.desc}`;
+  } else {
+    // フォールバック: ノード要素のテキスト
+    descText = nodeEl.textContent.trim() || "";
+  }
+  
+  descEl.textContent = descText;
+  descEl.style.display = descText ? "block" : "none";
+}
+
+function _setWorldFocus(focus) {
+  const selector = document.getElementById("worldSelector");
+  if (selector) {
+    if (focus) {
+      selector.classList.add("quest-map-world-focus");
+      selector.style.outline = "2px solid #00ffff";
+      selector.style.outlineOffset = "2px";
+      selector.style.border = "1px solid #00ffff";
+      selector.style.transform = "translateX(-50%)";
+      const nameArea = selector.querySelector(".world-name-area");
+      if (nameArea) {
+        nameArea.style.color = "#00ffff";
+        nameArea.style.fontWeight = "bold";
+      }
+    } else {
+      selector.classList.remove("quest-map-world-focus");
+      selector.style.outline = "";
+      selector.style.outlineOffset = "";
+      selector.style.border = "";
+      selector.style.transform = "translateX(-50%)";
+      const nameArea = selector.querySelector(".world-name-area");
+      if (nameArea) {
+        nameArea.style.color = "";
+        nameArea.style.fontWeight = "";
+      }
+    }
+  }
+}
+
+function _initQuestMapKeyboardNav() {
+  if (_questMapNavEnabled) return;
+  _questMapNavEnabled = true;
+
+  document.addEventListener("keydown", (e) => {
+    // クエストマップ画面かどうか判定
+    const mapScreen =
+      document.getElementById("questMapScreen") ||
+      document.getElementById("mapContainer");
+
+    if (!mapScreen || mapScreen.style.display === "none") {
+      _questMapSelectedNodeIdx = -1;
+      _questMapNavMode = "node";
+      _clearQuestMapSelection();
+      _setWorldFocus(false);
+      return;
+    }
+
+    const nodes = _getQuestMapNodes();
+    const { prev, next } = _getQuestMapWorldBtns();
+
+    // 矢印キー処理
+    if (
+      e.key === "ArrowLeft" ||
+      e.key === "ArrowRight" ||
+      e.key === "ArrowUp" ||
+      e.key === "ArrowDown"
+    ) {
+      e.preventDefault();
+
+      // ワールド選択モード
+      if (_questMapNavMode === "world") {
+        if (e.key === "ArrowLeft" && prev && !prev.disabled) {
+          prev.click();
+          _setWorldFocus(true);
+        } else if (e.key === "ArrowRight" && next && !next.disabled) {
+          next.click();
+          _setWorldFocus(true);
+        }
+
+        // 上下キーでノードモードに戻る
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          _questMapNavMode = "node";
+          _setWorldFocus(false);
+          _updateQuestMapSelection();
+        }
+
+        return;
+      }
+
+      // ノードモード：左右キーでノードを移動
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        if (nodes.length === 0) return;
+
+        let nextIdx;
+
+        if (e.key === "ArrowRight") {
+          nextIdx = (_questMapSelectedNodeIdx + 1) % nodes.length;
+        } else {
+          nextIdx =
+            (_questMapSelectedNodeIdx - 1 + nodes.length) % nodes.length;
+        }
+
+        _questMapSelectedNodeIdx = nextIdx;
+        _updateQuestMapSelection();
+        return;
+      }
+
+      // 上下キー：ノードとワールド選択モードを切り替え
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        _questMapNavMode = "world";
+        _setWorldFocus(true);
+        _clearQuestMapSelection();
+        return;
+      }
+    }
+
+    // Space / Enter で選択
+    if (e.key === " " || e.key === "Enter") {
+      if (_questMapNavMode === "world") {
+        // ワールドモードでは左右キーで切り替える
+        return;
+      }
+
+      e.preventDefault();
+
+      // 選択中のノードをクリック
+      const nodes2 = _getQuestMapNodes();
+
+      if (
+        _questMapSelectedNodeIdx >= 0 &&
+        _questMapSelectedNodeIdx < nodes2.length
+      ) {
+        const node = nodes2[_questMapSelectedNodeIdx];
+
+        if (node) {
+          node.classList.add("quest-map-node-selected");
+          node.dispatchEvent(
+            new MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+        }
+      }
+    }
+  });
+}
+
+// モジュール読み込み時に初期化
+_initQuestMapKeyboardNav();
 
 // ★星強化でレベルアップした直前/直後のクールダウン時間（再描画時に一度だけ表示する）
 let starUpgradeFlashInfo = null;
@@ -342,6 +626,8 @@ export function renderQuestMapUI(){
         const hasEndDialogue = DIALOGUE_DATA[endDialogueId] && !DIALOGUE_DATA[endDialogueId].isBranch;
         const el = document.createElement("div");
         el.classList.add("map-node");
+el.dataset.nodeId = node.id;
+el.dataset.stage = node.stage ?? "";
 
         starEl.textContent = renderStarString(starCount);
         wrapper.appendChild(starEl);
@@ -527,69 +813,7 @@ export function renderQuestMapUI(){
                 label.classList.add("cleared");
             }
             
-            el.onmouseenter = () => {
-                const stage = STAGES[node.stage];
-                if (!stage) return;
-
-                // フェーズがある場合は最初のフェーズの条件、なければトップレベルの条件を参照
-                const endConditions = stage.endConditions || (stage.phases && stage.phases[0] ? stage.phases[0].endConditions : null);
-                
-                const clearText = buildClearText(stage.clearConditions, getQuestAdjustedDefenseConfig(stage.defenseConfig));
-                const endText   = buildEndText(endConditions, stage.player, stage.defenseConfig);
-                const starText  = buildStarText(stage.star);
-
-                const rewardText = [];
-                if (node.reward) {
-                    if (node.reward.type === "slot") {
-                        rewardText.push(`スロット +${node.reward.value ?? 1}`);
-                    } else if (node.reward.type === "activeStock") {
-                        rewardText.push(`アクティブスキルストック +${node.reward.value ?? 1}`);
-                    } else {
-                        rewardText.push("報酬あり");
-                    }
-                }
-
-                const tooltipLines = [];
-                
-                // ミッションと敵バリエーションの追加
-                if (node.stage) {
-                    tooltipLines.push(`<span class="tooltip-title" style="font-size: 0.9em; color: #888;">${node.stage}</span>`);
-                    tooltipLines.push("");
-                }
-                if (stage.missionName) {
-                    tooltipLines.push(`<span class="tooltip-mission-title">${stage.missionName}</span>`);
-                    tooltipLines.push(`<span style="font-size:0.9em; color:#ddd;">${stage.missionDescription || ""}</span>`);
-                    tooltipLines.push("");
-                }
-                if (stage.enemyVariationDescription) {
-                    tooltipLines.push('<span class="tooltip-title">[エネミー構成]</span>');
-                    tooltipLines.push(stage.enemyVariationDescription);
-                    tooltipLines.push("");
-                }
-                // ★ 防衛モード: 出題ジャンルを独立セクションとして表示（クリア条件には含めない）
-                if (stage.isDefenseMode) {
-                    tooltipLines.push('<span class="tooltip-title">[出題ジャンル]</span>');
-                    tooltipLines.push(formatDefenseGenres(stage.defenseConfig?.genres));
-                    tooltipLines.push("");
-                }
-
-                tooltipLines.push(
-                    '<span class="tooltip-title">[終了条件]</span>',
-                    ...endText,
-                    "",
-                    '<span class="tooltip-title">[クリア条件]</span>',
-                    ...clearText,
-                    "",
-                    '<span class="tooltip-title">[★条件]</span>',
-                    ...starText
-                );
-
-                if (rewardText.length) {
-                    tooltipLines.push("", '<span class="tooltip-title">[報酬]</span>', ...rewardText);
-                }
-
-                showQuestTooltip(tooltipLines, el);
-            };
+            el.onmouseenter = () => _showQuestNodeHoverTooltip(node, el);
 
             el.onmouseleave = hideQuestTooltip;
 

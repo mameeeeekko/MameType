@@ -6,7 +6,7 @@
 // キャッシュバージョン
 // version.js の APP_VERSION と合わせる
 // -----------------------------------------------------
-const CACHE_NAME = "mametype-v1.1.3";
+const CACHE_NAME = "mametype-v1.1.4";
 
 // -----------------------------------------------------
 // デバッグログ（SW用）
@@ -134,6 +134,8 @@ const CORE_ASSETS = [
   "./js/enemyRenderer.js",
   "./js/enemyResult.js",
   "./js/enemyModeConfig.js",
+  "./js/enemyFontSize.js",
+  "./js/enemyDisplayMode.js",
   "./js/effectManager.js",
   "./js/defenseRenderer.js",
   "./js/defenseResult.js",

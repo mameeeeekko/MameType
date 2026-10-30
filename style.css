@@ -1,5 +1,50 @@
 
 /* =====================================================
+   クエストマップ キーボードナビゲーション選択表示
+   ===================================================== */
+.quest-map-node-selected {
+  outline: 2px solid #00ffff !important;
+  outline-offset: 2px !important;
+}
+
+.quest-map-world-focus {
+  outline: 2px solid #00ffff !important;
+  outline-offset: 2px !important;
+}
+.quest-map-world-focus .world-name-area {
+  color: #00ffff !important;
+  font-weight: bold !important;
+}
+
+.quest-map-node-desc {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  display: none;
+}
+
+
+/* =====================================================
+   メニューキーボードナビゲーションフォーカス
+   マウスホバーと同じ見た目にするため、枠線・グローは削除。
+   各ボタンの :focus で :hover と同じスタイルを適用する。
+   ===================================================== */
+.menu-nav-focus {
+  outline: none !important;
+}
+
+
+/* =====================================================
 style.css
    ・ページ全体のフォント / 背景 / 基本色
    ===================================================== */
@@ -719,13 +764,28 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   letter-spacing: 2px;
   transition: 0.3s;
 }
+/* キーボードナビゲーション中はマウス hover のハイライトを無効化（最後に触った方を優先） */
+body.menu-keyboard-nav #menu button:hover,
+body.menu-keyboard-nav #startMenu button:hover,
+body.menu-keyboard-nav #freeStartMenu button:hover,
+body.menu-keyboard-nav #questMenu button:hover {
+  background: rgba(88, 166, 255, 0.05);
+  padding-left: 20px;
+  color: #7b8892e8;
+  text-shadow: none;
+  border-left-width: 4px;
+}
 
-#menu button:hover, #startMenu button:hover, #freeStartMenu button:hover, #questMenu button:hover {
+
+
+#menu button:hover, #startMenu button:hover, #freeStartMenu button:hover, #questMenu button:hover,
+#menu button:focus, #startMenu button:focus, #freeStartMenu button:focus, #questMenu button:focus {
   background: rgba(88, 166, 255, 0.2);
   padding-left: 35px;
   color: #ffffff;
   text-shadow: 0 0 10px #fff;
   border-left-width: 8px;
+  outline: none;
 }
 
 /* フリーモード等で選択中のボタンを維持するスタイル */
@@ -2188,11 +2248,13 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
 }
 
 /* 装飾なしのまま、色のフィードバックだけ残す */
-#settings #settingsBackBtn:hover {
+#settings #settingsBackBtn:hover,
+#settings #settingsBackBtn:focus {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
   color: #ff9800;
+  outline: none;
 }
 
 #settings h2 {
@@ -2333,11 +2395,13 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   box-shadow: 0 2px 8px rgba(0,0,0,0.3); /* Subtle shadow */
 }
 
-#settings button:hover {
+#settings button:hover,
+#settings button:focus {
   background: rgba(88, 166, 255, 0.2); /* Lighter blue on hover */
   color: #fff; /* White text on hover */
   border-color: #58a6ff; /* Brighter border on hover */
   box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Stronger shadow on hover */
+  outline: none;
 }
 
 .data-btn-row {
@@ -2354,10 +2418,12 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #ffb4ae;
 }
 
-#settings .backup-reset-button:hover:not(:disabled) {
+#settings .backup-reset-button:hover:not(:disabled),
+#settings .backup-reset-button:focus:not(:disabled) {
   background: rgba(248, 81, 73, 0.25);
   border-color: #f85149;
   color: #fff;
+  outline: none;
 }
 
 #settings .backup-reset-button:disabled {
@@ -2409,8 +2475,10 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   color: #eb7e7e; /* Red text */
 }
 
-#settings button[id*="reset"]:hover {
+#settings button[id*="reset"]:hover,
+#settings button[id*="reset"]:focus {
   background: rgba(239, 68, 68, 0.3);
+  outline: none;
 }
 
 /* 戻るボタンだけ強調（旧：下部BACKボタン用。右上×に移行済みのため無効化） */
@@ -2706,10 +2774,12 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   border-radius: 8px; /* 角丸 */
 }
 
-#records .mode-buttons button:hover {
+#records .mode-buttons button:hover,
+#records .mode-buttons button:focus {
   background: rgba(88, 166, 255, 0.2); /* ホバーで少し明るく */
   color: #fff;
   border-color: #72acee;
+  outline: none;
 }
 
 #records .mode-buttons button.active {
@@ -2951,8 +3021,10 @@ html::after               { z-index: -1; }    /* 背景: ヘックスパター�
   transition: 0.15s;
 }
 
-#records-buttons button:hover {
+#records-buttons button:hover,
+#records-buttons button:focus {
   background: rgba(88, 166, 255, 0.2);
+  outline: none;
 }
 
 .records-more-btn {
@@ -7261,8 +7333,10 @@ body.win .map-label {
   color: #fff;
 }
 
-.save-modal-close-btn:hover {
+.save-modal-close-btn:hover,
+.save-modal-close-btn:focus {
   color: #ff9800;
+  outline: none;
 }
 
 /* =====================================================
@@ -9059,3 +9133,13 @@ body.win .map-label {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+.dialogue-enemy-thumb {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    margin-left: 8px;
+    vertical-align: middle;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+}
+

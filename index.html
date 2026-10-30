@@ -195,11 +195,12 @@
     <!-- 曲リスト（縦スクロールのみ・横スクロールなし） -->
     <fieldset class="music-fieldset">
       <legend>TRACKS</legend>
-      <div class="music-modal-note">曲名をクリックで再生／停止（BGM設定・音量が適用されます）</div>
+      <div class="music-modal-note">曲名をクリックで再生／一時停止（BGM設定・音量が適用されます）</div>
       <div id="musicList" class="music-list"></div>
     </fieldset>
 
     <div class="music-modal-actions">
+      <button id="musicPauseBtn" disabled>PAUSE</button>
       <button id="musicStopBtn" disabled>STOP</button>
     </div>
   </div>

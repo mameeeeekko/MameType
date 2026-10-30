@@ -14,7 +14,7 @@
 import { getBgmAssets } from "./assetsLoader.js";
 import {
     playBGM, stopBGM, ensureSound, playSE,
-    getBgmPlaybackInfo, seekBGM,
+    getBgmPlaybackInfo, seekBGM, pauseBGM, resumeBGM, isBgmPaused,
 } from "./effectManager.js";
 
 const MODAL_ID = "musicModal";
@@ -25,6 +25,7 @@ const FILL_ID = "musicProgressFill";
 const KNOB_ID = "musicProgressKnob";
 const TIME_ID = "musicProgressTime";
 const STOP_BTN_ID = "musicStopBtn";
+const PAUSE_BTN_ID = "musicPauseBtn";
 
 // 再生中のBGM名（null = 停止中）
 let currentTrack = null;
@@ -32,6 +33,11 @@ let currentTrack = null;
 let listBuilt = false;
 // name → { title, composer } の対応表（NOW PLAYING 表示用）
 const trackMap = {};
+
+// キーボード選択状態
+let selectedTrackIndex = 0;
+let selectedAction = 0; // 0: PAUSE, 1: STOP
+let selectionMode = "track"; // "track" | "action"
 
 // 進捗バーのドラッグ状態
 let dragging = false;
@@ -64,6 +70,7 @@ export function closeMusicModal() {
 
     stopProgressLoop();
     updateProgressUI();
+    clearSelectionStyles();
 }
 
 /** ミュージックモーダルを開きます。 */
@@ -79,6 +86,21 @@ export function openMusicModal() {
     if (bar) bar.classList.remove("dragging");
 
     modal.classList.remove("hidden");
+    // キーボード選択の初期化
+    const rows = getTrackRows();
+    if (rows.length) {
+        if (currentTrack) {
+            const idx = rows.findIndex(r => r.dataset.bgm === currentTrack);
+            selectedTrackIndex = idx >= 0 ? idx : 0;
+        } else {
+            selectedTrackIndex = 0;
+        }
+    }
+    selectionMode = "track";
+    selectedAction = 0;
+    clearSelectionStyles();
+    updateTrackSelection();
+
     updatePlayingHighlight();
     updateProgressUI();
     startProgressLoop();
@@ -90,6 +112,84 @@ export function openMusicModal() {
  * @param {KeyboardEvent} e
  * @returns {boolean} 処理したかどうか
  */
+// =====================================================
+// キーボード操作用の選択ヘルパー
+// =====================================================
+function getTrackRows() {
+    const list = document.getElementById(LIST_ID);
+    return list ? [...list.querySelectorAll(".music-row")] : [];
+}
+
+function updateTrackSelection() {
+    const rows = getTrackRows();
+    rows.forEach((row, i) => {
+        if (i === selectedTrackIndex) {
+            row.style.outline = "2px solid #58a6ff";
+            row.style.outlineOffset = "-2px";
+        } else {
+            row.style.outline = "";
+            row.style.outlineOffset = "";
+        }
+    });
+    if (rows[selectedTrackIndex]) {
+        rows[selectedTrackIndex].scrollIntoView({ block: "nearest" });
+    }
+}
+
+function updateActionSelection() {
+    const pauseBtn = document.getElementById(PAUSE_BTN_ID);
+    const stopBtn = document.getElementById(STOP_BTN_ID);
+    [pauseBtn, stopBtn].forEach((btn, i) => {
+        if (!btn) return;
+        if (i === selectedAction) {
+            btn.style.outline = "2px solid #58a6ff";
+            btn.style.outlineOffset = "-2px";
+        } else {
+            btn.style.outline = "";
+            btn.style.outlineOffset = "";
+        }
+    });
+}
+
+function clearSelectionStyles() {
+    getTrackRows().forEach(row => {
+        row.style.outline = "";
+        row.style.outlineOffset = "";
+    });
+    [document.getElementById(PAUSE_BTN_ID), document.getElementById(STOP_BTN_ID)].forEach(btn => {
+        if (btn) { btn.style.outline = ""; btn.style.outlineOffset = ""; }
+    });
+}
+
+function clearTrackSelection() {
+    getTrackRows().forEach(row => {
+        row.style.outline = "";
+        row.style.outlineOffset = "";
+    });
+}
+function clearActionSelection() {
+    [document.getElementById(PAUSE_BTN_ID), document.getElementById(STOP_BTN_ID)].forEach(btn => {
+        if (btn) { btn.style.outline = ""; btn.style.outlineOffset = ""; }
+    });
+}
+function activateSelectedTrack() {
+    const rows = getTrackRows();
+    const row = rows[selectedTrackIndex];
+    if (row) toggleTrack(row.dataset.bgm);
+}
+
+function activateSelectedAction() {
+    if (selectedAction === 0) {
+        if (!currentTrack) return;
+        if (isBgmPaused()) resumeBGM(); else pauseBGM();
+        updatePlayingHighlight();
+        updateProgressUI();
+    } else {
+        stopCurrentTrack();
+    }
+    try { playSE("select"); } catch (e) { /* 無視 */ }
+}
+
 export function handleMusicModalKey(e) {
     if (!isMusicModalOpen()) return false;
 
@@ -97,7 +197,73 @@ export function handleMusicModalKey(e) {
     if (key === "escape" || key === "b" || key === "m") {
         e.preventDefault();
         closeMusicModal();
+        return true;
     }
+
+    const rows = getTrackRows();
+
+    if (key === "arrowup") {
+        e.preventDefault();
+        selectionMode = "track";
+        selectedTrackIndex = Math.max(0, selectedTrackIndex - 1);
+        if (!rows.length) return true;
+        updateTrackSelection();
+        clearActionSelection();
+        return true;
+    }
+    if (key === "arrowdown") {
+        e.preventDefault();
+        selectionMode = "track";
+        selectedTrackIndex = Math.min(Math.max(0, rows.length - 1), selectedTrackIndex + 1);
+        if (!rows.length) return true;
+        updateTrackSelection();
+        clearActionSelection();
+        return true;
+    }
+    if (key === "arrowleft") {
+        e.preventDefault();
+        selectionMode = "action";
+        selectedAction = Math.max(0, selectedAction - 1);
+        updateActionSelection();
+        clearTrackSelection();
+        return true;
+    }
+    if (key === "arrowright") {
+        e.preventDefault();
+        selectionMode = "action";
+        selectedAction = Math.min(1, selectedAction + 1);
+        updateActionSelection();
+        clearTrackSelection();
+        return true;
+    }
+
+    if (key === " " || key === "enter") {
+        e.preventDefault();
+        if (selectionMode === "track") {
+            activateSelectedTrack();
+        } else {
+            activateSelectedAction();
+        }
+        updatePlayingHighlight();
+        updateProgressUI();
+        return true;
+    }
+
+    if (key === "p") {
+        e.preventDefault();
+        if (!currentTrack) return true;
+        if (isBgmPaused()) resumeBGM(); else pauseBGM();
+        updatePlayingHighlight();
+        updateProgressUI();
+        try { playSE("select"); } catch (e) { /* 無視 */ }
+        return true;
+    }
+    if (key === "s") {
+        e.preventDefault();
+        stopCurrentTrack();
+        return true;
+    }
+
     // モーダル表示中はメニューのキー操作（BACK 等）へ漏らさない
     return true;
 }
@@ -131,6 +297,12 @@ function buildListIfNeeded() {
         `;
 
         row.addEventListener("click", () => {
+            const rows = getTrackRows();
+            const idx = rows.indexOf(row);
+            if (idx >= 0) selectedTrackIndex = idx;
+            selectionMode = "track";
+            clearActionSelection();
+            updateTrackSelection();
             toggleTrack(track.name);
         });
 
@@ -156,16 +328,23 @@ function getTrackLabel(name) {
  */
 async function toggleTrack(name) {
     if (currentTrack === name) {
-        stopCurrentTrack();
+        // 同じ曲 → 一時停止 / 再開を切り替え
+        if (isBgmPaused()) {
+            resumeBGM();
+        } else {
+            pauseBGM();
+        }
+        updatePlayingHighlight();
+        updateProgressUI();
         return;
     }
 
-    // ★v1.0.42 以降は「鳴らす直前に読み込む」方式のため、先に取得してから再生する
+    // 別の曲 → 完全停止してから再生
+    stopCurrentTrack();
+
     await ensureSound(name);
     playBGM(name, 1.0);
 
-    // BGMトグルOFFなどで実際には鳴っていない場合も選択状態としては扱う
-    //（進捗バーは getBgmPlaybackInfo() が null のとき「待機」表示になる）
     currentTrack = name;
     updatePlayingHighlight();
     updateProgressUI();
@@ -189,14 +368,23 @@ function updatePlayingHighlight() {
     if (!list) return;
 
     list.querySelectorAll(".music-row").forEach(row => {
-        const isPlaying = !!currentTrack && row.dataset.bgm === currentTrack;
-        row.classList.toggle("playing", isPlaying);
+        const isCurrent = !!currentTrack && row.dataset.bgm === currentTrack;
+        const playing = isCurrent && !isBgmPaused();
+        const paused = isCurrent && isBgmPaused();
+        row.classList.toggle("playing", playing);
+        row.classList.toggle("paused", paused);
         const icon = row.querySelector(".music-row-icon");
-        if (icon) icon.textContent = isPlaying ? "■" : "▶";
+        if (icon) icon.textContent = isCurrent ? (isBgmPaused() ? "▶" : "⏸") : "▶";
     });
 
     const stopBtn = document.getElementById(STOP_BTN_ID);
     if (stopBtn) stopBtn.disabled = !currentTrack;
+
+    const pauseBtn = document.getElementById(PAUSE_BTN_ID);
+    if (pauseBtn) {
+        pauseBtn.disabled = !currentTrack;
+        pauseBtn.textContent = isBgmPaused() ? "RESUME" : "PAUSE";
+    }
 }
 
 // =====================================================
@@ -239,6 +427,7 @@ function updateProgressUI() {
     title.textContent = label.composer
         ? `${label.title} / ${label.composer}`
         : label.title;
+    if (isBgmPaused()) title.textContent += "（一時停止中）";
 
     // ドラッグ中は押した位置をプレビュー表示する
     const ratio = dragging ? dragRatio : (info.elapsed / info.duration);
@@ -349,6 +538,19 @@ export function initMusicPlayer() {
     const stopBtn = document.getElementById(STOP_BTN_ID);
     stopBtn?.addEventListener("click", () => {
         stopCurrentTrack();
+    });
+
+    const pauseBtn = document.getElementById(PAUSE_BTN_ID);
+    pauseBtn?.addEventListener("click", () => {
+        if (!currentTrack) return;
+        if (isBgmPaused()) {
+            resumeBGM();
+        } else {
+            pauseBGM();
+        }
+        updatePlayingHighlight();
+        updateProgressUI();
+        try { playSE("select"); } catch (e) { /* 無視 */ }
     });
 
     initProgressSeek();

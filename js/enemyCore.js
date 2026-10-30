@@ -842,19 +842,35 @@ function gameLoopImpl(timestamp) {
 
             enemy.knockbackTime++;
 
-            const t =
-                enemy.knockbackTime /
-                enemy.knockbackDuration;
+            // イーズアウト：最初は速く、徐々に減速
+            const rawT = enemy.knockbackTime / enemy.knockbackDuration;
+            const t = 1 - Math.pow(1 - rawT, 3);
+
+            // 到達時に軽くオーバーシュートしてバウンド（自然な停止）
+            let easedT = t;
+            if (rawT > 0.9) {
+                const over = (rawT - 0.9) / 0.1; // 0→1
+                easedT = t + Math.sin(over * Math.PI) * 0.06; // ±6% のオーバーシュート
+            }
+
+            // ノックバック方向への回転（飛ばされる方向に回る）
+            const dx = enemy.knockbackTargetX - enemy.knockbackStartX;
+            const dy = enemy.knockbackTargetY - enemy.knockbackStartY;
+            const targetAngle = Math.atan2(dy, dx);
+            // 回転を徐々に戻す（ノックバック終了時に元の角度へ）
+            const rotProgress = rawT;
+            const currentRot = enemy.rotation + (targetAngle - enemy.rotation) * rotProgress * 0.5;
+            enemy.rotation = currentRot;
 
             enemy.x =
                 enemy.knockbackStartX +
                 (enemy.knockbackTargetX -
-                enemy.knockbackStartX) * t;
+                enemy.knockbackStartX) * easedT;
 
             enemy.y =
                 enemy.knockbackStartY +
                 (enemy.knockbackTargetY -
-                enemy.knockbackStartY) * t;
+                enemy.knockbackStartY) * easedT;
 
             if (enemy.knockbackTime >= enemy.knockbackDuration) {
 
@@ -1907,6 +1923,10 @@ export function handleEnemyKey(e) {
 
             // ヒット演出
             playHitEffect(lockedEnemy.x, lockedEnemy.y);
+
+            // ダメージを受けた時のシェイク演出（1文字入力毎）
+            const shakeTarget = lockedEnemy.ref || lockedEnemy;
+            shakeTarget.damageShakeTimer = 12;
 
             // チェイン開始（保険）
             if (!stats.chainActive) {

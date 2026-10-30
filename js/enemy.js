@@ -1,7 +1,7 @@
 // enemy.js
 
 import { getUISafeMinEnemyY, markDamageTaken, onEnemyRemovedByDamage, killEnemy } from "./enemyCore.js";
-import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect,
+import { playDamageSound, spawnHitWave, spawnDamagePopup, spawnItemSkillEffect, spawnItemHealOrbEffect,
     spawnLaserEffect, spawnPlayerDamageEffect, spawnPlayerNegateEffect,
     spawnTurretLaserEffect, spawnTurretDamageEffect, spawnTurretGuardEffect,
     playSE} from "./effectManager.js";
@@ -357,6 +357,9 @@ export class Enemy {
         this.textOffsetY = 0;       // 現在の描画オフセット（補間値・負=上方向）
         this.targetTextOffsetY = 0; // 目標オフセット（enemyRenderer.updateEnemyTextOffsets が毎フレーム設定）
 
+        // ダメージを受けた時の震え演出（フレーム数カウントダウン）
+        this.damageShakeTimer = 0;
+
     }
 
     /**
@@ -397,6 +400,11 @@ export class Enemy {
             }
 
             return true;
+        }
+
+        // ダメージ震えタイマーのカウントダウン
+        if (this.damageShakeTimer > 0) {
+            this.damageShakeTimer -= deltaTime * 60;
         }
 
         // ★ビット連動ボス: 撃破されたビットの復活管理（毎フレーム）
@@ -1405,6 +1413,18 @@ function applyItemEffect(type, player, state = {}, enemies = [], pickupPos = nul
 
                 x: player.x,
                 y: player.y
+            });
+
+            // アイテム取得位置からプレイヤーへ回復オーブを飛ばす（従来エフェクトはそのまま維持）
+            spawnItemHealOrbEffect({
+                sx: pickupX ?? player.x,
+                sy: pickupY ?? player.y,
+                tx: player.x,
+                ty: player.y,
+                level:
+                    type.value === "full"
+                        ? "large"
+                        : "medium"
             });
 
             if(type.value === "full"){

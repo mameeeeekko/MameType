@@ -1,6 +1,6 @@
 //questSkills.js
 import { killEnemy } from "./enemyCore.js";
-import { spawnItemSkillEffect } from "./effectManager.js";
+import { spawnItemSkillEffect, spawnSkillCastEffect } from "./effectManager.js";
 
 
 export function getSkillById(skillId) {
@@ -132,6 +132,17 @@ export function activateSkill(skillId, gameState, enemies = []) {
             x: gameState.player.x,
             y: gameState.player.y
         });
+
+        // プレイヤー発動エフェクト（キャスト）
+        spawnSkillCastEffect({
+            type: "heal",
+            x: gameState.player.x,
+            y: gameState.player.y,
+            level:
+                skill.value >= 100 ? "large" :
+                skill.value >= 60  ? "medium" :
+                "small"
+        });
     }
 
     else if (skill.type === "freeze") {
@@ -153,6 +164,17 @@ export function activateSkill(skillId, gameState, enemies = []) {
                     e => e && !e.isDead && !e.isItem
                 )
         });
+
+        // プレイヤー発動エフェクト（キャスト）
+        spawnSkillCastEffect({
+            type: "freeze",
+            x: gameState.player.x,
+            y: gameState.player.y,
+            level:
+                skill.value >= 5
+                    ? "large"
+                    : "medium"
+        });
     }
 
     else if (skill.type === "knockback") {
@@ -166,6 +188,14 @@ export function activateSkill(skillId, gameState, enemies = []) {
 
             x: gameState.player.x,
             y: gameState.player.y
+        });
+
+        // プレイヤー発動エフェクト（キャスト）
+        spawnSkillCastEffect({
+            type: "knockback",
+            x: gameState.player.x,
+            y: gameState.player.y,
+            level: "large"
         });
     }
 
@@ -183,6 +213,17 @@ export function activateSkill(skillId, gameState, enemies = []) {
             y: player.y,
 
             value: skill.value // ← 秒そのまま渡す（ms変換は内部でやる想定）
+        });
+
+        // プレイヤー発動エフェクト（キャスト）
+        spawnSkillCastEffect({
+            type: "invincible",
+            x: player.x,
+            y: player.y,
+            level:
+                skillId.includes("short") ? "small" :
+                skillId.includes("medium") ? "medium" :
+                "large"
         });
     }
     
@@ -295,6 +336,19 @@ const SKILL_HANDLERS = {
                     ? "medium"
                     : "small",
         targets
+    });
+
+    // プレイヤー発動エフェクト（キャスト）
+    spawnSkillCastEffect({
+        type: "kill",
+        x: state.player.x,
+        y: state.player.y,
+        level:
+            targets.length >= 10
+                ? "large"
+                : targets.length >= 5
+                    ? "medium"
+                    : "small"
     });
 
     targets.forEach(enemy => {

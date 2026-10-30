@@ -9,7 +9,7 @@ import { getChainMultiplier } from "./enemyCore.js";
 import { spawnComboTierUpEffect, playComboTierUpSound } from "./effectManager.js";
 import { getEquippedActiveSkills, COMBO_TIERS, OVERDRIVE_COMBO, OVERDRIVE_SPEED, } from "./questPlayerStats.js";
 import { ACTIVE_SKILLS } from "./questSkills.js";
-import { getItemDescription } from "./enemy.js";
+import { getItemDescription, ItemTypes, EnemyTypes } from "./enemy.js";
 import { renderEnemyBehaviorEffect,renderFreezeAura } from "./effectManager.js";
 import { images } from "./assetsLoader.js";
 import { defineShapePath } from "./shapeDefinitions.js";
@@ -545,6 +545,15 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, layer = "all"){
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic"; // ←初期化
 
+    // ダメージを受けた時のシェイク（ランダムオフセット）
+    let shakeOffsetX = 0;
+    let shakeOffsetY = 0;
+    if (enemy.damageShakeTimer > 0) {
+        const shakeStrength = Math.min(12, enemy.damageShakeTimer) * 0.8;
+        shakeOffsetX = (Math.random() - 0.5) * shakeStrength;
+        shakeOffsetY = (Math.random() - 0.5) * shakeStrength;
+    }
+
     // ★ビット: フェードイン適用
     if (enemy.isBit && enemy.spawnAlpha < 1) {
         ctx.globalAlpha = enemy.spawnAlpha;
@@ -565,7 +574,7 @@ function drawEnemy(ctx, enemy, lockedEnemy, candidateEnemies, layer = "all"){
     // =====================
     // 敵の見た目描画（shape + pattern）
     // =====================
-    drawEnemyBody(ctx, enemy, enemyColor);
+    drawEnemyBody(ctx, enemy, enemyColor, shakeOffsetX, shakeOffsetY);
 
     // 固定砲台の予兆だけは本体の上へ描画する。
     if (deferBehaviorEffect) {
@@ -1029,7 +1038,7 @@ function drawBitLinks(ctx, enemy) {
 // ===============================
 // 敵の本体描画（形＋模様）
 // ===============================
-function drawEnemyBody(ctx, enemy, color){
+function drawEnemyBody(ctx, enemy, color, shakeOffsetX = 0, shakeOffsetY = 0){
 
     const { x, y, type } = enemy;
 
@@ -1047,14 +1056,14 @@ function drawEnemyBody(ctx, enemy, color){
     // =========================
     // 少し回転（動きが出る）
     // =========================
-    ctx.translate(x, y);
+    ctx.translate(x + shakeOffsetX, y + shakeOffsetY);
     // 通常形状は従来どおり回転を使う。固定砲台は左右対称の据置型なので回転させない。
     if (type.shape === "hexagon" || enemy.isFixed) {
         ctx.rotate(0);
     } else {
         ctx.rotate(enemy.rotation);
     }
-    ctx.translate(-x, -y);
+    ctx.translate(-x - shakeOffsetX, -y - shakeOffsetY);
 
     // =========================
     // ① 形（ベース）
@@ -1068,6 +1077,141 @@ function drawEnemyBody(ctx, enemy, color){
 
     ctx.restore();
 }
+export function getEnemyColorImage(colorKey) {
+    const key = String(colorKey || "").toUpperCase();
+    if (!getEnemyColorImage._cache) getEnemyColorImage._cache = {};
+    if (getEnemyColorImage._cache[key]) return getEnemyColorImage._cache[key];
+
+    const colorMap = {
+        RED: "#ff0055",
+        GREEN: "#00ff88",
+        YELLOW: "#ffea00",
+        PINK: "#ff00ff",
+        PURPLE: "#aa00ff",
+        BLUE: "#00ccff",
+        GRAY: "#a4a4a4"
+    };
+    const color = colorMap[key] || "#a4a4a4";
+
+    const size = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "";
+
+    const enemy = {
+        x: size / 2,
+        y: size / 2,
+        rotation: 0,
+        type: { shape: "circle", pattern: null, size: 18, color }
+    };
+
+    try {
+        drawEnemyBody(ctx, enemy, color, 0, 0);
+    } catch (e) {
+        console.warn("[getEnemyColorImage] draw failed", e);
+    }
+
+    const url = canvas.toDataURL("image/png");
+    getEnemyColorImage._cache[key] = url;
+    return url;
+}
+
+const itemTypeRepresentativeMap = {
+    HEAL: "HEAL_SMALL",
+    RECOVERY: "HEAL_SMALL",
+    ATTACK: "KILL_SMALL",
+    KILL: "KILL_SMALL",
+    SUPPORT: "FREEZE_SMALL",
+    FREEZE: "FREEZE_SMALL",
+    COOLDOWN: "COOLDOWN_SMALL",
+    BOOST: "COOLDOWN_SMALL",
+};
+
+/**
+ * アイテム種別（回復/攻撃/補助）の見た目をオフスクリーンCanvasに描画し、
+ * キャッシュされた data URL を返す（ダイアログ埋め込み用）。
+ */
+export function getItemTypeImage(typeKey) {
+    const key = String(typeKey || "").toUpperCase();
+    if (!getItemTypeImage._cache) getItemTypeImage._cache = {};
+    if (getItemTypeImage._cache[key]) return getItemTypeImage._cache[key];
+
+    const repKey = itemTypeRepresentativeMap[key] || "HEAL_SMALL";
+    const type = (ItemTypes && ItemTypes[repKey]) || null;
+
+    const size = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+
+    if (ctx && type) {
+        const enemy = {
+            x: size / 2,
+            y: size / 2,
+            rotation: 0,
+            type,
+        };
+        try {
+            drawEnemyBody(ctx, enemy, type.color, 0, 0);
+        } catch (e) {
+            console.warn("[getItemTypeImage] draw failed", e);
+        }
+    }
+    const url = canvas.toDataURL("image/png");
+    getItemTypeImage._cache[key] = url;
+    return url;
+}
+
+    const enemyTypeRepresentativeMap = {
+    LASER: "FIXED_TURRET_LASER_T3",
+    LASER_TURRET: "FIXED_TURRET_LASER_T3",
+    TURRET_LASER: "FIXED_TURRET_LASER_T3",
+    BULLET: "FIXED_TURRET_BULLET_T3",
+    BULLET_TURRET: "FIXED_TURRET_BULLET_T3",
+    TURRET_BULLET: "FIXED_TURRET_BULLET_T3",
+};
+
+/**
+ * 敵タイプ（固定砲台など）の見た目をオフスクリーンCanvasに描画し、
+ * キャッシュされた data URL を返す（ダイアログ埋め込み用）。
+ */
+export function getEnemyTypeImage(typeKey) {
+    const key = String(typeKey || "").toUpperCase();
+    if (!getEnemyTypeImage._cache) getEnemyTypeImage._cache = {};
+    if (getEnemyTypeImage._cache[key]) return getEnemyTypeImage._cache[key];
+
+    const repKey = enemyTypeRepresentativeMap[key] || key;
+    const type = (EnemyTypes && EnemyTypes[repKey]) || null;
+
+    const size = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+
+    if (ctx && type) {
+        const enemy = {
+            x: size / 2,
+            y: size / 2,
+            rotation: 0,
+            type,
+        };
+        try {
+            drawEnemyBody(ctx, enemy, type.color, 0, 0);
+        } catch (e) {
+            console.warn("[getEnemyTypeImage] draw failed", e);
+        }
+    }
+
+    const url = canvas.toDataURL("image/png");
+    getEnemyTypeImage._cache[key] = url;
+    return url;
+}
+
+
 
 // ===============================
 // 形を描く

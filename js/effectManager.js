@@ -44,6 +44,9 @@ let currentBgmName = null; // 現在再生中のBGM名（フェード切り替�
 // ★EXTRA CLEAR 特典：ミュージックプレイヤー用の再生位置情報
 let bgmStartedAt = 0;   // 再生（またはシーク）を開始した AudioContext 時刻
 let bgmStartOffset = 0; // 再生開始位置（秒。シーク対応用）
+// ★ミュージックプレイヤー：一時停止状態
+let bgmPaused = false;
+let bgmPausedOffset = 0;
 
 // ★ BGMフェード管理（古いタイマーの暴発防止）
 let bgmRequestId = 0;        // BGM操作の世代管理（新しい操作で古いタイマーを無効化）
@@ -993,6 +996,8 @@ export function stopBGM(){
     // ★EXTRA CLEAR 特典：再生位置情報もリセット
     bgmStartedAt = 0;
     bgmStartOffset = 0;
+    bgmPaused = false;
+    bgmPausedOffset = 0;
 }
 
 // =====================================================
@@ -1009,7 +1014,7 @@ export function stopBGM(){
  * @returns {{name: string, duration: number, elapsed: number}|null} 再生していない場合は null
  */
 export function getBgmPlaybackInfo() {
-    if (!bgmSource || !currentBgmName || bgmStartedAt <= 0) return null;
+    if (!currentBgmName) return null;
 
     const ctx = getAudioContext();
     if (!ctx) return null;
@@ -1017,6 +1022,12 @@ export function getBgmPlaybackInfo() {
     const buffer = buffers[currentBgmName];
     const duration = buffer?.duration ?? 0;
     if (!duration || duration <= 0) return null;
+
+    if (bgmPaused) {
+        return { name: currentBgmName, duration, elapsed: bgmPausedOffset };
+    }
+
+    if (!bgmSource || bgmStartedAt <= 0) return null;
 
     const raw = bgmStartOffset + (ctx.currentTime - bgmStartedAt);
     const elapsed = ((raw % duration) + duration) % duration;
@@ -1066,6 +1077,85 @@ export function seekBGM(offsetSec = 0) {
     bgmStartedAt = ctx.currentTime;
     bgmStartOffset = offset;
     return true;
+}
+
+/**
+ * 現在再生中のBGMを一時停止します（位置を保持）。
+ * @returns {boolean} 一時停止できたかどうか
+ */
+export function pauseBGM() {
+    if (bgmPaused || !currentBgmName || !bgmSource) return false;
+    if (!isBgmOn()) return false;
+
+    const info = getBgmPlaybackInfo();
+    const offset = info ? info.elapsed : bgmStartOffset;
+    bgmPausedOffset = offset;
+
+    try { bgmSource.stop(); } catch (e) { /* 無視 */ }
+    try { bgmSource.disconnect(); } catch (e) { /* 無視 */ }
+    bgmSource = null;
+    // bgmSourceGain は保持（再開時に再利用）
+
+    bgmPaused = true;
+    bgmStartedAt = 0;
+    bgmStartOffset = offset;
+    return true;
+}
+
+/**
+ * 一時停止中のBGMを再開します。
+ * @returns {boolean} 再開できたかどうか
+ */
+export function resumeBGM() {
+    if (!bgmPaused || !currentBgmName) return false;
+    if (!isBgmOn()) return false;
+
+    const ctx = getAudioContext();
+    if (!ctx) return false;
+
+    const buffer = buffers[currentBgmName];
+    if (!buffer) return false;
+
+    if (ctx.state !== "running") ctx.resume();
+
+    // ゲインが無ければ再生成（音量はメタデータ既定）
+    let gain = bgmSourceGain;
+    if (!gain) {
+        gain = ctx.createGain();
+        const individualVolume = soundMeta[currentBgmName]?.volume ?? 1.0;
+        gain.gain.value = 1.0 * individualVolume;
+        gain.connect(bgmGain);
+        bgmSourceGain = gain;
+    }
+
+    // 既存 source があれば停止
+    if (bgmSource) {
+        try { bgmSource.stop(); } catch (e) { /* 無視 */ }
+        try { bgmSource.disconnect(); } catch (e) { /* 無視 */ }
+        bgmSource = null;
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(gain);
+
+    source.start(0, bgmPausedOffset);
+
+    bgmSource = source;
+    bgmStartedAt = ctx.currentTime;
+    bgmStartOffset = bgmPausedOffset;
+    bgmPaused = false;
+    bgmPausedOffset = 0;
+    return true;
+}
+
+/**
+ * BGM が一時停止中かどうか。
+ * @returns {boolean}
+ */
+export function isBgmPaused() {
+    return bgmPaused;
 }
 
 /**
@@ -3884,6 +3974,246 @@ function spawnSkillReadyEffect({ x, y, level = "medium" }) {
 }
 
 // ======================================
+// SKILL : CAST（プレイヤー発動エフェクト）
+// スキル発動時にプレイヤーを中心に出す演出
+// source:"skill" の各スキルタイプに対応
+// ======================================
+export function spawnSkillCastEffect({ type, x, y, level = "medium" }) {
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
+    const isLarge = level === "large";
+
+    // ======================================
+    // kill：赤系・放射光バースト＋同心リング＋放射スパーク
+    // ======================================
+    if (type === "kill") {
+
+        // 中心フラッシュ（赤〜暗紅）
+        itemSkillEffects.push({
+            type: "skill_cast_kill_flash",
+            x, y,
+            maxRadius: isLarge ? 70 : 50,
+            life: 14,
+            maxLife: 14
+        });
+
+        // 同心リング2段（赤〜暗紅）
+        itemSkillEffects.push({
+            type: "skill_cast_kill_ring",
+            x, y,
+            radius: 16,
+            maxRadius: isLarge ? 100 : 70,
+            color: "255, 60, 60",
+            life: 26,
+            maxLife: 26,
+            delay: 0
+        });
+        itemSkillEffects.push({
+            type: "skill_cast_kill_ring",
+            x, y,
+            radius: 16,
+            maxRadius: isLarge ? 60 : 45,
+            color: "180, 40, 40",
+            life: 24,
+            maxLife: 24,
+            delay: 6
+        });
+
+        // 放射スパーク（赤）
+        const killSparkTotal = Math.max(6, scaledParticleCount(isLarge ? 16 : 12));
+        for (let i = 0; i < killSparkTotal; i++) {
+            const angle =
+                (Math.PI * 2 * i) / killSparkTotal +
+                (Math.random() - 0.5) * 0.35;
+            const speed = 2.6 + Math.random() * 2.4 + (isLarge ? 1.2 : 0);
+            const life = 22 + Math.random() * 8;
+            itemSkillEffects.push({
+                type: "skill_cast_kill_spark",
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 1.6 + Math.random() * 1.8,
+                color: i % 2 === 0 ? "#ff6b6b" : "#ff4444",
+                life,
+                maxLife: life
+            });
+        }
+    }
+
+    // ======================================
+    // heal：緑回復リング（2段）＋上方へ舞う光の粒子
+    // ======================================
+    else if (type === "heal") {
+
+        itemSkillEffects.push({
+            type: "skill_cast_heal_ring",
+            x, y,
+            radius: 16,
+            maxRadius: isLarge ? 100 : 70,
+            color: "134, 239, 172",
+            life: 26,
+            maxLife: 26,
+            delay: 0
+        });
+        itemSkillEffects.push({
+            type: "skill_cast_heal_ring",
+            x, y,
+            radius: 16,
+            maxRadius: isLarge ? 70 : 50,
+            color: "79, 255, 147",
+            life: 24,
+            maxLife: 24,
+            delay: 6
+        });
+
+        // 上方へ舞う粒子
+        const healParticleCount = Math.max(6, scaledParticleCount(isLarge ? 20 : 14));
+        for (let i = 0; i < healParticleCount; i++) {
+            const angle = (Math.random() - 0.5) * 0.8 - Math.PI / 2;
+            const speed = 1.5 + Math.random() * 2.5;
+            itemSkillEffects.push({
+                type: "skill_cast_heal_particle",
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 1,
+                radius: 2 + Math.random() * 3,
+                color: "#a7f3d0",
+                life: 30 + Math.random() * 20,
+                maxLife: 50
+            });
+        }
+    }
+
+    // ======================================
+    // freeze：青白い氷結リング＋雪の結晶パーティクル
+    // ======================================
+    else if (type === "freeze") {
+
+        itemSkillEffects.push({
+            type: "skill_cast_freeze_ring",
+            x, y,
+            radius: 16,
+            maxRadius: isLarge ? 110 : 80,
+            color: "165, 243, 252",
+            life: 28,
+            maxLife: 28,
+            delay: 0
+        });
+
+        // 雪の結晶パーティクル
+        const flakeCount = Math.max(6, scaledParticleCount(isLarge ? 24 : 16));
+        for (let i = 0; i < flakeCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 0.5 + Math.random() * 1.5;
+            itemSkillEffects.push({
+                type: "skill_cast_freeze_flake",
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 0.5,
+                radius: 1.5 + Math.random() * 2,
+                color: "#e0f2fe",
+                life: 40 + Math.random() * 20,
+                maxLife: 60
+            });
+        }
+    }
+
+    // ======================================
+    // knockback：衝撃波リング＋放射ストリーク線
+    // ======================================
+    else if (type === "knockback") {
+
+        itemSkillEffects.push({
+            type: "skill_cast_knockback_wave",
+            x, y,
+            radius: 20,
+            maxRadius: isLarge ? 400 : 300,
+            life: 24,
+            maxLife: 24
+        });
+
+        // 放射ストリーク
+        const streakCount = Math.max(8, scaledParticleCount(isLarge ? 24 : 16));
+        for (let i = 0; i < streakCount; i++) {
+            const angle = (Math.PI * 2 * i) / streakCount;
+            const speed = 4 + Math.random() * 4;
+            itemSkillEffects.push({
+                type: "skill_cast_knockback_streak",
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                length: 10 + Math.random() * 20,
+                color: "#e5e7eb",
+                life: 14,
+                maxLife: 14
+            });
+        }
+    }
+
+    // ======================================
+    // invincible：バリア展開の同心リング（青）
+    // ======================================
+    else if (type === "invincible") {
+
+        itemSkillEffects.push({
+            type: "skill_cast_invincible_ripple",
+            x, y,
+            radius: 16,
+            maxRadius: isLarge ? 110 : 85,
+            color: "80, 180, 255",
+            life: 26,
+            maxLife: 26,
+            delay: 0
+        });
+        itemSkillEffects.push({
+            type: "skill_cast_invincible_ripple",
+            x, y,
+            radius: 16,
+            maxRadius: isLarge ? 70 : 55,
+            color: "160, 210, 255",
+            life: 24,
+            maxLife: 24,
+            delay: 6
+        });
+    }
+
+    // ======================================
+    // revive：白光バースト＋放射スパーク（金）
+    // ======================================
+    else if (type === "revive") {
+
+        itemSkillEffects.push({
+            type: "skill_cast_revive_flash",
+            x, y,
+            maxRadius: isLarge ? 80 : 60,
+            life: 14,
+            maxLife: 14
+        });
+
+        const reviveSparkTotal = Math.max(8, scaledParticleCount(isLarge ? 18 : 12));
+        for (let i = 0; i < reviveSparkTotal; i++) {
+            const angle =
+                (Math.PI * 2 * i) / reviveSparkTotal +
+                (Math.random() - 0.5) * 0.35;
+            const speed = 2.6 + Math.random() * 2.4 + (isLarge ? 1.2 : 0);
+            const life = 22 + Math.random() * 8;
+            itemSkillEffects.push({
+                type: "skill_cast_revive_spark",
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 1.6 + Math.random() * 1.8,
+                color: i % 2 === 0 ? "#fde047" : "#fbbf24",
+                life,
+                maxLife: life
+            });
+        }
+    }
+
+}
+
+// ======================================
 // SOUND
 // ======================================
 
@@ -4163,6 +4493,115 @@ function spawnItemHealEffect({
 
             life: 40,
             maxLife: 40
+        });
+    }
+}
+
+// ======================================
+// ITEM : HEAL ORB
+// クールダウンアイテムのように、一つの球が
+// アイテム位置からプレイヤーへ飛んでいく
+// ======================================
+export function spawnItemHealOrbEffect({
+    sx,
+    sy,
+    tx,
+    ty,
+    level = "small"
+}) {
+    if (!Number.isFinite(sx) || !Number.isFinite(sy) ||
+        !Number.isFinite(tx) || !Number.isFinite(ty)) return;
+
+    const flightFrames = 36; // 約0.6秒（60fps基準）
+
+    const orbRadius =
+        level === "small" ? 6 :
+        level === "large" ? 10 :
+        8;
+
+    // 複数玉は少しずつずらして弧を変える（小→1個、中→2個、大→3個）
+    const orbCount =
+        level === "small" ? 1 :
+        level === "large" ? 3 :
+        2;
+
+    for (let i = 0; i < orbCount; i++) {
+        const spread =
+            (i - (orbCount - 1) / 2) * 24;
+
+        itemSkillEffects.push({
+
+            type: "item_heal_orb",
+
+            // ベジェ制御用
+            sx: sx + (Math.random() - 0.5) * 12,
+            sy: sy + (Math.random() - 0.5) * 12,
+            cx: (sx + tx) / 2 + spread,
+            cy: Math.min(sy, ty) - 80 - Math.random() * 30,
+            tx,
+            ty,
+
+            x: sx,
+            y: sy,
+
+            radius: orbRadius + (Math.random() - 0.5) * 2,
+
+            delay: i * 5,
+            t: 0,
+            duration: flightFrames + i * 3,
+            arriveLevel: level,
+
+            trailTick: 0,
+
+            life: flightFrames + i * 3 + 30,
+            maxLife: flightFrames + i * 3 + 30
+        });
+    }
+}
+
+// 回復オーブ到着時のバースト（緑色）
+function spawnHealArriveBurst(x, y, level = "small") {
+
+    // 到着時のリング拡散
+    itemSkillEffects.push({
+
+        type: "item_heal_arrive",
+
+        x,
+        y,
+
+        radius: 6,
+        maxRadius: level === "large" ? 64 : 44,
+
+        life: 18,
+        maxLife: 18
+    });
+
+    // 到着時のキラキラ
+    const sparkCount =
+        level === "small" ? 6 :
+        level === "large" ? 16 :
+        10;
+
+    for (let i = 0; i < sparkCount; i++) {
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 3.5;
+
+        itemSkillEffects.push({
+
+            type: "item_heal_spark",
+
+            x,
+            y,
+
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+
+            radius: 1.5 + Math.random() * 2.5,
+
+            life: 20 + Math.random() * 10,
+            maxLife: 30
         });
     }
 }
@@ -4672,6 +5111,156 @@ export function renderItemSkillEffects(ctx, deltaTime = 1 / 60) {
                 Math.PI * 2
             );
             ctx.fill();
+        }
+
+        // ======================================
+        // Item Heal Orb（取得場所→プレイヤーへ飛ぶ緑の光玉）
+        // ======================================
+        else if (e.type === "item_heal_orb") {
+
+            // 遅延中はlifeを減らさず待機
+            if ((e.delay || 0) > 0) {
+                e.life += scale;
+                e.delay -= scale;
+                e.x = e.sx;
+                e.y = e.sy;
+            } else {
+                e.t = Math.min((e.t || 0) + scale, e.duration || 36);
+                const p = Math.min(1, (e.t || 0) / (e.duration || 36));
+                const ease = p * p * (3 - 2 * p);
+                const easeIn = ease * ease;
+                const inv = 1 - easeIn;
+
+                e.x =
+                    inv * inv * e.sx +
+                    2 * inv * easeIn * e.cx +
+                    easeIn * easeIn * e.tx;
+                e.y =
+                    inv * inv * e.sy +
+                    2 * inv * easeIn * e.cy +
+                    easeIn * easeIn * e.ty;
+
+                // 軌跡を残す
+                e.trailTick = (e.trailTick || 0) + scale;
+                if (e.trailTick >= 2) {
+                    e.trailTick = 0;
+                    itemSkillEffects.push({
+                        type: "item_heal_trail",
+                        x: e.x + (Math.random() - 0.5) * 6,
+                        y: e.y + (Math.random() - 0.5) * 6,
+                        radius: (e.radius || 8) * 0.55,
+                        life: 16,
+                        maxLife: 16
+                    });
+                }
+
+                // 到着したらバーストを出して消える
+                if (p >= 1) {
+                    spawnHealArriveBurst(e.tx, e.ty, e.arriveLevel || "medium");
+                    try {
+                        playTone(1560, 0.06, "triangle", 0.12);
+                        setTimeout(() => playTone(2080, 0.07, "sine", 0.10), 35);
+                    } catch (err) { /* 音が出なくても演出は続行 */ }
+                    e.life = 0;
+                }
+            }
+
+            // 本体の緑の光玉（外側グロー＋内側コアの二重描画）
+            if ((e.delay || 0) <= 0 && e.life > 0) {
+                ctx.globalAlpha = 1;
+                const orbR = e.radius || 8;
+                ctx.globalCompositeOperation = "lighter";
+
+                const glow = ctx.createRadialGradient(
+                    e.x, e.y, 0,
+                    e.x, e.y, orbR * 2.2
+                );
+                glow.addColorStop(0, "rgba(134,239,172,0.95)");
+                glow.addColorStop(0.35, "rgba(52,211,153,0.75)");
+                glow.addColorStop(1, "rgba(52,211,153,0)");
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, orbR * 2.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                const core = ctx.createRadialGradient(
+                    e.x, e.y, 0,
+                    e.x, e.y, orbR
+                );
+                core.addColorStop(0, "#ffffff");
+                core.addColorStop(0.45, "#d1fae5");
+                core.addColorStop(1, "#34d399");
+                ctx.fillStyle = core;
+                ctx.shadowBlur = 18;
+                ctx.shadowColor = "#34d399";
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, orbR, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.globalCompositeOperation = "source-over";
+            }
+        }
+
+        // ======================================
+        // Item Heal Trail（緑玉の残像）
+        // ======================================
+        else if (e.type === "item_heal_trail") {
+
+            const tRatio = Math.max(0, e.life / e.maxLife);
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.fillStyle = `rgba(134,239,172,${(0.55 * tRatio).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, (e.radius || 4) * (0.5 + 0.5 * tRatio), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Item Heal Arrive（プレイヤーへの吸収リング）
+        // ======================================
+        else if (e.type === "item_heal_arrive") {
+
+            const progress = 1 - Math.max(0, e.life / e.maxLife);
+            const r = 6 + ((e.maxRadius || 44) - 6) * progress;
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = `rgba(134,239,172,${(0.9 * (1 - progress)).toFixed(3)})`;
+            ctx.lineWidth = 3 * (1 - progress) + 1;
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = "#34d399";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            // 中心フラッシュ
+            ctx.fillStyle = `rgba(209,250,229,${(0.8 * (1 - progress)).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, 8 * (1 - progress) + 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Item Heal Spark（到着時のキラキラ）
+        // ======================================
+        else if (e.type === "item_heal_spark") {
+
+            e.x += (e.vx || 0) * scale;
+            e.y += (e.vy || 0) * scale;
+            e.vx *= 0.96;
+            e.vy *= 0.96;
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.fillStyle = "#d1fae5";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#6ee7b7";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.radius || 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
         }
 
         // ======================================
@@ -5332,6 +5921,303 @@ export function renderItemSkillEffects(ctx, deltaTime = 1 / 60) {
             ctx.lineCap = "round";
             ctx.shadowBlur = 8;
             ctx.shadowColor = e.color || "#dff0ff";
+            ctx.beginPath();
+            ctx.moveTo(e.x, e.y);
+            ctx.lineTo(
+                e.x - (e.vx || 0) * len * 0.35,
+                e.y - (e.vy || 0) * len * 0.35
+            );
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Kill Flash（中心フラッシュ、赤）
+        // ======================================
+        else if (e.type === "skill_cast_kill_flash") {
+
+            const p = Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
+            const r = (e.maxRadius || 50) * (1 - p);
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+
+            const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, r);
+            grad.addColorStop(0, `rgba(255, 60, 60, ${(0.9 * (1 - p)).toFixed(3)})`);
+            grad.addColorStop(1, "rgba(255, 60, 60, 0)");
+
+            ctx.fillStyle = grad;
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = "#ff4444";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Kill Ring（同心リング、赤〜暗紅）
+        // ======================================
+        else if (e.type === "skill_cast_kill_ring") {
+
+            const p = Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
+            const ease = 1 - Math.pow(1 - p, 2);
+            const r = (e.radius || 16) + ((e.maxRadius || 70) - (e.radius || 16)) * ease;
+            const rgb = e.color || "255, 60, 60";
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = `rgba(${rgb}, ${((1 - p) * 0.95).toFixed(3)})`;
+            ctx.lineWidth = Math.max(1, 5 * (1 - p));
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = `rgba(${rgb}, 0.9)`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Kill Spark（放射スパーク、赤）
+        // ======================================
+        else if (e.type === "skill_cast_kill_spark") {
+
+            e.x += (e.vx || 0) * scale;
+            e.y += (e.vy || 0) * scale;
+            e.vx *= 0.92;
+            e.vy *= 0.92;
+
+            const len = 3 + 6 * Math.max(0, e.life / e.maxLife);
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = e.color || "#ff4444";
+            ctx.lineWidth = e.radius || 2;
+            ctx.lineCap = "round";
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = e.color || "#ff4444";
+            ctx.beginPath();
+            ctx.moveTo(e.x, e.y);
+            ctx.lineTo(
+                e.x - (e.vx || 0) * len * 0.35,
+                e.y - (e.vy || 0) * len * 0.35
+            );
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Heal Ring（回復リング、緑）
+        // ======================================
+        else if (e.type === "skill_cast_heal_ring") {
+
+            const p = Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
+            const ease = 1 - Math.pow(1 - p, 2);
+            const r = (e.radius || 16) + ((e.maxRadius || 70) - (e.radius || 16)) * ease;
+            const rgb = e.color || "134, 239, 172";
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = `rgba(${rgb}, ${((1 - p) * 0.95).toFixed(3)})`;
+            ctx.lineWidth = Math.max(1, 5 * (1 - p));
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = `rgba(${rgb}, 0.9)`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Heal Particle（上方へ舞う光の粒子）
+        // ======================================
+        else if (e.type === "skill_cast_heal_particle") {
+
+            e.x += (e.vx || 0) * scale;
+            e.y += (e.vy || 0) * scale;
+            e.vy += 0.05 * scale; // ゆっくり重力
+
+            const tRatio = Math.max(0, e.life / e.maxLife);
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.fillStyle = e.color || "#a7f3d0";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#34d399";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.radius || 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Freeze Ring（氷結リング、シアン）
+        // ======================================
+        else if (e.type === "skill_cast_freeze_ring") {
+
+            const p = Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
+            const ease = 1 - Math.pow(1 - p, 2);
+            const r = (e.radius || 16) + ((e.maxRadius || 80) - (e.radius || 16)) * ease;
+            const rgb = e.color || "165, 243, 252";
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = `rgba(${rgb}, ${((1 - p) * 0.95).toFixed(3)})`;
+            ctx.lineWidth = Math.max(1, 5 * (1 - p));
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = `rgba(${rgb}, 0.9)`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Freeze Flake（雪の結晶パーティクル）
+        // ======================================
+        else if (e.type === "skill_cast_freeze_flake") {
+
+            e.x += (e.vx || 0) * scale;
+            e.y += (e.vy || 0) * scale;
+            e.vy += 0.03 * scale;
+
+            const tRatio = Math.max(0, e.life / e.maxLife);
+
+            ctx.globalAlpha = tRatio;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.fillStyle = e.color || "#e0f2fe";
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#7dd3fc";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.radius || 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Knockback Wave（衝撃波リング）
+        // ======================================
+        else if (e.type === "skill_cast_knockback_wave") {
+
+            const p = Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
+            const r = (e.radius || 20) + ((e.maxRadius || 300) - (e.radius || 20)) * p;
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = `rgba(255, 255, 255, ${(0.8 * (1 - p)).toFixed(3)})`;
+            ctx.lineWidth = Math.max(1, 8 * (1 - p));
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Knockback Streak（放射ストリーク）
+        // ======================================
+        else if (e.type === "skill_cast_knockback_streak") {
+
+            e.x += (e.vx || 0) * scale;
+            e.y += (e.vy || 0) * scale;
+
+            const len = (e.length || 15) * Math.max(0, e.life / e.maxLife);
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = e.color || "#e5e7eb";
+            ctx.lineWidth = 2;
+            ctx.lineCap = "round";
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = "#ffffff";
+            ctx.beginPath();
+            ctx.moveTo(e.x, e.y);
+            ctx.lineTo(
+                e.x - (e.vx || 0) * len * 0.5,
+                e.y - (e.vy || 0) * len * 0.5
+            );
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Invincible Ripple（バリア展開リング、青）
+        // ======================================
+        else if (e.type === "skill_cast_invincible_ripple") {
+
+            const p = Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
+            const ease = 1 - Math.pow(1 - p, 2);
+            const r = (e.radius || 16) + ((e.maxRadius || 85) - (e.radius || 16)) * ease;
+            const rgb = e.color || "80, 180, 255";
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = `rgba(${rgb}, ${((1 - p) * 0.95).toFixed(3)})`;
+            ctx.lineWidth = Math.max(1, 5 * (1 - p));
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = `rgba(${rgb}, 0.9)`;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Revive Flash（白光バースト）
+        // ======================================
+        else if (e.type === "skill_cast_revive_flash") {
+
+            const p = Math.min(1, Math.max(0, 1 - (e.life / e.maxLife)));
+            const r = (e.maxRadius || 60) * (1 - p);
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+
+            const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, r);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${(0.9 * (1 - p)).toFixed(3)})`);
+            grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+            ctx.fillStyle = grad;
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalCompositeOperation = "source-over";
+        }
+
+        // ======================================
+        // Skill Cast Revive Spark（放射スパーク、金）
+        // ======================================
+        else if (e.type === "skill_cast_revive_spark") {
+
+            e.x += (e.vx || 0) * scale;
+            e.y += (e.vy || 0) * scale;
+            e.vx *= 0.92;
+            e.vy *= 0.92;
+
+            const len = 3 + 6 * Math.max(0, e.life / e.maxLife);
+
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.strokeStyle = e.color || "#fbbf24";
+            ctx.lineWidth = e.radius || 2;
+            ctx.lineCap = "round";
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = e.color || "#fbbf24";
             ctx.beginPath();
             ctx.moveTo(e.x, e.y);
             ctx.lineTo(
