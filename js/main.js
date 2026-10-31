@@ -4033,7 +4033,7 @@ const MAIN_MENU_MODE_DESCS = {
 };
 
 // ★ タイトル（MAMETYPE）ホバー時に表示する操作説明
-const TITLE_HELP_DESC = "タイピング入力は si / shi / ci など複数の入力形式に対応。入力に応じて候補が自動で変化します。メニューは矢印キーで選択、Enter / Space で決定。頭文字のキーで直接選択も可能で、基本的にb キーで戻れます。a キーで勲章、i キーで詳細ステータス（もしくは右上のHUD内アイコン）を表示します。";
+const TITLE_HELP_DESC = "・タイピング入力は si / shi / ci など複数の入力形式に対応。入力に応じて候補が自動で変化します。\n・メニューは矢印キーで選択、Enter / Space で決定。頭文字のキーで直接選択も可能で、基本的にb キーで戻れます。\n・a キーで勲章、i キーで詳細ステータス（もしくは右上のHUD内アイコン）を表示します。";
 
 /** タイトル（MAMETYPE）ホバー/フォーカス時に操作説明を表示 */
 function showTitleHelpDesc() {
@@ -4041,6 +4041,8 @@ function showTitleHelpDesc() {
   if (!el) return;
   const showDesc = modeDescToggle ? modeDescToggle.checked : true;
   if (!showDesc) { el.style.display = "none"; return; }
+  // \n で改行できるようにする
+  el.style.whiteSpace = "pre-line";
   el.textContent = TITLE_HELP_DESC;
   el.style.display = "block";
 }
@@ -4062,6 +4064,7 @@ function showModeDesc(descElId, descMap, btnId) {
     return;
   }
 
+  el.style.whiteSpace = "";
   el.textContent = text;
   el.style.display = "block";
 }
