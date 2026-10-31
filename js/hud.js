@@ -377,7 +377,8 @@ function updateQuestHud() {
   }
   
   if (expEl) {
-    expEl.textContent = `${exp} / ${nextExp}`;
+    const totalExpEarned = Number(s.totalExpEarned) || 0;
+    expEl.textContent = `${totalExpEarned} / ${totalExpEarned - exp + nextExp}`;
     expEl.style.fontFamily = "var(--font-mono)";
   }
 

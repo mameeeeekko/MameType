@@ -4274,6 +4274,9 @@ function bindModeStartEvents() {
   if (!bindOnce("modeStart")) return;
 
   // イベントリスナーの重複登録を防ぐため、要素をクローンして置き換える
+  if (!questStartBtn || !questStartBtnFromBeginning) return;
+
+
   questStartBtn = questStartBtn.replaceWith(questStartBtn.cloneNode(true)) || questStartBtn;
   questStartBtn = document.getElementById("questStartBtn");
 

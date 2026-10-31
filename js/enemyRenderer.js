@@ -1902,6 +1902,7 @@ export function renderPlayer(ctx, player, enemyStats) {
     ctx.fillStyle = hpColor;
     ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
 
+
     // ハイライト
     ctx.fillStyle = "rgba(255,255,255,0.15)";
     ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight * 0.4);
@@ -1909,6 +1910,164 @@ export function renderPlayer(ctx, player, enemyStats) {
     ctx.restore();
 }
 
+
+function drawCyberBlobBody(ctx, r) {
+    const now = performance.now();
+    const floatY = Math.sin(now * 0.002) * (r * 0.08);
+    const breathe = 1 + Math.sin(now * 0.003) * 0.04;
+
+    ctx.save();
+    ctx.translate(0, floatY);
+    ctx.scale(breathe * 1.15, breathe * 1.15);
+
+    const blobPath = () => {
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.9);
+        ctx.bezierCurveTo(r * 0.5, -r * 0.9, r * 0.9, -r * 0.4, r * 0.9, 0);
+        ctx.bezierCurveTo(r * 0.9, r * 0.45, r * 0.5, r * 0.85, 0, r * 0.85);
+        ctx.bezierCurveTo(-r * 0.5, r * 0.85, -r * 0.9, r * 0.45, -r * 0.9, 0);
+        ctx.bezierCurveTo(-r * 0.9, -r * 0.4, -r * 0.5, -r * 0.9, 0, -r * 0.9);
+        ctx.closePath();
+    };
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const glow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.5);
+    glow.addColorStop(0, "rgba(180, 190, 210, 0.22)");
+    glow.addColorStop(1, "rgba(180, 190, 210, 0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    blobPath();
+    const bodyGrad = ctx.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r);
+    bodyGrad.addColorStop(0, "#dfe3ea");
+    bodyGrad.addColorStop(0.5, "#9aa3af");
+    bodyGrad.addColorStop(1, "#5b6270");
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+
+    ctx.save();
+    blobPath();
+    const shade = ctx.createRadialGradient(r * 0.3, r * 0.35, 0, r * 0.3, r * 0.35, r);
+    shade.addColorStop(0, "rgba(0, 0, 0, 0)");
+    shade.addColorStop(1, "rgba(0, 0, 0, 0.32)");
+    ctx.fillStyle = shade;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    blobPath();
+    const shine = ctx.createRadialGradient(-r * 0.4, -r * 0.45, 0, -r * 0.4, -r * 0.45, r * 0.7);
+    shine.addColorStop(0, "rgba(255, 255, 255, 0.40)");
+    shine.addColorStop(0.5, "rgba(255, 255, 255, 0.10)");
+    shine.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = shine;
+    ctx.fill();
+    ctx.restore();
+
+    // ほっぺ（可愛さ）
+    ctx.fillStyle = "rgba(255, 182, 193, 0.25)";
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.38, r * 0.05, r * 0.10, r * 0.06, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(r * 0.38, r * 0.05, r * 0.10, r * 0.06, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const eyeY = -r * 0.15;
+    const eyeX = r * 0.28;
+    const eyeW = r * 0.12;
+    const eyeH = r * 0.20;
+    ctx.fillStyle = "#e0f2fe";
+    ctx.shadowColor = "#22d3ee";
+    ctx.shadowBlur = r * 0.6;
+    ctx.beginPath();
+    ctx.ellipse(-eyeX, eyeY, eyeW, eyeH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(eyeX, eyeY, eyeW, eyeH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    blobPath();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // 足（タチコマ風・左右対称4本）
+    ctx.fillStyle = "#5b6270";
+    for (let i = -1.5; i <= 1.5; i += 1) {
+        const lx = i * (r * 0.28);
+        ctx.beginPath();
+        ctx.ellipse(lx, r * 0.95, r * 0.12, r * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+
+function drawCyberMascot(ctx, r) {
+    const now = performance.now();
+    const floatY = Math.sin(now * 0.002) * (r * 0.06);
+    const pulse = 1 + Math.sin(now * 0.004) * 0.05;
+    const ringRot = now * 0.0015;
+
+    ctx.save();
+    ctx.translate(0, floatY);
+    ctx.scale(pulse, pulse);
+
+    // 外周グロー
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const glow = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r * 1.5);
+    glow.addColorStop(0, "rgba(34, 211, 238, 0.35)");
+    glow.addColorStop(1, "rgba(34, 211, 238, 0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 本体
+    const bodyGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.1, 0, 0, r);
+    bodyGrad.addColorStop(0, "#e0f2fe");
+    bodyGrad.addColorStop(0.4, "#38bdf8");
+    bodyGrad.addColorStop(1, "#0c4a6e");
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // コア
+    const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.4);
+    coreGrad.addColorStop(0, "#ffffff");
+    coreGrad.addColorStop(0.5, "#22d3ee");
+    coreGrad.addColorStop(1, "#0ea5e9");
+    ctx.fillStyle = coreGrad;
+    ctx.shadowColor = "#22d3ee";
+    ctx.shadowBlur = r * 0.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 辺縁をぼやけさせる
+    ctx.save();
+    const edgeFade = ctx.createRadialGradient(0, 0, r * 0.6, 0, 0, r);
+    edgeFade.addColorStop(0, "rgba(0,0,0,0)");
+    edgeFade.addColorStop(1, "rgba(0,0,0,0.35)");
+    ctx.fillStyle = edgeFade;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+}
 
 function drawPlayerBody(ctx, player, enemyStats) {
     const evo = enemyStats?.evo ?? 0;
@@ -1918,230 +2077,103 @@ function drawPlayerBody(ctx, player, enemyStats) {
     ctx.translate(player.x, player.y);
 
     // =====================
-    // 本体（常に丸）
+    // CYBER BLOB 本体
     // =====================
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    drawCyberMascot(ctx, r);
+    // CYBER BLOB 本体描画済み
 
-    // =====================
-    // 本体グラデーション
-    // =====================
-    const bodyGrad = ctx.createRadialGradient(
-        -r * 0.35,   // 光源を左上
-        -r * 0.4,
-        r * 0.15,
-        0,
-        0,
-        r
-    );
-
-    bodyGrad.addColorStop(0, "#b7bcc4");   // 明るい部分
-    bodyGrad.addColorStop(0.45, "#7b8188");
-    bodyGrad.addColorStop(1, "#4a4f55");   // 暗い外周
-
-    ctx.fillStyle = bodyGrad;
-    ctx.fill();
+    // Lv10: コアは drawCyberMascot で描画済み（拍動を維持）
 
     // =====================
-    // 上側ハイライト
+    // Lv2: エネルギーリング
     // =====================
-    const shine = ctx.createRadialGradient(
-        -r * 0.45,
-        -r * 0.45,
-        0,
-        -r * 0.45,
-        -r * 0.45,
-        r * 0.8
-    );
-
-    shine.addColorStop(0, "rgba(255,255,255,0.38)");
-    shine.addColorStop(0.4, "rgba(255,255,255,0.10)");
-    shine.addColorStop(1, "rgba(255,255,255,0)");
-
-    ctx.fillStyle = shine;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // =====================
-    // 下側シャドウ
-    // =====================
-    const shadow = ctx.createRadialGradient(
-        r * 0.25,
-        r * 0.35,
-        0,
-        r * 0.25,
-        r * 0.35,
-        r
-    );
-
-    shadow.addColorStop(0, "rgba(0,0,0,0)");
-    shadow.addColorStop(1, "rgba(0,0,0,0.28)");
-
-    ctx.fillStyle = shadow;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // =====================
-    // 外周輪郭
-    // =====================
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    
-
-    // =====================
-    // Lv10: 中心コア
-    // =====================
-    if (evo >= 1) {
-        const coreR = r * 0.35;
-
-        const coreGrad = ctx.createRadialGradient(
-            -coreR * 0.35,
-            -coreR * 0.35,
-            0,
-            0,
-            0,
-            coreR
-        );
-
-        coreGrad.addColorStop(0, "#d6dae2");
-        coreGrad.addColorStop(0.45, "#9ea4ad");
-        coreGrad.addColorStop(1, "#5d636b");
-
+    if (evo >= 1 && evo < 8) {
+        const ringRot = performance.now() * 0.002;
+        ctx.save();
+        ctx.rotate(ringRot);
+        ctx.strokeStyle = "rgba(34, 211, 238, 0.6)";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(0, 0, coreR, 0, Math.PI * 2);
-        ctx.fillStyle = coreGrad;
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(0, 0, coreR, 0, Math.PI * 2);
-        ctx.fillStyle = coreGrad;
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(0, 0, coreR, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,255,255,0.15)";
-        ctx.lineWidth = 1;
+        ctx.ellipse(0, 0, r * 1.15, r * 0.45, 0, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
     }
 
     // =====================
-    // Lv20: 外枠
+    // Lv3: セグメント装甲（四隅）
     // =====================
     if (evo >= 2) {
-        ctx.beginPath();
-        ctx.arc(0, 0, r + 3, 0, Math.PI * 2);
-
-        const ringGrad = ctx.createLinearGradient(
-            -r - 3,
-            -r - 3,
-            r + 3,
-            r + 3
-        );
-
-        ringGrad.addColorStop(0, "#d4d8e0");
-        ringGrad.addColorStop(0.45, "#7b8191");
-        ringGrad.addColorStop(1, "#4b5058");
-
-        ctx.strokeStyle = ringGrad;
+        ctx.strokeStyle = "rgba(34, 211, 238, 0.7)";
         ctx.lineWidth = 2;
-        ctx.stroke();
-    }
-    
-    // =====================
-    // Lv30: 内部装甲
-    // =====================
-    if (evo >= 3) {
-        drawArmorShell(ctx, r);
-    }
-
-    // =====================
-    // Lv40: 外部装甲
-    // =====================
-    if (evo >= 4) {
-        const armorGrad = ctx.createLinearGradient(
-            -r - 8,
-            -r - 8,
-            r + 8,
-            r + 8
-        );
-
-        armorGrad.addColorStop(0, "#d9dde6");
-        armorGrad.addColorStop(0.45, "#8a90a0");
-        armorGrad.addColorStop(1, "#4d525a");
-
-        ctx.strokeStyle = armorGrad;
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-
-        const armorR = r + 6;
-        const arcSize = 0.95; // アーマーの長さ
-
-        const angles = [
-            -Math.PI / 2, // 上
-            0,            // 右
-            Math.PI / 2,  // 下
-            Math.PI       // 左
-        ];
-
-        angles.forEach(angle => {
+        const segR = r + 4;
+        const segSize = 0.6;
+        const angles = [-Math.PI/4, Math.PI/4, 3*Math.PI/4, 5*Math.PI/4];
+        angles.forEach(a => {
             ctx.beginPath();
-            ctx.arc(
-                0,
-                0,
-                armorR,
-                angle - arcSize / 2,
-                angle + arcSize / 2
-            );
+            ctx.arc(0, 0, segR, a - segSize/2, a + segSize/2);
             ctx.stroke();
         });
     }
 
-     // =====================
-    // Lv50+: 外周シェル
     // =====================
-    if (evo >= 5) {
-
-        ctx.beginPath();
-
-        // 外側
-        ctx.arc(0, 0, r + 8, 0, Math.PI * 2);
-
-        // 内側をくり抜く
-        ctx.arc(0, 0, r + 4.5, 0, Math.PI * 2, true);
-
-        ctx.closePath();
-
-        const shellGrad = ctx.createLinearGradient(
-            -r - 8,
-            -r - 8,
-            r + 8,
-            r + 8
-        );
-
-        shellGrad.addColorStop(0, "#d6d9e1");
-        shellGrad.addColorStop(0.4, "#8e93a3");
-        shellGrad.addColorStop(1, "#4e535b");
-
-        ctx.fillStyle = shellGrad;
-        ctx.fill();
+    // Lv4: 外部プレート（上下左右）
+    // =====================
+    if (evo >= 3) {
+        ctx.fillStyle = "rgba(34, 211, 238, 0.25)";
+        const plateR = r + 6;
+        const plateSize = r * 0.35;
+        const positions = [
+            [0, -plateR], [plateR, 0], [0, plateR], [-plateR, 0]
+        ];
+        positions.forEach(([x, y]) => {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillRect(-plateSize/2, -plateSize/2, plateSize, plateSize);
+            ctx.restore();
+        });
     }
 
     // =====================
-    // Lv60: 
+    // Lv5: 二重リング
     // =====================
-    if (evo >= 6 && evo < 7) {
-        drawNodes(ctx, r, false);
+    if (evo >= 4) {
+        const ringRot = performance.now() * 0.0015;
+        ctx.save();
+        ctx.rotate(ringRot);
+        ctx.strokeStyle = "rgba(34, 211, 238, 0.5)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * 1.3, r * 0.5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * 1.35, r * 0.55, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // =====================
+    // Lv6: エネルギーノード
+    // =====================
+    if (evo >= 5) {
+        const nodeR = r * 1.2;
+        ctx.fillStyle = "#22d3ee";
+        ctx.shadowColor = "#22d3ee";
+        ctx.shadowBlur = r * 0.4;
+        for (let i = 0; i < 4; i++) {
+            const a = (Math.PI / 2) * i + performance.now() * 0.001;
+            const x = Math.cos(a) * nodeR;
+            const y = Math.sin(a) * nodeR * 0.4;
+            ctx.beginPath();
+            ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
     }
 
     // =====================
     // Lv70:
     // =====================
-    if (evo >= 7) {
+    if (evo >= 6) {
         drawNodes(ctx, r, true);
     }
 
@@ -2149,18 +2181,18 @@ function drawPlayerBody(ctx, player, enemyStats) {
     // =====================
     // Lv80+: 重力歪曲フィールド
     // =====================
-    if (evo >= 8) {
+    if (evo >= 7) {
 
         ctx.save();
 
         const t = performance.now() * 0.0015;
 
-        const fieldR = r + 26;
+        const fieldR = r + 14;
 
         // =====================
         // 歪曲層
         // =====================
-        for (let layer = 0; layer < 5; layer++) {
+        for (let layer = 0; layer < 0; layer++) {
 
             const rr =
                 fieldR - layer * 4;
@@ -2206,7 +2238,7 @@ function drawPlayerBody(ctx, player, enemyStats) {
             // 濃くする
             ctx.fillStyle =
                 `rgba(170,170,180,${
-                    0.11 - layer * 0.015
+                    -0.08 - layer * 0.012
                 })`;
 
             ctx.fill();
@@ -2263,10 +2295,10 @@ function drawPlayerBody(ctx, player, enemyStats) {
         // =====================
         // 重力ノイズ粒子
         // =====================
-        for (let i = 0; i < 34; i++) {
+        for (let i = 0; i < 4; i++) {
 
             const a =
-                (Math.PI * 2 / 34) * i
+                (Math.PI * 2 / 4) * i
                 + t * 0.5;
 
             const rr =
@@ -2294,7 +2326,7 @@ function drawPlayerBody(ctx, player, enemyStats) {
             );
 
             ctx.fillStyle =
-                "rgba(240,240,255,0.25)";
+                "rgba(240, 240, 255, 0.13)";
 
             ctx.fill();
         }
@@ -2305,13 +2337,13 @@ function drawPlayerBody(ctx, player, enemyStats) {
     // =====================
     // Lv90+: 特異点渦
     // =====================
-    if (evo >= 9) {
+    if (evo >= 8) {
 
         ctx.save();
 
         const t = performance.now() * 0.0018;
 
-        const fieldR = r + 34;
+        const fieldR = r + 12;
 
         // =====================
         // 渦流
@@ -2347,9 +2379,9 @@ function drawPlayerBody(ctx, player, enemyStats) {
 
             // 少し青白い重力光
             ctx.strokeStyle =
-                "rgba(180,210,255,0.13)";
+                "rgba(180,210,255,0.03)";
 
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 1;
 
             ctx.stroke();
         }
@@ -2357,7 +2389,7 @@ function drawPlayerBody(ctx, player, enemyStats) {
         // =====================
         // 吸い込み粒子
         // =====================
-        for (let i = 0; i < 36; i++) {
+        for (let i = 0; i < 0; i++) {
 
             const life =
                 ((t * 0.22 + i * 0.07) % 1);
@@ -2436,44 +2468,6 @@ function drawPlayerBody(ctx, player, enemyStats) {
 
         ctx.fill();
 
-        // =====================
-        // 中心圧縮
-        // =====================
-        const core =
-            ctx.createRadialGradient(
-                0, 0, r * 0.1,
-                0, 0, r
-            );
-
-        core.addColorStop(
-            0,
-            "rgba(0,0,0,0.5)"
-        );
-
-        core.addColorStop(
-            0.35,
-            "rgba(30,30,35,0.12)"
-        );
-
-        core.addColorStop(
-            1,
-            "rgba(0,0,0,0)"
-        );
-
-        ctx.fillStyle = core;
-
-        ctx.beginPath();
-
-        // 元の球は維持
-        ctx.arc(
-            0,
-            0,
-            r,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
 
         ctx.restore();
     }

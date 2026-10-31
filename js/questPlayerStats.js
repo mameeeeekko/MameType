@@ -19,7 +19,7 @@ const DEFAULT_STATS = {
     level: 1,
     exp: 0,
     nextExp: 500,
-    
+    totalExpEarned: 0, // ★累計獲得EXP（HUD表示用）
     maxHp: 35,
     defense: 0, //max 99
 
@@ -287,6 +287,10 @@ function loadStats() {
         delete parsed.skillSlotMax;
     }
 
+    if (parsed.totalExpEarned == null) {
+        parsed.totalExpEarned = calcCumulativeExpToLevel(parsed.level) + (parsed.exp || 0);
+    }
+
     return {
         ...DEFAULT_STATS,
         ...parsed,
@@ -317,6 +321,10 @@ export function reloadQuestPlayerStats() {
     const parsed = readQuestStorage("questPlayerStats");
 
     if (!parsed || typeof parsed !== "object") return;
+
+    if (parsed.totalExpEarned == null) {
+        parsed.totalExpEarned = calcCumulativeExpToLevel(parsed.level) + (parsed.exp || 0);
+    }
 
     playerStats = {
         ...DEFAULT_STATS,
@@ -376,7 +384,7 @@ export function getPlayerStatsForEnemy(mode = "enemy", levelOverride = null) {
     _mode: mode
   };
 
-  // フリーモード等でレベルが指定された場合、そのレベルに応じたステータスを再計算
+   // フリーモード等でレベルが指定された場合、そのレベルに応じたステータスを再計算
   if (levelOverride !== null) {
     base.level = levelOverride;
     // クエストモードの成長式を流用
@@ -386,10 +394,24 @@ export function getPlayerStatsForEnemy(mode = "enemy", levelOverride = null) {
     base.nextExp = calcNextExp(base.level);
   }
 
+  if (base.totalExpEarned == null) {
+    base.totalExpEarned = calcCumulativeExpToLevel(base.level) + (base.exp || 0);
+  }
+
   return buildFinalStats(base);
 }
 
 // ===============================
+// レベル到達までに必要な累計EXPを計算する
+function calcCumulativeExpToLevel(level) {
+    const lv = Math.max(1, Math.min(99, Number(level) || 1));
+    let total = 0;
+    for (let l = 1; l < lv; l++) {
+        total += calcNextExp(l);
+    }
+    return total;
+}
+
 // 経験値追加
 // ===============================
 export function addExp(amount) {
@@ -397,7 +419,7 @@ export function addExp(amount) {
     const beforeDef = playerStats.defense;
 
     playerStats.exp += amount;
-
+    playerStats.totalExpEarned = (playerStats.totalExpEarned || 0) + amount;
     let totalSlotIncrease = 0; // skillslot増加
     let totalStockIncrease = 0; // activeSkillStock増加
     let levelUpCount = 0;
@@ -496,7 +518,7 @@ export function forceSetLevel(targetLevel, progress = 0) {
     playerStats.level = 1;
     playerStats.exp = 0;
     playerStats.nextExp = 500;
-
+    playerStats.totalExpEarned = 0;
     playerStats.maxHp = DEFAULT_STATS.maxHp;
     playerStats.defense = DEFAULT_STATS.defense;
     playerStats.radius = DEFAULT_STATS.radius;
@@ -515,7 +537,7 @@ export function forceSetLevel(targetLevel, progress = 0) {
     playerStats.exp = Math.floor(
         playerStats.nextExp * progress
     );
-
+    playerStats.totalExpEarned = calcCumulativeExpToLevel(playerStats.level) + (playerStats.exp || 0);
     saveStats();
     return playerStats;
 }

@@ -40,9 +40,11 @@ export function getCandidatesForKana(text, pos) {
 // 候補リセット関数
 // 現在の pos の文字に対して、候補を生成する
 // =====================================================
-export function resetCandidates(posOverride = gameState.pos) {
+export function resetCandidates(posOverride = null) {
   candidateCache = {};
-  candidates = getCandidatesForKana(gameState.text, posOverride);
+  const pos = posOverride ?? (gameState?.pos ?? 0);
+  const text = gameState?.text ?? "";
+  candidates = getCandidatesForKana(text, pos);
 }
 
 export function fullResetInput() {
