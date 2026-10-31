@@ -1,9 +1,10 @@
 // questPlayerStats.js
 // ===============================
-// Lv1 → 100
-// Lv10 → 約400
-// Lv50 → 約1600
-// Lv99 → かなり重い（やり込み用）
+// Lv1 → 500
+// Lv10 → 約1299
+// Lv50 → 約28228
+// Lv50以降 → 1Lvあたり +2000（線形増加）
+// Lv99 → 約126228
 // Lv99 / HP999上限
 // ===============================
 
@@ -109,8 +110,21 @@ const DEFAULT_STATS = {
     },
 };
 
+// Lvに応じた次の必要経験値を計算する
+// Lv1: 500
+// Lv2〜Lv49: 650 * 1.08^(Lv-1)（指数カーブ）
+// Lv50〜Lv99: Lv50の必要XP + (Lv-50)*2000（線形増加）
+function calcNextExp(level) {
+    const lv = Math.max(1, Math.min(99, Number(level) || 1));
+    if (lv <= 1) return 500;
+    if (lv < 50) {
+        return Math.floor(650 * Math.pow(1.08, lv - 1));
+    }
+    const baseLv50Exp = Math.floor(650 * Math.pow(1.08, 49));
+    return baseLv50Exp + (lv - 50) * 2000;
+}
+
 // ================================================
-// 戦闘用リアルタイム計算
 // ================================================
 function buildFinalStats(base) {
 
@@ -326,6 +340,8 @@ export function reloadQuestPlayerStats() {
             ...(parsed.skillTreeProgress || {})
         }
     };
+    // ★ Lv50以降の必要XP変更に対応：nextExp を再計算
+    playerStats.nextExp = calcNextExp(playerStats.level);
 }
 
 function saveStats() {
@@ -367,7 +383,7 @@ export function getPlayerStatsForEnemy(mode = "enemy", levelOverride = null) {
     base.maxHp = Math.min(999, 45 + (base.level - 1) * 8);
     base.defense = Math.min(99, (DEFAULT_STATS.defense || 0) + (base.level - 1));
     // 次の経験値もレベルに合わせて更新
-    base.nextExp = Math.floor(650 * Math.pow(1.16, base.level - 1));
+    base.nextExp = calcNextExp(base.level);
   }
 
   return buildFinalStats(base);
@@ -431,10 +447,8 @@ function levelUp() {
     let slotIncrease = 0;
     let stockIncrease = 0;
 
-    // 次の必要経験値（指数カーブ）
-    playerStats.nextExp = Math.floor(
-        650 * Math.pow(1.08, playerStats.level - 1)
-    );
+    // 次の必要経験値（Lv50以降は線形増加）
+    playerStats.nextExp = calcNextExp(playerStats.level);
 
     // HP成長（上限999）
     playerStats.maxHp = Math.min(
@@ -461,6 +475,7 @@ function levelUp() {
     //if (playerStats.level === 30) { playerStats.bonusActiveSkillStockMax++; stockIncrease++;}
     if (playerStats.level === 35) { playerStats.bonusSkillSlot++; slotIncrease++; }
     if (playerStats.level === 70) { playerStats.bonusSkillSlot++; slotIncrease++; }
+    if (playerStats.level === 99) { playerStats.bonusSkillSlot++; slotIncrease++; }
 
     // ★レベル50到達で星の振り直しチケット（rebuild）を1枚付与
     if (playerStats.level === 50) {

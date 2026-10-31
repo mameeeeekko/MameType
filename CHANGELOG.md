@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.5] - 2026-10-31
+
+### Changed
+- レベルアップ必要XPの後半（特にLv50以降）を少なくした。
+  - Lv50以降は1レベルあたり+2000 XPの線形増加に変更（従来は指数カーブ）。
+  - Lv50の必要XPは現状維持（約28,228）、Lv99は約126,228（従来の約1,225,861から大幅減少）。
+  - Lv50未満のプレイヤーには影響なし。
+  - フリーモードの表示用必要XPもクエストモードと同じ計算式に統一。
+  - Lv99にスキルスロット増加を追加
+
+---
+
 ## [1.1.4] - 2026-10-30
 
 ### Added
@@ -9,7 +21,6 @@
 - タイトルのTIPS表示: タイトルのオンマウスでTIPSを表示。
 
 ### Changed
-- バージョンを1.1.4に更新 (version.js APP_VERSION, SW CACHE_NAME mametype-v1.1.4)
 
 ---
 
@@ -21,13 +32,11 @@
   - `js/enemyFontSize.js` 新設。ENEMY セクションに `enemyFontSizeSelect` を追加し、敵のワード・ローマ字・ひらがなの文字サイズを4段階で変更可能に。
 - **設定に敵の下行表示モード（ローマ字 / ひらがな）を追加**
   - `js/enemyDisplayMode.js` 新設。ENEMY DISPLAY セクションに `enemyDisplayModeSelect` を追加し、敵の下行表示を「ローマ字表示」または「ひらがな表示」に切り替え可能に。`localStorage` の `typing_game_settings.enemyDisplayMode` に保存・復元。
-- **敵の姿を変更**
-  - 敵の見た目を刷新。
+
 
 ### Changed
-- **アプリケーションバージョンを `1.1.3` に更新**
-  - `js/version.js` の `APP_VERSION` → `1.1.3`
-  - Service Worker のキャッシュ名 → `mametype-v1.1.3`
+- **敵の姿を変更**
+  - 敵の見た目を刷新。
 
 ---
 
